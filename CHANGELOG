@@ -8187,6 +8187,19 @@ Version 5.0 (unreleased)
    at 600 s NurseRostering-10 goes from 5,584 to 5,147 (field best 5,054)
    and NurseRostering-07 from 1,377 to 1,297, with 3 better, 1 worse
    (Warehouse-60-120-01, 6,496 vs 6,504) and 20 equal results.
+452. The FlatZinc front end reads three more forms of XCSP 2017-2019
+   models: a binary table whose missing pairs are exactly x - y = d is an
+   edge x - y != d of the all-different detection (the table stays
+   posted; pigeonsPlus-11-04 35 -> 0.7 s); when the columns of a table
+   (all, or all but one) have the same sum in every row, that sum of 3
+   or more terms is posted as a linear equality (Bacp: 16 -> 24 of 24
+   proved at 240 s, total 2,084 -> 50 s; -Dorg.jacop.fz.tableSums=false
+   turns it off); and a model of clauses and 0/1 negative tables only
+   posts the tables as clauses, so it is a pure clause model, whose root
+   clause refutation now runs before JaSAT takes it (hole-10: unknown at
+   240 s -> 0.7 s; -Dorg.jacop.fz.negativeTableClauses=false turns it
+   off). None of them fires on the wide set or XCSP 2022-2025 except the
+   disequality edges, which fire without a clique on spot5.
 
 453. JaSAT (CdclSolver) eliminates variables with a rising bound and with
    gates, as Kissat: the bound (resolvents allowed over the clauses they
@@ -8259,7 +8272,24 @@ Version 5.0 (unreleased)
    conflicts a second instead of 1; WordDesign2-words-mdd-035 and 045
    are solved in about 70 s instead of 485 s.
 
-456. Free search (-f) on models with vehicle routes: LNS uses only route
+456. JaLP proves infeasibility that its presolve sees without simplex
+   pivots where it can. When the presolve finds the bounds infeasible, or
+   its reduced LP ends infeasible, BoundProof propagates the row activity
+   bounds over the whole LP with a trail and resolves the conflict
+   backwards into a Farkas ray over the rows (feasibility-based bound
+   tightening as in Achterberg, Bixby, Gu, Rothberg and Weninger,
+   "Presolve reductions in mixed integer programming", INFORMS Journal on
+   Computing 32 (2020) 473-506; Brearley, Mitra and Williams, Mathematical
+   Programming 8 (1975) 54-83), checked like a simplex proof. Otherwise
+   the dual simplex looks for the proof from the slack basis with zero
+   costs, then goes on with the costs if the LP is feasible after all.
+   farkas() returns the ray either way; provedByBounds() tells which.
+   On the 29 infeasible Netlib LPs 12 are proved with no pivot and the
+   total time goes from 13.7 to 4.1 s (gosh 8.9 -> 2.3 s, greenbea 1.7 ->
+   0.04 s); pivots on the 658 feasible LPs of the LP bench are unchanged.
+   -Dorg.jacop.jalp.boundProof=false turns it off.
+
+457. Free search (-f) on models with vehicle routes: LNS uses only route
    removal, related (Shaw) removal and random neighbourhoods (the graph,
    propagation, objective, constraint and line neighbourhoods are off
    unless lns-kinds names them), and takes lns-share-routes 10 instead of
