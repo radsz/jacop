@@ -938,9 +938,9 @@ public class Constraints implements ParserTreeConstants {
     ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
     IntVar v1 = support.getVariable(p1);
     IntVar v2 = support.getVariable(p2);
-    if (v1 == v2 || dictionary.isAliasTarget(v2)) {
-      // the integer variable is already the alias of a Boolean; gen_bool2int posts the equality
-      // of the two Booleans
+    if (v1 == v2 || dictionary.isAliasTarget(v2) || dictionary.isDeclaredEqual(v2)) {
+      // the integer variable is already the alias of a Boolean, or a declaration made it equal to
+      // another variable on its own object; gen_bool2int posts the equality
       return;
     }
     dictionary.addAlias(v1, v2);
@@ -984,6 +984,7 @@ public class Constraints implements ParserTreeConstants {
         || x.max() > 1
         || dictionary.aliasTable.containsKey(x)
         || dictionary.isAliasTarget(x)
+        || dictionary.isDeclaredEqual(x)
         || dictionary.aliasTable.containsKey(b)) {
       return false;
     }

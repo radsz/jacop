@@ -1677,6 +1677,33 @@ class FlatzincFrontEndTest {
     }
   }
 
+  // the number of solutions of a model with -a and no symmetry breaking
+  private int allSolutions(String model) throws IOException, ParseException {
+    Path fzn = tmp.resolve("declared.fzn");
+    Files.writeString(fzn, model, StandardCharsets.UTF_8);
+    String out =
+        runInThisJvm(new Options(new String[] {"-a", "--symmetry", "off", fzn.toString()}), fzn);
+    return out.split("----------", -1).length - 1;
+  }
+
+  // var i = w posts i = w on the two variables before the constraint items are read; bool2int then
+  // made i an alias of b, which left w free (FlatZinc mutation harness, declared-equality mutants)
+  @Test
+  void aVariableOfADeclaredEqualityIsNoAliasOfABoolean() throws IOException, ParseException {
+    assertEquals(
+        2,
+        allSolutions(
+            "var bool: b :: output_var;\nvar 0..1: w :: output_var;\nvar 0..1: i = w;\n"
+                + "constraint bool2int(b, i);\nsolve satisfy;\n"));
+    assertEquals(
+        2,
+        allSolutions(
+            "var bool: b :: output_var;\nvar 0..1: i;\nvar 0..1: w :: output_var = i;\n"
+                + "constraint bool2int(b, i);\nsolve satisfy;\n"));
+  }
+
+
+
   // the output of a run of the model with the given options, in this JVM (no watchdog)
   private static String runInThisJvm(Options opt, Path fzn) throws IOException, ParseException {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
