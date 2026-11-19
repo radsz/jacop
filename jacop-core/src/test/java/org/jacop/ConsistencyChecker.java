@@ -1609,6 +1609,44 @@ class ConsistencyChecker {
         concat(x, new IntVar[] {cost1, cost2}));
   }
 
+  private static Model cumulatives(Store store, Random random, boolean upper, boolean optional) {
+    int n = 3;
+    IntVar[] starts = vars(store, "s", n, 0, 3, random);
+    IntVar[] durations = vars(store, "d", n, 0, 2, random);
+    IntVar[] heights = vars(store, "h", n, -1, 1, random);
+    IntVar[] machines = vars(store, "m", n, 1, 2, random);
+    IntVar[] bounds = vars(store, "b", 2, -1, 2, random);
+    IntVar[] present = optional ? bools(store, "o", n) : null;
+    Object constraint =
+        new org.jacop.constraints.cumulative.Cumulatives(
+            starts, durations, heights, machines, bounds, upper, 1, present);
+    return new Model(
+        constraint,
+        t -> {
+          for (int machine = 1; machine <= 2; machine++) {
+            int bound = t[4 * n + machine - 1];
+            for (int time = 0; time <= 6; time++) {
+              int load = 0;
+              boolean runs = false;
+              for (int i = 0; i < n; i++) {
+                boolean on = !optional || t[4 * n + 2 + i] == 1;
+                if (on && t[3 * n + i] == machine && t[i] <= time && time < t[i] + t[n + i]) {
+                  runs = true;
+                  load += t[2 * n + i];
+                }
+              }
+              if (runs && (upper ? load > bound : load < bound)) {
+                return false;
+              }
+            }
+          }
+          return true;
+        },
+        optional
+            ? concat(starts, durations, heights, machines, bounds, present)
+            : concat(starts, durations, heights, machines, bounds));
+  }
+
   private static IntVar[] concat(IntVar[]... parts) {
     return Arrays.stream(parts).flatMap(Arrays::stream).toArray(IntVar[]::new);
   }
@@ -2758,6 +2796,11 @@ class ConsistencyChecker {
         new Case("ColouredSpanningTree", Level.NONE, ConsistencyChecker::colouredSpanningTree),
         new Case("KnapsackDP", Level.NONE, ConsistencyChecker::knapsackDP),
         new Case("SubcircuitCostPair", Level.NONE, ConsistencyChecker::subcircuitCostPair),
+        // upper, lower and optional forms in turn; each instance enumerates a large box
+        new Case(
+            "Cumulatives",
+            Level.NONE,
+            (s, r) -> cumulatives(s, r, r.nextInt(3) != 1, r.nextInt(3) == 2)),
         new Case("UnaryTransition(all)", Level.NONE, (s, r) -> unaryTransition(s, r, false)),
         new Case("UnaryTransition(optional)", Level.NONE, (s, r) -> unaryTransition(s, r, true)),
         new Case("MultiCumulative", Level.NONE, ConsistencyChecker::multiCumulative),
