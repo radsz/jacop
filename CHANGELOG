@@ -8272,7 +8272,24 @@ Version 5.0 (unreleased)
    conflicts a second instead of 1; WordDesign2-words-mdd-035 and 045
    are solved in about 70 s instead of 485 s.
 
-456. The cyclic distance rewrite of the FlatZinc front end (entry 437) is
+456. JaLP proves infeasibility that its presolve sees without simplex
+   pivots where it can. When the presolve finds the bounds infeasible, or
+   its reduced LP ends infeasible, BoundProof propagates the row activity
+   bounds over the whole LP with a trail and resolves the conflict
+   backwards into a Farkas ray over the rows (feasibility-based bound
+   tightening as in Achterberg, Bixby, Gu, Rothberg and Weninger,
+   "Presolve reductions in mixed integer programming", INFORMS Journal on
+   Computing 32 (2020) 473-506; Brearley, Mitra and Williams, Mathematical
+   Programming 8 (1975) 54-83), checked like a simplex proof. Otherwise
+   the dual simplex looks for the proof from the slack basis with zero
+   costs, then goes on with the costs if the LP is feasible after all.
+   farkas() returns the ray either way; provedByBounds() tells which.
+   On the 29 infeasible Netlib LPs 12 are proved with no pivot and the
+   total time goes from 13.7 to 4.1 s (gosh 8.9 -> 2.3 s, greenbea 1.7 ->
+   0.04 s); pivots on the 658 feasible LPs of the LP bench are unchanged.
+   -Dorg.jacop.jalp.boundProof=false turns it off.
+
+457. The cyclic distance rewrite of the FlatZinc front end (entry 437) is
    on by default for models with at least 400 cyclic distances
    (-Dorg.jacop.fz.cyclicDistance.minDistances, default 400). There
    proofs are out of reach and the upper bound counts: at 600 s with -f,
@@ -8283,7 +8300,7 @@ Version 5.0 (unreleased)
    still rewrites every model, and =false none. No other instance of the
    wide set or of the XCSP 2022-2025 sets has the pattern.
 
-457. The FlatZinc front end rewrites products of two functions of one small
+458. The FlatZinc front end rewrites products of two functions of one small
    index (MiniZinc's (good[p] = g) * num[p], both looked up by the chosen
    preference p) as sum(v) f(v) * (p = v), linear over the value literals
    of p, and unfolds clauses of implied comparisons between such functions
