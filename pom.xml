@@ -355,6 +355,7 @@ setup to run configuration. -->
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/FloatPropagationFuzzTest.java</include>
                                 <include>**/FloatCidTest.java</include>
+                                <include>**/FloatDiveTest.java</include>
                                 <include>**/FloatNewtonTest.java</include>
                                 <include>**/FloatBuiltinsFuzzTest.java</include>
                                 <include>**/CostRegularTest.java</include>
@@ -636,6 +637,7 @@ setup to run configuration. -->
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/FloatPropagationFuzzTest.java</include>
                                 <include>**/FloatCidTest.java</include>
+                                <include>**/FloatDiveTest.java</include>
                                 <include>**/FloatNewtonTest.java</include>
                                 <include>**/FloatBuiltinsFuzzTest.java</include>
                                 <include>**/PresolveTest.java</include>
@@ -916,6 +918,7 @@ setup to run configuration. -->
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/FloatPropagationFuzzTest.java</include>
                                 <include>**/FloatCidTest.java</include>
+                                <include>**/FloatDiveTest.java</include>
                                 <include>**/FloatNewtonTest.java</include>
                                 <include>**/FloatBuiltinsFuzzTest.java</include>
                                 <include>**/PresolveTest.java</include>
@@ -1194,6 +1197,7 @@ setup to run configuration. -->
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/FloatPropagationFuzzTest.java</include>
                                 <include>**/FloatCidTest.java</include>
+                                <include>**/FloatDiveTest.java</include>
                                 <include>**/FloatNewtonTest.java</include>
                                 <include>**/FloatBuiltinsFuzzTest.java</include>
                                 <include>**/PresolveTest.java</include>
