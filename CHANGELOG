@@ -8349,6 +8349,19 @@ Version 5.0 (unreleased)
    optimisation instances of the wide set. -Djacop.lcg.coreProbeRate=false
    turns it off, -Djacop.lcg.coreProbeSlowRate sets the rate.
 
+457. Free search (-f) on models with vehicle routes: LNS uses only route
+   removal, related (Shaw) removal and random neighbourhoods (the graph,
+   propagation, objective, constraint and line neighbourhoods are off
+   unless lns-kinds names them), and takes lns-share-routes 10 instead of
+   3 of free search's calls. On CVRPLIB X-n110-k13 (giant tour of the
+   MiniZinc Challenge 2015 model) the generic neighbourhoods took 44 % of
+   the runs for 6 of 101 improvements. Paired runs, -f: the 10 X instances
+   at 600 s 9 better and 1 worse (X-n110-k13 19,389 -> 18,722, X-n115-k10
+   17,240 -> 14,877, X-n120-k6 20,089 -> 16,397); 38 routing instances at
+   240 s 18 better, 11 worse, time 7,167 -> 7,080 s; the 88 wide-set
+   instances with element or circuit at 240 s 6,369 -> 6,387 s, with only
+   3 of them running route neighbourhoods (the rest run unchanged code).
+
 Version 4.11
 =============
 
