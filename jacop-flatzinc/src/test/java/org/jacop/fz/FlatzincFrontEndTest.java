@@ -66,6 +66,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
+import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -1681,8 +1682,14 @@ class FlatzincFrontEndTest {
   private int allSolutions(String model) throws IOException, ParseException {
     Path fzn = tmp.resolve("declared.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);
-    String out =
-        runInThisJvm(new Options(new String[] {"-a", "--symmetry", "off", fzn.toString()}), fzn);
+    String out;
+    try {
+      out =
+          runInThisJvm(new Options(new String[] {"-a", "--symmetry", "off", fzn.toString()}), fzn);
+    } catch (FailException _) {
+      // failed while the model was read, which Fz2jacop prints as unsatisfiable
+      return 0;
+    }
     return out.split("----------", -1).length - 1;
   }
 
@@ -1811,6 +1818,22 @@ class FlatzincFrontEndTest {
     int apart = allSolutions(vars + sub.formatted("c") + "solve satisfy;\n");
     assertTrue(apart > 0);
     assertEquals(apart, shared);
+  }
+
+  // bool2int(b, i) made i an alias of b without the declared domain of i, so b took 0 and 1 for
+  // an i declared 1..20 or 2..20 (FlatZinc mutation harness, substituted variables)
+  @Test
+  void aBooleanAliasKeepsTheDomainOfItsInteger() throws IOException, ParseException {
+    String model =
+        """
+        var %s: i;
+        var bool: b :: output_var;
+        constraint bool2int(b, i);
+        solve satisfy;
+        """;
+    assertEquals(2, allSolutions(model.formatted("0..20")));
+    assertEquals(1, allSolutions(model.formatted("1..20")));
+    assertEquals(0, allSolutions(model.formatted("2..20")));
   }
 
   // the output of a run of the model with the given options, in this JVM (no watchdog)

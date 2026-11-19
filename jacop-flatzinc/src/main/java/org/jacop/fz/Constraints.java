@@ -948,10 +948,9 @@ public class Constraints implements ParserTreeConstants {
       return;
     }
     dictionary.addAlias(v1, v2);
-    if (v1.singleton() || v2.singleton()) {
-      v1.domain.in(store.level, v1, v2.domain);
-      v2.domain.in(store.level, v2, v1.domain);
-    }
+    // v1 stands for v2 from now on, so it takes the declared domain of v2 (var 2..20: i)
+    v1.domain.in(store.level, v1, v2.domain);
+    v2.domain.in(store.level, v2, v1.domain);
     if (debug) {
       FzConsole.println("% Alias: " + v1 + " == " + v2);
     }
