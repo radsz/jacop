@@ -790,14 +790,22 @@ class GlobalConstraints implements ParserTreeConstants {
   // and dominance reasons of Subcircuit it does not. The decomposition does not state that the
   // successors differ, and --proof implies -b, which leaves out the implied Alldistinct, so the
   // all-different is posted here: without it two nodes could share a successor (tpp and mario
-  // proved optima below the true ones).
+  // proved optima below the true ones). The successors leave the positions open, and only fixed
+  // positions rule out a second cycle, so the positions are search variables: a search that is not
+  // lazy clause generation (-a, or the hand-over after a slow LCG) labelled the successors alone
+  // and accepted two cycles (mario_t_hard_5 proved 4482 with nodes 1 and 2 on a cycle of their
+  // own).
   private void subcircuit(IntVar[] v) {
     if (support.options.proof() == null) {
       support.pose(new Subcircuit(v));
       return;
     }
-    for (Constraint c : Subcircuit.decomposition(store, v)) {
+    IntVar[] position = new IntVar[v.length];
+    for (Constraint c : Subcircuit.decomposition(store, v, position)) {
       support.pose(c);
+    }
+    for (IntVar p : position) {
+      support.dictionary.addSearchVar(p);
     }
     support.pose(new Alldiff(v));
   }
