@@ -81,6 +81,7 @@ import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XplusYeqC;
+import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cfn.CostNetworkBound;
 import org.jacop.constraints.cumulative.CumulativeBasic;
@@ -101,6 +102,7 @@ import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.FloatCid;
+import org.jacop.floats.search.FloatDive;
 import org.jacop.floats.search.LargestDomainFloat;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.fz.constraints.ClampedBounds;
@@ -459,16 +461,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   static void releaseAllBut(SimpleNode solveItem) {
     Node kept = solveItem;
     while (kept.jjtGetParent() instanceof SimpleNode parent) {
-      if (parent.children != null) {
-        for (int i = 0; i < parent.children.length; i++) {
-          if (parent.children[i] != kept) {
-            // and its own items: a node another structure keeps (a rewritten constraint) reaches
-            // them through its parent, which would keep every item of the model live
-            if (parent.children[i] instanceof SimpleNode released && released.children != null) {
-              Arrays.fill(released.children, null);
-            }
-            parent.children[i] = null;
+      for (int i = 0; i < parent.jjtGetNumChildren(); i++) {
+        Node child = parent.jjtGetChild(i);
+        if (child != kept) {
+          // and its own items: a node another structure keeps (a rewritten constraint) reaches
+          // them through its parent, which would keep every item of the model live
+          if (child instanceof SimpleNode released) {
+            released.releaseChildren();
           }
+          parent.releaseChild(i);
         }
       }
       kept = parent;
@@ -3059,6 +3060,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       if (refutation != null) {
         ignored.add(refutation);
+        if (!refutation.solved()) {
+          // nothing woke the refutation at the root (no domain changed), and JaSAT will not run it:
+          // solve it now (hole-10 of XCSP 2017, the pigeon-hole as conflict tables, is refuted
+          // here in a few pivots, while JaSAT does not finish)
+          try {
+            refutation.consistency(store);
+          } catch (FailException e) {
+            lcgStatus = CdclSolver.UNSAT;
+            return false;
+          }
+        }
       }
       PureClauseModel cnf =
           PureClauseModel.of(store, sat.collectedClauses(), ignored, this::declaredVariables);
@@ -4006,7 +4018,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // fixed search keeps LCG once it has a solution
       return false;
     } else if (solutionFound) {
-      long before = costs.peekFirst()[1];
+      long before = lcgCostAt(now - stallNanos, costs.peekFirst()[1]);
       long raised =
           boundGained(now, stallNanos, lcgBoundGain, cost) ? lcgBoundRaised : Long.MIN_VALUE;
       if (stillProgressing(now, stallNanos, gain, raised, before, cost)) {
@@ -4024,6 +4036,45 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return false;
     }
     return true;
+  }
+
+  // the best cost printed before each solution of LCG that improved it, with the time of that
+  // solution (CdclSolver.now of the LCG solver)
+  private final ArrayDeque<long[]> lcgImprovements = new ArrayDeque<>();
+
+  /**
+   * The best cost printed at a time {@code t} of the LCG solver, from the solutions LCG improved it
+   * with. The checks of LCG's speed sample the best cost only from the first check on, so a check
+   * made right after LCG found its first or a better solution saw no gain over its window. With -f
+   * at 240 s, celar graph11 (MiniZinc Challenge 2013) gave way at 24 s and ended at 13,387, and
+   * with the solutions before the first check counted it keeps LCG and ends at 3,080;
+   * team-assignment data3_5_31 (2022) was not proved and is proved in 63 s.
+   *
+   * @param t the start of the window
+   * @param sampled the best cost the checks sampled at the start of the window
+   * @return the best cost printed at t, or {@code sampled} when LCG improved on nothing since t
+   */
+  private long lcgCostAt(long t, long sampled) {
+    synchronized (lcgImprovements) {
+      return costAt(lcgImprovements, t, sampled);
+    }
+  }
+
+  /**
+   * The best cost at a time {@code t}, from the improvements made since.
+   *
+   * @param improvements the time of each improvement and the best cost before it, in time order
+   * @param t the time
+   * @param sampled the best cost sampled at or after t
+   * @return the best cost before the first improvement after t, or {@code sampled} if there is none
+   */
+  static long costAt(Iterable<long[]> improvements, long t, long sampled) {
+    for (long[] improvement : improvements) {
+      if (improvement[0] > t) {
+        return Math.max(improvement[1], sampled);
+      }
+    }
+    return sampled;
   }
 
   // the share of the gap a bound raise must close to keep a slow LCG (lcg-slow-bound-gain): on
@@ -4113,8 +4164,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   /**
    * The number of squares x * x among the terms of the objective: the variables that the linear
-   * constraints over the cost variable tie to it, followed through up to three such constraints (an
-   * objective w1 * norm + w2 * violations with norm a sum of squares counts the squares of norm). A
+   * constraints over the cost variable tie to it, followed through up to {@link
+   * #SQUARE_SEARCH_DEPTH} such constraints (an objective w1 * norm + w2 * violations with norm a
+   * sum of squares counts the squares of norm; a long sum whose declared bound reaches beyond
+   * JaCoP's range is posted as a tree of partial sums, four levels deep on XCSP 2023 GBACP-UD01). A
    * sum of squared deviations is a balancing objective (balanced academic curricula, nurse
    * workloads, low autocorrelation): under LCG its bound literals say little about which value of a
    * decision raises the cost, while free search without learning chooses each value by its bound on
@@ -4130,6 +4183,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return squaredTerms;
   }
 
+  // the linear constraints followed from the cost variable to its squared terms: three missed the
+  // 333 squares of XCSP 2023 GBACP-UD01, whose objective is a tree of partial sums
+  private static final int SQUARE_SEARCH_DEPTH = 8;
+
   // the squares among the objective's terms, -1 before they are counted
   private int squaredTerms = -1;
 
@@ -4140,7 +4197,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       Var square = squareOf(c);
       if (square != null) {
         squares.add(square);
-      } else if (c instanceof LinearInt || c instanceof SumWeight || c instanceof SumInt) {
+      } else if (c instanceof LinearInt
+          || c instanceof SumWeight
+          || c instanceof SumInt
+          || c instanceof XplusYeqZ) {
         linear.add(c);
       }
     }
@@ -4151,7 +4211,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     reached.add(costVar);
     Set<Constraint> used = Collections.newSetFromMap(new IdentityHashMap<>());
     Set<Var> frontier = Set.of(costVar);
-    for (int depth = 0; depth < 3 && !frontier.isEmpty(); depth++) {
+    for (int depth = 0; depth < SQUARE_SEARCH_DEPTH && !frontier.isEmpty(); depth++) {
       frontier = linearStep(frontier, linear, used, reached, squares);
     }
     return (int) reached.stream().filter(squares::contains).count();
@@ -7397,6 +7457,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     int solutionLimit = listener == null ? -1 : listener.solutionLimit;
     int base = store.level;
     boolean found = false;
+    // sampling dives for a search still running after FLOAT_DIVE_START of the time-out
+    // (FloatDiveSchedule)
+    FloatDiveSchedule dives =
+        FLOAT_DIVES && select instanceof SplitSelectFloat<?>
+            ? new FloatDiveSchedule(label, select, cost, listener, solutionLimit, base)
+            : null;
     while (true) {
       double best = label.getCostValueFloat();
       boolean farStep = !bisect[0] && best != Double.MAX_VALUE && far(lo[0], best, farOff[0]);
@@ -7414,6 +7480,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         }
         continue;
       }
+      int dived = dives == null ? 0 : dives.batch(best);
+      if (dived != 0) {
+        found |= dived > 0;
+        if (dived < 0 || label.timeOutOccured) {
+          break;
+        }
+        continue;
+      }
       boolean result = false;
       // the first run stops after FLOAT_CRAWL solutions and a run of the bisection at its first
       // solution, to start again from the root under the next bound: a depth-first search that
@@ -7423,6 +7497,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       boolean budget = bisect[0] || farStep;
       if (budget) {
         label.setNodesOut(label.getNodes() + Math.max(STEP_NODES, label.getNodes()));
+      }
+      if (dives != null) {
+        dives.startRun(budget);
       }
       int stopAt = -1;
       if (listener != null && FLOAT_RESTART) {
@@ -7448,6 +7525,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // found it
       result |= label.getCostValueFloat() < best;
       found |= result;
+      if (dives != null && dives.endRun()) {
+        continue;
+      }
       if (budget) {
         label.setNodesOut(Long.MAX_VALUE);
         if (label.timeOutOccured && options.getRemainingTimeOut() > 1) {
@@ -7571,6 +7651,237 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       pointProbeSolutions++;
     }
     return better;
+  }
+
+  // sampling dives of a float cost (FloatDive)
+  private static final boolean FLOAT_DIVES =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.floatDives", "true"));
+
+  // the share of the time-out after which a float cost that is not optimal yet gets dives
+  private static final double FLOAT_DIVE_START =
+      Double.parseDouble(System.getProperty("org.jacop.fz.floatDiveStart", "0.1"));
+
+  // the node budget of the first run of branch and bound once the dives started; it doubles each
+  // time a run uses it up
+  private static final long FLOAT_DIVE_NODES = Long.getLong("org.jacop.fz.floatDiveNodes", 10_000);
+
+  // the dives of the float cost, for the statistics
+  private FloatDive floatDive;
+
+  /**
+   * Sampling dives ({@link FloatDive}) for a float cost whose search is still running after
+   * FLOAT_DIVE_START of the time-out: that run is cut, and from then on runs of branch and bound,
+   * each with a doubled node budget, alternate with batches of dives under the bound best - gap.
+   * ex6_1_3 (Ibex optim/hard): branch and bound crawled along a flat valley at -0.3243 for 600 s,
+   * the dives reach the optimum -0.3525 in its corners, where interval bounds cannot lead a
+   * depth-first search. A batch spends as many calls of consistency as the run before it, times a
+   * share that halves after each batch that finds nothing; below 1/64 the dives stop and branch and
+   * bound runs to its end. A batch that finds a better solution runs again. Not from the start: a
+   * run from the root under the bound of a dive's solution near the optimum can take far longer
+   * than the branch and bound it replaces (ex6_1_2: 900 nodes in 25 s, against 21,000 nodes in 6 s
+   * for the whole proof), and so does a run that starts again after its node budget.
+   */
+  private final class FloatDiveSchedule {
+
+    private final DepthFirstSearch<T> label;
+
+    private final SelectChoicePoint<T> select;
+
+    private final FloatVar cost;
+
+    private final SimpleSolutionListener<T> listener;
+
+    private final int solutionLimit;
+
+    private final int base;
+
+    // the time left when the dives start, in milliseconds; 0 without a time-out
+    private final long diveAt;
+
+    private boolean diving;
+
+    private long nodes = FLOAT_DIVE_NODES;
+
+    private double share = 1;
+
+    // the calls of consistency of the last run of branch and bound
+    private long runCalls;
+
+    private long calls;
+
+    // the run is cut when the dives start
+    private boolean cut;
+
+    // the run has the node budget of the dives
+    private boolean run;
+
+    // the last dive failed with the bound at the root
+    private boolean rootFailed;
+
+    FloatDiveSchedule(
+        DepthFirstSearch<T> label,
+        SelectChoicePoint<T> select,
+        FloatVar cost,
+        SimpleSolutionListener<T> listener,
+        int solutionLimit,
+        int base) {
+      this.label = label;
+      this.select = select;
+      this.cost = cost;
+      this.listener = listener;
+      this.solutionLimit = solutionLimit;
+      this.base = base;
+      this.diveAt =
+          options.getTimeOut() > 0 ? (long) (options.getTimeOut() * (1 - FLOAT_DIVE_START)) : 0;
+    }
+
+    /**
+     * Runs a batch of dives once they started.
+     *
+     * @param best the best cost so far
+     * @return 1 if a dive found a better solution, -1 at the time-out, 0 otherwise
+     */
+    int batch(double best) {
+      if (!diving) {
+        return 0;
+      }
+      double limit = best == Double.MAX_VALUE ? Double.MAX_VALUE : best - gap(best);
+      if (probe(limit, Math.max(1, (long) (share * runCalls)))) {
+        share = 1;
+        return 1;
+      }
+      if (label.timeOutOccured) {
+        return -1;
+      }
+      share /= 2;
+      diving = share >= 1.0 / 64;
+      return 0;
+    }
+
+    /**
+     * Sets the node budget or the cut of the next run of branch and bound.
+     *
+     * @param budget the run has a node budget of its own
+     */
+    void startRun(boolean budget) {
+      run = diving && !budget;
+      calls = store.numberConsistencyCalls;
+      if (run) {
+        label.setNodesOut(label.getNodes() + nodes);
+      }
+      long left = options.getRemainingTimeOut();
+      cut = !diving && share == 1 && diveAt > 0 && left > diveAt;
+      if (cut) {
+        label.setTimeOutMilliseconds(left - diveAt);
+      }
+    }
+
+    /**
+     * Ends a run of branch and bound.
+     *
+     * @return true if it was cut for the dives or used up their node budget, so the search goes on
+     */
+    boolean endRun() {
+      runCalls = store.numberConsistencyCalls - calls;
+      if (cut) {
+        setSearchTimeout(label);
+        diving = resume();
+        return diving;
+      }
+      if (run) {
+        label.setNodesOut(Long.MAX_VALUE);
+        if (resume()) {
+          nodes *= 2;
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // a run stopped by its limit before the time-out goes on
+    private boolean resume() {
+      if (label.timeOutOccured && options.getRemainingTimeOut() > 1) {
+        label.timeOutOccured = false;
+        return true;
+      }
+      return false;
+    }
+
+    /**
+     * Dives under a bound on the cost until one finds a better solution, the dives have spent the
+     * calls of consistency or the bound fails at the root.
+     *
+     * @return true when a dive found a better solution
+     */
+    private boolean probe(double limit, long budget) {
+      if (floatDive == null) {
+        floatDive =
+            new FloatDive(
+                store,
+                ((SplitSelectFloat<?>) select).searchVariables,
+                cost,
+                options.getRandomSeed());
+      }
+      double before = label.getCostValueFloat();
+      long end = store.numberConsistencyCalls + budget;
+      boolean better = false;
+      boolean more = true;
+      while (more) {
+        if (options.getRemainingTimeOut() == 1) {
+          label.timeOutOccured = true;
+        } else {
+          better = dive(limit) && label.getCostValueFloat() < before;
+        }
+        if (better) {
+          floatDive.improved();
+        } else {
+          floatDive.failed();
+        }
+        more =
+            !better && !rootFailed && !label.timeOutOccured && store.numberConsistencyCalls < end;
+      }
+      return better;
+    }
+
+    /**
+     * Makes one dive and, when it narrows every float search variable, hands the box to the search,
+     * which labels what is left (integer variables) within a few nodes and records the solution.
+     *
+     * @return true if the search found a solution
+     */
+    private boolean dive(double limit) {
+      boolean found = false;
+      store.setLevel(base + 1);
+      // a bound that fails at the root fails every dive
+      rootFailed = true;
+      try {
+        if (limit != Double.MAX_VALUE) {
+          cost.domain.inMax(store.level, cost, limit);
+        }
+        rootFailed = !store.consistency();
+        if (!rootFailed && floatDive.dive()) {
+          if (listener != null) {
+            listener.setSolutionLimit(listener.solutionsNo() + 1);
+          }
+          label.setNodesOut((long) label.getNodes() + POINT_PROBE_NODES);
+          found = label.labeling(store, select, cost);
+        }
+      } catch (FailException _) {
+        store.clearChanged();
+      } finally {
+        while (store.level > base) {
+          store.removeLevel(store.level);
+          store.setLevel(store.level - 1);
+        }
+        if (listener != null) {
+          listener.setSolutionLimit(solutionLimit);
+        }
+        label.setNodesOut(Long.MAX_VALUE);
+        // the node limit stops the search as a time-out does
+        resume();
+      }
+      return found;
+    }
   }
 
   // the precision of the optimum: relative to its magnitude, as the gaps of Ibex and SCIP
@@ -7706,7 +8017,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         && !timeoutOccurred
         && isSearchComplete()
         && relaxedSearchComplete()
-        && !dictionary.domainsClamped()) {
+        && !clampedDomainsHideSolutions()) {
       IO.println(SEPARATOR_LINE);
     } else if (timeoutOccurred) {
       IO.println(TIME_OUT_MSG);
@@ -7818,6 +8129,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IO.println("%%%mzn-stat: floatLpFailures=" + c[2]);
       IO.println("%%%mzn-stat: floatLpPointProbes=" + pointProbes);
       IO.println("%%%mzn-stat: floatLpPointSolutions=" + pointProbeSolutions);
+    }
+    if (floatDive != null && options.getStatistics()) {
+      IO.println(
+          "%%%mzn-stat: floatDives="
+              + floatDive.dives()
+              + "\n%%%mzn-stat: floatDiveSteps="
+              + floatDive.steps()
+              + "\n%%%mzn-stat: floatDiveSolutions="
+              + floatDive.improvements());
     }
 
     printLinearRelaxationStatistics();
@@ -8180,7 +8500,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (!sat.collectedClauses().isEmpty()) {
       postCollectedClauses();
       if (!store.consistency()) {
-        IO.println(dictionary.domainsClamped() ? "=====UNKNOWN=====" : "=====UNSATISFIABLE=====");
+        IO.println(clampedDomainsHideSolutions() ? "=====UNKNOWN=====" : "=====UNSATISFIABLE=====");
         throw new TrivialSolution();
       }
     }
@@ -8191,7 +8511,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
 
     if ((options.getAll() || costVariable != null)
-        && (costVariable != null ? clampedDomainsKeepOptimum() : !dictionary.domainsClamped())) {
+        && (costVariable != null ? clampedDomainsKeepOptimum() : !clampedDomainsHideSolutions())) {
       IO.println(SEPARATOR_LINE);
     }
 
@@ -8896,6 +9216,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (costVariable instanceof IntVar cost && cost.singleton()) {
       if (lcg != null) {
         lcgLastCost = cost.value();
+        int previous = bestPrintedCost.get();
+        if (cost.value() < previous) {
+          synchronized (lcgImprovements) {
+            lcgImprovements.addLast(new long[] {lcg.sat().now(), previous});
+          }
+        }
       }
       bestPrintedCost.accumulateAndGet(cost.value(), Math::min);
     }

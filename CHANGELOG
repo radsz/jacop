@@ -8149,7 +8149,32 @@ Version 5.0 (unreleased)
    WeightedSpanningTree, BoundedPath, UnaryTransition, MultiCumulative,
    VectorBinpacking, XplusYgtC and XplusClteqZ.
 
-451. Regular, ExtensionalSupportMdd and Among (set and int forms) no
+451. JaLP shifts costs instead of moving columns to artificial bounds, and
+   its presolve holds inequality rows at the bound that a column singleton
+   pushes them to. A nonbasic column whose reduced cost ends up on the
+   wrong side of the tolerance by at most 1e-5 (as the slacks of
+   inequality rows do, by a few 1e-9, after the dual updates) has its cost
+   shifted to make the reduced cost 0, where it was moved to its 1e6
+   artificial bound before and took the basic values with it (cost
+   shifting, A. Koberstein, "The dual simplex method, techniques for a fast
+   and stable implementation", PhD thesis, Paderborn 2005; as in HiGHS).
+   The shifts are taken back at the optimum; when a column would then move
+   to an artificial bound, the primal simplex takes it into the basis
+   (-Dorg.jacop.jalp.shiftMax=0 turns shifting off). The presolve makes an
+   inequality row with two columns an equation when one is a column
+   singleton whose cost pushes it to a bound that the row implies (the
+   dual bound of a column singleton, Andersen and Andersen 1995, section
+   3.5), so that the doubleton equation substitutes it
+   (-Dorg.jacop.jalp.presolveTight=false). LP bench, 687 LPs at 120 s:
+   648 -> 653 solved, 0 wrong, 0.948 of the time on LPs over 0.5 s;
+   comp07-2idx 159,258 pivots -> 2,992 (TIME -> 3.3 s), thor50dday
+   45,687 -> 845 pivots (108 -> 4 s), dano3mip 75 -> 27 s, the n370
+   family 5,600 -> 230 pivots, ns1116954, supportcase10/42 and cont4 now
+   solved; pilot87 and neos-1354092 take 2x the pivots. The pivots of
+   JaCoP's own root LPs (jacop-root, 215) do not change; on the 21 wide
+   runs where it fires, 600 s, the same solved and total time.
+
+452. Regular, ExtensionalSupportMdd and Among (set and int forms) no
    longer listen to the removal of every store level. They record a level
    with Store.recordChange when they first change their state there, and
    the store calls their removeLevel only for those levels. Before, every
@@ -8162,8 +8187,158 @@ Version 5.0 (unreleased)
    at 600 s NurseRostering-10 goes from 5,584 to 5,147 (field best 5,054)
    and NurseRostering-07 from 1,377 to 1,297, with 3 better, 1 worse
    (Warehouse-60-120-01, 6,496 vs 6,504) and 20 equal results.
+452. The FlatZinc front end reads three more forms of XCSP 2017-2019
+   models: a binary table whose missing pairs are exactly x - y = d is an
+   edge x - y != d of the all-different detection (the table stays
+   posted; pigeonsPlus-11-04 35 -> 0.7 s); when the columns of a table
+   (all, or all but one) have the same sum in every row, that sum of 3
+   or more terms is posted as a linear equality (Bacp: 16 -> 24 of 24
+   proved at 240 s, total 2,084 -> 50 s; -Dorg.jacop.fz.tableSums=false
+   turns it off); and a model of clauses and 0/1 negative tables only
+   posts the tables as clauses, so it is a pure clause model, whose root
+   clause refutation now runs before JaSAT takes it (hole-10: unknown at
+   240 s -> 0.7 s; -Dorg.jacop.fz.negativeTableClauses=false turns it
+   off). None of them fires on the wide set or XCSP 2022-2025 except the
+   disequality edges, which fire without a clique on spot5.
 
-452. The linear relaxation expands a row whose sums lcg-split or linear
+453. JaSAT (CdclSolver) eliminates variables with a rising bound and with
+   gates, as Kissat: the bound (resolvents allowed over the clauses they
+   replace) is 0 before the search and rises through 1, 2, 4, 8 to 16
+   with each complete elimination run during search, resolvents may have
+   up to 100 literals, and when a variable is the output of an AND, XOR,
+   ITE gate or an equivalence (GateExtractor) only the resolvents of its
+   defining clauses with the other clauses are added (Een, Biere,
+   "Effective Preprocessing in SAT through Variable and Clause
+   Elimination", SAT 2005; Biere, Jarvisalo, Kiesl, "Preprocessing in SAT
+   Solving", Handbook of Satisfiability, 2nd ed., 2021). Later rounds try
+   only the variables whose clauses changed, and a run during search is
+   skipped when the last one found nothing and no new root fact or clause
+   came. With an external propagator (lazy clause generation) elimination
+   stays as before. On the 90 SAT Competition 2024/25 CNFs at 240 s JaSAT
+   solves 44 instead of 39 (seed 1: 45 instead of 41) in 0.94x (0.977x)
+   the time; on the structured UNSAT ones it made 2-3x the propagations
+   per conflict of Kissat because it eliminated far fewer variables
+   (algorithm-equivalence-checking 344 vs 124), now 136. At 600 s on 36
+   affected instances 31 instead of 26 are solved (planning,
+   grs-fp-comm, quasigroup-completion faster or new), total 0.71x.
+   CdclMain takes --elim-bound, --elim-clause-limit and --elim-gates.
+   GateExtractor looks for an XOR only on clause variable sets that have
+   enough clauses of one parity, each set once (sorted keys of both
+   occurrence lists instead of a scan of both lists per base clause): the
+   same gates in less time, Hamming-20-10-05-09 (XCSP 2024 as CNF) reaches
+   100k conflicts in 14.9 s instead of 20.1 s.
+
+454. Sampling dives for float objectives (FloatDive): a float search that
+   has not proved its optimum after 10 % of the time-out alternates runs
+   of branch and bound (node budget 10,000, doubling) with batches of
+   dives under the bound best - gap. A dive narrows the float search
+   variables in order to a box of the precision around a sampled value
+   and propagates after each one; the value is uniform in the domain or,
+   half of the time, Gaussian around the point of the last improving
+   dive, a (1+1) evolution strategy with the 1/5 success rule of
+   Rechenberg (Evolutionsstrategie, Frommann-Holzboog, 1973). Sampling
+   points for an upper bound follows the upper bounding of interval
+   branch and bound (I. Araya, G. Trombettoni, B. Neveu, G. Chabert,
+   J. Global Optim. 60(2), 2014) and diving with propagation the diving
+   heuristics of MIP (T. Berthold, Primal heuristics for mixed integer
+   programs, diploma thesis, TU Berlin, 2006). A batch spends as many
+   propagations as the run before it, halving after each batch that
+   finds nothing, and stops below 1/64. On ex6_1_3 (Ibex optim/hard)
+   branch and bound crawled along a flat valley at -0.3243 and -f stayed
+   at the LP point -0.2562; with dives both reach -0.3524 to -0.3521
+   (optimum -0.3525). On the 41 optimisation instances of the float
+   quick set at 600 s: default 14 better objectives, none worse, 23
+   proved instead of 22, total time 10,996 s instead of 11,577 s; -f 9
+   better, 2 worse, 4 instances with a first solution, proofs and total
+   time unchanged. -Dorg.jacop.fz.floatDives=false turns them off;
+   org.jacop.fz.floatDiveStart (0.1) and floatDiveNodes (10000) tune them.
+
+455. Explanations of large layered graphs (MDD, regular, cost MDD) under
+   lazy clause generation are found with less work, with the same
+   reasons. The four cuts of an explanation (nearest and far, source or
+   target first; Gange, Stuckey and Szymanek, MDD propagators with
+   explanation, Constraints 16(4), 2011) are walked together, one bit per
+   cut on each node, with the labels of a level looked up per value block
+   and the arrays of a walk kept per thread. On graphs of at least 4,096
+   nodes a far cut, which walks through the unreachable nodes or dead
+   ends, most of the graph deep in the search, is found from the other
+   side when that is smaller: the edges of removed values out of the
+   reached nodes (or into the nodes reaching the last level), each kept
+   when a depth-first search finds a path of unreachable nodes (dead ends)
+   to the cut; the nearest cuts of a failure are read from per-node masks
+   of the labels of its edges. On WordDesign2-words-mdd-055 (XCSP 2023,
+   1,485 MDDs on a diagram of 525,720 nodes and 1.83 million edges) an
+   explanation takes about 7 ms instead of 60 ms, and LCG makes about 11
+   conflicts a second instead of 1; WordDesign2-words-mdd-035 and 045
+   are solved in about 70 s instead of 485 s.
+
+456. JaLP proves infeasibility that its presolve sees without simplex
+   pivots where it can. When the presolve finds the bounds infeasible, or
+   its reduced LP ends infeasible, BoundProof propagates the row activity
+   bounds over the whole LP with a trail and resolves the conflict
+   backwards into a Farkas ray over the rows (feasibility-based bound
+   tightening as in Achterberg, Bixby, Gu, Rothberg and Weninger,
+   "Presolve reductions in mixed integer programming", INFORMS Journal on
+   Computing 32 (2020) 473-506; Brearley, Mitra and Williams, Mathematical
+   Programming 8 (1975) 54-83), checked like a simplex proof. Otherwise
+   the dual simplex looks for the proof from the slack basis with zero
+   costs, then goes on with the costs if the LP is feasible after all.
+   farkas() returns the ray either way; provedByBounds() tells which.
+   On the 29 infeasible Netlib LPs 12 are proved with no pivot and the
+   total time goes from 13.7 to 4.1 s (gosh 8.9 -> 2.3 s, greenbea 1.7 ->
+   0.04 s); pivots on the 658 feasible LPs of the LP bench are unchanged.
+   -Dorg.jacop.jalp.boundProof=false turns it off.
+
+452. Free search before LCG (entry 426) finds the squares of an objective
+   behind partial sums: the walk from the cost variable follows up to
+   eight linear constraints instead of three, and x + y = z as well. An
+   objective whose declared bound reaches beyond JaCoP's range is posted
+   as a tree of partial sums, four levels deep on XCSP 2023 GBACP-UD01,
+   UD03, UD07 and UD09 and their table forms, so free search never ran
+   first there. At 600 s with -f on those 8 instances: geometric mean of
+   the best objective 0.20 of before, better on all 8 (UD07 3727 -> 310,
+   table-UD01 13084 -> 793, table-UD03 7354 -> 423); at 240 s on all 20
+   GBACP instances 0.50. No wide instance changes: only two gbac
+   instances have a squared objective, found at both depths.
+
+453. jacop_nvalue over variables whose domains fall into blocks that share
+   no value is posted as one count of distinct values (Values) per block
+   and a sum of the counts. Each count then has the bound of its own
+   block (the NValue bounds of Bessiere, Hebrard, Hnich, Kiziltan and
+   Walsh, Constraints 11(4), 2006, hold per block and add up), and a
+   learnt clause or a core over one block leaves the others out. In MiniZinc Challenge gfd-schedule each kind of item takes its
+   group from a range of its own: the proof that 2018 n200f5d50m40k6
+   needs 17 groups (no 16 without deadline penalty) took LCG more than
+   250,000 conflicts without an end under one count, and 1,153 failures
+   with one count per kind. On the 20 gfd-schedule instances at 240 s
+   with -f: solved 15 -> 20 (2016 and 2022 n180, 2018 n80 and n200, 2022
+   n200; CP-SAT proves them in 11 to 24 s), total time 1,398 -> 261 s;
+   default search solved 12 -> 13, total 1,974 -> 1,750 s. Easy
+   instances take up to 4 s more. It splits no other jacop_nvalue of the
+   MiniZinc Challenge or the 53 XCSP instances with one.
+   -Dorg.jacop.fz.nvalueBlocks=false turns it off.
+
+454. The speed check of LCG free search (entry 291) counts the solutions
+   LCG found before its first check. It sampled the best cost only from
+   that check on, so a check made right after LCG improved its cost saw
+   no gain over its window and LCG gave way. With -f at 600 s: celar
+   graph11 (MiniZinc Challenge 2013) 8,749 -> 3,080, ptv pax_period_20_5a
+   70 -> 60; unit-commitment L10 equal over two runs, L12 1,484,650 ->
+   1,489,050. On the wide-quick set at 240 s only celar graph11 changes.
+
+455. The linear relaxation defines every block sum of a tree of sums
+   (entry 425) by its own row. It took the first variable it could define
+   in a row, and the row of an inner block also holds the sums of the
+   blocks below it: when that row came first, a lower sum was defined by
+   it and the inner sum stayed a free column. On XCSP 2025 BusScheduling-c2
+   536 of 7,199 sums were free and the LP gave no guidance. Of the 21 wide
+   instances with a tree, 10 had free sums. With -f at 240 s on those 10
+   and the 12 BusScheduling instances: total 2,108 -> 1,911 s,
+   BusScheduling-r5 proved (240 -> 19 s), t2 19 -> 6 s, c1a 42 -> 73 s,
+   rcpsp-wet-diverse j60_19_6 58,529 -> 5,788, celar graph11 16,734 ->
+   11,670.
+
+457. The linear relaxation expands a row whose sums lcg-split or linear
    overlap factoring defined up to 65,536 terms (was 4,096; property
    org.jacop.lp.maxExpandedTerms). Merging repeated variables at every
    level (jacop #815) keeps a row at most as long as the distinct

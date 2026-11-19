@@ -318,6 +318,14 @@ final class GateExtractor {
     if (occSize[pos] > OCC_LIMIT || occSize[pos + 1] > OCC_LIMIT) {
       return null;
     }
+    if (occSize[pos] + occSize[pos + 1] < 4) {
+      return null;
+    }
+    // the variable sets of the candidate clauses of both signs, sorted, so that a base clause is
+    // only tried when its variable set has enough clauses, and each set only once (the scan of
+    // both occurrence lists per base clause took a sixth of the run on Hamming CNFs)
+    long[] sets = variableSets(pos);
+    boolean[] tried = new boolean[sets.length];
     int[] list = occ[o];
     for (int k = 0; k < occSize[o]; k++) {
       int[] base = clauses[list[k]];
@@ -326,15 +334,72 @@ final class GateExtractor {
         continue;
       }
       int need = 1 << (size - 1);
-      if (occSize[pos] + occSize[pos + 1] < need) {
+      long key = variableSet(base);
+      int at = Arrays.binarySearch(sets, key);
+      int first = at < 0 ? 0 : runStart(sets, at);
+      if (at < 0 || tried[first] || runEnd(sets, at) - first < need) {
         continue;
       }
       Gate g = xorOn(base, pos, need);
       if (g != null) {
         return g;
       }
+      // this set has no XOR on it: the other clauses over it need not be tried
+      tried[first] = true;
     }
     return null;
+  }
+
+  /** The keys of the variable sets of the clauses of 3 to MAX_XOR_INPUTS + 1 literals on pos. */
+  private long[] variableSets(int pos) {
+    long[] keys = new long[occSize[pos] + occSize[pos + 1]];
+    int n = 0;
+    for (int side = 0; side < 2; side++) {
+      int[] list = occ[pos + side];
+      for (int k = 0; k < occSize[pos + side]; k++) {
+        int[] c = clauses[list[k]];
+        effort++;
+        if (c.length >= 3 && c.length <= MAX_XOR_INPUTS + 1) {
+          keys[n++] = variableSet(c);
+        }
+      }
+    }
+    keys = Arrays.copyOf(keys, n);
+    Arrays.sort(keys);
+    return keys;
+  }
+
+  /**
+   * A key of the variables of a clause, its size and the parity of its negative literals, which all
+   * clauses of one XOR share; different sets may share a key, which only costs a needless try.
+   */
+  private static long variableSet(int[] c) {
+    long key = c.length;
+    int parity = 0;
+    for (int l : c) {
+      long z = ((l >>> 1) + 1) * 0x9E3779B97F4A7C15L;
+      key += z ^ (z >>> 29);
+      parity ^= l & 1;
+    }
+    return (key << 1 | parity) & Long.MAX_VALUE;
+  }
+
+  /** The first position of the keys equal to the one at position at of the sorted keys. */
+  private static int runStart(long[] keys, int at) {
+    int lo = at;
+    while (lo > 0 && keys[lo - 1] == keys[at]) {
+      lo--;
+    }
+    return lo;
+  }
+
+  /** The position after the last key equal to the one at position at of the sorted keys. */
+  private static int runEnd(long[] keys, int at) {
+    int hi = at + 1;
+    while (hi < keys.length && keys[hi] == keys[at]) {
+      hi++;
+    }
+    return hi;
   }
 
   // the XOR gate on the variables of base, if all its 2^(size-1) clauses are there

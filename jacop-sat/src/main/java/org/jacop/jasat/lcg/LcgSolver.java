@@ -691,9 +691,9 @@ public final class LcgSolver implements ExternalPropagator {
       // the trail took the same root domain when it was made: one copy per variable, not two
       IntDomain atTrail = trail.rootDomain(x);
       root[i] = atTrail.eq(x.dom()) ? atTrail : x.dom().cloneLight();
-      ge[i] = new LiteralMap(root[i].min(), root[i].max());
-      eq[i] = new LiteralMap(root[i].min(), root[i].max());
-      linked[i] = new LiteralMap(root[i].min(), root[i].max());
+      ge[i] = LiteralMap.NO_LITERALS;
+      eq[i] = LiteralMap.NO_LITERALS;
+      linked[i] = LiteralMap.NO_LITERALS;
       if (!root[i].singleton()) {
         heapOf(i).insert(i);
         if (root[i].min() < 0 || root[i].max() > 1) {
@@ -1005,7 +1005,7 @@ public final class LcgSolver implements ExternalPropagator {
       model.constraint(c);
     }
     for (IntVar[][] clause : proofClauses) {
-      model.clause(clause[0], clause[1]);
+      model.solverClause(clause[0], clause[1]);
     }
     proofCardinality = model.cardinalityLines();
     proofEqualities = model.equalityLines();
@@ -2884,6 +2884,21 @@ public final class LcgSolver implements ExternalPropagator {
     return d;
   }
 
+  /**
+   * The literal map of a variable in one of {@link #ge}, {@link #eq} and {@link #linked}, made at
+   * its first literal: most variables never get literals of some kind, and a map of each kind for
+   * every variable from the start took 210 MB of XCSP 2022 RoomMate-sr0700 (1.46 million
+   * variables), three quarters of them never used.
+   */
+  private LiteralMap own(LiteralMap[] maps, int i) {
+    LiteralMap m = maps[i];
+    if (m == LiteralMap.NO_LITERALS) {
+      m = new LiteralMap(root[i].min(), root[i].max());
+      maps[i] = m;
+    }
+    return m;
+  }
+
   /** The variable of [x >= v] for v in (root min, root max], created when missing, linked. */
   private int geVar(int i, int v) {
     int d = ge[i].get(v);
@@ -2894,7 +2909,7 @@ public final class LcgSolver implements ExternalPropagator {
       return d;
     }
     int lit = newLiteral(i, GE_KIND, v);
-    ge[i].put(v, lit);
+    own(ge, i).put(v, lit);
     link(i, v, lit);
     return lit;
   }
@@ -2918,7 +2933,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (above != LiteralMap.NONE) {
       structural.add(new int[] {-above, lit}); // [x >= above] -> [x >= v]
     }
-    linked[i].put(v, lit);
+    own(linked, i).put(v, lit);
     if (!RELEASE || sat.value(lit) != 0) {
       return;
     }
@@ -2956,7 +2971,7 @@ public final class LcgSolver implements ExternalPropagator {
       return geVar(i, v);
     }
     int lit = newLiteral(i, GE_KIND, v);
-    ge[i].put(v, lit);
+    own(ge, i).put(v, lit);
     addTransient(lit);
     return lit;
   }
@@ -3038,7 +3053,7 @@ public final class LcgSolver implements ExternalPropagator {
       return d;
     }
     int lit = newLiteral(i, EQ_KIND, v);
-    eq[i].put(v, lit);
+    own(eq, i).put(v, lit);
     linkEq(i, v, lit);
     return lit;
   }
@@ -3058,7 +3073,7 @@ public final class LcgSolver implements ExternalPropagator {
       return eqVar(i, v);
     }
     int lit = newLiteral(i, EQ_KIND, v);
-    eq[i].put(v, lit);
+    own(eq, i).put(v, lit);
     addTransient(lit);
     return lit;
   }
