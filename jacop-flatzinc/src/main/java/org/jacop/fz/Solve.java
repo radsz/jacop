@@ -104,6 +104,7 @@ import org.jacop.floats.search.FloatCid;
 import org.jacop.floats.search.LargestDomainFloat;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.fz.constraints.ClampedBounds;
+import org.jacop.fz.constraints.ClausalModel;
 import org.jacop.fz.constraints.CostNetworkDetector;
 import org.jacop.fz.constraints.ObjectiveDetector;
 import org.jacop.fz.constraints.Support;
@@ -234,6 +235,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   LcgSolver lcg;
   // the solver of a model of clauses alone, which JaSAT solves without lazy clause generation
   private CdclSolver pureSat;
+  // set when pureSat solved the CNF of a model compiled by ClausalCompiler
+  private boolean clausalSolved;
 
   // a variable of the pure clause model fixed by its complement symmetry
   private boolean pureComplementFixed;
@@ -485,6 +488,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     ASTSolveKind kind = (ASTSolveKind) item.jjtGetChild(item.jjtGetNumChildren() - 1);
     boolean satisfy = getKind(kind.getKind()) == 0;
     if (satisfy && (opt.getAll() || opt.getNumberSolutions() > 1)) {
+      return;
+    }
+    if (dictionary.clausalModel != null) {
+      // JaSAT solves the compiled CNF, which lex-leader constraints of the store would not break
       return;
     }
     if (dictionary.onRestart != null) {
@@ -3043,6 +3050,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private boolean executeLcgSearch(Var costVar) {
     Portfolio.Worker worker = options.portfolioWorker();
+    ClausalModel clausal = dictionary.clausalModel;
+    dictionary.clausalModel = null;
+    if (clausal != null
+        && costVar == null
+        && worker == null
+        && options.proof() == null
+        && !options.getAll()
+        && options.getNumberSolutions() <= 1
+        && options.freeSearch()
+        && executeClausalSearch(clausal)) {
+      return numberSolutions > 0;
+    }
     if (PureClauseModel.enabled()
         && costVar == null
         && worker == null
@@ -3612,6 +3631,83 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       printSolution();
     }
     return numberSolutions > 0;
+  }
+
+  /**
+   * Solves the CNF of a satisfaction model over small domains ({@link ClausalCompiler}) with JaSAT,
+   * and prints its solution with the store's variables fixed to it, once the store's constraints
+   * and collected clauses accept it.
+   *
+   * @return true when JaSAT decided the model or ran out of time; false when its solution was
+   *     rejected, and the model is then solved as without the compilation
+   */
+  private boolean executeClausalSearch(ClausalModel cnf) {
+    CdclSolver solver = cnf.solver();
+    if (options.debug()) {
+      FzConsole.println("% clausal model: " + cnf.numVars() + " variables solved by JaSAT");
+    }
+    if (options.getTimeOut() > 0 && CdclSolver.VIRTUAL_CLOCK) {
+      solver.setDeadline(solver.now() + options.getTimeOut() * 1_000_000L);
+    } else if (options.getTimeOut() > 0) {
+      solver.setDeadline(System.nanoTime() + options.getRemainingTimeOut() * 1_000_000L);
+    }
+    String dump = System.getProperty("org.jacop.fz.clausal.dump");
+    if (dump != null) {
+      try (java.io.Writer w = Files.newBufferedWriter(Path.of(dump))) {
+        cnf.writeDimacs(w);
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
+    }
+    int status = solver.solve();
+    if (status == CdclSolver.SAT) {
+      int level = store.level;
+      if (!cnf.fix(store, solver) || !store.consistency() || !clausesHold()) {
+        // not a solution of the store: a compilation error, reported, and solved without it
+        FzConsole.printlnErr(
+            "%% clausal model: solution rejected by the store; solving without it");
+        store.removeLevel(store.level);
+        store.setLevel(level);
+        return false;
+      }
+    }
+    pureSat = solver;
+    clausalSolved = true;
+    lcgStatus = status;
+    if (status == CdclSolver.SAT) {
+      printSolution();
+    }
+    return true;
+  }
+
+  // every collected clause holds for the fixed variables
+  private boolean clausesHold() {
+    for (IntVar[][] clause : sat.collectedClauses()) {
+      boolean holds = false;
+      for (int side = 0; side < 2 && !holds; side++) {
+        for (IntVar x : clause[side]) {
+          if (!x.singleton()) {
+            continue;
+          }
+          if ((x.value() == 1) == (side == 0)) {
+            holds = true;
+            break;
+          }
+        }
+      }
+      if (!holds && clause[0].length + clause[1].length > 0) {
+        boolean open = false;
+        for (IntVar[] part : clause) {
+          for (IntVar x : part) {
+            open |= !x.singleton();
+          }
+        }
+        if (!open) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   // the 0/1 and integer variables of the model in the order of their declarations
@@ -4981,7 +5077,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         int value = lcgLastCost;
         IO.println(MZN_STAT_OBJECTIVE + objectiveValue(minimize ? value : -value));
       }
-      if (pureSat != null) {
+      if (pureSat != null && clausalSolved) {
+        IO.println("%%%mzn-stat: clausalModel=true");
+      } else if (pureSat != null) {
         IO.println("%%%mzn-stat: pureClauseModel=true");
         if (pureComplementFixed) {
           IO.println("%%%mzn-stat: complementSymmetry=true");
