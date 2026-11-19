@@ -504,6 +504,47 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  /**
+   * A rewriting during search imposes its target at the current level, which copies the lists of
+   * constraints of each variable whose domain is not of that level yet. On variables in thousands
+   * of constraints these copies, one per level, took more than 5 GB in 40 s of XCSP 2025
+   * LotteryDesign-32-6-6-2-3000. An implication over such a variable is not rewritten: the domain
+   * stays the one of the root, and the implication still propagates.
+   */
+  @Test
+  void testNoRewritingCopiesALongListOfConstraints() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    for (int k = 0; k < 100; k++) {
+      store.impose(new XneqY(x, new IntVar(store, "z" + k, 0, 9)));
+    }
+    store.impose(new Implies(b, new XneqY(x, y)));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    b.domain.in(store.level, b, 1, 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().stamp()).isLessThan(store.level);
+    y.domain.in(store.level, y, 3, 3);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().contains(3)).isFalse();
+    store.removeLevel(store.level);
+    store.setLevel(store.level - 1);
+
+    // a variable in a few constraints is still rewritten onto
+    Store small = new Store();
+    IntVar u = new IntVar(small, "u", 0, 9);
+    IntVar w = new IntVar(small, "w", 0, 9);
+    IntVar c = new IntVar(small, "c", 0, 1);
+    small.impose(new Implies(c, new XneqY(u, w)));
+    assertThat(small.consistency()).isTrue();
+    small.setLevel(small.level + 1);
+    c.domain.in(small.level, c, 1, 1);
+    assertThat(small.consistency()).isTrue();
+    assertThat(u.dom().stamp()).isEqualTo(small.level);
+  }
+
   @Test
   void testInvalidSimpleTable() {
 

@@ -322,6 +322,15 @@ public final class AdaptiveLns {
   private int[] nodeValue;
   // the decision variables each node stands for, computed when first needed
   private int[][] near;
+  // the walk distance of each node to the nearest decision variable over constraints of at most
+  // NEAR_ARITY variables and over all constraints (Integer.MAX_VALUE for none), computed when first
+  // needed: a walk of nearWalk expands only nodes on a shortest path to a decision variable
+  private int[] nearSmall;
+  private int[] nearAll;
+  // the levels of the walk of nearWalk and the decision variables it found
+  private int[] walkLevel;
+  private int[] walkNext;
+  private int[] walkFound;
   private Map<Var, Integer> nodeOf;
   // the vehicle routes of the model
   private final List<RouteStructure> routings = new ArrayList<>();
@@ -1125,7 +1134,7 @@ public final class AdaptiveLns {
    * breadth-first walk from it over constraints of at most {@link #NEAR_ARITY} variables, or, when
    * that walk meets none, over the other constraints of the graph, at most {@link #MAX_NEAR}.
    */
-  private int[] near(int u) {
+  int[] near(int u) {
     if (u < vars.length) {
       return new int[] {u};
     }
@@ -1144,43 +1153,119 @@ public final class AdaptiveLns {
     return found;
   }
 
+  /**
+   * The decision variables a breadth-first walk from u meets first, over constraints of at most
+   * arity variables, in the order the walk meets them (at most MAX_NEAR of them, spread over that
+   * order). The walk skips the nodes on no shortest path from u to a decision variable: they lead
+   * to none of those found, and a node that does is first met from a node on such a path, as is
+   * every constraint it is met through, so the order is that of the walk over all nodes. On
+   * rcpsp-wet-diverse j60_19_6 (287,666 variables) the whole walk visited about a million
+   * constraint memberships to find one variable four levels away, 61 % of the -f run.
+   */
   private int[] nearWalk(int u, int arity) {
+    int[] dist = arity == NEAR_ARITY ? nearSmall : nearAll;
+    if (dist == null) {
+      dist = distances(arity);
+      if (arity == NEAR_ARITY) {
+        nearSmall = dist;
+      } else {
+        nearAll = dist;
+      }
+    }
+    int d = dist[u];
+    if (d == Integer.MAX_VALUE) {
+      return new int[0];
+    }
+    if (walkLevel == null) {
+      walkLevel = new int[nodes.length];
+      walkNext = new int[nodes.length];
+      walkFound = new int[vars.length];
+    }
     stamp++;
-    List<Integer> found = new ArrayList<>();
-    List<Integer> level = new ArrayList<>();
-    level.add(u);
+    int[] level = walkLevel;
+    int[] next = walkNext;
+    int[] found = walkFound;
+    int levelSize = 1;
+    int nf = 0;
+    level[0] = u;
     seenVar[u] = stamp;
-    while (!level.isEmpty() && found.isEmpty()) {
-      List<Integer> next = new ArrayList<>();
-      for (int v : level) {
-        for (int c : varCons[v]) {
+    for (int depth = 1; levelSize > 0 && nf == 0; depth++) {
+      int nextSize = 0;
+      for (int k = 0; k < levelSize; k++) {
+        for (int c : varCons[level[k]]) {
           if (seenCon[c] == stamp || conVars[c].length > arity) {
             continue;
           }
           seenCon[c] = stamp;
           for (int w : conVars[c]) {
             if (seenVar[w] != stamp) {
-              seenVar[w] = stamp;
               if (w < vars.length) {
-                found.add(w);
-              } else {
-                next.add(w);
+                seenVar[w] = stamp;
+                found[nf++] = w;
+              } else if (dist[w] == d - depth) {
+                seenVar[w] = stamp;
+                next[nextSize++] = w;
               }
             }
           }
         }
       }
+      int[] t = level;
       level = next;
+      next = t;
+      levelSize = nextSize;
     }
-    if (found.size() > MAX_NEAR) {
+    if (nf > MAX_NEAR) {
       // a deterministic choice of the nearest ones, spread over the list
-      List<Integer> some = new ArrayList<>(MAX_NEAR);
+      int[] some = new int[MAX_NEAR];
       for (int k = 0; k < MAX_NEAR; k++) {
-        some.add(found.get(k * found.size() / MAX_NEAR));
+        some[k] = found[(int) ((long) k * nf / MAX_NEAR)];
       }
-      found = some;
+      return some;
     }
-    return found.stream().mapToInt(Integer::intValue).toArray();
+    return Arrays.copyOf(found, nf);
+  }
+
+  /**
+   * The walk distance of every node to the nearest decision variable over constraints of at most
+   * arity variables: 0 for a decision variable, Integer.MAX_VALUE when it meets none.
+   */
+  private int[] distances(int arity) {
+    int[] dist = new int[nodes.length];
+    Arrays.fill(dist, Integer.MAX_VALUE);
+    int[] queue = new int[nodes.length];
+    boolean[] taken = new boolean[conVars.length];
+    int tail = 0;
+    for (int v = 0; v < vars.length; v++) {
+      dist[v] = 0;
+      queue[tail++] = v;
+    }
+    for (int head = 0; head < tail; head++) {
+      int v = queue[head];
+      for (int c : varCons[v]) {
+        if (taken[c] || conVars[c].length > arity) {
+          continue;
+        }
+        taken[c] = true;
+        for (int w : conVars[c]) {
+          if (dist[w] == Integer.MAX_VALUE) {
+            dist[w] = dist[v] + 1;
+            queue[tail++] = w;
+          }
+        }
+      }
+    }
+    return dist;
+  }
+
+  /** The number of nodes of the graph: the decision variables first, then the others, for tests. */
+  int nodeCount() {
+    return nodes.length;
+  }
+
+  /** The nodes of each constraint of the graph, for tests. */
+  int[][] constraintNodes() {
+    return conVars;
   }
 
   /** Relaxes all the variables of constraints chosen at random until enough are relaxed. */

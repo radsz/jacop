@@ -105,6 +105,7 @@ import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SubcircuitCost;
 import org.jacop.constraints.SumBool;
+import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SymmetricAlldifferent;
 import org.jacop.constraints.SymmetricGCC;
 import org.jacop.constraints.TableCliques;
@@ -207,10 +208,11 @@ class GlobalConstraints implements ParserTreeConstants {
   // the tasks of the cumulative constraints read so far, see taskKey
   private final Set<List<IntVar>> cumulativeTasks = new HashSet<>();
 
-  // Tables over at most TableCliques.MAX_ARITY variables with the same tuples (after the filtering
-  // by the domains) share one tuple array, the reformulation of the table and, through the first
-  // HybridTable posted for them, the bit-sets built from the tuples. Models such as CrazyFrog post
-  // one large binary table on a thousand pairs of variables.
+  // Tables with the same tuples (after the filtering by the domains) share one tuple array, the
+  // reformulation of the table and, through the first HybridTable posted for them, the bit-sets
+  // built from the tuples. Models such as CrazyFrog post one large binary table on a thousand pairs
+  // of variables, and pigeonsPlus (XCSP 2017) one table of 5.8 million rows on eight lists of eight
+  // variables, which ran out of 4 GB when each table had its own tuples and cells.
   private final Map<TableTuples, int[][]> internedTables = new HashMap<>();
   private final Map<int[][], HybridTable> tableByTuples = new IdentityHashMap<>();
   private final Map<int[][], TableReformulation.Result> reformulations = new IdentityHashMap<>();
@@ -2060,9 +2062,9 @@ class GlobalConstraints implements ParserTreeConstants {
     if (vu.length != v.length) {
       poseTableWithUniqueVars(v, t, vu);
     } else {
+      t = internedTables.computeIfAbsent(new TableTuples(t), TableTuples::tuples);
+      tableByTuples.putIfAbsent(t, null);
       if (v.length <= TableCliques.MAX_ARITY) {
-        t = internedTables.computeIfAbsent(new TableTuples(t), TableTuples::tuples);
-        tableByTuples.putIfAbsent(t, null);
         support.dictionary.addTable(v, t);
       }
       poseImpliedTableSums(v, t);
@@ -3436,6 +3438,16 @@ class GlobalConstraints implements ParserTreeConstants {
     int[] from = support.getIntArray((SimpleNode) node.jjtGetChild(2));
     IntDomain[] label = support.getSetArray((SimpleNode) node.jjtGetChild(3));
     int[] to = support.getIntArray((SimpleNode) node.jjtGetChild(4));
+
+    // a diagram that is exactly a sum of its variables equal to a constant is posted as that sum
+    // (XCSP MagicSquare-mdd); --proof keeps the diagram
+    if (MddLinearSum.enabled() && support.options.proof() == null) {
+      Long s = MddLinearSum.sum(x, level, from, label, to);
+      if (s != null && s >= IntDomain.MIN_INT && s <= IntDomain.MAX_INT) {
+        support.pose(new SumInt(x, "==", support.dictionary.getConstant(s.intValue())));
+        return;
+      }
+    }
 
     // the layered graph must not have duplicated variables
     IntVar[] xx = removeDuplicates(x);

@@ -1470,6 +1470,11 @@ public class VariablesParameters implements ParserTreeConstants {
   int[] getArrayOfScalarFlatExpr(SimpleNode node, int index, int size) {
     SimpleNode child = (SimpleNode) node.jjtGetChild(index);
     int count = child.jjtGetNumChildren();
+    int[] packed = child.packedInts();
+    if (packed != null && count == size) {
+      // the declaration is dropped once read, and nothing changes a parameter array
+      return packed;
+    }
     if (count == size) {
       int[] aa = new int[size];
       for (int i = 0; i < count; i++) {

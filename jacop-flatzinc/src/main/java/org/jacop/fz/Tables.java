@@ -134,6 +134,9 @@ public class Tables {
   // its bound
   org.jacop.fz.constraints.CostNetworkDetector costNetwork;
 
+  // a satisfaction model over small domains compiled into one CNF, which Solve gives to JaSAT
+  public org.jacop.fz.constraints.ClausalModel clausalModel;
+
   // variables the detectors add for redundant constraints, which follow from the model's own: the
   // search of lazy clause generation branches on them last
   final ArrayList<Var> auxiliaryVariables = new ArrayList<>();

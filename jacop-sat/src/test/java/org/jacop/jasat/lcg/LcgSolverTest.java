@@ -3916,6 +3916,92 @@ class LcgSolverTest {
     assertThat(own).isGreaterThan(1000);
   }
 
+  /**
+   * Closed global cardinalities with fixed counts over variables of at most four values become
+   * clauses before search ({@code jacop.lcg.gccClauses}); the answers must match brute force.
+   */
+  @Test
+  void smallDomainGccAsClausesAgreesWithBruteForce() {
+    Random rnd = new Random(53);
+    int sat = 0;
+    int unsat = 0;
+    long encoded = 0;
+    for (int instance = 0; instance < 400; instance++) {
+      Store store = new Store();
+      int n = 5 + rnd.nextInt(3);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, rnd.nextInt(4) == 0 ? 1 : 0, 3);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 1 + rnd.nextInt(2); c > 0; c--) {
+        int[] at = new int[3 + rnd.nextInt(n - 2)];
+        for (int k = 0; k < at.length; k++) {
+          at[k] = pick(rnd, n, Arrays.copyOf(at, k));
+        }
+        IntVar[] q = new IntVar[at.length];
+        for (int k = 0; k < at.length; k++) {
+          q[k] = x[at[k]];
+        }
+        // mostly closed GCCs (the counts add up to the list), which become clauses
+        int[] values = {0, 1, 2, 3};
+        int[] lb = new int[values.length];
+        for (int k = 0; k < at.length; k++) {
+          lb[rnd.nextInt(values.length)]++;
+        }
+        int[] ub = lb.clone();
+        if (rnd.nextInt(4) == 0) {
+          ub[rnd.nextInt(values.length)]++;
+        }
+        relations.add(
+            new Relation(
+                new CountValuesBounds(q, lb, ub, values),
+                t -> {
+                  for (int k = 0; k < values.length; k++) {
+                    int count = 0;
+                    for (int i : at) {
+                      if (t[i] == values[k]) {
+                        count++;
+                      }
+                    }
+                    if (count < lb[k] || count > ub[k]) {
+                      return false;
+                    }
+                  }
+                  return true;
+                }));
+      }
+      for (int c = rnd.nextInt(2); c > 0; c--) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      encoded += solver.gccsAsClauses;
+    }
+    assertThat(sat).isGreaterThan(40);
+    assertThat(unsat).isGreaterThan(40);
+    assertThat(encoded).isGreaterThan(100);
+  }
+
   /** An automaton of three states, its transitions on small ranges, over 3 or 4 variables. */
   private static Relation regularRelation(IntVar[] x, Random rnd) {
     int[] at = new int[3 + rnd.nextInt(2)];
