@@ -106,7 +106,7 @@ class LinearConstraints implements ParserTreeConstants {
     // If a linear term contains only constants and can be evaluated
     // check if satisfied and do not generate constraint
     if (par3.min() == par3.max()) {
-      Integer sum = evaluateConstantLinearTerm(p1, p2);
+      Long sum = evaluateConstantLinearTerm(p1, p2);
       if (sum != null) {
         if (sum == par3.min()) {
           return;
@@ -217,10 +217,10 @@ class LinearConstraints implements ParserTreeConstants {
     }
     int p3 = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
     boolean p2Fixed = allConstants(p2);
-    int s = 0;
+    long s = 0;
     if (p2Fixed) {
       for (int el = 0; el < p2.length; el++) {
-        s += p2[el].min() * p1[el];
+        s += (long) p2[el].min() * p1[el];
       }
     }
     IntVar p4 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
@@ -259,7 +259,7 @@ class LinearConstraints implements ParserTreeConstants {
   }
 
   private void intLinReifEq(
-      int[] p1, IntVar[] p2, int p3, IntVar p4, boolean p2Fixed, int s, boolean isReified) {
+      int[] p1, IntVar[] p2, int p3, IntVar p4, boolean p2Fixed, long s, boolean isReified) {
     if (p2Fixed) {
       handleIntLinReifEqFixed(p4, p3, s, isReified);
       return;
@@ -286,7 +286,7 @@ class LinearConstraints implements ParserTreeConstants {
     }
   }
 
-  private void handleIntLinReifEqFixed(IntVar p4, int p3, int s, boolean isReified) {
+  private void handleIntLinReifEqFixed(IntVar p4, int p3, long s, boolean isReified) {
     if (isReified) {
       p4.domain.inValue(store.level, p4, s == p3 ? 1 : 0);
     } else if (s != p3) {
@@ -525,7 +525,7 @@ class LinearConstraints implements ParserTreeConstants {
       }
     }
 
-    Integer s = evaluateConstantLinearTerm(p1, p2);
+    Long s = evaluateConstantLinearTerm(p1, p2);
     boolean p2Fixed = s != null;
 
     if (!p2Fixed && (operation == Support.EQ || operation == Support.LE)) {
@@ -609,7 +609,7 @@ class LinearConstraints implements ParserTreeConstants {
     int_lin_relationEq(p1, p2, p3, null, false);
   }
 
-  private void int_lin_relationEq(int[] p1, IntVar[] p2, int p3, Integer s, boolean p2Fixed)
+  private void int_lin_relationEq(int[] p1, IntVar[] p2, int p3, Long s, boolean p2Fixed)
       throws FailException {
     if (p2Fixed) {
       if (s == p3) {
@@ -769,7 +769,7 @@ class LinearConstraints implements ParserTreeConstants {
     }
   }
 
-  private void int_lin_relationNe(int[] p1, IntVar[] p2, int p3, Integer s, boolean p2Fixed)
+  private void int_lin_relationNe(int[] p1, IntVar[] p2, int p3, Long s, boolean p2Fixed)
       throws FailException {
     if (p2Fixed) {
       if (s != p3) {
@@ -813,7 +813,7 @@ class LinearConstraints implements ParserTreeConstants {
     }
   }
 
-  private void int_lin_relationLt(int[] p1, IntVar[] p2, int p3, Integer s, boolean p2Fixed)
+  private void int_lin_relationLt(int[] p1, IntVar[] p2, int p3, Long s, boolean p2Fixed)
       throws FailException {
     if (p2Fixed) {
       if (s < p3) {
@@ -842,7 +842,7 @@ class LinearConstraints implements ParserTreeConstants {
     }
   }
 
-  private void int_lin_relationLe(int[] p1, IntVar[] p2, int p3, Integer s, boolean p2Fixed)
+  private void int_lin_relationLe(int[] p1, IntVar[] p2, int p3, Long s, boolean p2Fixed)
       throws FailException {
     if (p2Fixed) {
       if (s <= p3) {
@@ -1255,13 +1255,14 @@ class LinearConstraints implements ParserTreeConstants {
    * @param vars the variables array
    * @return the computed sum if all variables are constants, or null if not all are constants
    */
-  private Integer evaluateConstantLinearTerm(int[] weights, IntVar[] vars) {
+  private Long evaluateConstantLinearTerm(int[] weights, IntVar[] vars) {
     if (!allConstants(vars)) {
       return null;
     }
-    int sum = 0;
+    // in long: the terms of int coefficients and values overflow int
+    long sum = 0;
     for (int i = 0; i < vars.length; i++) {
-      sum += vars[i].min() * weights[i];
+      sum += (long) vars[i].min() * weights[i];
     }
     return sum;
   }

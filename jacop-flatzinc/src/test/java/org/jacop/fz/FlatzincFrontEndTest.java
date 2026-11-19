@@ -1418,6 +1418,32 @@ class FlatzincFrontEndTest {
   }
 
   /**
+   * A linear row over fixed variables is decided when it is posted; its sum was taken in int, so
+   * 2147483647 * 1 - 2147483647 * 3 wrapped to 2 and the row failed.
+   */
+  @Test
+  void linearRowOverFixedVariablesIsSummedWithoutOverflow() throws IOException {
+    String row = "[2147483647, -2147483647], [x, y], -2147483647";
+    String fixed = "var 1..1: x :: output_var;\nvar 3..3: y :: output_var;\n";
+    String[] out = run(fixed + "constraint int_lin_le(" + row + ");\nsolve satisfy;\n");
+    assertEquals("x = 1;\ny = 3;\n----------\n", out[0]);
+    out = run(fixed + "constraint int_lin_eq(" + row + ");\nsolve satisfy;\n");
+    assertTrue(out[0].endsWith("=====UNSATISFIABLE=====\n"), out[0]);
+    for (String[] reified :
+        new String[][] {{"eq", "false"}, {"ne", "true"}, {"lt", "true"}, {"le", "true"}}) {
+      out =
+          run(
+              fixed
+                  + "var bool: b :: output_var;\nconstraint int_lin_"
+                  + reified[0]
+                  + "_reif("
+                  + row
+                  + ", b);\nsolve satisfy;\n");
+      assertEquals("x = 1;\ny = 3;\nb = " + reified[1] + ";\n----------\n", out[0], reified[0]);
+    }
+  }
+
+  /**
    * A variable named twice in a linear row, as merged aliases leave it, has its coefficients added;
    * a sum beyond int wrapped around: 2^31 * i <= 2^30 accepted i = 1.
    */
