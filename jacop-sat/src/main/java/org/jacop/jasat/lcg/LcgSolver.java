@@ -4054,6 +4054,8 @@ public final class LcgSolver implements ExternalPropagator {
       if (workEnd == Long.MAX_VALUE) {
         return coreSearch.run(sat.conflicts + conflicts, coreCallLimit);
       }
+      runDeadline = deadline;
+      givenBack = 0;
       long full = setPhaseLimits(share, deadline);
       int result;
       if (CORE_NO_SOLUTION > 0) {
@@ -4063,7 +4065,7 @@ public final class LcgSolver implements ExternalPropagator {
         result = coreSearch.run(Long.MAX_VALUE, coreCallLimit);
         if (result == CdclSolver.UNKNOWN && sat.work() >= sat.workLimit()) {
           if (ownSolution()) {
-            sat.setWorkLimit(full);
+            sat.setWorkLimit(CoreSearch.GIVE_BACK ? full + givenBack : full);
             result = coreSearch.run(Long.MAX_VALUE, coreCallLimit);
           } else {
             coreSearch.noSolutionStops++;
@@ -4107,11 +4109,37 @@ public final class LcgSolver implements ExternalPropagator {
     return limit;
   }
 
+  // the deadline of the run around a phase of the core-guided schedule, and the work the phase was
+  // given back since it started (see #giveBack)
+  private long runDeadline = Long.MAX_VALUE;
+  private long givenBack;
+
+  /**
+   * Gives a phase of the core-guided schedule back the given work and time, which its searches
+   * spent on tests that proved nothing (core exhaustion that refutes nothing, the objective's
+   * probes): its work limit and its clock move by as much, the clock no later than the run's
+   * deadline, and the work also counts once the phase, with a solution of its own, goes on past the
+   * share it gets without one ({@link #CORE_NO_SOLUTION}). HaplotypeAssembly (MaxSAT Evaluation
+   * 2024) gave back 77M work, 38 s at {@link #WORK_PER_MS}, and its phase stopped twice on the
+   * clock.
+   */
+  void giveBack(long work, long nanos) {
+    givenBack += work;
+    if (sat.workLimit() != Long.MAX_VALUE) {
+      sat.setWorkLimit(sat.workLimit() + work);
+    }
+    long deadline = sat.deadline();
+    if (runDeadline != Long.MAX_VALUE && deadline < runDeadline && nanos > 0) {
+      sat.setDeadline(deadline > runDeadline - nanos ? runDeadline : deadline + nanos);
+    }
+  }
+
   /** Restores the limits of the run after a phase of the core-guided schedule. */
   private void endPhase(long deadline) {
     if (sat.deadline() < deadline && sat.now() > sat.deadline()) {
       clockStops++;
     }
+    runDeadline = Long.MAX_VALUE;
     sat.setDeadline(deadline);
     sat.setWorkLimit(Long.MAX_VALUE);
     sat.setConflictLimit(conflictCap);
