@@ -1839,6 +1839,29 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void subcircuitUnderProofLabelsPositions() throws IOException {
+    // Two cycles, 1 -> 2 -> 1 and 3 -> 4 -> 3. The --proof decomposition rules out the second cycle
+    // only once the positions are fixed, and the successors leave them open. -a ignores --proof but
+    // keeps its decomposition, and its search labelled the successors alone, so it printed the two
+    // cycles (as the hand-over after a slow LCG did on mario_t_hard_5, which proved 4482).
+    String fzn =
+        """
+        var {2}: x1:: output_var;
+        var {1}: x2:: output_var;
+        var {4}: x3:: output_var;
+        var {3}: x4:: output_var;
+        array [1..4] of var int: x = [x1,x2,x3,x4];
+        constraint jacop_subcircuit(x);
+        solve satisfy;
+        """;
+    String prefix = tmp.resolve("subcircuitcycles").toString();
+    String all = run(fzn, "-a", "--proof", prefix)[0];
+    assertTrue(all.contains("=====UNSATISFIABLE====="), all);
+    String proof = run(fzn, "--proof", prefix)[0];
+    assertTrue(proof.contains("=====UNSATISFIABLE====="), proof);
+  }
+
+  @Test
   void rootFailureUnderFreeSearchIsProved() throws IOException {
     // s is false (x5 <= x1 cannot hold), so r is true, and the row of r fails over the bounds:
     // the store of the LCG solver fails at the root. Under -f the root probing ran first, saw the
