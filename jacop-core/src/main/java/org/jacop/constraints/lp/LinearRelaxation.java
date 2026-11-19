@@ -1414,6 +1414,26 @@ public class LinearRelaxation extends Constraint
         tags.putIfAbsent(f, "given");
       }
     }
+    // over the root domains only, so that the cuts hold for the whole search; the pair literals
+    // that no row of the model holds get a row, so that they are columns
+    List<PartitionCuts> partitions =
+        PARTITION_CUTS && objective != null && store.level == 0
+            ? PartitionCuts.of(constraints)
+            : new ArrayList<>();
+    if (!partitions.isEmpty()) {
+      Set<IntVar> present = Collections.newSetFromMap(new IdentityHashMap<>());
+      for (LinearForm f : localForms) {
+        present.addAll(Arrays.asList(f.vars()));
+      }
+      for (PartitionCuts p : partitions) {
+        List<LinearForm> rows = p.columnRows(present);
+        localForms.addAll(rows);
+        tag(tags, rows, "partition");
+        for (LinearForm f : rows) {
+          present.addAll(Arrays.asList(f.vars()));
+        }
+      }
+    }
     int pairCliques = 0;
     // for an objective only, whose bound they raise: on satisfaction models (rubik) the longer
     // rows only make each call dearer
@@ -1703,10 +1723,7 @@ public class LinearRelaxation extends Constraint
     r.hall = hall;
     r.trees = trees;
     // over the root domains only, so that the cuts hold for the whole search
-    r.partitions =
-        PARTITION_CUTS && objective != null && store.level == 0
-            ? PartitionCuts.of(constraints)
-            : new ArrayList<>();
+    r.partitions = partitions;
     return r.rows() + r.extraColumns.length < 2 ? null : r;
   }
 
@@ -5258,6 +5275,7 @@ public class LinearRelaxation extends Constraint
               return found;
             },
             PARTITION_ROUNDS,
+            true,
             true);
     partitionCuts += result[1];
     if (result[0] == DualSimplex.OPTIMAL) {
@@ -5366,6 +5384,18 @@ public class LinearRelaxation extends Constraint
    */
   private long[] separatedRounds(
       java.util.function.Supplier<List<MirCut>> separation, int rounds, boolean toSparse) {
+    return separatedRounds(separation, rounds, toSparse, false);
+  }
+
+  // as above; with roomFirst, a dense tableau without room for a round of cuts moves to the sparse
+  // simplex before the first round (and back if no cut is kept): the tried rows can fill the dense
+  // tableau up to its cap before any cut (community detection rnd_n50_e2500 of the Challenge 2021:
+  // 1,610 rows and 2,934 violated triangle cuts, none of which fitted)
+  private long[] separatedRounds(
+      java.util.function.Supplier<List<MirCut>> separation,
+      int rounds,
+      boolean toSparse,
+      boolean roomFirst) {
     double start = lp.value(0);
     int firstCount = rows();
     LpSolver first = lp.copy();
@@ -5375,6 +5405,14 @@ public class LinearRelaxation extends Constraint
     int stall = 0;
     int status = DualSimplex.OPTIMAL;
     Set<List<Long>> seen = new HashSet<>();
+    if (roomFirst && simplex == Simplex.DENSE) {
+      long m = (long) lp.rows() + CUTS_PER_ROUND;
+      if (m * (m + lp.columns()) > MAX_TABLEAU && moveToSparse(true)) {
+        first = lp.copy();
+        firstRows = lpRow;
+        forced = true;
+      }
+    }
     for (int round = 0; round < rounds && stall < CAPACITY_STALL; round++) {
       if (toSparse
           && simplex == Simplex.DENSE

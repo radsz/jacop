@@ -45,6 +45,7 @@ import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XneqY;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.lcg.LinearForm;
 
 /**
  * Cuts of the clique partitioning polytope over the pair indicators of a model: Booleans {@code b
@@ -582,7 +583,51 @@ public final class PartitionCuts {
     return m;
   }
 
-  // the cut sum w p[a][b] <= rhs over the pairs, stated over the literals
+  /**
+   * Returns rows that make the literals missing from the given variables columns of the relaxation:
+   * for each such literal of a pair i, j, a triangle inequality {@code p[i][l] + p[l][j] - p[i][j]
+   * <= 1} over a node l with both pairs known. The pairs with no weight in the objective (zero
+   * modularity) are in no row of the model, and without them as columns no triangle over them could
+   * be separated.
+   *
+   * @param present the variables that are already in rows of the relaxation
+   * @return the rows, as {@code sum weights * vars <= rhs}
+   */
+  public List<LinearForm> columnRows(java.util.Set<IntVar> present) {
+    List<LinearForm> rows = new ArrayList<>();
+    boolean[] covered = new boolean[literals.length];
+    for (int k = 0; k < literals.length; k++) {
+      covered[k] = present.contains(literals[k]);
+    }
+    for (int i = 0; i < nodes; i++) {
+      for (int j = i + 1; j < nodes; j++) {
+        int k = pair[i][j];
+        if (k < 0 || covered[k]) {
+          continue;
+        }
+        for (int l = 0; l < nodes; l++) {
+          if (l != i && l != j && pair[i][l] != NONE && pair[l][j] != NONE) {
+            List<Cut> one = new ArrayList<>(1);
+            add(new int[] {i, l, i}, new int[] {l, j, j}, new long[] {1, 1, -1}, 1, null, one);
+            if (!one.isEmpty()) {
+              Cut c = one.get(0);
+              IntVar[] vs = new IntVar[c.literals.length];
+              for (int t = 0; t < vs.length; t++) {
+                vs[t] = literals[c.literals[t]];
+                covered[c.literals[t]] = true;
+              }
+              rows.add(new LinearForm(vs, c.weights, c.rhs, LinearForm.LE));
+            }
+            break;
+          }
+        }
+      }
+    }
+    return rows;
+  }
+
+  // the cut sum w p[a][b] <= rhs over the pairs, stated over the literals; with p null, the row
+  // whatever its violation
   private void add(int[] as, int[] bs, long[] ws, long rhs, double[][] p, List<Cut> found) {
     double violation = -rhs;
     Map<Integer, Long> weights = new java.util.TreeMap<>();
@@ -591,7 +636,7 @@ public final class PartitionCuts {
       if (k == NONE) {
         return;
       }
-      violation += ws[t] * p[as[t]][bs[t]];
+      violation += p == null ? 0 : ws[t] * p[as[t]][bs[t]];
       if (k >= 0) {
         if (negated[k]) {
           // w (1 - b)
@@ -605,7 +650,7 @@ public final class PartitionCuts {
       }
     }
     weights.values().removeIf(w -> w == 0);
-    if (weights.isEmpty() || !(violation > MIN_VIOLATION)) {
+    if (weights.isEmpty() || !(violation > MIN_VIOLATION || p == null)) {
       return;
     }
     int[] ls = new int[weights.size()];
