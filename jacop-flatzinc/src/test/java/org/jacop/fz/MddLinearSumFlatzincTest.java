@@ -72,13 +72,11 @@ class MddLinearSumFlatzincTest {
     // nodes per level by partial sum, kept only when the terminal stays reachable
     int minV = Arrays.stream(vals).min().getAsInt();
     int maxV = Arrays.stream(vals).max().getAsInt();
-    List<Map<Integer, Integer>> levels = new ArrayList<>();
     List<Integer> level = new ArrayList<>();
     List<int[]> edges = new ArrayList<>();
     Map<Integer, Integer> current = new LinkedHashMap<>();
     current.put(0, 1);
     level.add(1);
-    levels.add(current);
     for (int l = 0; l < n; l++) {
       Map<Integer, Integer> next = new LinkedHashMap<>();
       int rest = n - l - 1;

@@ -3438,8 +3438,8 @@ class GlobalConstraints implements ParserTreeConstants {
     IntDomain[] label = support.getSetArray((SimpleNode) node.jjtGetChild(3));
     int[] to = support.getIntArray((SimpleNode) node.jjtGetChild(4));
 
-    // a diagram that states exactly x_1 + ... + x_n = S is posted as that sum (MagicSquare-mdd);
-    // --proof keeps the diagram
+    // a diagram that is exactly a sum of its variables equal to a constant is posted as that sum
+    // (XCSP MagicSquare-mdd); --proof keeps the diagram
     if (MddLinearSum.enabled() && support.options.proof() == null) {
       Long s = MddLinearSum.sum(x, level, from, label, to);
       if (s != null && s >= IntDomain.MIN_INT && s <= IntDomain.MAX_INT) {
