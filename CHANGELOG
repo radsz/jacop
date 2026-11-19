@@ -8068,6 +8068,31 @@ Version 5.0 (unreleased)
    (costas-array and blocks-world slower over three rounds);
    -Djacop.lcg.shiftSplitBounds=true|false overrides.
 
+448. Sampling dives for float objectives (FloatDive): a float search that
+   has not proved its optimum after 10 % of the time-out alternates runs
+   of branch and bound (node budget 10,000, doubling) with batches of
+   dives under the bound best - gap. A dive narrows the float search
+   variables in order to a box of the precision around a sampled value
+   and propagates after each one; the value is uniform in the domain or,
+   half of the time, Gaussian around the point of the last improving
+   dive, a (1+1) evolution strategy with the 1/5 success rule of
+   Rechenberg (Evolutionsstrategie, Frommann-Holzboog, 1973). Sampling
+   points for an upper bound follows the upper bounding of interval
+   branch and bound (I. Araya, G. Trombettoni, B. Neveu, G. Chabert,
+   J. Global Optim. 60(2), 2014) and diving with propagation the diving
+   heuristics of MIP (T. Berthold, Primal heuristics for mixed integer
+   programs, diploma thesis, TU Berlin, 2006). A batch spends as many
+   propagations as the run before it, halving after each batch that
+   finds nothing, and stops below 1/64. On ex6_1_3 (Ibex optim/hard)
+   branch and bound crawled along a flat valley at -0.3243 and -f stayed
+   at the LP point -0.2562; with dives both reach -0.3524 to -0.3521
+   (optimum -0.3525). On the 41 optimisation instances of the float
+   quick set at 600 s: default 14 better objectives, none worse, 23
+   proved instead of 22, total time 10,996 s instead of 11,577 s; -f 9
+   better, 2 worse, 4 instances with a first solution, proofs and total
+   time unchanged. -Dorg.jacop.fz.floatDives=false turns them off;
+   org.jacop.fz.floatDiveStart (0.1) and floatDiveNodes (10000) tune them.
+
 Version 4.11
 =============
 
