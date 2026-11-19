@@ -56,10 +56,6 @@ public class IfThenElseBool extends PrimitiveConstraint implements Copyable<IfTh
   /** It specifies constraint elseVar in the IfThenElseBool constraint. */
   private final BooleanVar elseVar;
 
-  // imposed variable to manifest that constraint has been imposed (top-level)
-  // constraint
-  boolean imposed;
-
   /**
    * It creates ifthenelse constraint.
    *
@@ -92,23 +88,24 @@ public class IfThenElseBool extends PrimitiveConstraint implements Copyable<IfTh
       elseVar.domain.inValue(store.level, elseVar, 1);
     }
 
-    if (imposed) {
+    // also when nested: a Reified with b = 1 runs this consistency on a constraint it did not
+    // impose
+    if (thenVar.max() == 0) {
+      condVar.domain.inValue(store.level, condVar, 0);
+      elseVar.domain.inValue(store.level, elseVar, 1);
+    }
 
-      if (thenVar.max() == 0) {
-        condVar.domain.inValue(store.level, condVar, 0);
-        elseVar.domain.inValue(store.level, elseVar, 1);
-      }
-
-      if (elseVar.max() == 0) {
-        condVar.domain.inValue(store.level, condVar, 1);
-        thenVar.domain.inValue(store.level, thenVar, 1);
-      }
+    if (elseVar.max() == 0) {
+      condVar.domain.inValue(store.level, condVar, 1);
+      thenVar.domain.inValue(store.level, thenVar, 1);
     }
   }
 
   @Override
   public boolean notSatisfied() {
-    return (condVar.min() == 1 && thenVar.max() == 0) || (condVar.max() == 0 && elseVar.max() == 0);
+    return (condVar.min() == 1 && thenVar.max() == 0)
+        || (condVar.max() == 0 && elseVar.max() == 0)
+        || (thenVar.max() == 0 && elseVar.max() == 0);
   }
 
   @Override
@@ -119,6 +116,17 @@ public class IfThenElseBool extends PrimitiveConstraint implements Copyable<IfTh
     }
 
     if (condVar.min() == 1) {
+      thenVar.domain.inValue(store.level, thenVar, 0);
+    }
+
+    // the negation is (cond and not then) or (not cond and not else)
+    if (thenVar.min() == 1) {
+      condVar.domain.inValue(store.level, condVar, 0);
+      elseVar.domain.inValue(store.level, elseVar, 0);
+    }
+
+    if (elseVar.min() == 1) {
+      condVar.domain.inValue(store.level, condVar, 1);
       thenVar.domain.inValue(store.level, thenVar, 0);
     }
   }
@@ -139,16 +147,10 @@ public class IfThenElseBool extends PrimitiveConstraint implements Copyable<IfTh
   }
 
   @Override
-  public void impose(Store store) {
-
-    super.impose(store);
-
-    imposed = true;
-  }
-
-  @Override
   public boolean satisfied() {
-    return (condVar.min() == 1 && thenVar.min() == 1) || (condVar.max() == 0 && elseVar.min() == 1);
+    return (condVar.min() == 1 && thenVar.min() == 1)
+        || (condVar.max() == 0 && elseVar.min() == 1)
+        || (thenVar.min() == 1 && elseVar.min() == 1);
   }
 
   @Override
