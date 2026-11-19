@@ -1611,13 +1611,13 @@ class FlatzincFrontEndTest {
     link(items, kept, 0);
     link(items, other, 1);
 
-    Solve.releaseAllBut(solve);
+    Solve.releaseAllBut(root, solve);
 
     assertNull(root.jjtGetChild(0));
     assertSame(end, root.jjtGetChild(1));
     assertSame(solve, end.jjtGetChild(0));
-    // kept still reaches its item list, but the list no longer holds the other items
-    assertSame(items, kept.jjtGetParent());
+    // the list no longer holds the items, and a kept item does not reach its list
+    assertThrows(UnsupportedOperationException.class, kept::jjtGetParent);
     for (int i = 0; i < items.jjtGetNumChildren(); i++) {
       assertNull(items.jjtGetChild(i));
     }
@@ -4614,9 +4614,10 @@ class FlatzincFrontEndTest {
   }
 
   /**
-   * A node of the parse tree keeps its id, its parent and its children only: the parser and a value
-   * of the node, never read, cost 8 bytes of each of the 20 million nodes of XCSP 2022
-   * RoomMate-sr0700 (163 MB while the model is read).
+   * A node of the parse tree keeps its id and its children only: the parser and a value of the
+   * node, never read, cost 8 bytes of each of the 20 million nodes of XCSP 2022 RoomMate-sr0700
+   * (163 MB while the model is read), and the parent took the 7.8 million scalar expressions from
+   * 32 to 40 bytes each; the readers of a parent now get it from the root.
    */
   @Test
   void parseTreeNodesKeepNoParserOrValue() {
@@ -4626,7 +4627,7 @@ class FlatzincFrontEndTest {
             .map(Field::getName)
             .sorted()
             .toList();
-    assertEquals(List.of("children", "id", "parent"), fields);
+    assertEquals(List.of("children", "id"), fields);
   }
 
   /**
@@ -4635,6 +4636,53 @@ class FlatzincFrontEndTest {
    * each of about 5 million nodes of XCSP 2022 RoomMate-sr0700. The children read, copy and release
    * as before.
    */
+  /**
+   * A detector that reads the annotations of a constraint (the sequence detector skips the window
+   * rows that define a variable) gets the constraint item with its element, since a node does not
+   * keep its parent.
+   */
+  @Test
+  void constraintElementsComeWithTheirItems(@TempDir Path dir) throws Exception {
+    Path fzn = dir.resolve("items.fzn");
+    Files.writeString(
+        fzn,
+        """
+        var 0..1: a;
+        var 0..1: b;
+        var 0..2: s :: is_defined_var;
+        constraint int_lin_eq([1,1,-1],[a,b,s],0) :: defines_var(s);
+        constraint int_lin_le([1,1],[a,b],1);
+        solve satisfy;
+        """,
+        StandardCharsets.UTF_8);
+    SimpleNode tree;
+    Parser parser;
+    try (java.io.FileInputStream in = new java.io.FileInputStream(fzn.toFile())) {
+      parser = new Parser(in);
+      parser.setOptions(new Options(new String[] {fzn.toString()}));
+      tree = parser.parseModel();
+    }
+    Method each =
+        org.jacop.fz.constraints.Support.class.getDeclaredMethod(
+            "forEachConstraintItem", SimpleNode.class, java.util.function.BiConsumer.class);
+    each.setAccessible(true);
+    List<SimpleNode> items = new ArrayList<>();
+    List<ASTConstElem> elements = new ArrayList<>();
+    java.util.function.BiConsumer<SimpleNode, ASTConstElem> collect =
+        (item, element) -> {
+          items.add(item);
+          elements.add(element);
+        };
+    each.invoke(parser.cc.support, tree, collect);
+    assertEquals(2, items.size());
+    for (int i = 0; i < 2; i++) {
+      assertSame(elements.get(i), items.get(i).jjtGetChild(0));
+    }
+    assertEquals(2, items.get(0).jjtGetNumChildren());
+    assertEquals("defines_var", ((ASTAnnotation) items.get(0).jjtGetChild(1)).getAnnId());
+    assertEquals(1, items.get(1).jjtGetNumChildren());
+  }
+
   @Test
   void nodesWithOneChildKeepNoArray() {
     SimpleNode one = new SimpleNode(ParserTreeConstants.JJTANNOTATION);
@@ -4648,7 +4696,6 @@ class FlatzincFrontEndTest {
     SimpleNode copy = one.copy();
     assertEquals(1, copy.jjtGetNumChildren());
     assertNotSame(child, copy.jjtGetChild(0));
-    assertSame(copy, copy.jjtGetChild(0).jjtGetParent());
 
     // the parser adds the children of a node from the last one
     SimpleNode three = new SimpleNode(ParserTreeConstants.JJTCONSTELEM);

@@ -397,6 +397,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @param opt the options for solving
    */
   public void solveModel(SimpleNode astTree, Tables table, Options opt) {
+    modelRoot = astTree;
 
     dictionary = table;
 
@@ -446,33 +447,63 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @param solveItem the solve item, whose branch of the parse tree is kept
    */
   private void releaseModelItems(SimpleNode solveItem) {
-    releaseAllBut(solveItem);
+    if (modelRoot != null) {
+      releaseAllBut(modelRoot, solveItem);
+    }
   }
+
+  // the root of the parse tree of the model being solved: its nodes do not keep their parent
+  private SimpleNode modelRoot;
 
   /**
    * Cuts every branch of the parse tree but the one of a node: the children of its ancestors other
-   * than the path to it, and the children of those, the variable and constraint items. A node of a
-   * dropped item that another structure keeps then reaches its own item only, not every item of the
-   * model through its parent.
+   * than the path to it, and the children of those, the variable and constraint items. The parser
+   * keeps the root, so the items it held are then free, but for the nodes another structure keeps,
+   * which reach their own children only (a node does not keep its parent).
    *
+   * @param root the root of the parse tree
    * @param solveItem the node whose branch is kept
    */
-  static void releaseAllBut(SimpleNode solveItem) {
-    Node kept = solveItem;
-    while (kept.jjtGetParent() instanceof SimpleNode parent) {
+  static void releaseAllBut(SimpleNode root, SimpleNode solveItem) {
+    List<SimpleNode> path = pathTo(root, solveItem, 2);
+    for (int k = path.size() - 2; k >= 0; k--) {
+      SimpleNode parent = path.get(k);
+      Node kept = path.get(k + 1);
       for (int i = 0; i < parent.jjtGetNumChildren(); i++) {
         Node child = parent.jjtGetChild(i);
         if (child != kept) {
-          // and its own items: a node another structure keeps (a rewritten constraint) reaches
-          // them through its parent, which would keep every item of the model live
+          // and its own items, so that the item lists hold none of them
           if (child instanceof SimpleNode released) {
             released.releaseChildren();
           }
           parent.releaseChild(i);
         }
       }
-      kept = parent;
     }
+  }
+
+  /**
+   * The nodes from a node down to one of its descendants, both included, found within a depth, or
+   * the empty list. The solve item is two levels below the root, under the model end.
+   */
+  private static List<SimpleNode> pathTo(SimpleNode from, SimpleNode to, int depth) {
+    if (from == to) {
+      List<SimpleNode> path = new ArrayList<>();
+      path.add(to);
+      return path;
+    }
+    if (depth > 0) {
+      for (int i = 0; i < from.jjtGetNumChildren(); i++) {
+        if (from.jjtGetChild(i) instanceof SimpleNode child) {
+          List<SimpleNode> path = pathTo(child, to, depth - 1);
+          if (!path.isEmpty()) {
+            path.addFirst(from);
+            return path;
+          }
+        }
+      }
+    }
+    return List.of();
   }
 
   /**
@@ -1398,12 +1429,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (objective == null || objective.singleton()) {
       return null;
     }
-    SimpleNode root = node;
-    while (root.jjtGetParent() != null) {
-      root = (SimpleNode) root.jjtGetParent();
+    if (modelRoot == null) {
+      return null;
     }
     return new ObjectiveDetector(new Support(store, dictionary, sat))
-        .collect(root, objective, k == 1);
+        .collect(modelRoot, objective, k == 1);
   }
 
   /**
