@@ -568,6 +568,32 @@ class RevisedDualSimplexTest {
   }
 
   @Test
+  void infeasibilityThePresolveSeesIsProvedByBoundsWithoutPivots() {
+    // z >= 1 (a singleton row), x - z = 2 (a doubleton equation), x + y <= 1: x >= 3 cannot hold
+    Lp p = new Lp(new Random(0), 0, 0, 0, 0);
+    p.cols = new int[][] {{2}, {0, 2}, {0, 1}};
+    p.vals = new double[][] {{1}, {1, -1}, {1, 1}};
+    p.rowLo = new double[] {1, 2, -INF};
+    p.rowHi = new double[] {INF, 2, 1};
+    p.cost = new double[] {1, -1, 2};
+    p.lo = new double[] {0, 0, 0};
+    p.hi = new double[] {10, 10, 10};
+    for (boolean scale : new boolean[] {false, true}) {
+      RevisedDualSimplex lp = p.simplex(scale);
+      assertThat(lp.solve(1_000_000)).isEqualTo(RevisedDualSimplex.INFEASIBLE);
+      assertThat(lp.provedByBounds()).isTrue();
+      assertThat(lp.pivots()).isZero();
+      checkFarkas(p, lp.farkas(), "scaled " + scale);
+      // the bounds that made it infeasible go: the next solve finds the optimum
+      p.rowHi[2] = 20;
+      lp.setBounds(3 + 2, -INF, 20);
+      assertThat(solveAndCheck(p, lp, scale, "relaxed")).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      assertThat(lp.provedByBounds()).isFalse();
+      p.rowHi[2] = 1;
+    }
+  }
+
+  @Test
   void givenDualsHaveNoPerturbation() {
     // min z with z - x - y >= 0, x + y >= 3, x - y <= 1, all in [0, 10]: duals 1, 1, 0
     double inf = Double.POSITIVE_INFINITY;
@@ -651,6 +677,7 @@ class RevisedDualSimplexTest {
     int runs = Integer.getInteger("jalp.test.runs", 3000) / 3;
     int reduced = 0;
     int optimal = 0;
+    int byBounds = 0;
     for (int run = 0; run < runs; run++) {
       boolean scale = rnd.nextBoolean();
       int m = 1 + rnd.nextInt(14);
@@ -713,6 +740,9 @@ class RevisedDualSimplexTest {
           reductions[k] += lp.presolveReductions()[k];
         }
       }
+      if (lp.provedByBounds()) {
+        byBounds++;
+      }
       String inChunks = what + " in chunks";
       assertThat(solveAndCheck(p, chunked, scale, inChunks)).as(inChunks).isEqualTo(status);
       if (status == RevisedDualSimplex.OPTIMAL) {
@@ -739,6 +769,8 @@ class RevisedDualSimplexTest {
       }
     }
     assertThat(reduced).isGreaterThan(optimal / 2);
+    // some infeasibilities the presolve saw were proved by bound propagation, the rays checked
+    assertThat(byBounds).isGreaterThan(runs / 100);
     // every kind of reduction was made, parallel rows and columns too
     assertThat(reductions).as(java.util.Arrays.toString(reductions)).doesNotContain(0);
   }
@@ -901,6 +933,9 @@ class RevisedDualSimplexTest {
       for (double weight : new double[] {0, 1, 0.01}) {
         String what = "run " + run + " weight " + weight;
         RevisedDualSimplex lp = p.simplex(true);
+        // no presolve: the infeasibilities it sees are proved by bounds, without the pivots that
+        // make the rule fire
+        lp.setPresolve(false);
         lp.setRefactorWeight(weight);
         int s = solveAndCheck(p, lp, true, what);
         if (weight <= 0) {

@@ -226,6 +226,18 @@ public final class RevisedDualSimplex {
   private int weightsFrom;
 
   private int infeasibleRow = -1;
+  // the Farkas ray of the last solve when bound propagation proved it infeasible without a basis
+  // (internal rows), or null
+  private double[] boundRay;
+  // the presolve of this solve saw infeasibility: try a proof by bound propagation
+  private boolean presolveInfeasible;
+  // the Farkas ray of the reduced problem that ended infeasible, over the rows here, or null
+  private double[] reducedRay;
+  // the costs given while the solve looks for a proof of infeasibility with no costs, or null
+  private double[] provingCosts;
+  // bound propagation proves infeasibility the presolve saw (org.jacop.jalp.boundProof)
+  private static final boolean BOUND_PROOF =
+      Boolean.parseBoolean(System.getProperty("org.jacop.jalp.boundProof", "true"));
 
   // counts the removals of rows: a saved basis is for the rows of one count
   private long rowEpoch;
@@ -493,6 +505,7 @@ public final class RevisedDualSimplex {
     factorValid = false; // the copy factorizes its basis again when it is solved
     weightsFrom = o.weightsFrom;
     infeasibleRow = o.infeasibleRow;
+    boundRay = o.boundRay;
     rowEpoch = o.rowEpoch;
     crashRows = o.crashRows;
     crashPending = o.crashPending;
@@ -980,6 +993,9 @@ public final class RevisedDualSimplex {
     }
     shrinkArtificial();
     int status = dualSolve(limit);
+    if (provingCosts != null) {
+      endProving();
+    }
     ended = status != LIMIT;
     if (ended) {
       cleaning = false;
@@ -1014,6 +1030,7 @@ public final class RevisedDualSimplex {
 
   private int dualSolve(int limit) {
     infeasibleRow = -1;
+    boundRay = null;
     outsideValid = false;
     clearSkipped();
     if (feasibility) {
@@ -1044,6 +1061,13 @@ public final class RevisedDualSimplex {
     }
     if (reducedLp != null) {
       return LIMIT;
+    }
+    if (presolveInfeasible) {
+      presolveInfeasible = false;
+      if (boundProof()) {
+        return INFEASIBLE;
+      }
+      startProving();
     }
     if (crashPending) {
       crashPending = false;
@@ -1390,6 +1414,13 @@ public final class RevisedDualSimplex {
     if (skippedRows > 0 && !skippedRowsHold()) {
       return LIMIT;
     }
+    if (provingCosts != null) {
+      // feasible after all: on with the costs from this basis
+      endProving();
+      placeNonbasic();
+      updateBeta();
+      return -1;
+    }
     if (feasibility) {
       // feasible, but the objective pulled a column past every artificial bound
       return UNBOUNDED;
@@ -1561,7 +1592,77 @@ public final class RevisedDualSimplex {
    */
   public double[] farkas() {
     flushReduced();
+    if (boundRay != null) {
+      double[] y = new double[m];
+      for (int i = 0; i < m; i++) {
+        y[i] = boundRay[i] * rowScale[i];
+      }
+      return y;
+    }
     return inverseRow(infeasibleRow);
+  }
+
+  /**
+   * Returns whether the last solve proved infeasibility by bound propagation over the rows (see
+   * {@link BoundProof}), without a basis; {@link #farkas()} then gives that proof.
+   *
+   * @return whether the proof of the last solve came from bound propagation
+   */
+  public boolean provedByBounds() {
+    return boundRay != null;
+  }
+
+  // the presolve saw infeasibility that bound propagation does not prove: the dual simplex looks
+  // for the proof with no costs, where every basis is dual feasible and no pivot is spent on the
+  // objective (gosh: 11,136 pivots, 3.6 s, with the costs; 0.6 s without)
+  private void startProving() {
+    provingCosts = givenCost.clone();
+    Arrays.fill(givenCost, 0);
+    setCosts(true);
+    cleaning = false;
+    placed = false;
+    dualsChecked = false;
+    if (factorValid) {
+      computeDuals();
+    }
+  }
+
+  // the costs as given again
+  private void endProving() {
+    System.arraycopy(provingCosts, 0, givenCost, 0, n);
+    provingCosts = null;
+    setCosts(true);
+    cleaning = false;
+    placed = false;
+    dualsChecked = false;
+    if (factorValid) {
+      computeDuals();
+    }
+  }
+
+  // a proof of infeasibility by bound propagation over the whole problem, as the presolve found
+  private boolean boundProof() {
+    BoundProof b = new BoundProof(n, m, rowIdx, rowVal, colIdx, colLen, boundLo, boundHi);
+    double[] y = null;
+    if (reducedRay != null) {
+      y = b.holds(reducedRay) ? reducedRay : null;
+      reducedRay = null;
+      if (PRESOLVE_TRACE) {
+        System.err.println("reduced ray " + (y != null));
+      }
+    }
+    if (y == null) {
+      y = b.run();
+    }
+    ops += b.work();
+    if (PRESOLVE_TRACE) {
+      System.err.println("bound proof " + (y != null) + " work " + b.work());
+    }
+    if (y == null) {
+      return false;
+    }
+    boundRay = y;
+    return true;
   }
 
   /**
@@ -1733,6 +1834,7 @@ public final class RevisedDualSimplex {
     placed = false;
     dualsChecked = false;
     infeasibleRow = -1;
+    boundRay = null;
     return true;
   }
 
@@ -1886,6 +1988,7 @@ public final class RevisedDualSimplex {
     cols = cols2;
     factorValid = false;
     infeasibleRow = -1;
+    boundRay = null;
     rowEpoch++;
     allocateWork();
     return oldRow;
@@ -2511,6 +2614,7 @@ public final class RevisedDualSimplex {
               + Arrays.toString(p.counts()));
     }
     if (!reduced) {
+      presolveInfeasible = BOUND_PROOF && p.infeasible();
       if (factorValid) {
         // the perturbation of a column may have changed sign
         computeDuals();
@@ -2606,12 +2710,24 @@ public final class RevisedDualSimplex {
     Presolve p = reducedBy;
     reducedLp = null;
     reducedBy = null;
+    presolveInfeasible = BOUND_PROOF && status == INFEASIBLE;
+    if (presolveInfeasible) {
+      // the ray of the reduced problem over the rows it kept, a proof here too when the
+      // reductions that changed those rows do not matter to it
+      double[] yr = red.farkas();
+      reducedRay = new double[m];
+      for (int k = 0; k < yr.length; k++) {
+        reducedRay[p.oldRow[k]] = yr[k];
+      }
+    }
     if (PRESOLVE_TRACE) {
       System.err.println("presolve reduced end status " + status + " pivots " + red.totalPivots);
     }
-    // the dual simplex keeps its basis dual feasible: an infeasible end or the limit leave a
-    // basis worth carrying over too, only an unbounded end does not
-    if (status == UNBOUNDED) {
+    // the dual simplex keeps its basis dual feasible: the limit leaves a basis worth carrying
+    // over, an unbounded end does not, and neither does an infeasible one when the proof is looked
+    // for with no costs (gosh: 11,581 more pivots from the basis carried over, 1,933 from the slack
+    // basis)
+    if (status == UNBOUNDED || presolveInfeasible) {
       return;
     }
     int nr = p.columnsLeft();
@@ -3084,6 +3200,7 @@ public final class RevisedDualSimplex {
 
   private int primalPivots(int limit) {
     infeasibleRow = -1;
+    boundRay = null;
     clearSkipped();
     // a clean-up of the perturbation that the last call left at its limit goes on with the costs
     // as given: perturbing them again here made a primal solve called with a limit of one pivot
