@@ -116,6 +116,14 @@ final class Presolve {
   // above the cost perturbation (about 1e-6 relative), which alone fixes nothing
   private static final double DOMINATED = 1e-5;
 
+  // whether inequality rows that a column singleton holds at a bound become equations
+  // (org.jacop.jalp.presolveTight)
+  private static final boolean TIGHT_RULE =
+      Boolean.parseBoolean(System.getProperty("org.jacop.jalp.presolveTight", "true"));
+
+  // the rows made equations by tightRow
+  int tightRows;
+
   private final int n;
   private final int m;
 
@@ -757,7 +765,7 @@ final class Presolve {
       return 0;
     }
     if (!impliedFree(i, k, a, b)) {
-      return 0;
+      return TIGHT_RULE ? tightRow(i, k, a, b) : 0;
     }
     int t = record(FREE_COLUMN, i, k);
     recNum[0][t] = a;
@@ -776,6 +784,53 @@ final class Presolve {
     colAlive[k] = false;
     colsLeft--;
     removeRow(i);
+    return 1;
+  }
+
+  /**
+   * A column singleton x_k of inequality row i whose cost pushes it to a bound that the row at b
+   * implies: without that bound, which never binds, x_k has one finite bound left and bounds the
+   * dual of its row strictly away from 0 (Andersen and Andersen, section 3.5: the dual bounds of
+   * column singletons with one infinite bound), so the row is at b in every optimum. The row
+   * becomes the equation at b and the implied bound of x_k goes; with one other column the row is
+   * then a doubleton equation and x_k is substituted (thor50dday: x_e in -49 x_e + f_e <= 0 with
+   * cost on x_e, 53,130 such rows). Only rows with one other column are taken, so that no equation
+   * stays behind.
+   *
+   * @return 1 when the row was changed, 0 when not
+   */
+  private int tightRow(int i, int k, double a, double b) {
+    if (rowCount[i] != 2 || rowLo[i] == rowHi[i]) {
+      return 0;
+    }
+    double c = wtrue[k];
+    if (c == 0 || c > 0 != wcost[k] > 0) {
+      return 0;
+    }
+    // the cost lowers x_k (c > 0) or raises it; that bound must be implied by the row at b
+    boolean down = wcost[k] > 0;
+    double keepLo = lo[k];
+    double keepHi = hi[k];
+    if (down) {
+      hi[k] = Double.POSITIVE_INFINITY;
+    } else {
+      lo[k] = Double.NEGATIVE_INFINITY;
+    }
+    boolean implied = impliedFree(i, k, a, b);
+    hi[k] = keepHi;
+    lo[k] = keepLo;
+    if (!implied) {
+      return 0;
+    }
+    if (down) {
+      lo[k] = Double.NEGATIVE_INFINITY;
+    } else {
+      hi[k] = Double.POSITIVE_INFINITY;
+    }
+    rowLo[i] = b;
+    rowHi[i] = b;
+    relaxed = true;
+    tightRows++;
     return 1;
   }
 
