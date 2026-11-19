@@ -8170,6 +8170,11 @@ Version 5.0 (unreleased)
    affected instances 31 instead of 26 are solved (planning,
    grs-fp-comm, quasigroup-completion faster or new), total 0.71x.
    CdclMain takes --elim-bound, --elim-clause-limit and --elim-gates.
+   GateExtractor looks for an XOR only on clause variable sets that have
+   enough clauses of one parity, each set once (sorted keys of both
+   occurrence lists instead of a scan of both lists per base clause): the
+   same gates in less time, Hamming-20-10-05-09 (XCSP 2024 as CNF) reaches
+   100k conflicts in 14.9 s instead of 20.1 s.
 
 Version 4.11
 =============
