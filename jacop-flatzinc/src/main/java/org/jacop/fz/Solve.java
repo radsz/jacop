@@ -3580,6 +3580,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (lcgSliceDue && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch(lcg)) {
       return alternateWithoutLearning();
     }
+    if (lcgCopSliceDue
+        && lcgStatus == CdclSolver.UNKNOWN
+        && costVar instanceof IntVar cost
+        && !tooLateForFreeSearch(lcg)) {
+      return alternateOptimisationWithoutLearning(cost);
+    }
     if (lcgSlow && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch(lcg)) {
       return free ? continueWithoutLcg(costVar) : continueFixedWithoutLcg(costVar);
     }
@@ -4127,6 +4133,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         lcgSlowDeferred++;
       } else {
         lcgSlow = true;
+        sliceInsteadOfHandOver();
         solver.stop();
         return false;
       }
@@ -4175,8 +4182,124 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     lcgHopeless = true;
     lcgSlowUnsolved = !solutionFound;
     lcgSlow = true;
+    if (!unsolvedOnly) {
+      sliceInsteadOfHandOver();
+    }
     solver.stop();
     return true;
+  }
+
+  // set when a slow LCG search of an optimisation model with a solution stops for a slice of free
+  // search without learning, after which it gets the proof back (lcg-cop-slices)
+  private volatile boolean lcgCopSliceDue;
+  // the slices of free search without learning that an optimisation search alternated with LCG
+  private int lcgCopSlices;
+
+  /**
+   * Turns the hand-over of a slow LCG search that has a solution into slices (lcg-cop-slices=1):
+   * free search without learning runs while it improves the best solution, and LCG gets the search
+   * back, under the best cost, once a slice of free search ends without a better one.
+   */
+  private void sliceInsteadOfHandOver() {
+    if (solutionFound && "1".equals(options.freeConfig("lcg-cop-slices", "0"))) {
+      lcgSlow = false;
+      lcgCopSliceDue = true;
+    }
+  }
+
+  /**
+   * Alternates free search without learning with LCG on an optimisation model, after LCG gave way
+   * as slow with a solution ({@link #sliceInsteadOfHandOver}). A slice of free search lasts as long
+   * as LCG ran before it; while a slice finds a better solution the next one is free search again,
+   * and after a slice without one LCG goes on under the best cost for twice its earlier time. Both
+   * shares double after each turn of LCG. XCSP 2025 Coprime-20: LCG gives way at 4.7 s, free search
+   * finds the optimum 139 at 31 s but cannot prove it, while LCG under the bound 139 proves it in
+   * 69 s.
+   *
+   * @param cost the cost variable
+   * @return whether a solution was found
+   */
+  private boolean alternateOptimisationWithoutLearning(IntVar cost) {
+    lcgCopSliceDue = false;
+    LcgSolver solver = lcg;
+    CdclSolver sat = solver.sat();
+    long end = sat.deadline();
+    long lcgShare = Math.max(1, sat.now() - lcgStart);
+    long cpMillis = Math.max(1000, lcgShare / 1_000_000L);
+    freeSearchBuildOnly = true;
+    try {
+      executeFreeSearch(cost);
+    } finally {
+      freeSearchBuildOnly = false;
+    }
+    FreeSearch sliceSearch = freeSearch;
+    solver.setSharedBound(bestPrintedCost::get);
+    solver.onSolution(
+        () -> {
+          if (cost.value() < bestPrintedCost.get()) {
+            printSolution();
+          }
+        });
+    while (true) {
+      lcgCopSlices++;
+      int before = bestPrintedCost.get();
+      if (options.debug()) {
+        IO.println(
+            "%% LCG stopped after "
+                + sat.conflicts
+                + " conflicts; "
+                + cpMillis
+                + " ms of free search without learning");
+      }
+      int root = store.level;
+      store.setLevel(root + 1);
+      Runnable giveBack = solver.lend();
+      try {
+        for (IntVar[][] clause : this.sat.collectedClauses()) {
+          store.impose(new BoolClause(clause[0], clause[1]));
+        }
+        freeSearchStatus =
+            sliceSearch.resume(
+                System.currentTimeMillis() + Math.min(cpMillis, options.getRemainingTimeOut()),
+                FreeSearch.VIRTUAL_CLOCK ? cpMillis : 0);
+      } finally {
+        store.removeLevel(root + 1);
+        store.setLevel(root);
+        giveBack.run();
+      }
+      if (freeSearchStatus == FreeSearch.Status.OPTIMAL
+          || freeSearchStatus == FreeSearch.Status.UNSATISFIABLE) {
+        lcgStatus = CdclSolver.SAT;
+        return numberSolutions > 0;
+      }
+      if (options.getTimeOut() > 0 && options.getRemainingTimeOut() <= 0) {
+        return numberSolutions > 0;
+      }
+      if (bestPrintedCost.get() < before) {
+        // free search still improves: another slice of it
+        continue;
+      }
+      lcgShare *= 2;
+      cpMillis *= 2;
+      if (options.debug()) {
+        IO.println("%% LCG goes on under the bound " + bestPrintedCost.get());
+      }
+      solver.unstop();
+      sat.setDeadline(end - sat.now() > lcgShare ? sat.now() + lcgShare : end);
+      try {
+        lcgStatus = solver.minimize(cost);
+      } finally {
+        sat.setDeadline(end);
+      }
+      if (lcgStatus != CdclSolver.UNKNOWN) {
+        // no better solution than the best printed one: it is optimal
+        lcgStatus = CdclSolver.SAT;
+        return numberSolutions > 0;
+      }
+      if (sat.now() >= end) {
+        return numberSolutions > 0;
+      }
+    }
   }
 
   /**
@@ -5102,6 +5225,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         }
       } else if (options.searchStatistics()) {
         printLcgExplanationStatistics();
+        if (lcgCopSlices > 0) {
+          IO.println("%%%mzn-stat: lcgCopSlices=" + lcgCopSlices);
+        }
         if (lcgSatSlices > 0) {
           // slices of search without learning between runs of LCG on a satisfaction model
           IO.println("%%%mzn-stat: lcgSatSlices=" + lcgSatSlices);
