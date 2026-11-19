@@ -162,8 +162,8 @@ public final class FreeSearch {
   private final boolean allSolutions;
   private final long solutionLimit;
   private final long failLimit;
-  private final long timeLimitMillis;
-  private final long deadlineMillis;
+  private long timeLimitMillis;
+  private long deadlineMillis;
   private final boolean virtualClock;
   private final Var[] recorded;
   private final Set<Var> projection;
@@ -341,6 +341,23 @@ public final class FreeSearch {
         .restarts(new GeometricCalculator(DEFAULT_RESTART_BASE, DEFAULT_RESTART_SCALE))
         .restartOnSolution(true)
         .nogoodsFromRestarts(true);
+  }
+
+  /**
+   * Runs the search again after {@link #solve} ended at its limit, with new limits: the restart
+   * sequence, the heuristics' weights and the saved phases go on where they stopped, while the
+   * nogoods of the earlier runs are dropped. The store must be at the level of the first call.
+   *
+   * @param deadline the wall-clock deadline in epoch milliseconds, or 0 for none
+   * @param timeLimit the time limit in milliseconds, counted from now (on the virtual clock when it
+   *     is on), or 0 for none
+   * @return how the search ended.
+   */
+  public Status resume(long deadline, long timeLimit) {
+    deadlineMillis = deadline;
+    timeLimitMillis = timeLimit;
+    limitReached = false;
+    return solve();
   }
 
   /**
