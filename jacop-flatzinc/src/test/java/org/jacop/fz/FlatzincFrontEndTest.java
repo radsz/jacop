@@ -519,6 +519,20 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void mddLibraryPassesTheDiagramArraysAsTheyAre() throws IOException {
+    // array1d makes a new array at each call and MiniZinc keeps only a few for reuse: with it,
+    // WordDesign2-words-mdd-025 (XCSP 2023) got 31 copies of its diagram of 1.8 million edges in
+    // the FlatZinc (1.1 GB, 7 GB to flatten) and the larger sizes did not flatten at all.
+    Path lib = Path.of("src/main/minizinc/org/jacop/minizinc");
+    for (String file : List.of("fzn_mdd.mzn", "fzn_mdd_nondet.mzn", "fzn_cost_mdd.mzn")) {
+      String text = Files.readString(lib.resolve(file), StandardCharsets.UTF_8);
+      for (String array : List.of("level", "from", "label", "cost", "to")) {
+        assertFalse(text.contains("array1d(" + array + ")"), file + " copies " + array);
+      }
+    }
+  }
+
+  @Test
   void outputFileGetsEverySolutionWhenAllAreRequested() throws IOException {
     // With -a the output file kept only the last solution, so golden files of the MiniZinc
     // based tests could not record all solutions.

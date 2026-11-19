@@ -8068,7 +8068,31 @@ Version 5.0 (unreleased)
    (costas-array and blocks-world slower over three rounds);
    -Djacop.lcg.shiftSplitBounds=true|false overrides.
 
-448. The FlatZinc front end posts a short table (jacop_short_table_int) of
+448. Memory of many MDDs on one diagram, in the MiniZinc library and in
+   support search. fzn_mdd, fzn_mdd_nondet and fzn_cost_mdd pass the
+   arrays of the diagram as they are: array1d made a new array at each
+   call, which MiniZinc wrote again every few calls (WordDesign2-words-
+   mdd-025, XCSP 2023: 31 copies of 1.8 million edges, a FlatZinc of
+   1.1 GB that took 7 GB and 170 s to flatten; now 36 MB in 6 s). The
+   support search of a layered graph keeps the nodes without support as
+   a list with a bitset instead of three arrays over the nodes, and the
+   constraints of a store on one built graph share the stamps of the
+   search, which are only read during one call (66 KB instead of 6 MB
+   per constraint on that diagram). The symmetry pass reads an array
+   longer than 64 once however many constraints share it, and the flow
+   encodings of the linear relaxation take the edges on a path and
+   their arc columns once per built graph over equal domains: both read
+   the 1.8 million edges again for each MDD (setup of -055, 1,485 MDDs,
+   164 s -> 9 s). The explanations of a layered graph keep the edges of
+   a level by value and skip the values gone from the domain (20 % more
+   LCG conflicts per second on -035, same explanations). All sizes,
+   -035 to -100 (4,951 MDDs), now set up in 6 to 23 s within 6 GB;
+   -035 and -045 are solved (-045 ran out of memory at 6 GB before),
+   -055 to -100 stay unsolved at 600 s: LCG makes about one conflict a
+   second on these diagrams, and search without learning does not find
+   a solution either.
+
+449. The FlatZinc front end posts a short table (jacop_short_table_int) of
    at least 100,000 rows as a multi-valued decision diagram
    (ExtensionalSupportMdd) when its reduced diagram has at most a tenth
    of the table's cells as edges. The diagram is built from the rows with
@@ -8090,7 +8114,7 @@ Version 5.0 (unreleased)
    generalized arc consistency algorithm for positive and negative table
    constraints and some global constraints, Constraints 15(2), 2010.
 
-449. Disjoint and Diff2 limit a rectangle's length from the least start of
+450. Disjoint and Diff2 limit a rectangle's length from the least start of
    each segment of its start domain, not from the interval of the domain
    that meets a forbidden region, and begin a new segment after a region
    whose end is a hole of the domain. Disjoint lets a rectangle of zero
