@@ -218,13 +218,28 @@ public final class PermutationElementSums {
     if (union.getSize() < x.length || union.getSize() > MAX_ARRAY) {
       return;
     }
-    // the elements of each array, the first one of each index
+    Map<ArrayKey, List<Element>> groups = groups(x);
+    for (Map.Entry<ArrayKey, List<Element>> g : groups.entrySet()) {
+      List<Element> es = g.getValue();
+      if (es.size() >= 2) {
+        boolean permutation = es.size() == x.length && union.getSize() == x.length;
+        if (permutation && countsEnabled()) {
+          postCounts(es, union);
+        }
+        post(es, union, permutation);
+      }
+    }
+  }
+
+  // the elements of each array over the indices x, the first one of each index, or none when a
+  // variable occurs twice in x
+  private Map<ArrayKey, List<Element>> groups(IntVar[] x) {
     Map<ArrayKey, List<Element>> groups = new HashMap<>();
     Map<IntVar, Boolean> seen = new IdentityHashMap<>();
     for (IntVar v : x) {
       if (seen.put(v, Boolean.TRUE) != null) {
         // a variable twice, which the all_different constraint fails on
-        return;
+        return Map.of();
       }
       List<Element> es = byIndex.get(v);
       if (es == null) {
@@ -238,16 +253,7 @@ public final class PermutationElementSums {
         }
       }
     }
-    for (Map.Entry<ArrayKey, List<Element>> g : groups.entrySet()) {
-      List<Element> es = g.getValue();
-      if (es.size() >= 2) {
-        boolean permutation = es.size() == x.length && union.getSize() == x.length;
-        if (permutation && countsEnabled()) {
-          postCounts(es, union);
-        }
-        post(es, union, permutation);
-      }
-    }
+    return groups;
   }
 
   /**
