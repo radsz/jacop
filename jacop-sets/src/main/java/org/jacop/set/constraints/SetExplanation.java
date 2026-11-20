@@ -30,6 +30,9 @@
 
 package org.jacop.set.constraints;
 
+import java.util.HashSet;
+import java.util.Set;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
@@ -435,6 +438,173 @@ final class SetExplanation {
       return false;
     }
     addAtoms(trail, sets, state, e, position, out);
+    return true;
+  }
+
+  /**
+   * Explains an atom of a membership for a constraint that puts every element in at most one of its
+   * sets ({@link AllDisjoint}) or, when {@code exactlyOne}, in exactly one of them ({@link
+   * PartitionSet}, for the elements of its universe): an element leaves a set because another set
+   * holds it, and joins a set because every other set lost it. Unlike {@link #explain} it does not
+   * enumerate the memberships of all the sets, so it suits many sets. Other atoms (cardinalities,
+   * prunings by counting) are left to the generic reason.
+   *
+   * @param trail the trail
+   * @param entry the entry of the atom
+   * @param sets the sets, which must be distinct
+   * @param universe the elements that must be in one set, or null when an element may be in none
+   * @param out where the reason entries are added
+   * @return false when the rule does not give the atom
+   */
+  static boolean explainOneOf(
+      AtomicTrail trail, int entry, SetVar[] sets, IntDomain universe, EntryList out) {
+    IntVar x = trail.variable(entry);
+    for (int k = 0; k < sets.length; k++) {
+      SetMirror m = mirrorOf(sets[k]);
+      if (m == null) {
+        continue;
+      }
+      for (int e : m.elements()) {
+        if (m.member(e) == x) {
+          return membership(trail, entry)
+              ? universe != null && universe.contains(e) && othersOut(trail, sets, k, e, entry, out)
+              : otherIn(trail, sets, k, e, entry, out);
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Explains a failure of {@link #explainOneOf}'s rule: an element in two sets, or an element of the
+   * universe in none.
+   *
+   * @param trail the trail
+   * @param sets the sets, which must be distinct
+   * @param universe the elements that must be in one set, or null
+   * @param out where the reason entries are added
+   * @return false when no element breaks the rule
+   */
+  static boolean explainOneOfFailure(
+      AtomicTrail trail, SetVar[] sets, IntDomain universe, EntryList out) {
+    int position = trail.size();
+    for (int k = 0; k < sets.length; k++) {
+      SetMirror m = mirrorOf(sets[k]);
+      if (m == null) {
+        continue;
+      }
+      for (int e : m.elements()) {
+        if (trail.minBefore(m.member(e), position) >= 1
+            && otherIn(trail, sets, k, e, position, out)) {
+          trail.addLowerBound(m.member(e), position, out);
+          return true;
+        }
+        if (universe != null
+            && universe.contains(e)
+            && trail.maxBefore(m.member(e), position) <= 0
+            && othersOut(trail, sets, k, e, position, out)) {
+          trail.addUpperBound(m.member(e), position, out);
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  // adds the atom of another set than k holding e before the position, when one does
+  private static boolean otherIn(
+      AtomicTrail trail, SetVar[] sets, int k, int e, int position, EntryList out) {
+    for (int j = 0; j < sets.length; j++) {
+      if (j != k && membership(trail, sets[j], e, position, true, out)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // adds the atoms of every set but k being without e before the position, when all are
+  private static boolean othersOut(
+      AtomicTrail trail, SetVar[] sets, int k, int e, int position, EntryList out) {
+    for (int j = 0; j < sets.length; j++) {
+      if (j != k && states(trail, new SetVar[] {sets[j]}, e, position)[0] != OUT) {
+        return false;
+      }
+    }
+    for (int j = 0; j < sets.length; j++) {
+      if (j != k) {
+        membership(trail, sets[j], e, position, false, out);
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Adds to {@code out} the reason why a constraint whose relation holds element by element was
+   * entailed, or disentailed, just before a trail position, for its reification. Entailed: on every
+   * element the memberships known then leave no assignment that breaks the relation; the reason is
+   * those memberships, each element's minimised. Disentailed: on some element they leave none that
+   * satisfies it.
+   *
+   * @param trail the trail
+   * @param position the trail position
+   * @param sets the sets of the constraint, by argument position
+   * @param relation the relation the constraint implies on every element
+   * @param entailed true for entailment, false for disentailment
+   * @param out where the reason entries are added
+   * @return false when the memberships do not show it (the constraint's cardinalities may)
+   */
+  static boolean explainEntailment(
+      AtomicTrail trail,
+      int position,
+      SetVar[] sets,
+      Relation relation,
+      boolean entailed,
+      EntryList out) {
+    Relation broken = (e, in) -> !relation.holds(e, in);
+    Relation test = entailed ? broken : relation;
+    int mark = out.size();
+    Set<Integer> seen = new HashSet<>();
+    for (SetVar s : sets) {
+      SetMirror m = mirrorOf(s);
+      if (m == null) {
+        continue;
+      }
+      for (int e : m.elements()) {
+        if (!seen.add(e)) {
+          continue;
+        }
+        int[] state = states(trail, sets, e, position);
+        if (!satisfiable(sets, state, test, e, null, false)) {
+          if (!entailed) {
+            minimize(sets, state, test, e, null, false);
+            addAtoms(trail, sets, state, e, position, out);
+            return true;
+          }
+          minimize(sets, state, test, e, null, false);
+          addAtoms(trail, sets, state, e, position, out);
+        } else if (entailed) {
+          // an assignment of the memberships of e breaks the relation: not entailed by them
+          out.truncate(mark);
+          return false;
+        }
+      }
+    }
+    if (!entailed) {
+      return false;
+    }
+    // the elements fixed in every set when the mirrors were made must satisfy the relation too
+    for (SetVar s : sets) {
+      SetMirror m = mirrorOf(s);
+      IntDomain lub = m == null ? s.domain.lub() : m.rootLub();
+      for (var en = lub.valueEnumeration(); en.hasMoreElements(); ) {
+        int e = en.nextElement();
+        if (!seen.contains(e)
+            && !satisfiable(sets, states(trail, sets, e, position), relation, e, null, false)) {
+          out.truncate(mark);
+          return false;
+        }
+      }
+    }
     return true;
   }
 }

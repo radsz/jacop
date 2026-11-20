@@ -118,10 +118,19 @@ import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.Restriction;
 import org.jacop.core.BooleanVar;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.jasat.cdcl.CdclSolver;
+import org.jacop.set.constraints.AeqB;
+import org.jacop.set.constraints.AinB;
+import org.jacop.set.constraints.AllDisjoint;
+import org.jacop.set.constraints.CardAeqX;
+import org.jacop.set.constraints.EinA;
+import org.jacop.set.constraints.PartitionSet;
+import org.jacop.set.constraints.SetMirror;
+import org.jacop.set.core.SetVar;
 import org.jacop.lcg.ValueIndicator;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMax;
@@ -6962,5 +6971,184 @@ class LcgSolverTest {
       values[i] = e.nextElement();
       bruteForce(x, w, rhs, i + 1, values, shown, out);
     }
+  }
+
+  @Test
+  void allDisjointAndPartitionSetReasonsAgreeWithBruteForce() {
+    // the elementwise reasons of AllDisjoint and PartitionSet, checked by the explanation checker,
+    // and every solution found once by the enumeration, against brute force over the memberships
+    Random rnd = new Random(89);
+    int explained = 0;
+    for (int instance = 0; instance < 400; instance++) {
+      Store store = new Store();
+      int n = 2 + rnd.nextInt(3);
+      int elements = 3 + rnd.nextInt(2);
+      boolean partition = rnd.nextBoolean();
+      SetVar[] sets = new SetVar[n];
+      IntVar[] card = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        sets[i] = new SetVar(store, "s" + i, 0, elements);
+        card[i] = new IntVar(store, "c" + i, rnd.nextInt(2), 1 + rnd.nextInt(elements + 1));
+        store.impose(new CardAeqX(sets[i], card[i]));
+      }
+      IntDomain universe = new IntervalDomain(0, elements - 1);
+      store.impose(partition ? new PartitionSet(sets, universe) : new AllDisjoint(sets));
+      int forced = rnd.nextInt(elements + 1);
+      int forcedSet = rnd.nextInt(n);
+      store.impose(new EinA(forced, sets[forcedSet]));
+      List<IntVar> members = new ArrayList<>();
+      for (SetVar v : sets) {
+        SetMirror m = new SetMirror(v);
+        store.impose(m);
+        members.addAll(Arrays.asList(m.mirrorVariables()));
+      }
+      // brute force: an owner (a set, or none) for each of the elements 0..elements
+      Set<List<Integer>> expected = new HashSet<>();
+      int[] owner = new int[elements + 1];
+      for (long code = 0; code < Math.round(Math.pow(n + 1, elements + 1)); code++) {
+        long c = code;
+        for (int e = 0; e <= elements; e++) {
+          owner[e] = (int) (c % (n + 1));
+          c /= n + 1;
+        }
+        boolean ok = owner[forced] == forcedSet;
+        for (int e = 0; e <= elements && ok; e++) {
+          ok = !partition || (e < elements ? owner[e] < n : owner[e] == n);
+        }
+        for (int i = 0; i < n && ok; i++) {
+          int size = 0;
+          for (int e = 0; e <= elements; e++) {
+            size += owner[e] == i ? 1 : 0;
+          }
+          ok = card[i].dom().contains(size);
+        }
+        if (ok) {
+          List<Integer> t = new ArrayList<>();
+          for (int e = 0; e <= elements; e++) {
+            t.add(owner[e]);
+          }
+          expected.add(t);
+        }
+      }
+      if (!store.consistency()) {
+        assertThat(expected).as("instance " + instance).isEmpty();
+        continue;
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      assertThat(solver.setEnumeration(members)).isTrue();
+      List<List<Integer>> found = new ArrayList<>();
+      solver.onSolution(
+          () -> {
+            List<Integer> t = new ArrayList<>();
+            for (int e = 0; e <= elements; e++) {
+              int o = n;
+              for (int i = 0; i < n; i++) {
+                o = sets[i].dom().glb().contains(e) ? i : o;
+              }
+              t.add(o);
+            }
+            found.add(t);
+          });
+      assertThat(solver.solve()).as("instance " + instance).isEqualTo(CdclSolver.UNSAT);
+      assertThat(found).as("instance " + instance).doesNotHaveDuplicates();
+      assertThat(new HashSet<>(found)).as("instance " + instance).isEqualTo(expected);
+      explained += found.size();
+    }
+    assertThat(explained).isGreaterThan(400);
+  }
+
+  @Test
+  void reifiedSetConstraintsAreExplainedByTheirEntailment() {
+    // b <=> c for the set relations explained element by element, checked by the explanation
+    // checker, and every solution found once, against brute force over the memberships
+    Random rnd = new Random(97);
+    int found = 0;
+    for (int instance = 0; instance < 300; instance++) {
+      Store store = new Store();
+      int elements = 3;
+      SetVar[] sets = new SetVar[3];
+      for (int i = 0; i < 3; i++) {
+        sets[i] = new SetVar(store, "s" + i, 0, elements - 1);
+      }
+      int kinds = 1 + rnd.nextInt(3);
+      int[] kind = new int[kinds];
+      int[][] args = new int[kinds][];
+      IntVar[] b = new IntVar[kinds];
+      for (int k = 0; k < kinds; k++) {
+        // the reifiable relations explained element by element (the others are not primitive)
+        kind[k] = rnd.nextInt(2);
+        int p = rnd.nextInt(3);
+        int q = (p + 1 + rnd.nextInt(2)) % 3;
+        args[k] = new int[] {p, q, 3 - p - q};
+        b[k] = new IntVar(store, "b" + k, 0, 1);
+        SetVar x = sets[p];
+        SetVar y = sets[q];
+        store.impose(
+            new Reified(
+                kind[k] == 0 ? new AinB(x, y) : new AeqB(x, y),
+                b[k]));
+      }
+      int forced = rnd.nextInt(elements);
+      int forcedSet = rnd.nextInt(3);
+      store.impose(new EinA(forced, sets[forcedSet]));
+      List<IntVar> shown = new ArrayList<>(Arrays.asList(b));
+      for (SetVar v : sets) {
+        SetMirror m = new SetMirror(v);
+        store.impose(m);
+        shown.addAll(Arrays.asList(m.mirrorVariables()));
+      }
+      Set<String> expected = new HashSet<>();
+      for (int code = 0; code < 1 << (3 * elements); code++) {
+        boolean[][] in = new boolean[3][elements];
+        for (int i = 0; i < 3; i++) {
+          for (int e = 0; e < elements; e++) {
+            in[i][e] = (code >> (i * elements + e) & 1) == 1;
+          }
+        }
+        if (!in[forcedSet][forced]) {
+          continue;
+        }
+        StringBuilder t = new StringBuilder();
+        for (int k = 0; k < kinds; k++) {
+          boolean holds = true;
+          for (int e = 0; e < elements; e++) {
+            boolean x = in[args[k][0]][e];
+            boolean y = in[args[k][1]][e];
+            holds &=
+                kind[k] == 0 ? !x || y : x == y;
+          }
+          t.append(holds ? 1 : 0);
+        }
+        for (int i = 0; i < 3; i++) {
+          for (int e = 0; e < elements; e++) {
+            t.append(in[i][e] ? 1 : 0);
+          }
+        }
+        expected.add(t.toString());
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      assertThat(solver.setEnumeration(shown)).isTrue();
+      List<String> solutions = new ArrayList<>();
+      solver.onSolution(
+          () -> {
+            StringBuilder t = new StringBuilder();
+            for (IntVar v : b) {
+              t.append(v.value());
+            }
+            for (SetVar v : sets) {
+              for (int e = 0; e < elements; e++) {
+                t.append(v.dom().glb().contains(e) ? 1 : 0);
+              }
+            }
+            solutions.add(t.toString());
+          });
+      assertThat(solver.solve()).as("instance " + instance).isEqualTo(CdclSolver.UNSAT);
+      assertThat(solutions).as("instance " + instance).doesNotHaveDuplicates();
+      assertThat(new HashSet<>(solutions)).as("instance " + instance).isEqualTo(expected);
+      found += solutions.size();
+    }
+    assertThat(found).isGreaterThan(300);
   }
 }

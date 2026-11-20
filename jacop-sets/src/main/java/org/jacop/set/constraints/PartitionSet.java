@@ -46,6 +46,9 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.PbEncodable;
 import org.jacop.lcg.PbModel;
@@ -62,7 +65,8 @@ import org.jacop.set.core.SetVar;
  * @version 5.0
  */
 @Slf4j
-public class PartitionSet extends Constraint implements Copyable<PartitionSet>, PbEncodable {
+public class PartitionSet extends Constraint
+    implements Copyable<PartitionSet>, PbEncodable, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -268,5 +272,31 @@ public class PartitionSet extends Constraint implements Copyable<PartitionSet>, 
     }
     SetPb.cardinalities(model, s, ones, new IntVar[0], new long[0], LinearForm.EQ, u.getSize());
     return true;
+  }
+
+  // whether the sets are distinct variables, which the elementwise explanations need
+  private Boolean distinct;
+
+  private boolean distinctSets() {
+    if (distinct == null) {
+      distinct = Arrays.stream(s).distinct().count() == n;
+    }
+    return distinct;
+  }
+
+  /**
+   * Explains the elementwise rule under lazy clause generation: an element of the universe leaves a
+   * set because another set holds it, and joins a set because every other set lost it. The
+   * prunings of the cardinalities get the generic reason.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return distinctSets() && SetExplanation.explainOneOf(trail, entry, s, u, out);
+  }
+
+  /** Explains a failure of the elementwise rule: an element in two sets, or one of u in none. */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return distinctSets() && SetExplanation.explainOneOfFailure(trail, s, u, out);
   }
 }

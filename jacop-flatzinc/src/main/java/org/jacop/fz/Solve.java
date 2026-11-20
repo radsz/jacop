@@ -5375,7 +5375,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   private void printLcgStatistics(boolean interrupted) {
     boolean complete = lcgStatus != CdclSolver.UNKNOWN;
-    printResultStatus(interrupted, numberSolutions > 0, !complete, complete && !interrupted);
+    // -n N stopped the search at its N-th solution: no time-out
+    boolean limitReached =
+        options.getNumberSolutions() > 0 && numberSolutions >= options.getNumberSolutions();
+    printResultStatus(
+        interrupted, numberSolutions > 0, !complete && !limitReached, complete && !interrupted);
     if (options.getStatistics()) {
       printStatisticsOutput(
           (int) lcgSat().decisions,
