@@ -8679,6 +8679,22 @@ Version 5.0 (unreleased)
    18 s, brazil58 proved in 174 s), 25 unsolved tours worse; -f 27 -> 28
    proved, time 11,642 -> 11,044 s, 11 tours worse.
 
+487. JaLP's presolve aggregates: in an equation of 3 to 16 columns, a column
+   of 2 to 8 entries whose bounds the equation implies is substituted out
+   of its other rows, and the equation and the column go (free column
+   substitution, Andersen and Andersen, Presolving in linear programming,
+   Mathematical Programming 71 (1995) 221-245, section 3.3; the
+   aggregator of HiGHS). The pivot is at least 1 % of the other entries of
+   its row and column, and the fill is bounded per substitution and in
+   all. Found by comparing traces of a patched HiGHS 1.15.1 with JaLP's
+   new trace (-Dorg.jacop.jalp.trace=file: one line per presolve
+   reduction, pivot and factorization): MIPLIB 2017 app1-2 13.4 s -> 1.8 s,
+   13,897 -> 610 pivots (HiGHS 681), with the same presolved size as
+   HiGHS. On the 687 LPs of the osolpro LP bench at 120 s: no wrong
+   answer, the same 647 solved plus pds-80, total time 7,013 -> 6,806 s,
+   fome12 111 -> 60 s, sgpf5y6 62 -> 30 s.
+   -Dorg.jacop.jalp.presolveAggregate=false turns it off.
+
 Version 4.11
 =============
 
