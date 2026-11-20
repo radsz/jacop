@@ -185,9 +185,9 @@ class TspEdgeEliminationFlatzincTest {
     Random random = new Random(31);
     for (int trial = 0; trial < 30; trial++) {
       String model = randomModel(random, false, false);
-      System.setProperty(KOPT, "false");
-      String without = optimum(run(model));
       System.clearProperty(KOPT);
+      String without = optimum(run(model));
+      System.setProperty(KOPT, "true");
       String out = run(model, "-debug");
       assertTrue(out.contains(KOPT_MARK), "trial " + trial);
       assertEquals(without, optimum(out), "trial " + trial + "\n" + model);
@@ -196,6 +196,9 @@ class TspEdgeEliminationFlatzincTest {
           without, optimum(run(model, "--lcg", "off")), "trial " + trial + " no lcg\n" + model);
     }
     assertFalse(run(randomModel(random, true, false), "-debug").contains(KOPT_MARK));
+    System.clearProperty(KOPT);
+    assertFalse(run(randomModel(random, false, false), "-debug").contains(KOPT_MARK));
+    System.setProperty(KOPT, "true");
     assertFalse(run(randomModel(random, false, true), "-debug").contains(KOPT_MARK));
   }
 

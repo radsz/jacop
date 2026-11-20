@@ -104,12 +104,6 @@ public class TspKOpt extends Constraint implements Stateful, Copyable<TspKOpt>, 
   // the tour length that switches the rules on, or null
   private final IntVar length;
 
-  // the largest relative distance between the length's bounds at which the rules are on
-  private final double gap;
-
-  // the largest lower bound of the length seen at the root
-  private int rootMin = Integer.MIN_VALUE;
-
   // whether a tour within the length's bound has been seen; always true without a length
   private boolean seenTour;
 
@@ -145,25 +139,22 @@ public class TspKOpt extends Constraint implements Stateful, Copyable<TspKOpt>, 
    * @param d the symmetric arc lengths; a missing arc must be longer than any tour
    */
   public TspKOpt(IntVar[] x, int offset, long[][] d) {
-    this(x, offset, d, null, 0);
+    this(x, offset, d, null);
   }
 
   /**
    * Creates the constraint for a model whose objective is the tour length and which has no other
    * constraint on the tour, so that every tour within the length's bound is a solution. The rules
-   * make better tours harder to find, since a tour that a depth-first search completes is rarely
-   * locally optimal: before a first tour they can keep a search from finding any, and far from the
-   * optimum they slow the improvements. So they remove nothing until the constraint has seen such a
-   * tour, and then only at the nodes where the length's bounds are within the relative gap of each
-   * other (max - min &le; gap * |max|), where the search is mostly proving.
+   * make tours harder to find, since a tour that a depth-first search completes is rarely locally
+   * optimal: before a first tour they can keep a search from finding any. So they remove nothing
+   * until the constraint has seen such a tour, as after the first solution of a branch and bound.
    *
    * @param x the successors, x[v] = w + offset for the arc v -&gt; w
    * @param offset the value of the successor of node 0
    * @param d the symmetric arc lengths; a missing arc must be longer than any tour
    * @param length the tour length
-   * @param gap the relative gap between the length's bounds below which the rules are on
    */
-  public TspKOpt(IntVar[] x, int offset, long[][] d, IntVar length, double gap) {
+  public TspKOpt(IntVar[] x, int offset, long[][] d, IntVar length) {
     checkInputForNullness("x", x);
     n = x.length;
     if (n < 4 || d == null || d.length != n) {
@@ -183,7 +174,6 @@ public class TspKOpt extends Constraint implements Stateful, Copyable<TspKOpt>, 
     this.offset = offset;
     this.d = d;
     this.length = length;
-    this.gap = gap;
     this.seenTour = length == null;
     this.numberId = idNumber.incrementAndGet();
     checked = new int[n];
@@ -237,9 +227,6 @@ public class TspKOpt extends Constraint implements Stateful, Copyable<TspKOpt>, 
 
   @Override
   public void consistency(Store store) {
-    if (length != null && store.level == 0) {
-      rootMin = Math.max(rootMin, length.min());
-    }
     if (!seenTour) {
       // the first complete tour within the length's bound is a solution: switch on after it
       long sum = 0;
@@ -251,11 +238,6 @@ public class TspKOpt extends Constraint implements Stateful, Copyable<TspKOpt>, 
         sum += d[v][w];
       }
       seenTour = sum <= length.max();
-      return;
-    }
-    if (length != null && length.max() - (double) rootMin > gap * Math.abs((double) length.max())) {
-      // the root bound is far from the best tour: no removal, and the arcs are checked once it is
-      // near
       return;
     }
     boolean again = true;
