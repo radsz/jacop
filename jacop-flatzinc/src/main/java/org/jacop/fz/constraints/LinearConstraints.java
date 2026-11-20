@@ -1043,14 +1043,26 @@ class LinearConstraints implements ParserTreeConstants {
   }
 
   private void int_lin_relationLeSingleWeight(int w, IntVar x, int p3) {
+    if (w == 0) {
+      // 0 * x <= p3 is the constant test 0 <= p3
+      if (p3 < 0) {
+        throw Store.failException;
+      }
+      return;
+    }
     if (w < 0) {
-      int rhsValue = (int) Math.round(Math.ceil((float) p3 / (float) w));
+      // in long: the bound of -x <= Integer.MIN_VALUE does not fit an int
+      long bound = Math.ceilDiv((long) p3, (long) w);
+      if (bound > Integer.MAX_VALUE) {
+        throw Store.failException;
+      }
+      int rhsValue = (int) bound;
       x.domain.inMin(store.level, x, rhsValue);
       if (support.options.debug()) {
         FzConsole.println("Pruned variable " + x + " to be >= " + rhsValue);
       }
     } else {
-      int rhsValue = (int) Math.round(Math.floor((float) p3 / (float) w));
+      int rhsValue = Math.floorDiv(p3, w);
       x.domain.inMax(store.level, x, rhsValue);
       if (support.options.debug()) {
         FzConsole.println("% Pruned variable " + x + " to be <= " + rhsValue);

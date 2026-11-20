@@ -5810,4 +5810,43 @@ class FlatzincFrontEndTest {
       assertTrue(cuts[k] > 0, Arrays.toString(runs[k]));
     }
   }
+
+  @Test
+  void singleWeightLinearLeBoundIsExact() throws IOException {
+    // the bound of w * x <= c was computed in float: wrong beyond 2^24 and NaN for w = 0
+    String[][] cases = {
+      {
+        "var 100000005..100000008: x:: output_var;",
+        "int_lin_le([3],[x],300000020)",
+        "[x = 100000005;, x = 100000006;] =========="
+      },
+      {
+        "var 100000005..100000008: x:: output_var;",
+        "int_lin_le([1,2],[x,x],300000020)",
+        "[x = 100000005;, x = 100000006;] =========="
+      },
+      {
+        "var -100000008..-100000005: x:: output_var;",
+        "int_lin_le([-3],[x],300000020)",
+        "[x = -100000005;, x = -100000006;] =========="
+      },
+      {
+        "var 16777215..16777220: x:: output_var;",
+        "int_lin_le([1],[x],16777217)",
+        "[x = 16777215;, x = 16777216;, x = 16777217;] =========="
+      },
+      {"var 0..2: x:: output_var;", "int_lin_le([0],[x],5)", "[x = 0;, x = 1;, x = 2;] =========="},
+      {"var 0..2: x:: output_var;", "int_lin_le([0],[x],-1)", "[] =====UNSATISFIABLE====="},
+      {"var bool: x:: output_var;", "bool_lin_le([0],[x],3)", "[x = false;, x = true;] =========="},
+      {"var bool: x:: output_var;", "bool_lin_le([0],[x],-1)", "[] =====UNSATISFIABLE====="}
+    };
+    for (String[] c : cases) {
+      String model = c[0] + "\nconstraint " + c[1] + ";\nsolve satisfy;\n";
+      assertEquals(c[2], normalised(run(model, "-a")[0], false), model);
+    }
+    String opt =
+        "var 0..200000000: x:: output_var;\nconstraint int_lin_le([3],[x],300000020);\n"
+            + "solve maximize x;\n";
+    assertEquals("x = 100000006; ==========", normalised(run(opt)[0], true));
+  }
 }
