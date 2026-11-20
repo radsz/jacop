@@ -1297,6 +1297,49 @@ class LinearRelaxationTest {
   }
 
   /**
+   * A long row cut into sums of blocks is expanded back whole: the objective of XCSP 2025
+   * BusScheduling-c2, a sum of 14,771 Booleans that lcg-split cuts into blocks, stayed as the sum
+   * of its blocks under a cap of 4,096 terms per expanded row, and free search proved its optimum
+   * in none of 3 runs of 120 s instead of in 17-31 s.
+   */
+  @Test
+  void substitutionExpandsLongRowsCutIntoBlocks() {
+    Store store = new Store();
+    int n = 5000;
+    int block = 20;
+    IntVar[] b = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      b[i] = new IntVar(store, "b" + i, 0, 1);
+    }
+    Set<IntVar> sums = new HashSet<>();
+    IntVar[] blocks = new IntVar[n / block];
+    for (int j = 0; j < blocks.length; j++) {
+      blocks[j] = new IntVar(store, "s" + j, 0, block);
+      IntVar[] vs = new IntVar[block + 1];
+      int[] ws = new int[block + 1];
+      vs[0] = blocks[j];
+      ws[0] = 1;
+      for (int i = 0; i < block; i++) {
+        vs[i + 1] = b[j * block + i];
+        ws[i + 1] = -1;
+      }
+      store.impose(new LinearInt(vs, ws, "==", 0));
+      sums.add(blocks[j]);
+    }
+    int[] ones = new int[blocks.length];
+    Arrays.fill(ones, 1);
+    store.impose(new LinearInt(blocks, ones, ">=", 30));
+    // a second row: a relaxation has at least two
+    store.impose(new LinearInt(new IntVar[] {b[0], b[1]}, new int[] {1, 1}, "<=", 1));
+    LinearRelaxation r = LinearRelaxation.of(store, null, false, List.of(), sums);
+    assertThat(r).isNotNull();
+    assertThat(r.allRows())
+        .anyMatch(
+            f -> f.vars().length == n && Arrays.asList(f.vars()).containsAll(Arrays.asList(b)));
+    assertThat(r.allRows()).noneMatch(f -> Arrays.asList(f.vars()).contains(blocks[0]));
+  }
+
+  /**
    * Many extra rows that do not change the root bound are not kept: on rel2onto under lazy clause
    * generation the clauses made 1,135 rows of a relaxation that had 65, and the large relaxation
    * stalled at its pivot limit and pruned nothing.

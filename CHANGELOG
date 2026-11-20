@@ -8513,7 +8513,43 @@ Version 5.0 (unreleased)
    instances with element or circuit at 240 s 6,369 -> 6,387 s, with only
    3 of them running route neighbourhoods (the rest run unchanged code).
 
-476. The FlatZinc front end writes a sum of conjunctions over all pairs of
+476. The permutation element sums of the FlatZinc front end (entry 404)
+   also take binary tables whose one column is a total function of the
+   other, and, when the indices are a permutation of their values, post
+   the count of each value next to the sum: y[k] = c[x[k]] with the x[k]
+   a permutation of U takes each value v exactly |{u in U : c[u] = v}|
+   times (CountValues with fixed counters, for at most 64 distinct
+   values and at most half as many as indices). This is the cardinality
+   form of the aggregated assignment formulation of element and
+   all_different (P. Refalo, Linear formulation of constraint
+   programming models and hybrid solvers, CP 2000). In the mystery
+   shopper problem (CSPLib prob004, XCSP 2024 MisteryShopper) the
+   visitor group of each visit is a table of the visitor, the visitors
+   of a week are a permutation, and the groups that visit a visitee over
+   the W weeks are all different, so each group must make as many visits
+   as there are visitees, W times its size; the counts and the
+   all_different constraints make the linear relaxation infeasible when
+   the groups differ in size. All 10 UNSAT instances (including
+   6-12-1, which no 2024 solver decided) are proved in 1.6-2.9 s at
+   600 s; before, JaCoP proved 6 (up to 180 s) and timed out on 5-08-1,
+   5-10-1, 6-12-1 and 6-12-2.
+   -Dorg.jacop.fz.permutationElementCounts=false turns the counts off.
+
+477. The linear relaxation expands a row whose sums lcg-split or linear
+   overlap factoring defined up to 65,536 terms (was 4,096; property
+   org.jacop.lp.maxExpandedTerms). Merging repeated variables at every
+   level (jacop #815) keeps a row at most as long as the distinct
+   variables it reaches, so the old cap only kept rows that are long in
+   the model as sums of their blocks: the objective of XCSP 2025
+   BusScheduling-c2, a sum of 14,771 Booleans. -f proved it in none of 5
+   runs of 120 s; with this change and lcg-split-tree=0 in 3 of 3 (17-31
+   s), and with the tree-split fix of jacop #863 in 2 of 2 (39, 45 s). On
+   the 24 XCSP 2024/2025 and wide instances with
+   a row of 4,097 to 65,536 terms, at 240 s: -f 10 = 10 proved, total
+   3,749 -> 3,720 s; default search 10 = 10 proved, 3,751 -> 3,662 s
+   (BusScheduling c1a 89 -> 30 s, r5a 69 -> 32 s).
+
+478. The FlatZinc front end writes a sum of conjunctions over all pairs of
    two sets of Boolean variables, sum(i in A, j in B) w *
    bool2int(a[i] /\ b[j]), as w * sum(a) * sum(b) when the conjunctions
    and their bool2int have no other use (ProductOfSumsDetector, system
@@ -8527,14 +8563,14 @@ Version 5.0 (unreleased)
    before the search; it now finds objective 694,296 within 600 s with a
    live heap of 1.5 GB.
 
-477. The Hall cuts of an all-different in the linear relaxation
+479. The Hall cuts of an all-different in the linear relaxation
    (AlldifferentCuts.separate) list the variables only of the cuts they
    return. A long constraint has a violated prefix of almost every
    length, and listing them all took quadratic memory: a FlatZinc model
    with an 80,000-variable all-different ran out of a 4 GB heap at the
    root, and now reaches its answer in 9 s. The cuts are the same.
 
-478. The JaLP presolve treats a long row of column singletons in linear
+480. The JaLP presolve treats a long row of column singletons in linear
    time. The implied-free test of each singleton read the whole row; it
    now first tests the row activity, kept while no bound, column or
    entry changes, and reads the row only when that test does not fail
@@ -8546,7 +8582,7 @@ Version 5.0 (unreleased)
    is solved in 0.2 s instead of about a minute (50,000: 16 s), and a 40,000
    term FlatZinc sum of bool2int over a conjunction from 32 s to 25 s.
 
-479. The tabu search of functional models (FunctionalModel, CHANGELOG
+481. The tabu search of functional models (FunctionalModel, CHANGELOG
    419) leaves to the solver a model with a function other than a sum
    or a product over more than 1,024 variables, which the search
    evaluates whole after every trial move. With the cost a count over
