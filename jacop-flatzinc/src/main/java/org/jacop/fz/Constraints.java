@@ -58,6 +58,7 @@ import org.jacop.fz.constraints.BalanceDetector;
 import org.jacop.fz.constraints.CardinalityDetector;
 import org.jacop.fz.constraints.CircuitCostDetector;
 import org.jacop.fz.constraints.ClampedBounds;
+import org.jacop.fz.constraints.ClausalCompiler;
 import org.jacop.fz.constraints.ColouredTreeDetector;
 import org.jacop.fz.constraints.CommonSubexpressions;
 import org.jacop.fz.constraints.ConjunctionSumDetector;
@@ -75,6 +76,7 @@ import org.jacop.fz.constraints.ExactCoverDetector;
 import org.jacop.fz.constraints.GiantTourDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
 import org.jacop.fz.constraints.IndexDisjunctionDetector;
+import org.jacop.fz.constraints.IndexFunctionDetector;
 import org.jacop.fz.constraints.IntensionTableDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
 import org.jacop.fz.constraints.LinearOverlapDetector;
@@ -173,11 +175,22 @@ public class Constraints implements ParserTreeConstants {
     // forces on it, instead of being narrowed
     ObjectiveScaling.apply(support, astTree);
     if (dictionary.domainsClamped()) {
-      System.err.println(dictionary.clampedDomainsWarning());
+      if (dictionary.boundedDomainsClamped()) {
+        System.err.println(dictionary.clampedDomainsWarning());
+      }
       dictionary.recordDeclaredDomains();
       dictionary.setSaturationCandidates(
           SaturatedProducts.find(
               support, astTree, ObjectiveScaling.objective(dictionary, astTree)));
+      // reads the rows as declared, before the detectors replace constraints, to show the
+      // narrowing of domains harmless at the end or when the model fails while it is translated
+      dictionary.setClampedBounds(
+          new ClampedBounds(
+              support,
+              astTree,
+              dictionary.narrowedVariables(),
+              dictionary::declaredBounds,
+              dictionary.saturatedProducts()));
     }
 
     Options options = support.options;
@@ -218,6 +231,16 @@ public class Constraints implements ParserTreeConstants {
       // presolve has preprocessed them; Solve posts them
       sat.collectClauses();
     }
+    // a satisfaction model over small domains under free search is also compiled into one CNF,
+    // which Solve gives to JaSAT; the store is built as usual, to check the solution
+    if (ClausalCompiler.enabled()
+        && options.lcg()
+        && options.proof() == null
+        && !manySolutions
+        && satisfaction(astTree)
+        && freeSearchModel(astTree, options)) {
+      dictionary.clausalModel = ClausalCompiler.compile(support, astTree);
+    }
     if (options.proof() != null && options.lcg()) {
       // the constraints propagate as they are imposed; the proof derives their changes from the
       // domains the model states
@@ -255,6 +278,7 @@ public class Constraints implements ParserTreeConstants {
           pureClique = true;
         }
       }
+      cf.setClauseModel(clauseModel(astTree));
       // a search variable that became an alias is searched as its Boolean
       dictionary.searchAliasTargets(dictionary.binaryEqAliases);
       // the same function of the same inputs is computed once; --proof encodes the model as given
@@ -433,6 +457,15 @@ public class Constraints implements ParserTreeConstants {
         }
       }
 
+      // a product of two functions of one index variable as a sum over the index's value literals
+      if (IndexFunctionDetector.enabled() && options.proof() == null) {
+        Set<SimpleNode> products = new IndexFunctionDetector(support).detect(astTree);
+        if (!products.isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(products);
+        }
+      }
+
       IncreasingDetector increasing = null;
       if (IncreasingDetector.sumEnabled() || IncreasingDetector.nvalueEnabled()) {
         increasing = new IncreasingDetector(support);
@@ -549,16 +582,6 @@ public class Constraints implements ParserTreeConstants {
 
       support.releaseLinearRewrites();
       support.reportAlldiffChannels();
-      if (dictionary.domainsClamped()) {
-        // reads the rows as declared, to show the narrowing of domains harmless at the end
-        dictionary.setClampedBounds(
-            new ClampedBounds(
-                support,
-                astTree,
-                dictionary.narrowedVariables(),
-                dictionary::declaredBounds,
-                dictionary.saturatedProducts()));
-      }
       cf.poseCounts();
       cf.poseDiffnProjections();
 
@@ -790,6 +813,39 @@ public class Constraints implements ParserTreeConstants {
 
   // a constraint item, imposed as implied by the others when implied is true
   /** The integer variables named by the solve item: the objective and the search annotations. */
+  private static final Set<String> CLAUSE_CONSTRAINTS =
+      Set.of(
+          "jacop_negative_table_int",
+          "bool_clause",
+          "array_bool_or",
+          "array_bool_and",
+          "bool2int",
+          "bool_not",
+          "bool_eq",
+          "bool_le",
+          "bool_lt",
+          "bool_or",
+          "bool_and");
+
+  /* Whether every constraint of the model is a clause or a negative table, which over 0/1
+   * variables is a set of clauses. */
+  private static boolean clauseModel(SimpleNode astTree) {
+    for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
+      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
+      if (node.getId() != JJTCONSTRAINTITEMS) {
+        continue;
+      }
+      for (int j = 0; j < node.jjtGetNumChildren(); j++) {
+        SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
+        if (item.getId() != JJTCONSTELEM
+            || !CLAUSE_CONSTRAINTS.contains(((ASTConstElem) item).getName())) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   private Set<IntVar> solveItemVariables(SimpleNode astTree) {
     Set<IntVar> vars = Collections.newSetFromMap(new IdentityHashMap<>());
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
@@ -1048,6 +1104,26 @@ public class Constraints implements ParserTreeConstants {
   private boolean hasFloatVariables() {
     for (int i = 0; i < store.size(); i++) {
       if (store.vars[i] instanceof FloatVar) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // whether the model is solved by free search: -f, or no search annotation (as Solve decides)
+  private static boolean freeSearchModel(Node node, Options options) {
+    if (options.freeSearch()) {
+      return true;
+    }
+    if (!options.freeSearchWithoutAnnotation() || options.complementarySearch()) {
+      return false;
+    }
+    for (int i = node.jjtGetNumChildren() - 1; i >= 0; i--) {
+      Node child = node.jjtGetChild(i);
+      if (child instanceof ASTSolveItem item) {
+        return item.jjtGetNumChildren() == 1;
+      }
+      if (child instanceof ASTModelEnd && freeSearchModel(child, options)) {
         return true;
       }
     }
