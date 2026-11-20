@@ -1281,6 +1281,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.rootPrunings
             + "\n%%%mzn-stat: lpRootReducedSkipped="
             + r.rootReducedSkipped
+            + "\n%%%mzn-stat: lpRootReducedPasses="
+            + r.rootReducedPasses
             + "\n%%%mzn-stat: lpCutBound="
             + r.cutBound
             + "\n%%%mzn-stat: lpSparseCuts="
