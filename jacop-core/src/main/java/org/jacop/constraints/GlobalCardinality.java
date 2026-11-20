@@ -180,6 +180,16 @@ public class GlobalCardinality extends Constraint
   private final int[] dfsNumber;
   private final int[] lowLink;
   private final int[] component;
+
+  // Bit sets of the value lists, used when the values fit in a few words: word w of variable i is
+  // adjBits[i * words + w], with bit a set when a is in the list of i. Component c has the values
+  // componentBits[c * words ...]. They turn the value graph and the pruning scan into word
+  // operations instead of a walk over every value of every variable.
+  private static final int MAX_BIT_WORDS = 8;
+  private final int words;
+  private final long[] adjBits;
+  private final long[] componentBits;
+  private final long[] unionBits;
   private final int[] cursor;
   private final int[] callStack;
   private final int[] sccStack;
@@ -341,6 +351,11 @@ public class GlobalCardinality extends Constraint
     dfsNumber = new int[nodes];
     lowLink = new int[nodes];
     component = new int[nodes];
+    int w = (m + 1 + 63) >>> 6;
+    words = w <= MAX_BIT_WORDS ? w : 0;
+    adjBits = words > 0 ? new long[n * words] : null;
+    unionBits = words > 0 ? new long[words] : null;
+    componentBits = words > 0 ? new long[(m + 2) * words] : null;
     cursor = new int[nodes];
     callStack = new int[nodes];
     sccStack = new int[nodes];
@@ -497,6 +512,9 @@ public class GlobalCardinality extends Constraint
     }
     builtSize[i] = domainSize;
     int size = adjStart[i];
+    if (words > 0) {
+      Arrays.fill(adjBits, i * words, (i + 1) * words, 0L);
+    }
     if (d.singleton()) {
       int a = index(d.min());
       fixedTo[i] = a < 0 ? m : a;
@@ -533,6 +551,13 @@ public class GlobalCardinality extends Constraint
       possible[m]++;
     }
     adjEnd[i] = size;
+    if (words > 0) {
+      int base = i * words;
+      for (int k = adjStart[i]; k < size; k++) {
+        int a = adj[k];
+        adjBits[base + (a >>> 6)] |= 1L << a;
+      }
+    }
     return true;
   }
 
@@ -830,6 +855,13 @@ public class GlobalCardinality extends Constraint
    */
   private int computeComponents() {
     // arcs between values, without repetitions
+    int size = words > 0 ? valueArcsFromBits() : valueArcs();
+    valueAdjStart[m + 1] = size;
+    return stronglyConnectedComponents();
+  }
+
+  /** The arcs between values, from the value lists; returns their number. */
+  private int valueArcs() {
     int size = 0;
     generation++;
     for (int a = 0; a <= m; a++) {
@@ -848,8 +880,39 @@ public class GlobalCardinality extends Constraint
         }
       }
     }
-    valueAdjStart[m + 1] = size;
+    return size;
+  }
 
+  /** The arcs between values, as unions of the bit sets of the lists; returns their number. */
+  private int valueArcsFromBits() {
+    int size = 0;
+    long[] union = unionBits;
+    for (int a = 0; a <= m; a++) {
+      valueAdjStart[a] = size;
+      Arrays.fill(union, 0L);
+      for (int i = head[a]; i >= 0; i = next[i]) {
+        int base = i * words;
+        for (int w = 0; w < words; w++) {
+          union[w] |= adjBits[base + w];
+        }
+      }
+      union[a >>> 6] &= ~(1L << a);
+      for (int w = 0; w < words; w++) {
+        long bits = union[w];
+        while (bits != 0) {
+          if (size == valueAdj.length) {
+            valueAdj = Arrays.copyOf(valueAdj, 2 * size);
+          }
+          valueAdj[size++] = (w << 6) + Long.numberOfTrailingZeros(bits);
+          bits &= bits - 1;
+        }
+      }
+    }
+    return size;
+  }
+
+  /** Tarjan's algorithm over the value graph; returns the number of components. */
+  private int stronglyConnectedComponents() {
     int nodes = m + 2;
     int sink = m + 1;
     Arrays.fill(dfsNumber, 0, nodes, 0);
@@ -932,6 +995,9 @@ public class GlobalCardinality extends Constraint
    * variable that can take no other value of the component of its value is fixed to its value.
    */
   private boolean prune(Store store) {
+    if (words > 0) {
+      return pruneFromBits(store);
+    }
     boolean pruned = false;
     for (int i = 0; i < n; i++) {
       int matched = varMatch[i];
@@ -982,6 +1048,85 @@ public class GlobalCardinality extends Constraint
             removedValues.unionAdapt(removed, removed);
           }
           removedValues.unionAdapt(values[a], values[a]);
+        }
+      }
+      if (removeUncounted) {
+        x.domain.in(store.level, x, valuesDomain);
+      }
+      if (removedValues != null) {
+        x.domain.in(store.level, x, x.dom().subtract(removedValues));
+      } else if (removed >= 0) {
+        x.domain.inComplement(store.level, x, removed);
+      }
+    }
+    return pruned;
+  }
+
+  /** {@link #prune(Store)} with the bit sets of the lists and of the components. */
+  private boolean pruneFromBits(Store store) {
+    long[] comp = componentBits;
+    Arrays.fill(comp, 0L);
+    for (int a = 0; a <= m; a++) {
+      comp[component[a] * words + (a >>> 6)] |= 1L << a;
+    }
+    boolean pruned = false;
+    for (int i = 0; i < n; i++) {
+      int matched = varMatch[i];
+      if (matched < 0) {
+        continue;
+      }
+      int cbase = component[matched] * words;
+      int base = i * words;
+      boolean outside = false;
+      for (int w = 0; w < words; w++) {
+        if ((adjBits[base + w] & ~comp[cbase + w]) != 0) {
+          outside = true;
+          break;
+        }
+      }
+      if (!outside) {
+        continue;
+      }
+      pruned = true;
+      boolean inComponent = false;
+      for (int w = 0; w < words; w++) {
+        long inside = adjBits[base + w] & comp[cbase + w];
+        if (w == matched >>> 6) {
+          inside &= ~(1L << matched);
+        }
+        if (inside != 0) {
+          inComponent = true;
+          break;
+        }
+      }
+      IntVar x = list[i];
+      if (!inComponent) {
+        if (matched == m) {
+          x.domain.in(store.level, x, x.dom().subtract(valuesDomain));
+        } else {
+          x.domain.in(store.level, x, values[matched], values[matched]);
+        }
+        continue;
+      }
+      int removed = -1;
+      IntervalDomain removedValues = null;
+      boolean removeUncounted = false;
+      for (int w = 0; w < words; w++) {
+        long bits = adjBits[base + w] & ~comp[cbase + w];
+        while (bits != 0) {
+          int a = (w << 6) + Long.numberOfTrailingZeros(bits);
+          bits &= bits - 1;
+          if (a == m) {
+            removeUncounted = true;
+          } else if (removed < 0) {
+            removed = values[a];
+          } else {
+            if (removedValues == null) {
+              removedValues = new IntervalDomain();
+              removedValues.unionAdapt(removed, removed);
+            }
+            removedValues.unionAdapt(values[a], values[a]);
+          }
         }
       }
       if (removeUncounted) {
