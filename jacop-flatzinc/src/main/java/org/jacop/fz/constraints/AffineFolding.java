@@ -169,6 +169,18 @@ public class AffineFolding implements ParserTreeConstants {
         }
       }
     }
+    // the definitions first: the occurrences are read only when there is one (a clause model has
+    // none, and the occurrences of its millions of clauses took seconds)
+    List<Definition> definitions = new ArrayList<>();
+    for (ASTConstElem c : all) {
+      Definition d = definition(c);
+      if (d != null) {
+        definitions.add(d);
+      }
+    }
+    if (definitions.isEmpty()) {
+      return;
+    }
     // the constraints each variable occurs in, and whether each constraint is a linear row
     Map<IntVar, Set<ASTConstElem>> occurrences = new IdentityHashMap<>();
     for (ASTConstElem c : all) {
@@ -177,11 +189,9 @@ public class AffineFolding implements ParserTreeConstants {
       }
     }
     Map<IntVar, Definition> folded = new IdentityHashMap<>();
-    for (ASTConstElem c : all) {
-      Definition d = definition(c);
-      if (d != null
-          && !folded.containsKey(output(c, d))
-          && foldable(output(c, d), d, occurrences)) {
+    for (Definition d : definitions) {
+      ASTConstElem c = d.node();
+      if (!folded.containsKey(output(c, d)) && foldable(output(c, d), d, occurrences)) {
         folded.put(output(c, d), d);
       }
     }
