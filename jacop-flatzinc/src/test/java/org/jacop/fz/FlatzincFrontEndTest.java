@@ -6009,4 +6009,29 @@ class FlatzincFrontEndTest {
         """;
     assertEquals(List.of("x0 = 536685545; x2 = -46341; x3 = -1;"), solveAllInOrder(model));
   }
+
+  @Test
+  void elementOfConstantsBeyondTheDomainRangeIsSolved() throws IOException {
+    // a constant beyond MIN_INT..MAX_INT at the only position of the index was posted as XeqC,
+    // which rejected it: "Constraint XeqC has a constant c 2147483646 that is not in the
+    // allowed range" instead of the answer
+    String fixed =
+        """
+        var {1}: i:: output_var;
+        var {-1,0,1}: v:: output_var;
+        constraint array_int_element(i,[2147483646],v);
+        solve satisfy;
+        """;
+    String[] out = run(fixed, "-a");
+    assertTrue(out[0].contains("=====UNSATISFIABLE====="), out[0] + out[1]);
+    assertEquals(0, lastStatus, out[0] + out[1]);
+    String open =
+        """
+        var {1,2}: i:: output_var;
+        var {-4,0}: v:: output_var;
+        constraint array_int_element(i,[2147483646,-4],v);
+        solve satisfy;
+        """;
+    assertEquals(List.of("i = 2; v = -4;"), solveAllInOrder(open));
+  }
 }
