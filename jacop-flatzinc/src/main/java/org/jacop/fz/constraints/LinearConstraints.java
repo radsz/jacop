@@ -226,6 +226,14 @@ class LinearConstraints implements ParserTreeConstants {
     }
     IntVar p4 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
 
+    Boolean decided = decidedBeyondInt(operation, p1, p2, p3);
+    if (decided != null) {
+      if (isReified || !decided) {
+        p4.domain.inValue(store.level, p4, decided ? 1 : 0);
+      }
+      return;
+    }
+
     if (p2.length == 0) {
       // the empty sum is the constant test 0 rel p3, which LinearInt rejects
       boolean holds =
@@ -554,6 +562,14 @@ class LinearConstraints implements ParserTreeConstants {
         p2 = terms.keySet().toArray(new IntVar[0]);
         p1 = terms.values().stream().mapToInt(Long::intValue).toArray();
       }
+    }
+
+    Boolean decided = decidedBeyondInt(operation, p1, p2, p3);
+    if (decided != null) {
+      if (!decided) {
+        throw Store.failException;
+      }
+      return;
     }
 
     Long s = evaluateConstantLinearTerm(p1, p2);
@@ -1289,6 +1305,45 @@ class LinearConstraints implements ParserTreeConstants {
       IntVar[] vars, String op, int constant, IntVar boolVar, boolean isReified) {
     IntVar result = support.dictionary.getConstant(constant);
     poseSumBoolOrIntReified(vars, op, result, boolVar, isReified);
+  }
+
+  /**
+   * Decides a short row whose sum or constant lies beyond int by the bounds of its terms, computed
+   * in long. The two-variable constraints such rows are posted as add their bounds in int and
+   * reject them; with unit weights and variables within the domain range, such a row is always
+   * decided.
+   *
+   * @param operation the relation of the row
+   * @param weights the weights
+   * @param vars the variables
+   * @param c the right-hand side
+   * @return whether the row holds, or null when it is not decided or fits in int
+   */
+  private static Boolean decidedBeyondInt(int operation, int[] weights, IntVar[] vars, int c) {
+    if (vars.length == 0 || vars.length > 3) {
+      return null;
+    }
+    long lo = 0;
+    long hi = 0;
+    for (int i = 0; i < vars.length; i++) {
+      long a = (long) weights[i] * vars[i].min();
+      long b = (long) weights[i] * vars[i].max();
+      lo += Math.min(a, b);
+      hi += Math.max(a, b);
+    }
+    if (lo >= Integer.MIN_VALUE
+        && hi <= Integer.MAX_VALUE
+        && c >= IntDomain.MIN_INT
+        && c <= IntDomain.MAX_INT) {
+      return null;
+    }
+    return switch (operation) {
+      case Support.EQ -> c < lo || c > hi ? Boolean.FALSE : lo == hi ? Boolean.TRUE : null;
+      case Support.NE -> c < lo || c > hi ? Boolean.TRUE : lo == hi ? Boolean.FALSE : null;
+      case Support.LE -> hi <= c ? Boolean.TRUE : lo > c ? Boolean.FALSE : null;
+      case Support.LT -> hi < c ? Boolean.TRUE : lo >= c ? Boolean.FALSE : null;
+      default -> null;
+    };
   }
 
   /**

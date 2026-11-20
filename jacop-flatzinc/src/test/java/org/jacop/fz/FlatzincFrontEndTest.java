@@ -6034,4 +6034,43 @@ class FlatzincFrontEndTest {
         """;
     assertEquals(List.of("i = 2; v = -4;"), solveAllInOrder(open));
   }
+
+  @Test
+  void shortLinearRowBeyondIntIsDecidedByItsBounds() throws IOException {
+    // rows of two variables with unit weights are posted as XplusCeqZ, XplusYeqC or XplusClteqZ,
+    // which add their bounds and constant in int and rejected these models with "Evaluation of
+    // model resulted in an overflow"; each row is decided by its bounds
+    String reified =
+        """
+        var {-3,65536,268435454}: x:: output_var;
+        var bool: b:: output_var;
+        constraint int_lin_ne_reif([1,-1],[x,x],2147483647,b);
+        solve satisfy;
+        """;
+    assertEquals(
+        List.of("b = true; x = -3;", "b = true; x = 65536;", "b = true; x = 268435454;"),
+        solveAllInOrder(reified));
+    String implied =
+        """
+        var {-536870909,0,536870909}: x:: output_var;
+        var {-536870909,0,536870909}: y:: output_var;
+        var bool: b:: output_var;
+        constraint int_lin_eq_imp([1,-1],[x,y],2147483646,b);
+        constraint bool_eq(b,true);
+        solve satisfy;
+        """;
+    String[] out = run(implied, "-a");
+    assertTrue(out[0].contains("=====UNSATISFIABLE====="), out[0] + out[1]);
+    assertEquals(0, lastStatus, out[0] + out[1]);
+    String plain =
+        """
+        var {-65536,1,268435454}: x:: output_var;
+        var {-32768,7}: y:: output_var;
+        constraint int_lin_le([1,-1],[y,x],-2147483647);
+        solve satisfy;
+        """;
+    out = run(plain, "-a");
+    assertTrue(out[0].contains("=====UNSATISFIABLE====="), out[0] + out[1]);
+    assertEquals(0, lastStatus, out[0] + out[1]);
+  }
 }
