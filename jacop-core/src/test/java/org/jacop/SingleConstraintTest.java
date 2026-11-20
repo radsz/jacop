@@ -12043,4 +12043,28 @@ class SingleConstraintTest extends TestHelper {
           .isEqualTo(expected);
     }
   }
+
+  @Test
+  void affineViewRangeWithPreimageBelowMinIntHasNoBaseValue() {
+    // y = x + 12 over x in MIN_INT..MIN_INT+5: the preimage of MIN_INT+1..MIN_INT+3 lies below
+    // MIN_INT, so it holds no value of x; it was clamped to MIN_INT..MIN_INT instead
+    int m = IntDomain.MIN_INT;
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", m, m + 5);
+    org.jacop.core.AffineView y = new org.jacop.core.AffineView(store, "y", x, 1, 12);
+    assertThat(y.dom().isIntersecting(m + 1, m + 2)).isFalse();
+    store.setLevel(1);
+    y.domain.inComplement(1, y, m + 1, m + 3);
+    assertThat(x.min()).isEqualTo(m);
+    assertThat(x.getSize()).isEqualTo(6);
+    assertThatThrownBy(() -> y.domain.in(1, y, m + 1, m + 3)).isInstanceOf(FailException.class);
+    store.removeLevel(1);
+    store.setLevel(0);
+    IntDomain d =
+        new org.jacop.core.AffineView(store, "z", new IntVar(store, "u", m, m + 5), 1, 12).domain;
+    d.subtractAdapt(m + 1, m + 3);
+    assertThat(d.getSize()).isEqualTo(6);
+    assertThat(d.intersectAdapt(m + 1, m + 3)).isEqualTo(IntDomain.GROUND);
+    assertThat(d.isEmpty()).isTrue();
+  }
 }
