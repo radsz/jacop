@@ -5868,4 +5868,16 @@ class FlatzincFrontEndTest {
           normalised(run(zeros, options)[0], false));
     }
   }
+
+  @Test
+  void emptyXorIsUnsatisfiable() throws IOException {
+    // the xor of no variables is false; the SAT translation failed with a negative array size
+    String model = "var bool: b1:: output_var;\nconstraint array_bool_xor([]);\nsolve satisfy;\n";
+    for (String[] options : new String[][] {{}, {"-a"}, {"--lcg"}, {"-sat"}}) {
+      String[] out = run(model, options);
+      assertEquals("[] =====UNSATISFIABLE=====", normalised(out[0], false), out[1]);
+      assertEquals(0, lastStatus, out[1]);
+      assertFalse(out[1].contains("problem detected"), out[1]);
+    }
+  }
 }
