@@ -505,6 +505,7 @@ public final class RevisedDualSimplex {
     exact = o.exact;
     cleaning = o.cleaning;
     dualPending = o.dualPending;
+    traceStart = o.traceStart;
     // copy() postsolves an open reduced solve first, so the copy has none
     reducedLp = null;
     reducedBy = null;
