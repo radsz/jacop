@@ -3652,14 +3652,29 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (lcgProbe > 0 && lcgProbeDelay > 0 && lcg.probePasses > 0) {
       printProbeStatistics(lcg);
     }
-    if (slowCheck != null) {
+    if (slowCheck != null && lcgTasteDue && lcgStatus == CdclSolver.UNKNOWN) {
+      // the probe goes on after the taste of search without learning
+      lcgProbeThread = slowCheck;
+    } else if (slowCheck != null) {
       slowCheck.interrupt();
-      // a finished virtual thread keeps its task, and the task the solver: free search without
-      // learning, which runs in this frame, would keep the solver and its clauses
-      slowCheck = null;
     }
+    // a finished virtual thread keeps its task, and the task the solver: free search without
+    // learning, which runs in this frame, would keep the solver and its clauses
+    slowCheck = null;
     if (lcgSliceDue && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch(lcg)) {
-      return alternateWithoutLearning();
+      try {
+        return alternateWithoutLearning();
+      } finally {
+        if (lcgProbeThread != null) {
+          lcgProbeThread.interrupt();
+          lcgProbeThread = null;
+        }
+      }
+    }
+    lcgTasteDue = false;
+    if (lcgProbeThread != null) {
+      lcgProbeThread.interrupt();
+      lcgProbeThread = null;
     }
     if (lcgSlow && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch(lcg)) {
       return free ? continueWithoutLcg(costVar) : continueFixedWithoutLcg(costVar);
@@ -3673,6 +3688,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private int lcgSatSlices;
   // the time of a slice of search without learning as a share of LCG's time before it
   private double lcgSliceShare = 1;
+  // set when the probe stopped LCG early for one slice of search without learning (lcg-sat-taste)
+  private volatile boolean lcgTasteDue;
+  // the nanoseconds of CdclSolver.now that the taste of search without learning took
+  private long lcgTasteNanos;
+  // the probe's thread, kept running across the taste
+  private Thread lcgProbeThread;
 
   /**
    * Alternates search without learning with LCG on a satisfaction model, after the probe found that
@@ -3692,10 +3713,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private boolean alternateWithoutLearning() {
     lcgSliceDue = false;
+    boolean taste = lcgTasteDue;
+    lcgTasteDue = false;
     CdclSolver sat = lcg.sat();
     long end = sat.deadline();
     long lcgShare = Math.max(1, sat.now() - lcgStart);
-    long cpMillis = Math.max(1, (long) (lcgSliceShare * lcgShare / 1_000_000L));
+    long cpMillis = Math.max(1, (long) ((taste ? 1 : lcgSliceShare) * lcgShare / 1_000_000L));
     // the search is built at the root, below the levels of the slices: the time stamps of its
     // branchings (input order of the annotation) live at the level they were made at
     freeSearchBuildOnly = true;
@@ -3716,6 +3739,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 + " ms of free search without learning");
       }
       int root = store.level;
+      long sliceStart = sat.now();
       store.setLevel(root + 1);
       Runnable giveBack = lcg.lend();
       try {
@@ -3742,6 +3766,22 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       if (options.getTimeOut() > 0 && options.getRemainingTimeOut() <= 0) {
         return false;
+      }
+      if (taste) {
+        // LCG goes on to the end, and the probe may still start the slices
+        taste = false;
+        lcgTasteNanos += sat.now() - sliceStart;
+        lcgStatus = lcg.solve();
+        if (lcgStatus != CdclSolver.UNKNOWN
+            || sat.now() >= end
+            || !lcgSliceDue
+            || tooLateForFreeSearch(lcg)) {
+          return numberSolutions > 0;
+        }
+        lcgSliceDue = false;
+        lcgShare = Math.max(1, sat.now() - lcgStart - lcgTasteNanos);
+        cpMillis = Math.max(1, (long) (lcgSliceShare * lcgShare / 1_000_000L));
+        continue;
       }
       lcgShare *= 2;
       cpMillis *= 2;
@@ -4101,11 +4141,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     boolean report = !act || options.debug() || options.searchStatistics();
     lcgStart = solver.sat().now();
+    lcgTasteNanos = 0;
     long limit = CdclSolver.VIRTUAL_CLOCK ? options.getTimeOut() : options.getRemainingTimeOut();
     long first = (long) (at * limit);
     if (first <= 0) {
       return null;
     }
+    double tasteShare = Double.parseDouble(options.freeConfig("lcg-sat-taste", "0.01"));
+    long taste =
+        act && tasteShare > 0 && tasteShare < at && !"once".equals(lcgSatHandover())
+            ? (long) (tasteShare * limit)
+            : 0;
     if (CdclSolver.VIRTUAL_CLOCK) {
       Runnable[] check = new Runnable[1];
       long[] next = {first};
@@ -4116,7 +4162,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               solver.sat().setAlarm(lcgStart + next[0] * 1_000_000L, check[0]);
             }
           };
-      solver.sat().setAlarm(lcgStart + first * 1_000_000L, check[0]);
+      if (taste > 0) {
+        solver
+            .sat()
+            .setAlarm(
+                lcgStart + taste * 1_000_000L,
+                () -> {
+                  tasteWithoutLearning(solver);
+                  solver.sat().setAlarm(lcgStart + first * 1_000_000L, check[0]);
+                });
+      } else {
+        solver.sat().setAlarm(lcgStart + first * 1_000_000L, check[0]);
+      }
       return null;
     }
     return Thread.ofVirtual()
@@ -4124,6 +4181,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             () -> {
               try {
                 long slept = 0;
+                if (taste > 0) {
+                  Thread.sleep(taste);
+                  slept = taste;
+                  tasteWithoutLearning(solver);
+                }
                 long next = first;
                 do {
                   Thread.sleep(next - slept);
@@ -4137,6 +4199,26 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             });
   }
 
+  private String lcgSatHandover() {
+    return options.freeConfig("lcg-sat-handover", "slices");
+  }
+
+  /**
+   * Stops LCG, early in a satisfaction search (lcg-sat-taste, 1 % of the time limit), for one slice
+   * of search without learning as long as LCG had; LCG then goes on with the probe as before. The
+   * probe (lcg-sat-at, 10 % of the time limit) is a long wait for models that search without
+   * learning decides in seconds: CSP Solver Competition 2008 queens-100, allIntervalSeries-100,
+   * crossword ogd-23-10 and the random tightness-0.8 tables take 0.1 to 4 s without learning, and
+   * LCG 28 to 60 s or more.
+   */
+  private void tasteWithoutLearning(LcgSolver solver) {
+    if (!tooLateForFreeSearch(solver)) {
+      lcgTasteDue = true;
+      lcgSliceDue = true;
+      solver.sat().interrupt();
+    }
+  }
+
   /**
    * Makes one probe of a satisfaction search with learning.
    *
@@ -4145,7 +4227,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private boolean satisfactionProbeOnce(LcgSolver solver, boolean act, boolean report) {
     CdclSolver sat = solver.sat();
     long conflicts = sat.conflicts;
-    double seconds = (sat.now() - lcgStart) / 1e9;
+    double seconds = (sat.now() - lcgStart - lcgTasteNanos) / 1e9;
     double level = conflicts == 0 ? 0 : (double) sat.conflictLevels / conflicts;
     double jump = conflicts == 0 ? 0 : (double) sat.backjumpLevels / conflicts;
     double lbd = conflicts == 0 ? 0 : (double) sat.lbdSum() / conflicts;
@@ -4171,7 +4253,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               sat.propagations,
               weak));
     }
-    boolean slices = !"once".equals(options.freeConfig("lcg-sat-handover", "slices"));
+    boolean slices = !"once".equals(lcgSatHandover());
     // a search with learning that makes few conflicts a second gets slices without learning too:
     // XCSP 2026 Antichain1-126-09 and 252-10 make 7 to 90 conflicts/s, jump back 2 to 14 levels
     // (learning looks useful) and stay open in 600 s, while search without learning solves them

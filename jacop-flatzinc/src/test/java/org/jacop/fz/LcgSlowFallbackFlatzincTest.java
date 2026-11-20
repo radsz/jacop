@@ -390,7 +390,31 @@ class LcgSlowFallbackFlatzincTest {
     // an all-different: the proof needs search. Slices of 1 ms of search without learning
     // alternate with LCG from the first probe, and the answer must be unsatisfiable whichever of
     // them finishes
-    int n = 9;
+    String out =
+        runSatisfaction(
+            pigeons(9),
+            "lcg-sat-at=0.0001,lcg-sat-jump=1000,lcg-sat-lbd=0,lcg-sat-cp-share=0.0001");
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+    assertFalse(out.contains("----------"), out);
+    assertTrue(out.contains("lcgSatSlices="), out);
+  }
+
+  @Test
+  void satisfactionTastesSearchWithoutLearningOnce() throws IOException {
+    // the pigeons of satisfactionProvedUnsatisfiableAcrossSlices: the taste stops LCG after its
+    // first moments for one slice of search without learning, and LCG, which the probe never stops
+    // (no jump counts as weak, no rate as slow), then proves the model unsatisfiable
+    String out =
+        runSatisfaction(
+            pigeons(9), "lcg-sat-taste=0.0001,lcg-sat-at=0.9,lcg-sat-jump=0,lcg-sat-slow=0");
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+    assertFalse(out.contains("----------"), out);
+    assertTrue(out.contains("lcgSatSlices=1\n"), out);
+  }
+
+  // n pigeons in n - 1 holes, each difference a variable without 0, which presolve does not read as
+  // an all-different: the proof needs search
+  private static String pigeons(int n) {
     StringBuilder decl = new StringBuilder();
     StringBuilder cons = new StringBuilder();
     StringBuilder nonZero = new StringBuilder();
@@ -410,13 +434,7 @@ class LcgSlowFallbackFlatzincTest {
         cons.append(",").append(d).append("],0);\n");
       }
     }
-    String out =
-        runSatisfaction(
-            decl.toString() + cons + "solve satisfy;\n",
-            "lcg-sat-at=0.0001,lcg-sat-jump=1000,lcg-sat-lbd=0,lcg-sat-cp-share=0.0001");
-    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
-    assertFalse(out.contains("----------"), out);
-    assertTrue(out.contains("lcgSatSlices="), out);
+    return decl.toString() + cons + "solve satisfy;\n";
   }
 
   private String runSatisfaction(String model, String config) throws IOException {
