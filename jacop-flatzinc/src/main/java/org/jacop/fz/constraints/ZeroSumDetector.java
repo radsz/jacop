@@ -326,7 +326,7 @@ public class ZeroSumDetector implements ParserTreeConstants {
         least &= u.value == d.least;
       }
       long more = (long) us.size() * d.x.length;
-      if (!least || implications + more > MAX_IMPLICATIONS) {
+      if (!least || implications + more > MAX_IMPLICATIONS || !holdsEverySum(d)) {
         continue;
       }
       implications += more;
@@ -399,6 +399,18 @@ public class ZeroSumDetector implements ParserTreeConstants {
       literals++;
     }
     return b;
+  }
+
+  // whether the domain of s holds every value of its sum, so that dropping the sum keeps the
+  // solutions: a narrower domain of s is a constraint on the terms
+  private static boolean holdsEverySum(Definition d) {
+    long most = 0;
+    for (int i = 0; i < d.x.length; i++) {
+      most += (long) d.w[i] * (d.w[i] > 0 ? d.x[i].max() : d.x[i].min());
+    }
+    return d.least >= d.s.min()
+        && most <= d.s.max()
+        && d.s.dom().contains((int) d.least, (int) most);
   }
 
   private void spoil(Set<IntVar> vars) {
