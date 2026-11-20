@@ -331,8 +331,8 @@ public class GiantTourDetector implements ParserTreeConstants {
       return;
     }
     ASTScalarFlatExpr r = scalar(node, 2);
-    if (r.getType() == 2 && support.dictionary.getVariable(r.getIdent()) != null) {
-      IntVar v = support.dictionary.getVariable(r.getIdent());
+    if (r.getType() == 2 && support.dictionary.getVariable(r) != null) {
+      IntVar v = support.dictionary.getVariable(r);
       if (!v.singleton()) {
         return;
       }
@@ -380,7 +380,7 @@ public class GiantTourDetector implements ParserTreeConstants {
       return;
     }
     ASTScalarFlatExpr r = scalar(node, 2);
-    if (r.getType() == 2 && support.dictionary.getVariable(r.getIdent()) != null) {
+    if (r.getType() == 2 && support.dictionary.getVariable(r) != null) {
       return;
     }
     long rhs = support.getVariable(r).value();

@@ -72,12 +72,21 @@ public class Parser {
 
     // a name is repeated at every use of it (and a constraint name at every constraint): one
     // String per name, not one per token, keeps the parse tree of the largest models a third
-    // smaller (ma-path-finding, rcpsp-wet-diverse); cleared once the model is read
-    private final java.util.HashMap<String, String> names = new java.util.HashMap<String, String>();
+    // smaller (ma-path-finding, rcpsp-wet-diverse); cleared once the model is read. The nodes of an
+    // identifier share its Ident, which keeps the variable it names (Tables.getVariable)
+    private final java.util.HashMap<String, Ident> names = new java.util.HashMap<String, Ident>();
 
     String name(Token t) {
-	String known = names.putIfAbsent(t.image, t.image);
-	return known == null ? t.image : known;
+	return ident(t).name;
+    }
+
+    Ident ident(Token t) {
+	Ident known = names.get(t.image);
+	if (known == null) {
+	    known = new Ident(t.image);
+	    names.put(t.image, known);
+	}
+	return known;
     }
 
     // a declaration is read once, when its variable, parameter or array is made; only the
@@ -878,7 +887,7 @@ void scalar_flat_expr() #ScalarFlatExpr:
 	  jjtThis.setInt(aa.getIndex());
 	}
     | t = <IDENT> 
-	{ jjtThis.setType(2); jjtThis.setIdent(name(t)); }
+	{ jjtThis.setType(2); jjtThis.setIdent(ident(t)); }
     | t = bool_literal() 
 	{ jjtThis.setType(1); 
 	  int val = Boolean.parseBoolean(t.image)==true?1:0;
