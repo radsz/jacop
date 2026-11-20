@@ -370,7 +370,24 @@ public final class AlldifferentCuts {
   }
 
   // a violated cut over the first k + 1 variables of an order
-  private record Prefix(Integer[] order, int k, boolean lower, long bound, double efficacy) {
+  private static final class Prefix {
+    private final Integer[] order;
+    private final int k;
+    private final boolean lower;
+    private final long bound;
+    private final double efficacy;
+
+    Prefix(Integer[] order, int k, boolean lower, long bound, double efficacy) {
+      this.order = order;
+      this.k = k;
+      this.lower = lower;
+      this.bound = bound;
+      this.efficacy = efficacy;
+    }
+
+    double efficacy() {
+      return efficacy;
+    }
 
     Cut cut() {
       int[] vars = new int[k + 1];
