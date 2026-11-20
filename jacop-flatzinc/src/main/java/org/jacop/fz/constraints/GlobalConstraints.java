@@ -2713,8 +2713,50 @@ class GlobalConstraints implements ParserTreeConstants {
     }
     if (b.max() == 0) {
       support.pose(new NegativeTable(nv, t));
+    } else if (position.containsKey(b)) {
+      tableReifiedOnControl(nv, t, position.get(b), b, implication);
     } else {
       support.pose(new TableReified(nv, t, b, implication));
+    }
+  }
+
+  /**
+   * Posts b = 1 implies (or if and only if) x is a tuple when b is x[k] (a bool2int alias), which
+   * TableReified rejects: b = 1 implies that the other variables are a tuple with 1 at k, and, for
+   * the reification, b = 0 implies that they are not a tuple with 0 at k.
+   */
+  private void tableReifiedOnControl(IntVar[] x, int[][] t, int k, IntVar b, boolean implication) {
+    IntVar[] rest = new IntVar[x.length - 1];
+    for (int i = 0, n = 0; i < x.length; i++) {
+      if (i != k) {
+        rest[n++] = x[i];
+      }
+    }
+    List<int[]> one = new ArrayList<>();
+    List<int[]> zero = new ArrayList<>();
+    for (int[] tuple : t) {
+      int[] r = new int[rest.length];
+      for (int i = 0, n = 0; i < tuple.length; i++) {
+        if (i != k) {
+          r[n++] = tuple[i];
+        }
+      }
+      (tuple[k] == 1 ? one : zero).add(r);
+    }
+    if (one.isEmpty()) {
+      b.domain.in(store.level, b, 0, 0);
+    } else if (rest.length > 0) {
+      support.pose(new TableReified(rest, one.toArray(new int[0][]), b, true));
+    }
+    if (implication || zero.isEmpty()) {
+      return;
+    }
+    if (rest.length == 0) {
+      b.domain.in(store.level, b, 1, 1);
+    } else {
+      BooleanVar inZero = new BooleanVar(store);
+      support.pose(new TableReified(rest, zero.toArray(new int[0][]), inZero, false));
+      support.pose(new XlteqY(inZero, b));
     }
   }
 

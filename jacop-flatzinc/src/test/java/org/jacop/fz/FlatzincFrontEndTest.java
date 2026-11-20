@@ -5900,4 +5900,39 @@ class FlatzincFrontEndTest {
       assertEquals(c[1], normalised(run(model, "-a")[0], false), model);
     }
   }
+
+  @Test
+  void reifiedTableWithItsControlInTheScope() throws IOException {
+    // bool2int(b, i) makes i the control b itself, and TableReified rejects a control in its list
+    int[][] table = {{2, 0}, {0, 2}, {1, 0}, {-2, 1}, {0, 1}};
+    for (boolean imp : new boolean[] {true, false}) {
+      for (int rows : new int[] {4, 5}) {
+        StringBuilder tbl = new StringBuilder();
+        Set<String> expected = new TreeSet<>();
+        for (int k = 0; k < rows; k++) {
+          tbl.append(k == 0 ? "" : ",").append(table[k][0]).append(',').append(table[k][1]);
+        }
+        for (int b = 0; b <= 1; b++) {
+          for (int x = -2; x <= 2; x++) {
+            boolean in = false;
+            for (int k = 0; k < rows; k++) {
+              in |= table[k][0] == x && table[k][1] == b;
+            }
+            if (imp ? b == 0 || in : (b == 1) == in) {
+              expected.add("b2 = " + (b == 1) + "; i3 = " + b + "; x1 = " + x + ";");
+            }
+          }
+        }
+        String model =
+            "var bool: b2:: output_var;\nvar 0..1: i3:: output_var;\n"
+                + "var -2..2: x1:: output_var;\nconstraint bool2int(b2,i3);\n"
+                + "constraint jacop_table_int_"
+                + (imp ? "imp" : "reif")
+                + "([x1,i3],["
+                + tbl
+                + "],b2);\nsolve satisfy;\n";
+        assertEquals(expected + " ==========", normalised(run(model, "-a")[0], false), model);
+      }
+    }
+  }
 }
