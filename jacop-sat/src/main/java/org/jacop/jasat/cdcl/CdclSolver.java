@@ -1017,6 +1017,12 @@ public final class CdclSolver {
     interrupted = true;
   }
 
+  /** Takes back {@link #cancel()}: later calls of {@link #solve} run again. */
+  public void uncancel() {
+    cancelled = false;
+    interrupted = false;
+  }
+
   /**
    * Whether the clock of the solver is virtual (system property {@code jacop.virtualClock}): {@link
    * #now} then counts {@link #work}, {@link #VIRTUAL_WORK_PER_MS} per millisecond, instead of
