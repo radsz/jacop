@@ -3658,10 +3658,103 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // learning, which runs in this frame, would keep the solver and its clauses
       slowCheck = null;
     }
+    if (lcgSliceDue && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch(lcg)) {
+      return alternateWithoutLearning();
+    }
     if (lcgSlow && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch(lcg)) {
       return free ? continueWithoutLcg(costVar) : continueFixedWithoutLcg(costVar);
     }
     return numberSolutions > 0;
+  }
+
+  // set when the satisfaction probe stopped LCG for a slice of search without learning
+  private volatile boolean lcgSliceDue;
+  // the slices of search without learning that a satisfaction search alternated with LCG
+  private int lcgSatSlices;
+  // the time of a slice of search without learning as a share of LCG's time before it
+  private double lcgSliceShare = 1;
+
+  /**
+   * Alternates search without learning with LCG on a satisfaction model, after the probe found that
+   * learning cuts little ({@link #learningCutsLittle}) or that LCG makes few conflicts a second.
+   * Free search without learning gets three times the time LCG had before the probe stopped it
+   * after weak learning (lcg-sat-cp-share), as much after slow learning (lcg-sat-slow-share), then
+   * LCG goes on with its learnt clauses for twice its first share, and both shares double until one
+   * of them decides the model or the time is up. Each slice goes on with the same free search, its
+   * restarts, weights and saved phases. Before, the probe handed the model over for good: XCSP 2022
+   * BlockedQueens-48-1721237620 and BlockedQueens-50-1642399343, which LCG proves unsatisfiable in
+   * 312 and 93 s, stayed open at 600 s without learning. Each slice of search without learning runs
+   * in a store level of its own, with the constraints and clauses that only the LCG solver held
+   * posted there ({@link LcgSolver#lend}); removing the level gives the store back to LCG as it
+   * left it.
+   *
+   * @return whether a solution was found
+   */
+  private boolean alternateWithoutLearning() {
+    lcgSliceDue = false;
+    CdclSolver sat = lcg.sat();
+    long end = sat.deadline();
+    long lcgShare = Math.max(1, sat.now() - lcgStart);
+    long cpMillis = Math.max(1, (long) (lcgSliceShare * lcgShare / 1_000_000L));
+    // the search is built at the root, below the levels of the slices: the time stamps of its
+    // branchings (input order of the annotation) live at the level they were made at
+    freeSearchBuildOnly = true;
+    try {
+      executeFreeSearch(null);
+    } finally {
+      freeSearchBuildOnly = false;
+    }
+    FreeSearch sliceSearch = freeSearch;
+    while (true) {
+      lcgSatSlices++;
+      if (options.debug()) {
+        IO.println(
+            "%% LCG stopped after "
+                + sat.conflicts
+                + " conflicts; "
+                + cpMillis
+                + " ms of free search without learning");
+      }
+      int root = store.level;
+      store.setLevel(root + 1);
+      Runnable giveBack = lcg.lend();
+      try {
+        for (IntVar[][] clause : this.sat.collectedClauses()) {
+          store.impose(new BoolClause(clause[0], clause[1]));
+        }
+        // every slice goes on with the same search: its restarts, dom/wdeg weights and saved phases
+        freeSearchStatus =
+            sliceSearch.resume(
+                System.currentTimeMillis() + Math.min(cpMillis, options.getRemainingTimeOut()),
+                FreeSearch.VIRTUAL_CLOCK ? cpMillis : 0);
+      } finally {
+        store.removeLevel(root + 1);
+        store.setLevel(root);
+        giveBack.run();
+      }
+      if (freeSearchStatus == FreeSearch.Status.UNSATISFIABLE) {
+        lcgStatus = CdclSolver.UNSAT;
+        return false;
+      }
+      if (numberSolutions > 0) {
+        lcgStatus = CdclSolver.SAT;
+        return true;
+      }
+      if (options.getTimeOut() > 0 && options.getRemainingTimeOut() <= 0) {
+        return false;
+      }
+      lcgShare *= 2;
+      cpMillis *= 2;
+      sat.setDeadline(end - sat.now() > lcgShare ? sat.now() + lcgShare : end);
+      try {
+        lcgStatus = lcg.solve();
+      } finally {
+        sat.setDeadline(end);
+      }
+      if (lcgStatus != CdclSolver.UNKNOWN || sat.now() >= end) {
+        return numberSolutions > 0;
+      }
+    }
   }
 
   /**
@@ -4078,10 +4171,31 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               sat.propagations,
               weak));
     }
-    if (act && weak && !tooLateForFreeSearch(solver)) {
-      lcgSlow = true;
-      lcgSlowUnsolved = true;
-      solver.stop();
+    boolean slices = !"once".equals(options.freeConfig("lcg-sat-handover", "slices"));
+    // a search with learning that makes few conflicts a second gets slices without learning too:
+    // XCSP 2026 Antichain1-126-09 and 252-10 make 7 to 90 conflicts/s, jump back 2 to 14 levels
+    // (learning looks useful) and stay open in 600 s, while search without learning solves them
+    // in 20 and 88 s. Below 100 conflicts/s on the satisfaction data of the probe (topic and
+    // hold-out sets, 240 s), search without learning also won nmseq 202 and 395 and magic-sequence
+    // n500; LCG won Dominoes-table-45-204 (55 s), which alternation leaves at least half the time
+    double slowRate = Double.parseDouble(options.freeConfig("lcg-sat-slow", "100"));
+    boolean slow = slices && seconds > 0 && conflicts < slowRate * seconds;
+    if (act && (weak || slow) && !tooLateForFreeSearch(solver)) {
+      if (!slices) {
+        // the hand-over of jacop #755: search without learning to the end
+        lcgSlow = true;
+        lcgSlowUnsolved = true;
+        solver.stop();
+      } else {
+        // learning that looks like chronological backtracking gives search without learning twice
+        // LCG's time, a slow LCG search as much as LCG's
+        lcgSliceShare =
+            Double.parseDouble(
+                options.freeConfig(
+                    weak ? "lcg-sat-cp-share" : "lcg-sat-slow-share", weak ? "3" : "1"));
+        lcgSliceDue = true;
+        solver.sat().interrupt();
+      }
       return false;
     }
     return !tooLateForFreeSearch(solver);
@@ -5209,6 +5323,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         }
       } else if (options.searchStatistics()) {
         printLcgExplanationStatistics();
+        if (lcgSatSlices > 0) {
+          // slices of search without learning between runs of LCG on a satisfaction model
+          IO.println("%%%mzn-stat: lcgSatSlices=" + lcgSatSlices);
+        }
         if (lcgSlowDeferred > 0) {
           // LCG made too few conflicts but kept finding better solutions or bounds
           IO.println("%%%mzn-stat: lcgSlowDeferred=" + lcgSlowDeferred);
@@ -6886,6 +7004,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (options.debug()) {
       IO.println("% FreeSearch(" + restarts + ") " + selects);
     }
+    if (freeSearchBuildOnly) {
+      return false;
+    }
     freeSearchStatus = freeSearch.solve();
     if (recorded != null && freeSearch.getSolution() != null) {
       freeFirstVars = recorded;
@@ -6902,6 +7023,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // with a balancing objective, the time free search without learning runs before LCG, in
   // milliseconds (0 = none), and the best solution it found, which LCG starts from
   private long freeFirstMillis;
+  // set while alternateWithoutLearning builds the free search that its slices run
+  private boolean freeSearchBuildOnly;
   private IntVar[] freeFirstVars;
   private int[] freeFirstValues;
   private int freeFirstCost;

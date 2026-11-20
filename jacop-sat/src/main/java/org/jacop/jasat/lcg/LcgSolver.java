@@ -7836,6 +7836,40 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Lends the store to search without learning for a while, keeping the solver, its learnt clauses
+   * and its trail: the trail stops recording, and the constraints that went to the solver as
+   * clauses propagate again. The caller must open a store level above the root first, run its
+   * search above it, remove it, and then call the returned action, which takes the constraints back
+   * and records again; {@link #solve} then goes on where it stopped.
+   *
+   * @return the action that gives the store back to the solver
+   */
+  public Runnable lend() {
+    trail.suspend();
+    List<Constraint> lent = new ArrayList<>(encodedGraphs.size() + encodedConstraints.size());
+    lent.addAll(encodedGraphs);
+    lent.addAll(encodedConstraints);
+    int[] entailedAt = new int[lent.size()];
+    for (int k = 0; k < entailedAt.length; k++) {
+      entailedAt[k] = lent.get(k).entailedAt();
+    }
+    for (LayeredGraphConstraint g : encodedGraphs) {
+      g.restoreConstraint(store);
+    }
+    for (Constraint c : encodedConstraints) {
+      // imposed above the root: removing that level detaches the constraint again
+      store.clearEntailed(c);
+      c.impose(store);
+    }
+    return () -> {
+      for (int k = 0; k < entailedAt.length; k++) {
+        lent.get(k).setEntailedAt(entailedAt[k]);
+      }
+      trail.resume();
+    };
+  }
+
+  /**
    * Stops recording the store's changes, for a solver built on a store level of its own that the
    * caller removes next: the backtrack restores the constraints that went to the solver as clauses
    * (they are only marked as entailed above the root), which {@link #release} would impose a second

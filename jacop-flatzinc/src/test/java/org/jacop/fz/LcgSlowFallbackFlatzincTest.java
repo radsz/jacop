@@ -333,6 +333,92 @@ class LcgSlowFallbackFlatzincTest {
     }
   }
 
+  @Test
+  void satisfactionSolvedInASliceWithoutLearning() throws IOException {
+    // 40 queens with a clause that only the SAT solver holds under LCG: exactly one of q1 and q2 is
+    // at most 20. The probe fires at its first conflicts (any jump counts as weak) and search
+    // without learning gets a thousand times LCG's time, so it finds the solution in its slice,
+    // where the clauses must be posted in the store
+    int n = 40;
+    StringBuilder s = new StringBuilder();
+    for (int i = 1; i <= n; i++) {
+      s.append("var 1..").append(n).append(": q").append(i).append(":: output_var;\n");
+    }
+    s.append("var bool: b1;\nvar bool: b2;\n");
+    for (int i = 1; i <= n; i++) {
+      for (int j = i + 1; j <= n; j++) {
+        s.append("constraint int_ne(q").append(i).append(", q").append(j).append(");\n");
+        for (int d : new int[] {j - i, i - j}) {
+          s.append("constraint int_lin_ne([1, -1], [q")
+              .append(i)
+              .append(", q")
+              .append(j)
+              .append("], ")
+              .append(d)
+              .append(");\n");
+        }
+      }
+    }
+    s.append("constraint int_le_reif(q1, 20, b1);\n");
+    s.append("constraint int_le_reif(q2, 20, b2);\n");
+    s.append("constraint bool_clause([b1, b2], []);\n");
+    s.append("constraint bool_clause([], [b1, b2]);\n");
+    s.append("solve satisfy;\n");
+    String out =
+        runSatisfaction(
+            s.toString(),
+            "lcg-sat-at=0.0001,lcg-sat-jump=1000,lcg-sat-lbd=0,lcg-sat-cp-share=1000");
+    // LCG may find the solution before its first conflict, when the probe cannot fire yet
+    assertFalse(out.contains("lcgSlowUnsolved"), out);
+    int[] q = new int[n + 1];
+    for (int i = 1; i <= n; i++) {
+      Matcher m = Pattern.compile("q" + i + " = (\\d+);").matcher(out);
+      assertTrue(m.find(), out);
+      q[i] = Integer.parseInt(m.group(1));
+    }
+    for (int i = 1; i <= n; i++) {
+      for (int j = i + 1; j <= n; j++) {
+        assertTrue(q[i] != q[j] && Math.abs(q[i] - q[j]) != j - i, out);
+      }
+    }
+    assertTrue(q[1] <= 20 != q[2] <= 20, out);
+  }
+
+  @Test
+  void satisfactionProvedUnsatisfiableAcrossSlices() throws IOException {
+    // 9 pigeons in 8 holes, each difference a variable without 0, which presolve does not read as
+    // an all-different: the proof needs search. Slices of 1 ms of search without learning
+    // alternate with LCG from the first probe, and the answer must be unsatisfiable whichever of
+    // them finishes
+    int n = 9;
+    StringBuilder decl = new StringBuilder();
+    StringBuilder cons = new StringBuilder();
+    StringBuilder nonZero = new StringBuilder();
+    for (int v = 2 - n; v <= n - 2; v++) {
+      if (v != 0) {
+        nonZero.append(nonZero.isEmpty() ? "" : ",").append(v);
+      }
+    }
+    for (int i = 1; i <= n; i++) {
+      decl.append("var 1..").append(n - 1).append(": p").append(i).append(":: output_var;\n");
+    }
+    for (int i = 1; i <= n; i++) {
+      for (int j = i + 1; j <= n; j++) {
+        String d = "d" + i + "_" + j;
+        decl.append("var {").append(nonZero).append("}: ").append(d).append(";\n");
+        cons.append("constraint int_lin_eq([1,-1,-1],[p").append(i).append(",p").append(j);
+        cons.append(",").append(d).append("],0);\n");
+      }
+    }
+    String out =
+        runSatisfaction(
+            decl.toString() + cons + "solve satisfy;\n",
+            "lcg-sat-at=0.0001,lcg-sat-jump=1000,lcg-sat-lbd=0,lcg-sat-cp-share=0.0001");
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+    assertFalse(out.contains("----------"), out);
+    assertTrue(out.contains("lcgSatSlices="), out);
+  }
+
   private String runSatisfaction(String model, String config) throws IOException {
     Path fzn = tmp.resolve("sat.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);

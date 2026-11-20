@@ -222,6 +222,23 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   }
 
   /**
+   * Stops recording the store's changes for a while, for search without learning above the level of
+   * the root domains; {@link #resume} records them again. The trail keeps its entries and its
+   * numbering, and must be resumed at the level it was suspended at, with the store's domains as
+   * they were then.
+   */
+  public void suspend() {
+    if (store.domainChangeRecorder == this) {
+      store.domainChangeRecorder = null;
+    }
+  }
+
+  /** Records the store's changes again after {@link #suspend}. */
+  public void resume() {
+    store.domainChangeRecorder = this;
+  }
+
+  /**
    * Returns the number by which this trail knows a variable: twice its store index, or for a {@link
    * BooleanVar}, which has no store index, an odd number given when the trail first sees it.
    *
