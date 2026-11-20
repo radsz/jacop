@@ -1883,13 +1883,19 @@ final class Presolve {
       boolean jLow = (recFlag[t] & 1) != 0 && same(v, recNum[7][t]);
       boolean jHigh = (recFlag[t] & 2) != 0 && same(v, recNum[8][t]);
       if (jLow || jHigh) {
+        double dj = reducedCost(recNum[4][t], j, recLenB[t], y);
+        if (jLow && jHigh) {
+          // x_j fixed by its bounds: the one its reduced cost pulls it to holds it
+          jLow = dj >= 0;
+        }
         // x_j = (b - a_k x_k) / a_j falls as x_k rises when a_k / a_j > 0
         boolean kUpper = jLow == ak / aj > 0;
-        double dj = reducedCost(recNum[4][t], j, recLenB[t], y);
         double yi = dj / aj;
         y[i] = yi;
         double dk = reducedCost(recNum[3][t], k, recLenA[t], y);
-        if (kUpper ? dk <= 1e-9 : dk >= -1e-9) {
+        // a fixed x_k is at both bounds, so any reduced cost suits it (sgpf5y6: x_k fixed by the
+        // problem gave x_j a value inside its own bounds, where x_j cannot be nonbasic)
+        if (recNum[5][t] == recNum[6][t] || (kUpper ? dk <= 1e-9 : dk >= -1e-9)) {
           basic[j] = true;
           basic[k] = false;
           upper[k] = kUpper;

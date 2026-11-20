@@ -42,8 +42,10 @@ import java.util.Locale;
  * <p>Lines: {@code R kind row column other} per presolve reduction, in the indices of the problem
  * as given (rows and columns of the MPS file); {@code P solve pivot phase entering leaving row
  * primalStep dualStep pivot} per dual simplex pivot; {@code F solve pivot reason} per
- * factorization. {@code solve} numbers the instances of {@link RevisedDualSimplex}, so the reduced
- * problem of the presolve has its own number.
+ * factorization; {@code A} and {@code B} lines at the start from a postsolved basis (nonbasic
+ * columns at artificial bounds, basic columns outside their bounds). {@code solve} numbers the
+ * instances of {@link RevisedDualSimplex}, so the reduced problem of the presolve has its own
+ * number.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
