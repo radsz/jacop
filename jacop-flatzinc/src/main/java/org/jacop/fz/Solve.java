@@ -2937,8 +2937,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (v.singleton()) {
         continue;
       }
+      // Boolean variables are not in the store's array, the others are
       int at = v.index();
-      boolean inStore = at >= 0 && at < store.size() && store.vars[at] == v;
+      boolean inStore =
+          v instanceof BooleanVar
+              ? ((BooleanVar) v).getStore() == store
+              : at >= 0 && at < store.size() && store.vars[at] == v;
       if (!(v instanceof IntVar || v instanceof SetVar) || !inStore || unused.contains(v)) {
         return "all solutions are not supported: output " + v.id() + " is not a solver variable";
       }
