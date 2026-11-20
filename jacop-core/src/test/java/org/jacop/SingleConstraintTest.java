@@ -11864,4 +11864,33 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     assertThat(x[2].domain.contains(1)).isTrue();
   }
+
+  /**
+   * HybridTable imposed again (LcgSolver.release at the root, lend one level up) rebuilt its valid
+   * tuples but skipped the first full filtering, as the first imposition had done it and nothing
+   * had changed since; values without a tuple stayed and [0, 0, 2] was accepted later.
+   */
+  @Test
+  void hybridTableImposedAgainFiltersInFull() {
+    for (int level : new int[] {0, 1}) {
+      Store store = new Store();
+      IntVar[] x = {
+        new IntVar(store, "x0", 0, 2), new IntVar(store, "x1", 0, 2), new IntVar(store, "x2", 0, 2)
+      };
+      int[][] tuples = {
+        {2, 1, 0}, {1, 2, 0}, {2, 0, 2}, {0, 2, 0}, {1, 0, 2}, {1, 0, 1}, {2, 1, 0}
+      };
+      HybridTable c = new HybridTable(x, tuples, Integer.MIN_VALUE);
+      store.impose(c);
+      assertThat(store.consistency()).isTrue();
+      c.removeConstraint();
+      x[2].domain.in(0, x[2], 2, 2);
+      store.setLevel(level);
+      store.clearEntailed(c);
+      c.impose(store);
+      assertThat(store.consistency()).isTrue();
+      assertThat(x[0].min()).as("level " + level).isEqualTo(1);
+      assertThat(x[1].singleton(0)).as("level " + level).isTrue();
+    }
+  }
 }
