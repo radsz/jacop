@@ -3301,7 +3301,7 @@ class FlatzincFrontEndTest {
     // lazy clause generation before, 0.2 s and 88 nodes after)
     String model = flattenedQueens(7);
     String debug = run(model, "-debug", "-s")[0];
-    assertTrue(debug.contains("% absolute differences rewritten: 21,"), debug);
+    assertTrue(debug.contains("% absolute differences rewritten: 21 of 21,"), debug);
     assertEquals(3, debug.split("% alldifferent on 7 variables", -1).length - 1, debug);
     Set<String> rewritten = solveAll(model);
     System.setProperty("org.jacop.fz.absoluteDifference", "false");
@@ -3314,7 +3314,26 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void absoluteDifferencesOutsideCliquesStay() throws IOException {
+    // three queens: no clique of five, so the two adjacent pairs, whose hole at 1 would become
+    // lone disequalities, keep their auxiliaries; the corner pair excludes only the end of its
+    // range, which becomes two bounds
+    String debug = run(flattenedQueens(3), "-debug", "-s")[0];
+    assertTrue(debug.contains("% absolute differences rewritten: 1 of 3, 0 disequalities"), debug);
+  }
+
+  @Test
   void absoluteDifferenceRewriteKeepsTheSolutions() throws IOException {
+    // every rewrite is made, also one whose disequalities are in no clique
+    System.setProperty("org.jacop.fz.absoluteDifference", "all");
+    try {
+      randomAbsoluteDifferences();
+    } finally {
+      System.clearProperty("org.jacop.fz.absoluteDifference");
+    }
+  }
+
+  private void randomAbsoluteDifferences() throws IOException {
     // random x, y with holes, t defined by q * t + p * x - p * y = c in any term order, t and a
     // with
     // holes and narrowed bounds: the solutions over x and y are those without the rewrite
@@ -3345,7 +3364,7 @@ class FlatzincFrontEndTest {
       fzn.append(c).append(");\n");
       fzn.append("constraint int_abs(t,a);\nsolve satisfy;\n");
       String model = fzn.toString();
-      if (run(model, "-debug", "-s")[0].contains("% absolute differences rewritten: 1,")) {
+      if (run(model, "-debug", "-s")[0].contains("% absolute differences rewritten: 1 of 1,")) {
         fired++;
       }
       Set<String> rewritten = solveAll(model);
@@ -3353,7 +3372,7 @@ class FlatzincFrontEndTest {
       try {
         assertEquals(solveAll(model), rewritten, model);
       } finally {
-        System.clearProperty("org.jacop.fz.absoluteDifference");
+        System.setProperty("org.jacop.fz.absoluteDifference", "all");
       }
     }
     assertTrue(fired >= 20, "rewritten in " + fired + " of 60");

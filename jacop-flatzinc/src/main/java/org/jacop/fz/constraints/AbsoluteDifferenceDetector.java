@@ -61,10 +61,13 @@ import org.jacop.fz.SimpleNode;
  * corner pairs of the diagonals exclude only their largest difference.
  *
  * <p>The rewrite is exact: x - y takes, within the bounds of x and y, exactly the values w for
- * which t has a value with {@code a = |t|} in the domain of a. It is made only when x - y ranges
- * over at most {@link #MAX_RANGE} values and at most {@link #maxHoles()} values inside the range
- * are excluded. Not with {@code --proof}. Setting the system property {@code
- * org.jacop.fz.absoluteDifference} to false turns it off.
+ * which t has a value with {@code a = |t|} in the domain of a. It is considered only when x - y
+ * ranges over at most {@link #MAX_RANGE} values and at most {@link #maxHoles()} values inside the
+ * range are excluded, and made only when every disequality inside the range becomes part of an
+ * all-different constraint (or there is none): a few disequalities per pair alone propagate no
+ * better than |t| and explain worse under lazy clause generation. Not with {@code --proof}. Setting
+ * the system property {@code org.jacop.fz.absoluteDifference} to false turns it off, and to all
+ * makes every rewrite found.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -87,8 +90,7 @@ public class AbsoluteDifferenceDetector implements ParserTreeConstants {
   /**
    * A disequality x - y != d of a rewrite, with the node that stands for it in clique detection.
    */
-  // needed is false for a value the bounds on x - y exclude, which is a clique edge only
-  private record Disequality(IntVar x, IntVar y, int d, SimpleNode token, boolean needed) {}
+  private record Disequality(IntVar x, IntVar y, int d, SimpleNode token) {}
 
   private final Map<IntVar, Absolute> absolutes = new IdentityHashMap<>();
 
@@ -102,10 +104,20 @@ public class AbsoluteDifferenceDetector implements ParserTreeConstants {
 
   private final List<Disequality> disequalities = new ArrayList<>();
 
-  // statistics
-  private int rewritten;
+  // a rewrite found: the two constraints, the variables, the bounds on x - y that cut values off
+  // (null when none) and the disequalities inside the range
+  private record Rewrite(
+      SimpleNode abs,
+      SimpleNode definition,
+      IntVar t,
+      IntVar a,
+      IntVar x,
+      IntVar y,
+      Integer first,
+      Integer last,
+      List<SimpleNode> holes) {}
 
-  private int bounds;
+  private final List<Rewrite> rewrites = new ArrayList<>();
 
   /**
    * It creates a detector reading variables through the given support.
@@ -126,6 +138,16 @@ public class AbsoluteDifferenceDetector implements ParserTreeConstants {
   }
 
   /**
+   * It tells if every rewrite found is made, also when its disequalities are in no all-different
+   * constraint: the system property org.jacop.fz.absoluteDifference is all.
+   *
+   * @return true if the system property org.jacop.fz.absoluteDifference is all.
+   */
+  public static boolean all() {
+    return "all".equalsIgnoreCase(System.getProperty(PROPERTY));
+  }
+
+  /**
    * It returns the most values inside the range of x - y that a rewrite excludes by disequalities:
    * the system property org.jacop.fz.absoluteDifference.maxHoles, 8 by default.
    *
@@ -136,15 +158,15 @@ public class AbsoluteDifferenceDetector implements ParserTreeConstants {
   }
 
   /**
-   * It finds the absolute differences to rewrite and posts the bounds on x - y that they state. The
-   * disequalities are posted by {@link #postDisequalities(Set)}, after {@link AlldifferentDetector}
-   * has read them through {@link #feed(AlldifferentDetector)}.
+   * It finds the absolute differences that can be rewritten. Nothing is posted or replaced yet:
+   * {@link #feed(AlldifferentDetector)} gives their disequalities to the all-different detection,
+   * and {@link #apply(Set)} then makes the rewrites whose disequalities all became part of an
+   * all-different constraint, or that have none.
    *
    * @param astTree the root of the parsed model.
    * @param skipped the constraint nodes already replaced by other detectors.
-   * @return the constraint nodes it replaces, which must not be posted.
    */
-  public Set<SimpleNode> detect(SimpleNode astTree, Set<SimpleNode> skipped) {
+  public void detect(SimpleNode astTree, Set<SimpleNode> skipped) {
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {
@@ -163,17 +185,6 @@ public class AbsoluteDifferenceDetector implements ParserTreeConstants {
     for (Map.Entry<IntVar, Absolute> e : absolutes.entrySet()) {
       rewrite(e.getKey(), e.getValue());
     }
-    if (support.options.debug() && rewritten > 0) {
-      FzConsole.println(
-          "% absolute differences rewritten: "
-              + rewritten
-              + ", "
-              + disequalities.size()
-              + " disequalities, "
-              + bounds
-              + " bounds");
-    }
-    return replaced;
   }
 
   /**
@@ -198,18 +209,60 @@ public class AbsoluteDifferenceDetector implements ParserTreeConstants {
   }
 
   /**
-   * It posts the disequalities of the rewrites that no all-different constraint replaces.
+   * It makes the rewrites whose disequalities inside the range of x - y are all replaced by
+   * all-different constraints, or that have none: it posts their bounds on x - y and returns their
+   * constraints, which must not be posted. The others keep their constraints and variables, since a
+   * few disequalities per pair propagate no better than |t| and explain worse under lazy clause
+   * generation (Rlfap-graph-01, XCSP 2022: about 5 per pair, no clique, the optimum proved in 13 s
+   * without the rewrite and not in 240 s with it).
    *
    * @param inCliques the replaced constraint nodes of the all-different detection.
+   * @return the constraint nodes it replaces.
    */
-  public void postDisequalities(Set<SimpleNode> inCliques) {
-    for (Disequality d : disequalities) {
-      if (d.needed() && !inCliques.contains(d.token())) {
-        // x - y != d, that is y + d != x
-        support.pose(new XplusCneqZ(d.y(), d.d(), d.x()));
+  public Set<SimpleNode> apply(Set<SimpleNode> inCliques) {
+    int bounds = 0;
+    int holes = 0;
+    for (Rewrite r : rewrites) {
+      if (!all() && !inCliques.containsAll(r.holes())) {
+        continue;
       }
+      if (r.first() != null) {
+        // x - y >= first, that is y + first <= x
+        support.pose(new XplusClteqZ(r.y(), r.first(), r.x()));
+        bounds++;
+      }
+      if (r.last() != null) {
+        // x - y <= last, that is x - last <= y
+        support.pose(new XplusClteqZ(r.x(), -r.last(), r.y()));
+        bounds++;
+      }
+      holes += r.holes().size();
+      for (Disequality d : disequalities) {
+        if (r.holes().contains(d.token()) && !inCliques.contains(d.token())) {
+          // x - y != d, that is y + d != x
+          support.pose(new XplusCneqZ(d.y(), d.d(), d.x()));
+        }
+      }
+      replaced.add(r.abs());
+      replaced.add(r.definition());
+      removed.add(r.t());
+      removed.add(r.a());
     }
+    if (support.options.debug() && !rewrites.isEmpty()) {
+      FzConsole.println(
+          "% absolute differences rewritten: "
+              + replaced.size() / 2
+              + " of "
+              + rewrites.size()
+              + ", "
+              + holes
+              + " disequalities in cliques, "
+              + bounds
+              + " bounds");
+    }
+    rewrites.clear();
     disequalities.clear();
+    return replaced;
   }
 
   private void rewrite(IntVar t, Absolute abs) {
@@ -267,32 +320,31 @@ public class AbsoluteDifferenceDetector implements ParserTreeConstants {
       // no value of x - y is allowed: the constraints are posted and fail
       return;
     }
-    if (first > lo) {
-      // x - y >= first, that is y + first <= x
-      support.pose(new XplusClteqZ(y, first, x));
-      bounds++;
-    }
-    if (last < hi) {
-      // x - y <= last, that is x - last <= y
-      support.pose(new XplusClteqZ(x, -last, y));
-      bounds++;
-    }
+    List<SimpleNode> tokens = new ArrayList<>();
     for (int h : holes) {
-      disequalities.add(new Disequality(x, y, h, new SimpleNode(JJTCONSTELEM), true));
+      SimpleNode token = new SimpleNode(JJTCONSTELEM);
+      tokens.add(token);
+      disequalities.add(new Disequality(x, y, h, token));
     }
     // the values cut off at the ends are disequalities too, which may complete a clique: the
     // corner pair of a queens diagonal has its only excluded difference at the end of the range
     for (long w = lo; w < first && w < lo + maxHoles(); w++) {
-      disequalities.add(new Disequality(x, y, (int) w, new SimpleNode(JJTCONSTELEM), false));
+      disequalities.add(new Disequality(x, y, (int) w, new SimpleNode(JJTCONSTELEM)));
     }
     for (long w = hi; w > last && w > hi - maxHoles(); w--) {
-      disequalities.add(new Disequality(x, y, (int) w, new SimpleNode(JJTCONSTELEM), false));
+      disequalities.add(new Disequality(x, y, (int) w, new SimpleNode(JJTCONSTELEM)));
     }
-    replaced.add(abs.node());
-    replaced.add(def.node());
-    removed.add(t);
-    removed.add(a);
-    rewritten++;
+    rewrites.add(
+        new Rewrite(
+            abs.node(),
+            def.node(),
+            t,
+            a,
+            x,
+            y,
+            first > lo ? first : null,
+            last < hi ? last : null,
+            tokens));
   }
 
   // in no alias, no declared equality and not output

@@ -319,13 +319,7 @@ public class Constraints implements ParserTreeConstants {
       AbsoluteDifferenceDetector absoluteDifferences = null;
       if (AbsoluteDifferenceDetector.enabled() && options.proof() == null) {
         absoluteDifferences = new AbsoluteDifferenceDetector(support);
-        Set<SimpleNode> rewritten = absoluteDifferences.detect(astTree, replaced);
-        if (!rewritten.isEmpty()) {
-          replaced = new HashSet<>(replaced);
-          replaced.addAll(rewritten);
-          dictionary.removeFromDefaultSearch(absoluteDifferences.removed());
-          dictionary.unusedVariables.addAll(absoluteDifferences.removed());
-        }
+        absoluteDifferences.detect(astTree, replaced);
       }
       Set<SimpleNode> inCliques = Set.of();
       if (AlldifferentDetector.enabled()) {
@@ -343,7 +337,13 @@ public class Constraints implements ParserTreeConstants {
         }
       }
       if (absoluteDifferences != null) {
-        absoluteDifferences.postDisequalities(inCliques);
+        Set<SimpleNode> rewritten = absoluteDifferences.apply(inCliques);
+        if (!rewritten.isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(rewritten);
+          dictionary.removeFromDefaultSearch(absoluteDifferences.removed());
+          dictionary.unusedVariables.addAll(absoluteDifferences.removed());
+        }
       }
 
       // small expressions flattened into several constraints become the table of their solutions
