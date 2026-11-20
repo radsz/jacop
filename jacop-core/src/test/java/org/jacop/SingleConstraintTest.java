@@ -12287,4 +12287,73 @@ class SingleConstraintTest extends TestHelper {
     backToRoot(store);
     assertThat(noOfAllSolutions(store, vars)).isEqualTo(expected);
   }
+
+  /**
+   * Three objects in one dimension and time: shapes 0 (length 1) and 1 (length 3). Returns the
+   * variables origin, shape, start, duration, end of each object.
+   */
+  private static IntVar[] geostLateLevelModel(Store store) {
+    IntVar[][] o = {
+      {
+        new IntVar(store, "x0", 1, 1),
+        new IntVar(store, "s0", 0, 0),
+        new IntVar(store, "t0", 0, 0),
+        new IntVar(store, "d0", 1, 1),
+        new IntVar(store, "e0", 0, 3)
+      },
+      {
+        new IntVar(store, "x1", 2, 4),
+        new IntVar(store, "s1", 1, 1),
+        new IntVar(store, "t1", 0, 0),
+        new IntVar(store, "d1", 1, 2),
+        new IntVar(store, "e1", 2, 4)
+      },
+      {
+        new IntVar(store, "x2", 1, 2),
+        new IntVar(store, "s2", 0, 1),
+        new IntVar(store, "t2", 0, 1),
+        new IntVar(store, "d2", 1, 1),
+        new IntVar(store, "e2", 2, 6)
+      }
+    };
+    o[2][3].addDom(3, 3);
+    List<GeostObject> objects = new ArrayList<>();
+    for (int i = 0; i < 3; i++) {
+      objects.add(new GeostObject(i, new IntVar[] {o[i][0]}, o[i][1], o[i][2], o[i][3], o[i][4]));
+    }
+    store.impose(
+        new Geost(
+            objects,
+            List.of(new NonOverlapping(objects, new int[] {0, 1})),
+            List.of(
+                new Shape(0, new int[] {0}, new int[] {1}),
+                new Shape(1, new int[] {0}, new int[] {3}))));
+    return Arrays.stream(o).flatMap(Arrays::stream).toArray(IntVar[]::new);
+  }
+
+  /**
+   * Geost first saw a change of level 1 in a consistency at level 2. Removing level 2 restored the
+   * objects from the domains of level 1 and removing level 1 then left them there, so the start of
+   * object 2 lost the value 0.
+   */
+  @Test
+  void geostRestoresObjectsOfChangesSeenOneLevelUp() {
+    Store reference = new Store();
+    IntVar[] r = geostLateLevelModel(reference);
+    r[11].domain.in(0, r[11], 0, 0);
+    int expected = noOfAllSolutions(reference, r);
+
+    Store store = new Store();
+    IntVar[] v = geostLateLevelModel(store);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    v[5].domain.in(1, v[5], 2, 2);
+    store.setLevel(2);
+    v[11].domain.in(2, v[11], 1, 1);
+    store.consistency();
+    backToRoot(store);
+    v[11].domain.in(0, v[11], 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(noOfAllSolutions(store, v)).isEqualTo(expected);
+  }
 }

@@ -370,6 +370,19 @@ public class Geost extends Constraint
    */
   TimeStampInt setStart;
 
+  /**
+   * The lowest level of the changes queued since the last consistency. The store may raise its
+   * level before a consistency (Store.raiseLevelBeforeConsistency), so changes of level l are seen
+   * at level l + 1. The objects then updated are restored when l + 1 is removed, from the domains
+   * of level l, and must be restored again when l is removed.
+   */
+  private int queuedLevel = Integer.MAX_VALUE;
+
+  /** Objects updated for changes of a lower level, with the level whose removal restores them. */
+  private final List<GeostObject> lateObjects = new ArrayList<>();
+
+  private final List<Integer> lateObjectLevels = new ArrayList<>();
+
   /** It contains objects that need to be checked in the next sweep. */
   LinkedHashSet<GeostObject> objectQueue;
 
@@ -1372,6 +1385,10 @@ public class Geost extends Constraint
 
         for (GeostObject uo : updatedObjectSet) {
           objectList.add(uo);
+          if (queuedLevel < store.level && queuedLevel > imposedAt) {
+            lateObjects.add(uo);
+            lateObjectLevels.add(queuedLevel);
+          }
         }
 
         updatedObjectSet.clear();
@@ -1387,6 +1404,14 @@ public class Geost extends Constraint
     } finally {
 
       inConsistency = false;
+      if (queuedLevel < store.level && queuedLevel > imposedAt) {
+        // after a failure, the objects updated so far are restored by removeLevelLate
+        for (GeostObject uo : updatedObjectSet) {
+          lateObjects.add(uo);
+          lateObjectLevels.add(queuedLevel);
+        }
+      }
+      queuedLevel = Integer.MAX_VALUE;
       variableQueue.clear();
 
       objectQueue.clear();
@@ -1755,6 +1780,8 @@ public class Geost extends Constraint
 
     objectList = new ArrayList<>();
     updatedObjectSet = new HashSet<>();
+    lateObjects.clear();
+    lateObjectLevels.clear();
 
     // last: it reports the variables to queueVariable, which uses the state made above
     super.impose(store);
@@ -1777,6 +1804,7 @@ public class Geost extends Constraint
   public void queueVariable(int level, Var v) {
 
     currentLevel = level;
+    queuedLevel = Math.min(queuedLevel, level);
 
     if (v.singleton()) {
 
@@ -1847,6 +1875,11 @@ public class Geost extends Constraint
   @SuppressWarnings("all")
   public void removeLevel(int level) {
 
+    if (level <= queuedLevel) {
+      // the queued changes are undone
+      queuedLevel = Integer.MAX_VALUE;
+    }
+
     // added.
     if (level > currentLevel) {
       return;
@@ -1896,6 +1929,14 @@ public class Geost extends Constraint
     updatedObjectSet.clear();
 
     restoreObjectsFromList();
+
+    // objects updated at a higher level for changes of this level
+    for (int i = lateObjects.size() - 1; i >= 0; i--) {
+      if (lateObjectLevels.get(i) >= level) {
+        lateObjectLevels.remove(i);
+        onObjectUpdate(lateObjects.remove(i));
+      }
+    }
 
     backtracking = false;
   }
