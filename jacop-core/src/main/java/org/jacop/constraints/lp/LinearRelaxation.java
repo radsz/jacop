@@ -3248,8 +3248,10 @@ public class LinearRelaxation extends Constraint
         scanned += rootForms[k].vars().length;
       }
       // a pruning a pass scans more than ROOT_REDUCED_SCAN columns for counts as none: on a row
-      // of n columns whose bound moves at every decision, one pruning a pass is quadratic
-      useful = (prunings - pruned) * ROOT_REDUCED_SCAN >= scanned;
+      // of n columns whose bound moves at every decision, one pruning a pass is quadratic. A pass
+      // over fewer than ROOT_REDUCED_MIN_COLUMNS columns is cheap and always counts as useful
+      useful =
+          scanned < ROOT_REDUCED_MIN_COLUMNS || (prunings - pruned) * ROOT_REDUCED_SCAN >= scanned;
     } finally {
       // a pass that pruned (almost) nothing doubles the passes skipped before the next one, one
       // that pruned or failed starts again at every change of the bound
@@ -3263,16 +3265,18 @@ public class LinearRelaxation extends Constraint
   // decisions on its terms its upper bound falls at every one of them. In the core-guided phase on
   // Security-CPS test61 (MaxSAT Evaluation 2021: 16,010 soft clauses, 20,347 columns), each call
   // assumes the softs one by one and every assumption scanned the root forms again, without a
-  // pruning: 0.9 s a core instead of 0.23 s. Passes that prune nothing back off exponentially,
-  // above
-  // the lowest level only: skipping the bounds of the solutions there lost the proof of MaxSAT 2021
-  // titanic_train_5_DNF_2_1 (237 at 150 s; 214 at 240 s)
+  // pruning: 0.9 s a core instead of 0.23 s. Passes that prune nothing back off exponentially
   private static final int ROOT_REDUCED_MAX_PERIOD = 128;
 
   // the columns a pass may scan for each pruning it makes and still count as useful: units learnt
   // at the root moved the bound of jacop_lex_less_int over 2 x 20,000 columns maximizing a sum
   // 60,000 times, 46 s of passes over 40,000 columns
   private static final int ROOT_REDUCED_SCAN = 64;
+
+  // the columns below which a pass never backs off: accap instance5 (MiniZinc Challenge 2019, 116
+  // columns) made 2 million passes, about a tenth of its time, and their 69 rare prunings found
+  // 114 in 600 s; backed off to 16,000 passes, one pruning and 134
+  private static final int ROOT_REDUCED_MIN_COLUMNS = 1000;
   private int rootReducedPeriod = 1;
   private int rootReducedSkips;
 
