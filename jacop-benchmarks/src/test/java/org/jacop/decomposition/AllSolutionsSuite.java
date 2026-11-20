@@ -136,6 +136,11 @@ class AllSolutionsSuite {
       System.currentTimeMillis()
           + (long) (Double.parseDouble(System.getProperty("suite.hours", "1000000")) * 3_600_000);
   private final Pattern problemFilter = Pattern.compile(System.getProperty("suite.problems", ".*"));
+  // only the checks whose name matches are run; the others count as done
+  private final Pattern checkFilter = Pattern.compile(System.getProperty("suite.checks", ".*"));
+  // also enumerate with --lcg -a (all:lcg, all:lcg:f, all:lcg:decomp:C), for a build whose LCG
+  // enumerates the solutions of satisfaction models
+  private final boolean lcgAll = Boolean.parseBoolean(System.getProperty("suite.lcgAll", "false"));
   // largest decomposed FlatZinc file to run
   private final long maxDecomposedBytes = Long.getLong("suite.maxDecomposedBytes", 50_000_000L);
 
@@ -563,6 +568,10 @@ class AllSolutionsSuite {
 
     // every solution with free search
     countCheck(c, sha, model, bound, ref, "all:f", Set.of(), null, List.of("-f"));
+    if (lcgAll) {
+      countCheck(c, sha, model, bound, ref, "all:lcg", Set.of(), null, List.of("--lcg"));
+      countCheck(c, sha, model, bound, ref, "all:lcg:f", Set.of(), null, List.of("--lcg", "-f"));
+    }
     // every solution with each global constraint decomposed
     Map<String, List<Integer>> occurrences = new LinkedHashMap<>();
     for (Constraint k : model.constraints) {
@@ -593,6 +602,18 @@ class AllSolutionsSuite {
           Set.copyOf(e.getValue()),
           decomposed.get(e.getKey()),
           List.of());
+      if (lcgAll) {
+        countCheck(
+            c,
+            sha,
+            model,
+            bound,
+            ref,
+            "all:lcg:" + check,
+            Set.copyOf(e.getValue()),
+            decomposed.get(e.getKey()),
+            List.of("--lcg"));
+      }
     }
     if (std != null) {
       stdChecks(c, sha, std, objective, ref, projections, printed, stdObjs);
@@ -648,6 +669,9 @@ class AllSolutionsSuite {
   }
 
   private boolean done(Candidate c, String sha, String check) {
+    if (!checkFilter.matcher(check).matches()) {
+      return true;
+    }
     String[] f = checks.get(c.name + "\t" + sha + "\t" + check);
     return f != null && !retry.contains(f[4]);
   }
