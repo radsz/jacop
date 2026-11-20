@@ -5994,4 +5994,19 @@ class FlatzincFrontEndTest {
       assertFalse(out.contains("UNSATISFIABLE"), Arrays.toString(options) + out);
     }
   }
+
+  @Test
+  void congruenceOfALinearSystemPrunesFewValuesOfAWideDomain() throws IOException {
+    // the congruence x0 = 1 (mod 4) of the system was applied by building every congruent value
+    // between the bounds of x0, about 268 million of them for its five values: out of memory
+    String model =
+        """
+        var {-536870910,268435456,268435457,536685545,536870909}: x0:: output_var;
+        var {-536870910,-536870909,-46341,4,32768}: x2:: output_var;
+        var {-3,-2,-1,65536}: x3:: output_var;
+        constraint int_lin_eq([4,-1,-536870910],[x2,x0,x3],1);
+        solve satisfy;
+        """;
+    assertEquals(List.of("x0 = 536685545; x2 = -46341; x3 = -1;"), solveAllInOrder(model));
+  }
 }
