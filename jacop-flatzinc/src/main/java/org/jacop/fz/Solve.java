@@ -320,6 +320,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // the node budget of a run of the bisection, at least the nodes so far
   private static final long STEP_NODES = Long.getLong("org.jacop.fz.floatStepNodes", 100_000);
 
+  // free search splits the float variables of the model before the ones MiniZinc introduced
+  private static final boolean FLOAT_DECISION_FIRST =
+      !"false".equals(System.getProperty("org.jacop.fz.floatDecisionFirst"));
+
   private static final int FLOAT_CRAWL = Integer.getInteger("org.jacop.fz.floatCrawl", 1000);
 
   // how far above lo, relative to max(1, |best|), a float cost steps down by max(1, |best|) in
@@ -7251,7 +7255,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       selects.add(new SimpleSelect<>(new IntVar[] {objective}, null, new IndomainMin<>()));
     }
     if (floats.length > 0) {
-      selects.add(new SplitSelectFloat<>(store, floats, new LargestDomainFloat<>()));
+      selects.add(new SplitSelectFloat<Var>(store, floats, freeFloatChoice()));
     }
   }
 
@@ -7785,10 +7789,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // relaxation ran off to -1e143)
     // only under free search: the annotated searches of ex2_1_10 (input_order, split) and box prove
     // the optimum in 4 s and 0.8 s by branch and bound to 1000 solutions, and in 59 s and 53 s by
-    // bisection from the start
+    // bisection from the start; or when the relaxation is the whole model, whose optimum is then at
+    // the point of the relaxation (transp1, 61 equations and 100 inequalities: the annotated search
+    // found 199,697.9 by the point at the root and then nothing better in 27 s, against the
+    // optimum 199,693.06; bisection from the start proves it in 50 nodes)
     boolean[] bisect = {
       FLOAT_BISECT_START
-          && options.freeSearch()
+          && (options.freeSearch() || floatRelaxation != null && floatRelaxation.isLinearModel())
           && FLOAT_LP_POINT
           && floatRelaxation != null
           && lo[0] > -1e12
@@ -7882,7 +7889,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       if (budget) {
         label.setNodesOut(Long.MAX_VALUE);
-        if (label.timeOutOccured && options.getRemainingTimeOut() > 1) {
+        if (label.timeOutOccured && options.timeLeft()) {
           // out of the node budget: branch and bound from the best solution, and bisect again
           // once it crawls
           label.timeOutOccured = false;
@@ -7993,7 +8000,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       label.setNodesOut(Long.MAX_VALUE);
       // the node limit stops the search as a time-out does
-      if (label.timeOutOccured && options.getRemainingTimeOut() > 1) {
+      if (label.timeOutOccured && options.timeLeft()) {
         label.timeOutOccured = false;
       }
     }
@@ -8152,7 +8159,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     // a run stopped by its limit before the time-out goes on
     private boolean resume() {
-      if (label.timeOutOccured && options.getRemainingTimeOut() > 1) {
+      if (label.timeOutOccured && options.timeLeft()) {
         label.timeOutOccured = false;
         return true;
       }
@@ -8473,7 +8480,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @param result whether a solution was found
    */
   void printStatisticsForSingleSearch(boolean interrupted, boolean result) {
-    if (floatRelaxation != null && options.getStatistics()) {
+    if (floatRelaxation != null && options.searchStatistics()) {
       long[] c = floatRelaxation.counts();
       IO.println("%%%mzn-stat: floatLpRows=" + floatRelaxation.rows());
       IO.println("%%%mzn-stat: floatLpSolves=" + c[0]);
@@ -8482,7 +8489,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IO.println("%%%mzn-stat: floatLpPointProbes=" + pointProbes);
       IO.println("%%%mzn-stat: floatLpPointSolutions=" + pointProbeSolutions);
     }
-    if (floatDive != null && options.getStatistics()) {
+    if (floatDive != null && options.searchStatistics()) {
       IO.println(
           "%%%mzn-stat: floatDives="
               + floatDive.dives()
@@ -8757,7 +8764,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
       SelectChoicePoint<Var> floatSelect =
           options.freeSearch() || options.complementarySearch()
-              ? new SplitSelectFloat<>(store, floatSearchVariables, new LargestDomainFloat<>())
+              ? new SplitSelectFloat<>(store, floatSearchVariables, freeFloatChoice())
               : new SplitSelectFloat<>(store, floatSearchVariables, null);
 
       if (variableSelection == null) {
@@ -9374,6 +9381,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     attachFloatCid(label, si.vars());
 
     return label;
+  }
+
+  /**
+   * The variable choice of free search over float variables: the largest domain first, the
+   * variables MiniZinc introduced last ({@link DecisionFirstFloat}). System property
+   * org.jacop.fz.floatDecisionFirst=false gives the largest domain over all of them.
+   */
+  private ComparatorVariable<Var> freeFloatChoice() {
+    if (!FLOAT_DECISION_FIRST || dictionary.introducedFloatVariables().isEmpty()) {
+      return new LargestDomainFloat<>();
+    }
+    return new DecisionFirstFloat<>(dictionary.introducedFloatVariables());
   }
 
   /**

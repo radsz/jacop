@@ -117,6 +117,9 @@ public class Tables {
   // variables named by a defines_var annotation of a constraint
   final ArrayList<Var> definedVariables = new ArrayList<>();
 
+  // float variables declared var_is_introduced or is_defined_var: MiniZinc's intermediate results
+  final ArrayList<Var> introducedFloatVariables = new ArrayList<>();
+
   // variables that no constraint uses any more, such as the sums merged into a minimum
   final ArrayList<Var> unusedVariables = new ArrayList<>();
 
@@ -820,6 +823,7 @@ public class Tables {
     defaultSearchFloatArrays.forEach(a -> t.defaultSearchFloatArrays.add(map.get(a)));
     defaultSearchSetArrays.forEach(a -> t.defaultSearchSetArrays.add(map.get(a)));
     t.definedVariables.addAll(map.get(definedVariables));
+    t.introducedFloatVariables.addAll(map.get(introducedFloatVariables));
     t.unusedVariables.addAll(map.get(unusedVariables));
     t.auxiliaryVariables.addAll(map.get(auxiliaryVariables));
     t.splitSums.addAll(map.get(splitSums));
@@ -1387,6 +1391,24 @@ public class Tables {
    */
   public void addDefinedVar(Var v) {
     definedVariables.add(v);
+  }
+
+  /**
+   * Records a float variable that MiniZinc introduced (var_is_introduced or is_defined_var).
+   *
+   * @param v the introduced float variable
+   */
+  public void addIntroducedFloatVar(Var v) {
+    introducedFloatVariables.add(v);
+  }
+
+  /**
+   * Returns the float variables that MiniZinc introduced (var_is_introduced or is_defined_var).
+   *
+   * @return the introduced float variables
+   */
+  public List<Var> introducedFloatVariables() {
+    return introducedFloatVariables;
   }
 
   /**
