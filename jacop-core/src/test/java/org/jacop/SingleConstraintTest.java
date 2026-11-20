@@ -11687,4 +11687,52 @@ class SingleConstraintTest extends TestHelper {
     assertThat((long) countSolutions(store, new IntVar[] {a0, a1, a2, o0, o1}, new Random(1)))
         .isEqualTo(expected);
   }
+
+  /** 65536 * 65536 wraps to 0 in int: the reification must not call the product equal to 0. */
+  @Test
+  public void testReifiedXmulYeqCWithAProductBeyondIntIsFalse() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 65536, 65536);
+    IntVar y = new IntVar(store, "y", 65536, 65536);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new XmulYeqC(x, y, 0), b));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.singleton(0)).isTrue();
+  }
+
+  /** As above for a constant factor, the form int_lin_eq_reif([65536], [x], 0, b) is posted in. */
+  @Test
+  public void testReifiedXmulCeqZWithAProductBeyondIntIsFalse() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 0);
+    x.addDom(65536, 65536);
+    IntVar z = new IntVar(store, "z", 0, 0);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new XmulCeqZ(x, 65536, z), b));
+    store.impose(new XeqC(x, 65536));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.singleton(0)).isTrue();
+  }
+
+  /** The negation removed the wrapped product 0 from z, the only value of z. */
+  @Test
+  public void testNegatedXmulCeqZKeepsTheWrappedProductInZ() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 65536, 65536);
+    IntVar z = new IntVar(store, "z", 0, 0);
+    store.impose(new Not(new XmulCeqZ(x, 65536, z)));
+    assertThat(store.consistency()).isTrue();
+  }
+
+  /** c - y.max() + 1 wrapped to a large positive bound for c near the smallest int. */
+  @Test
+  public void testXplusYgtCWithAConstantNearTheSmallestIntHolds() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -10, -5);
+    IntVar y = new IntVar(store, "y", 0, 10);
+    store.impose(new org.jacop.constraints.XplusYgtC(x, y, -2147483642));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().getSize()).isEqualTo(6);
+    assertThat(y.dom().getSize()).isEqualTo(11);
+  }
 }
