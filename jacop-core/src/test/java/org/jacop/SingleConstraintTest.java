@@ -108,6 +108,7 @@ import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.EqBool;
 import org.jacop.constraints.ExtensionalConflictVa;
 import org.jacop.constraints.GCC;
+import org.jacop.constraints.GlobalCardinality;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.IfThenBool;
 import org.jacop.constraints.IfThenElse;
@@ -4221,6 +4222,53 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     assertThat(b.singleton(0)).isTrue();
     assertThat(q.dom().toString()).isEqualTo("{2..3, 5}");
+  }
+
+  @Test
+  void globalCardinalityOverMoreThan64ValuesKeepsSupportsAndReachesFixpoint() {
+    // 90 counted values plus the uncounted ones: the bit sets of the value lists span two words
+    Random random = new Random(23);
+    int[] values = IntStream.range(0, 90).toArray();
+    for (int run = 0; run < 300; run++) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[4];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i);
+        for (int k = 0; k < 4; k++) {
+          int v = random.nextInt(100);
+          x[i].addDom(v, v);
+        }
+      }
+      int[] low = new int[values.length];
+      int[] up = new int[values.length];
+      for (int a = 0; a < values.length; a++) {
+        up[a] = random.nextInt(4) == 0 ? 0 : 1 + random.nextInt(2);
+      }
+      String instance = "run " + run + " up " + Arrays.toString(up) + " " + domainsOf(x);
+      GlobalCardinality gcc = new GlobalCardinality(x, values, low, up);
+      store.impose(gcc);
+      checkSupportsAndFixpointAlongRandomWalk(
+          instance,
+          store,
+          x,
+          vs ->
+              bruteForce(
+                  vs,
+                  t -> {
+                    int[] count = new int[100];
+                    for (int v : t) {
+                      count[v]++;
+                    }
+                    for (int a = 0; a < values.length; a++) {
+                      if (count[a] > up[a]) {
+                        return false;
+                      }
+                    }
+                    return true;
+                  }),
+          () -> rerunAtNewLevel(store, gcc, x),
+          random);
+    }
   }
 
   @Test
