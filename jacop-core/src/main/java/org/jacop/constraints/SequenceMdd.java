@@ -162,6 +162,10 @@ public class SequenceMdd extends Constraint
   private int skip;
   private int backoff;
   private boolean pruned;
+  // whether a variable has several roles (an arc and a time, or two times), so that a pass prunes
+  // the inputs it read and must be repeated until nothing changes
+  private final boolean shared;
+  private boolean changed;
 
   // layer arrays, allocated at the first call: masks, per-last earliest departures and least costs
   // (INF for the nodes outside lastMask)
@@ -439,17 +443,22 @@ public class SequenceMdd extends Constraint
     this.words = (size + 63) >>> 6;
     this.queueIndex = 4;
     Set<Var> scope = new LinkedHashSet<>(Arrays.asList(arcs));
+    int roles = size;
     for (int i = 0; i < size; i++) {
       if (in[i] != null) {
         scope.add(in[i]);
+        roles++;
       }
       if (out[i] != null) {
         scope.add(out[i]);
+        roles++;
       }
     }
     if (cost != null) {
       scope.add(cost);
+      roles++;
     }
+    this.shared = scope.size() < roles;
     setScope(scope);
   }
 
@@ -676,6 +685,17 @@ public class SequenceMdd extends Constraint
     if (allMask == null) {
       allocate();
     }
+    pruned = false;
+    do {
+      changed = false;
+      propagate(store);
+    } while (shared && changed);
+    backoff = pruned ? 0 : Math.min(2 * backoff + 1, MAX_SKIP);
+    skip = backoff;
+  }
+
+  // one pass: compiles the diagram over the current domains and prunes the variables
+  private void propagate(Store store) {
     arcMasks();
     // layer 0: the start
     count[0] = 1;
@@ -771,10 +791,7 @@ public class SequenceMdd extends Constraint
         }
       }
     }
-    pruned = false;
     prune(store);
-    backoff = pruned ? 0 : Math.min(2 * backoff + 1, MAX_SKIP);
-    skip = backoff;
   }
 
   // the candidate with the visited set all + j, found in the table of the layer or added as number
@@ -1061,6 +1078,7 @@ public class SequenceMdd extends Constraint
             int value = offset + (pred ? i : j);
             x.domain.inComplement(store.level, x, value);
             pruned = true;
+            changed = true;
           }
         }
       }
@@ -1087,20 +1105,22 @@ public class SequenceMdd extends Constraint
     maxIn[j] = Math.max(maxIn[j], a);
   }
 
-  private static void lower(Store store, IntVar v, long max) {
+  private void lower(Store store, IntVar v, long max) {
     if (v != null && max != NEG && max < v.max()) {
       if (max < v.min()) {
         throw Store.failException;
       }
+      changed = true;
       v.domain.inMax(store.level, v, (int) max);
     }
   }
 
-  private static void raise(Store store, IntVar v, long min) {
+  private void raise(Store store, IntVar v, long min) {
     if (v != null && min != INF && min > v.min()) {
       if (min > v.max()) {
         throw Store.failException;
       }
+      changed = true;
       v.domain.inMin(store.level, v, (int) min);
     }
   }
