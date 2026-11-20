@@ -3490,6 +3490,15 @@ public final class LcgSolver implements ExternalPropagator {
     }
     probeBooleans = booleans.size();
     probeValueVariables = valued.size();
+    // the failures of probes are not the search's: counted, they would steer dom/wdeg, afc and
+    // activity to the probed values. On XCSP 2022 BlockedQueens-56-1860437025 (661 failed probes
+    // in 0.8 s) free search found no solution in 600 s on three seeds; without them 8-15 s
+    boolean weights = store.variableWeightManagement;
+    boolean afc = store.afcManagement();
+    boolean activity = store.activityManagement();
+    store.variableWeightManagement = false;
+    store.afcManagement(false);
+    store.activityManagement(false);
     try {
       boolean changed = true;
       while (changed) {
@@ -3518,6 +3527,9 @@ public final class LcgSolver implements ExternalPropagator {
       }
       return true;
     } finally {
+      store.variableWeightManagement = weights;
+      store.afcManagement(afc);
+      store.activityManagement(activity);
       probeNanos += sat.now() - start;
       if (!rootFailed && !propagateRoot()) {
         rootFailed = true;
