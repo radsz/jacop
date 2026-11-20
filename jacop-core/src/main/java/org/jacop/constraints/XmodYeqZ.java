@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
@@ -99,12 +100,14 @@ public class XmodYeqZ extends AbstractXopYeqZ implements Copyable<XmodYeqZ>, Exp
     return BoxExplanation.explainFailure(trail, new IntVar[] {x, y, z}, DivModPowBounds::mod, out);
   }
 
-  // x keeps the values whose remainder is in the domain of z
+  // x keeps the values whose remainder is in the domain of z, and z the remainders of the values
+  // of x
   private void propagateWhenYsingleton(Store store) {
     if (x.domain.getSize() < 100) {
       int absY = Math.abs(y.value());
       IntDomain d = makeDomain(x, absY, z);
       x.domain.in(store.level, x, d);
+      z.domain.in(store.level, z, remainders(x, absY));
     } else {
       int absY = Math.abs(y.value());
       IntDomain zDom = z.dom();
@@ -133,6 +136,23 @@ public class XmodYeqZ extends AbstractXopYeqZ implements Copyable<XmodYeqZ>, Exp
         throw Store.failException;
       }
     }
+  }
+
+  // the remainders x mod y of the values of x, which has fewer than 100 values
+  private static IntDomain remainders(IntVar x, int y) {
+    int[] r = new int[x.domain.getSize()];
+    int n = 0;
+    for (ValueEnumeration e = x.domain.valueEnumeration(); e.hasMoreElements(); ) {
+      r[n++] = e.nextElement() % y;
+    }
+    Arrays.sort(r, 0, n);
+    IntervalDomain d = new IntervalDomain();
+    for (int i = 0; i < n; i++) {
+      if (i == 0 || r[i] != r[i - 1]) {
+        d.unionAdapt(r[i]);
+      }
+    }
+    return d;
   }
 
   IntDomain makeDomain(IntVar x, int y, IntVar z) {

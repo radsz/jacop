@@ -8844,6 +8844,27 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void xmodYeqZKeepsOnlyRemaindersOfX() {
+    // rotating-workforce: x in 98..102 has the remainders 2, 3, 4, 5 and 0 modulo 6, so z = 1 has
+    // no support (found by Choco's domain-consistent modulo on the same domains)
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 98, 102);
+    IntVar y = new IntVar(store, "y", 6, 6);
+    IntVar z = new IntVar(store, "z", 0, 5);
+    store.impose(new XmodYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.dom().contains(1)).isFalse();
+    assertThat(z.getSize()).isEqualTo(5);
+    // and negative dividends keep negative remainders: -7..-5 mod 3 is -1, -2, 0
+    IntVar u = new IntVar(store, "u", -7, -5);
+    IntVar w = new IntVar(store, "w", -2, 2);
+    store.impose(new XmodYeqZ(u, new IntVar(store, "three", -3, -3), w));
+    assertThat(store.consistency()).isTrue();
+    assertThat(w.min()).isEqualTo(-2);
+    assertThat(w.max()).isEqualTo(0);
+  }
+
+  @Test
   void xexpYeqZBoundsOnWideDomains() {
     // x is too wide for the enumeration of supports until the bounds narrow it: z in 9..30 holds
     // the squares of 3..5 and of -5..-3 and the cube 27, so x is in -5..5 and z in 9..27; then the
