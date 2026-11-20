@@ -82,6 +82,7 @@ import org.jacop.constraints.Min;
 import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.Or;
 import org.jacop.constraints.OverlappingAlldiff;
+import org.jacop.constraints.Not;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Routes;
 import org.jacop.constraints.SeqPrecedeChain;
@@ -7077,7 +7078,7 @@ class LcgSolverTest {
       IntVar[] b = new IntVar[kinds];
       for (int k = 0; k < kinds; k++) {
         // the reifiable relations explained element by element (the others are not primitive)
-        kind[k] = rnd.nextInt(2);
+        kind[k] = rnd.nextInt(4);
         int p = rnd.nextInt(3);
         int q = (p + 1 + rnd.nextInt(2)) % 3;
         args[k] = new int[] {p, q, 3 - p - q};
@@ -7086,7 +7087,12 @@ class LcgSolverTest {
         SetVar y = sets[q];
         store.impose(
             new Reified(
-                kind[k] == 0 ? new AinB(x, y) : new AeqB(x, y),
+                switch (kind[k]) {
+                  case 0 -> new AinB(x, y);
+                  case 1 -> new AeqB(x, y);
+                  case 2 -> new Not(new AeqB(x, y));
+                  default -> new Not(new AinB(x, y));
+                },
                 b[k]));
       }
       int forced = rnd.nextInt(elements);
@@ -7115,8 +7121,11 @@ class LcgSolverTest {
           for (int e = 0; e < elements; e++) {
             boolean x = in[args[k][0]][e];
             boolean y = in[args[k][1]][e];
-            holds &=
-                kind[k] == 0 ? !x || y : x == y;
+            holds &= kind[k] % 2 == 0 ? !x || y : x == y;
+          }
+          if (kind[k] >= 2) {
+            // the negations
+            holds = !holdsPositive(in, args[k], kind[k] == 2 ? 1 : 0, elements);
           }
           t.append(holds ? 1 : 0);
         }
@@ -7150,5 +7159,16 @@ class LcgSolverTest {
       found += solutions.size();
     }
     assertThat(found).isGreaterThan(300);
+  }
+
+  // whether AinB (kind 0) or AeqB (kind 1) holds on the memberships of sets args[0] and args[1]
+  private static boolean holdsPositive(boolean[][] in, int[] args, int kind, int elements) {
+    boolean holds = true;
+    for (int e = 0; e < elements; e++) {
+      boolean x = in[args[0]][e];
+      boolean y = in[args[1]][e];
+      holds &= kind == 0 ? !x || y : x == y;
+    }
+    return holds;
   }
 }
