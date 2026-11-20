@@ -107,6 +107,9 @@ public class TspKOpt extends Constraint implements Stateful, Copyable<TspKOpt>, 
   // the largest relative distance between the length's bounds at which the rules are on
   private final double gap;
 
+  // the largest lower bound of the length seen at the root
+  private int rootMin = Integer.MIN_VALUE;
+
   // whether a tour within the length's bound has been seen; always true without a length
   private boolean seenTour;
 
@@ -234,6 +237,9 @@ public class TspKOpt extends Constraint implements Stateful, Copyable<TspKOpt>, 
 
   @Override
   public void consistency(Store store) {
+    if (length != null && store.level == 0) {
+      rootMin = Math.max(rootMin, length.min());
+    }
     if (!seenTour) {
       // the first complete tour within the length's bound is a solution: switch on after it
       long sum = 0;
@@ -247,9 +253,9 @@ public class TspKOpt extends Constraint implements Stateful, Copyable<TspKOpt>, 
       seenTour = sum <= length.max();
       return;
     }
-    if (length != null
-        && length.max() - (double) length.min() > gap * Math.abs((double) length.max())) {
-      // the bound is far from the best tour: no removal, and the arcs are checked once it is near
+    if (length != null && length.max() - (double) rootMin > gap * Math.abs((double) length.max())) {
+      // the root bound is far from the best tour: no removal, and the arcs are checked once it is
+      // near
       return;
     }
     boolean again = true;
