@@ -8521,6 +8521,7 @@ Version 5.0 (unreleased)
    a row of 4,097 to 65,536 terms, at 240 s: -f 10 = 10 proved, total
    3,749 -> 3,720 s; default search 10 = 10 proved, 3,751 -> 3,662 s
    (BusScheduling c1a 89 -> 30 s, r5a 69 -> 32 s).
+
 476. FlatZinc objective presolve contracts disjunctions: when the
    literals of r <-> or(b) exclude each other, now also because they
    share an at-most-one sum(b) <= 1 or an exactly-one set, and all have
