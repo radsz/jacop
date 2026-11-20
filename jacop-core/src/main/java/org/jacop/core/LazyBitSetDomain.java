@@ -1698,11 +1698,13 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
     if (result.getSize() == size) {
       return NONE;
     }
+    int previousMin = minBound;
+    int previousMax = maxBound;
     assign(result);
-    if (isEmpty()) {
+    if (isEmpty() || singleton()) {
       return GROUND;
     }
-    return singleton() ? GROUND : ANY;
+    return minBound != previousMin || maxBound != previousMax ? BOUND : ANY;
   }
 
   @Override

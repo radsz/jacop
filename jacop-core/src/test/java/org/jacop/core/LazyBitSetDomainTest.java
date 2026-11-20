@@ -709,4 +709,17 @@ class LazyBitSetDomainTest {
     }
     assertThat(intervals.toString()).isEqualTo("0..499 501..99999 ");
   }
+
+  @Test
+  void intersectAdaptOfADomainReportsChangedBounds() {
+    // both bounds move: the event must be BOUND (ANY would not wake bound-subscribed constraints)
+    LazyBitSetDomain d = new LazyBitSetDomain(-62, 68, false);
+    d.setDomain(new IntervalDomain(-62, -46).union(42, 68));
+    assertThat(d.intersectAdapt(new BoundDomain(25, 46))).isEqualTo(IntDomain.BOUND);
+    assertThat(d.toString()).isEqualTo("{42..46}");
+    // only values inside the bounds go: ANY
+    d = new LazyBitSetDomain(0, 9, false);
+    d.setDomain(new IntervalDomain(0, 9));
+    assertThat(d.intersectAdapt(new IntervalDomain(0, 3).union(6, 9))).isEqualTo(IntDomain.ANY);
+  }
 }
