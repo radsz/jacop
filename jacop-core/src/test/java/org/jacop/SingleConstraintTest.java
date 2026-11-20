@@ -154,6 +154,7 @@ import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.SymmetricGCC;
 import org.jacop.constraints.TableCover;
 import org.jacop.constraints.UsedBy;
+import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.ViolationMeasure;
 import org.jacop.constraints.XdivYeqZ;
@@ -11833,5 +11834,34 @@ class SingleConstraintTest extends TestHelper {
     origin[1][0].domain.in(store.level, origin[1][0], 2, 2);
     store.impose(new Alldistinct(new IntVar[] {u, w}));
     assertThat(store.consistency()).isFalse();
+  }
+
+  /**
+   * ValuePrecede imposed again (LcgSolver.lend and release impose the same object after removing
+   * it) made its positions anew at 0 but skipped the initialisation, as the first imposition had
+   * done it, and x2 lost the value 1 of the solution [1, 1, 1, 1].
+   */
+  @Test
+  void valuePrecedeImposedAgainStartsFromFreshPositions() {
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 0, 1),
+      new IntVar(store, "x1", 1, 2),
+      new IntVar(store, "x2", 0, 2),
+      new IntVar(store, "x3", 0, 1)
+    };
+    ValuePrecede c = new ValuePrecede(0, 2, x);
+    store.impose(c);
+    x[3].domain.in(0, x[3], 1, 1);
+    assertThat(store.consistency()).isTrue();
+    c.removeConstraint();
+    store.setLevel(1);
+    store.clearEntailed(c);
+    c.impose(store);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(2);
+    x[0].domain.in(2, x[0], 1, 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[2].domain.contains(1)).isTrue();
   }
 }
