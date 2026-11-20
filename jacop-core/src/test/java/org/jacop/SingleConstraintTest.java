@@ -12188,4 +12188,35 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     assertThat(x1.dom().toString()).isEqualTo("{0..2}");
   }
+
+  /**
+   * Geost made before a variable of an object was grounded threw NullPointerException at
+   * imposition: impose() reported the ground variable to queueVariable before it had made the stamp
+   * of grounded variables.
+   */
+  @Test
+  void geostImposedAfterAVariableIsGroundedCountsTheSolutions() {
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 1), new IntVar(store, "x1", 0, 1)};
+    List<GeostObject> objects = new ArrayList<>();
+    for (int i = 0; i < 2; i++) {
+      objects.add(
+          new GeostObject(
+              i,
+              new IntVar[] {x[i]},
+              new IntVar(store, 0, 0),
+              new IntVar(store, 0, 0),
+              new IntVar(store, 1, 1),
+              new IntVar(store, 1, 1)));
+    }
+    Geost geost =
+        new Geost(
+            objects,
+            List.of(new NonOverlapping(objects, new int[] {0, 1})),
+            List.of(new Shape(0, new int[] {0}, new int[] {1})));
+    x[0].domain.in(0, x[0], 0, 0);
+    store.impose(geost);
+    assertThat(store.consistency()).isTrue();
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(1);
+  }
 }

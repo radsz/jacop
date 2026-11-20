@@ -1730,8 +1730,6 @@ public class Geost extends Constraint
   @Override
   public void impose(Store store) {
 
-    super.impose(store);
-
     if (volumeReasoning) {
       List<VolumeCheck> checks = new ArrayList<>();
       for (ExternalConstraint ec : externalConstraints) {
@@ -1757,6 +1755,9 @@ public class Geost extends Constraint
 
     objectList = new ArrayList<>();
     updatedObjectSet = new HashSet<>();
+
+    // last: it reports the variables to queueVariable, which uses the state made above
+    super.impose(store);
   }
 
   @Override
