@@ -6173,4 +6173,26 @@ class FlatzincFrontEndTest {
       assertTrue(out[0].contains(c[1].isEmpty() ? "=====UNSATISFIABLE=====" : "=========="), what);
     }
   }
+
+  @Test
+  void sumMergedIntoAMinimumKeepsTheHoleOfItsVariable() throws IOException {
+    // z = x + y is merged into m = min(z, w) without z; the hole z != 3 is a constraint on x + y
+    // that the merge dropped (160 solutions for 120)
+    String model =
+        "var 0..3: x :: output_var;\n"
+            + "var 0..3: y :: output_var;\n"
+            + "var {0,1,2,4,5,6}: z;\n"
+            + "var 0..9: w :: output_var;\n"
+            + "var 0..9: m :: output_var;\n"
+            + "constraint int_lin_eq([1,1,-1],[x,y,z],0);\n"
+            + "constraint int_min(z, w, m);\n"
+            + "solve satisfy;\n";
+    int expected = 0;
+    for (int x = 0; x <= 3; x++) {
+      for (int y = 0; y <= 3; y++) {
+        expected += x + y == 3 ? 0 : 10;
+      }
+    }
+    assertEquals(expected, solveAll(model).size());
+  }
 }
