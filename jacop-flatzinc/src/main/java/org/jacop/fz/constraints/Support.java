@@ -355,7 +355,7 @@ public class Support implements ParserTreeConstants {
       int val = node.getInt();
       return dictionary.getConstant(val);
     } else if (node.getType() == 2) { // ident
-      IntVar int_boolVar = dictionary.getVariable(node.getIdent());
+      IntVar int_boolVar = dictionary.getVariable(node);
       if (int_boolVar == null) {
         int bInt = dictionary.getInt(node.getIdent());
         return dictionary.getConstant(bInt); // new IntVar(store, bInt, bInt);
@@ -794,7 +794,7 @@ public class Support implements ParserTreeConstants {
 
     ASTScalarFlatExpr e = (ASTScalarFlatExpr) node.jjtGetChild(0);
     if (e != null) {
-      return dictionary.getVariable(e.getIdent());
+      return dictionary.getVariable(e);
     } else {
       throw new IllegalArgumentException(
           "Wrong variable identified in \"defines_var\" annotation" + node);

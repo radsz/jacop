@@ -224,7 +224,7 @@ public class DifferenceCyclesDetector implements ParserTreeConstants {
     if (type == 0 || type == 1) {
       return constant(e.getInt());
     }
-    if (type == 2 && support.dictionary.getVariable(e.getIdent()) == null) {
+    if (type == 2 && support.dictionary.getVariable(e) == null) {
       return constant(support.dictionary.getInt(e.getIdent()));
     }
     return support.getVariable(e);

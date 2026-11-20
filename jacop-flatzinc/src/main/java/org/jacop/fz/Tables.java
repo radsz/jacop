@@ -42,6 +42,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Routes;
 import org.jacop.constraints.TableCliques;
@@ -72,6 +73,19 @@ import org.jacop.set.core.SetVar;
 public class Tables {
 
   public final Map<IntVar, IntVar> aliasTable = new LinkedHashMap<>();
+
+  // the stamps of the tables: a new one, unique over all tables, whenever what a name denotes may
+  // change (a variable, an array of variables or an alias added), so a ScalarName resolved under
+  // an older stamp, or under other tables, is resolved again
+  private static final AtomicLong STAMPS = new AtomicLong();
+  private volatile long stamp = STAMPS.incrementAndGet();
+
+  // the shared names of the scalar expressions resolved through these tables
+  private final HashMap<String, ScalarName> scalarNames = new HashMap<>();
+
+  private void changed() {
+    stamp = STAMPS.incrementAndGet();
+  }
 
   /** Under --proof, the trail of the root propagation, which the proof derives; null otherwise. */
   AtomicTrail rootTrail;
@@ -715,6 +729,7 @@ public class Tables {
    * @param v the variable being aliased
    */
   public void addAlias(IntVar b, IntVar v) {
+    changed();
     IntVar x = aliasTable.get(v);
     if (x == null) {
       aliasTable.put(v, b);
@@ -732,6 +747,7 @@ public class Tables {
    * @param aliasesOfFrom the variables whose alias is {@code from}.
    */
   public void mergeAlias(IntVar to, IntVar from, List<IntVar> aliasesOfFrom) {
+    changed();
     for (IntVar v : aliasesOfFrom) {
       aliasTable.put(v, to);
     }
@@ -840,6 +856,7 @@ public class Tables {
     t.numberBoolVariables = numberBoolVariables;
     t.numberFloatVariables = numberFloatVariables;
     t.numberSetVariables = numberSetVariables;
+    t.changed();
     return t;
   }
 
@@ -1150,6 +1167,7 @@ public class Tables {
    * @param v the variable being added.
    */
   public void addVariable(String ident, IntVar v) {
+    changed();
     variableTable.put(ident, v);
   }
 
@@ -1161,6 +1179,63 @@ public class Tables {
    */
   public IntVar getVariable(String ident) {
     return getAlias(variableTable.get(ident));
+  }
+
+  /**
+   * It returns the variable an identifier expression names, as {@link #getVariable(String)} with
+   * its identifier, from what the expression keeps of the last look-up while these tables have not
+   * changed since (see {@link ScalarName}).
+   *
+   * @param e the expression.
+   * @return the variable of the expression's identifier, or null if it names no variable.
+   */
+  public IntVar getVariable(ASTScalarFlatExpr e) {
+    ScalarName.Resolved r = resolve(e);
+    return r == null ? getVariable(e.getIdent()) : r.variable();
+  }
+
+  /**
+   * It returns the array of variables an identifier expression names, as {@link
+   * #getDeclaredVariableArray(String)} with its identifier; the look-up of a name that is no such
+   * array is kept as in {@link #getVariable(ASTScalarFlatExpr)}.
+   *
+   * @param e the expression.
+   * @return the array of variables, or null if the identifier is not an array of variables.
+   */
+  public IntVar[] getDeclaredVariableArray(ASTScalarFlatExpr e) {
+    ScalarName.Resolved r = resolve(e);
+    if (r == null) {
+      return getDeclaredVariableArray(e.getIdent());
+    }
+    return r.array() ? getVariableArray(e.getIdent()) : null;
+  }
+
+  private ScalarName.Resolved resolve(ASTScalarFlatExpr e) {
+    Object ref = e.identRef();
+    if (ref == null) {
+      return null;
+    }
+    long now = stamp;
+    ScalarName name;
+    if (ref instanceof ScalarName n) {
+      ScalarName.Resolved r = n.resolved;
+      if (r != null && r.stamp() == now) {
+        return r;
+      }
+      name = n;
+    } else if (ref instanceof String ident && e.getType() != 4) {
+      synchronized (scalarNames) {
+        name = scalarNames.computeIfAbsent(ident, ScalarName::new);
+      }
+      e.setIdentRef(name);
+    } else {
+      return null;
+    }
+    String ident = name.ident;
+    ScalarName.Resolved r =
+        new ScalarName.Resolved(now, getVariable(ident), variableArrayTable.containsKey(ident));
+    name.resolved = r;
+    return r;
   }
 
   /**
@@ -1190,6 +1265,7 @@ public class Tables {
    * @param array the array of variables being added.
    */
   public void addVariableArray(String ident, IntVar[] array) {
+    changed();
     variableArrayTable.put(ident, array);
   }
 

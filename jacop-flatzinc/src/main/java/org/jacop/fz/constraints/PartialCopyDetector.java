@@ -241,19 +241,18 @@ public class PartialCopyDetector implements ParserTreeConstants {
     }
     ASTScalarFlatExpr e = (ASTScalarFlatExpr) arg;
     if (e.getType() == 2) {
-      IntVar[] array = support.dictionary.getDeclaredVariableArray(e.getIdent());
+      IntVar[] array = support.dictionary.getDeclaredVariableArray(e);
       if (array != null) {
         for (IntVar v : array) {
           occurrences.merge(v, 1, Integer::sum);
         }
         return;
       }
-      IntVar v = support.dictionary.getVariable(e.getIdent());
+      IntVar v = support.dictionary.getVariable(e);
       if (v != null) {
         occurrences.merge(v, 1, Integer::sum);
       }
-    } else if (e.getType() == 3
-        && support.dictionary.getDeclaredVariableArray(e.getIdent()) != null) {
+    } else if (e.getType() == 3 && support.dictionary.getDeclaredVariableArray(e) != null) {
       // an element of an array of variables; other arrays hold parameters
       occurrences.merge(support.getVariable(e), 1, Integer::sum);
     }

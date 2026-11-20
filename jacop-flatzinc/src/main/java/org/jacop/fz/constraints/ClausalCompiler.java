@@ -593,7 +593,7 @@ public final class ClausalCompiler {
         SimpleNode child = (SimpleNode) item.jjtGetChild(i);
         IntVar[] vs = null;
         if (child instanceof ASTScalarFlatExpr s && (s.getType() == 2 || s.getType() == 3)) {
-          IntVar v = support.dictionary.getVariable(s.getIdent());
+          IntVar v = support.dictionary.getVariable(s);
           if (v != null && s.getType() == 2) {
             vs = new IntVar[] {v};
           } else if (support.dictionary.getVariableArray(s.getIdent()) != null) {

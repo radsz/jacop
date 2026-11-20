@@ -46,7 +46,22 @@ public class ASTScalarFlatExpr extends SimpleNode {
   }
 
   public String getIdent() {
-    return type != 4 && text instanceof String s ? s : null;
+    if (type == 4) {
+      return null;
+    }
+    return text instanceof ScalarName n ? n.ident : text instanceof String s ? s : null;
+  }
+
+  /** The identifier as the parser set it, or the shared name it was replaced with. */
+  Object identRef() {
+    return text;
+  }
+
+  /**
+   * Replaces the identifier by its shared name (see {@link Tables#getVariable(ASTScalarFlatExpr)}).
+   */
+  void setIdentRef(ScalarName name) {
+    text = name;
   }
 
   public void setIdent(String i) {

@@ -392,11 +392,11 @@ public final class ClampedBounds {
   // every variable a constraint names, also through arrays; more than it uses is safe
   private void occurrences(Support support, Node node, List<IntVar> out) {
     if (node instanceof ASTScalarFlatExpr e && (e.getType() == 2 || e.getType() == 3)) {
-      IntVar[] array = support.dictionary.getDeclaredVariableArray(e.getIdent());
+      IntVar[] array = support.dictionary.getDeclaredVariableArray(e);
       if (array != null) {
         out.addAll(Arrays.asList(array));
       } else {
-        IntVar v = support.dictionary.getVariable(e.getIdent());
+        IntVar v = support.dictionary.getVariable(e);
         if (v != null) {
           out.add(v);
         }

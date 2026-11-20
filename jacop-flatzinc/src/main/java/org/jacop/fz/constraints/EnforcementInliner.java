@@ -397,16 +397,15 @@ public class EnforcementInliner implements ParserTreeConstants {
     }
     ASTScalarFlatExpr e = (ASTScalarFlatExpr) arg;
     if (e.getType() == 2) {
-      IntVar[] array = support.dictionary.getDeclaredVariableArray(e.getIdent());
+      IntVar[] array = support.dictionary.getDeclaredVariableArray(e);
       if (array != null) {
         for (IntVar v : array) {
           add(v, out);
         }
         return;
       }
-      add(support.dictionary.getVariable(e.getIdent()), out);
-    } else if (e.getType() == 3
-        && support.dictionary.getDeclaredVariableArray(e.getIdent()) != null) {
+      add(support.dictionary.getVariable(e), out);
+    } else if (e.getType() == 3 && support.dictionary.getDeclaredVariableArray(e) != null) {
       add(support.getVariable(e), out);
     }
   }
