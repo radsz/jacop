@@ -185,10 +185,12 @@ class MddLinearSumFlatzincTest {
     // and the two paths match the two tuples of x0 + x1 = 0, but the short path is no tuple of the
     // sum, so the diagram must stay a diagram
     String fzn =
-        "var 0..1: x0:: output_var;\n"
-            + "var -1..1: x1:: output_var;\n"
-            + "constraint jacop_mdd([x0,x1],[1,2],[1,1,2],[{0},{1},{-1}],[0,2,0]);\n"
-            + "solve satisfy;\n";
+        """
+        var 0..1: x0:: output_var;
+        var -1..1: x1:: output_var;
+        constraint jacop_mdd([x0,x1],[1,2],[1,1,2],[{0},{1},{-1}],[0,2,0]);
+        solve satisfy;
+        """;
     String out = run(fzn, null, "-a", "-debug");
     assertFalse(out.contains("SumInt"), out);
     assertEquals(solutions(run(fzn, "false", "-a")), solutions(out));
@@ -199,16 +201,18 @@ class MddLinearSumFlatzincTest {
     // both diagrams have the shape of x0 + x1 = 2 and name the same node and target arrays, but
     // the second one's labels make it y0 + y1 = 3 with y0 >= 1
     String fzn =
-        "array[1..6] of int: F = [1,1,1,2,3,4];\n"
-            + "array[1..6] of int: T = [2,3,4,0,0,0];\n"
-            + "array[1..4] of int: L = [1,2,2,2];\n"
-            + "var 0..2: x0:: output_var;\n"
-            + "var 0..2: x1:: output_var;\n"
-            + "var 0..3: y0:: output_var;\n"
-            + "var 0..3: y1:: output_var;\n"
-            + "constraint jacop_mdd([x0,x1],L,F,[{0},{1},{2},{2},{1},{0}],T);\n"
-            + "constraint jacop_mdd([y0,y1],L,F,[{1},{2},{3},{2},{1},{0}],T);\n"
-            + "solve satisfy;\n";
+        """
+        array[1..6] of int: F = [1,1,1,2,3,4];
+        array[1..6] of int: T = [2,3,4,0,0,0];
+        array[1..4] of int: L = [1,2,2,2];
+        var 0..2: x0:: output_var;
+        var 0..2: x1:: output_var;
+        var 0..3: y0:: output_var;
+        var 0..3: y1:: output_var;
+        constraint jacop_mdd([x0,x1],L,F,[{0},{1},{2},{2},{1},{0}],T);
+        constraint jacop_mdd([y0,y1],L,F,[{1},{2},{3},{2},{1},{0}],T);
+        solve satisfy;
+        """;
     String off = run(fzn, "false", "-a");
     assertEquals(9, solutions(off).size(), off);
     assertEquals(solutions(off), solutions(run(fzn, null, "-a")));
