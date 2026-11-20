@@ -112,7 +112,9 @@ import org.jacop.fz.SimpleNode;
  * org.jacop.fz.tspElimination=false turns it off; org.jacop.fz.tspEliminationMs (default 2000)
  * limits its time. For the same pure TSP it posts {@link org.jacop.constraints.TspKOpt}, which
  * removes during search the partial tours that a 2-opt or 3-opt move shortens (Isoart and Régin, A
- * k-Opt Based Constraint for the TSP, CP 2021); org.jacop.fz.tspKOpt=false turns it off.
+ * k-Opt Based Constraint for the TSP, CP 2021) after a first tour, where the objective's bounds are
+ * within org.jacop.fz.tspKOptGap of each other (default 0.01, relative); org.jacop.fz.tspKOpt=false
+ * turns it off.
  *
  * <p>All the constraints of the model stay. System property org.jacop.fz.giantTour=false turns the
  * detection off; org.jacop.fz.routes=false turns it off with the other routes.
@@ -153,6 +155,10 @@ public class GiantTourDetector implements ParserTreeConstants {
 
   // the most milliseconds of the edge elimination
   private static final long ELIMINATION_MS = Long.getLong("org.jacop.fz.tspEliminationMs", 2_000L);
+
+  // the relative gap between the objective's bounds below which TspKOpt removes tours
+  private static final double KOPT_GAP =
+      Double.parseDouble(System.getProperty("org.jacop.fz.tspKOptGap", "0.01"));
 
   private final Support support;
 
@@ -904,7 +910,7 @@ public class GiantTourDetector implements ParserTreeConstants {
       for (int v = 0; v < n; v++) {
         lengths[v] = d[v].clone();
       }
-      support.delayedConstraints.add(new TspKOpt(x, offset, lengths, obj));
+      support.delayedConstraints.add(new TspKOpt(x, offset, lengths, obj, KOPT_GAP));
       if (support.options.debug()) {
         FzConsole.println("% TSP k-opt dominance (TspKOpt) on " + n + " nodes");
       }
