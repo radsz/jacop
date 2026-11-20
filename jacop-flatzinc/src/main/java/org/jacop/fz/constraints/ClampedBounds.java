@@ -115,10 +115,11 @@ public final class ClampedBounds {
   private static final int HULL = 7;
   private static final int POW = 8;
 
-  // int_eq_reif(u, v, b): b -> {u, v}, read to bound a variable that an if-then-else makes equal
-  // to one of several values
+  // the reified equalities of the model: each control variable maps to the pairs of variables
+  // whose equality it reifies, read to bound a variable that an if-then-else makes equal to one of
+  // several values
   private final Map<IntVar, List<IntVar[]>> equalityReifications = new IdentityHashMap<>();
-  // jacop_if_then_else_bool(c, x, true): {c, x}
+  // the conditions and branches of the Boolean if-then-else constraints whose result is true
   private final List<IntVar[][]> trueIfThenElses = new ArrayList<>();
 
   /**
@@ -154,10 +155,14 @@ public final class ClampedBounds {
     }
   }
 
-  /*
-   * jacop_if_then_else_bool(c, x, true) makes x[i] true for the first true c[i]. When every x[i]
-   * that can be chosen is defined by int_eq_reif(v, a[i], x[i]) over one variable v and a
-   * condition is fixed true, every solution gives v one of the a[i]: v lies in their hull.
+  /**
+   * Bounds a variable that a Boolean if-then-else with a true result makes equal to one of several
+   * values. The if-then-else makes the branch of its first true condition true. When a condition is
+   * fixed true and every branch that can be chosen reifies the equality of one variable with some
+   * value, every solution gives the variable one of those values, so it lies in their hull.
+   *
+   * @param c the conditions
+   * @param x the branches
    */
   private void chosenValue(IntVar[] c, IntVar[] x) {
     List<List<IntVar[]>> chosen = new ArrayList<>();
