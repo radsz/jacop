@@ -57,6 +57,9 @@ final class Table {
 
   long paramStar;
 
+  /** The least cell that is not a star, once computed. */
+  Long minCell;
+
   /** The values of each column without a star, once computed. */
   Dom[] columns;
 

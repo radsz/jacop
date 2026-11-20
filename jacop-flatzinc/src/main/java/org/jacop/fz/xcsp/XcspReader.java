@@ -1039,15 +1039,22 @@ public final class XcspReader {
     }
     long star = 0;
     if (t.starred) {
-      long min = Long.MAX_VALUE;
-      for (int i = 0; i < t.size; i++) {
-        if (t.cells[i] != Table.STAR) {
-          min = Math.min(min, t.cells[i]);
+      if (t.minCell == null) {
+        long min = Long.MAX_VALUE;
+        for (int i = 0; i < t.size; i++) {
+          if (t.cells[i] != Table.STAR) {
+            min = Math.min(min, t.cells[i]);
+          }
         }
+        t.minCell = min;
       }
-      star = min == Long.MAX_VALUE ? 0 : min - 1;
+      star = t.minCell == Long.MAX_VALUE ? 0 : t.minCell - 1;
       for (Expr x : xs) {
         star = Math.min(star, ec.lin(x).min() - 1);
+      }
+      // any value below the table and the domains will do: keep the one already written
+      if (t.param != null && t.paramStar <= star) {
+        star = t.paramStar;
       }
     }
     String param = tableParam(t, star);
@@ -1075,6 +1082,16 @@ public final class XcspReader {
       }
       v[j] = xs.get(j).var;
     }
+    if (t.columns != null) {
+      // no row can be dropped when every domain holds the values of its column
+      boolean all = true;
+      for (int j = 0; j < a && all; j++) {
+        all = t.columns[j] == null || v[j].dom.intersect(t.columns[j]).equals(t.columns[j]);
+      }
+      if (all) {
+        return t;
+      }
+    }
     int rows = t.rows();
     int[] cells = t.cells;
     int[] kept = null;
@@ -1100,11 +1117,12 @@ public final class XcspReader {
       }
     }
     Table result = t;
-    if (kept != null) {
-      if (keptSize == 0) {
-        m.fail();
-        return null;
-      }
+    if (kept != null && keptSize == 0) {
+      m.fail();
+      return null;
+    }
+    // a table that loses less than half of its rows stays shared (one parameter for all its uses)
+    if (kept != null && 2L * keptSize <= t.size) {
       boolean starred = false;
       for (int i = 0; i < keptSize && !starred; i++) {
         starred = kept[i] == Table.STAR;

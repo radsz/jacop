@@ -61,7 +61,59 @@ public final class Xcsp2jacop {
    * @param args the FlatZinc options, then the XCSP3 file
    */
   public static void main(String[] args) {
+    watchdog = true;
     System.exit(run(args));
+  }
+
+  // a run from the command line answers by its time limit, whatever the solver is doing then
+  private static boolean watchdog;
+
+  // the output filter, once solving starts; the watchdog prints its last solution
+  private static volatile XcspOutput current;
+
+  /** Margin after the time limit (-t, from the start of the run) before the watchdog answers. */
+  private static final long WATCHDOG_MARGIN_MS =
+      Long.getLong("org.jacop.fz.xcsp.watchdogMargin", 1000);
+
+  private static Thread startWatchdog(PrintStream stdout, long deadlineNanos) {
+    Thread w =
+        new Thread(
+            () -> {
+              try {
+                long wait;
+                while ((wait = (deadlineNanos - System.nanoTime()) / 1_000_000) > 0) {
+                  Thread.sleep(wait);
+                }
+              } catch (InterruptedException e) {
+                return;
+              }
+              XcspOutput f = current;
+              if (f != null) {
+                f.finish();
+              } else {
+                stdout.println("c time limit reached before solving started");
+                stdout.println("s UNKNOWN");
+              }
+              stdout.flush();
+              Runtime.getRuntime().halt(0);
+            },
+            "xcsp-watchdog");
+    w.setDaemon(true);
+    w.start();
+    return w;
+  }
+
+  // the value of -t in milliseconds, 0 without one
+  private static long timeLimit(List<String> fzArgs) {
+    int i = fzArgs.indexOf("-t");
+    if (i < 0 || i + 1 >= fzArgs.size()) {
+      return 0;
+    }
+    try {
+      return Long.parseLong(fzArgs.get(i + 1));
+    } catch (NumberFormatException e) {
+      return 0;
+    }
   }
 
   /**
@@ -89,6 +141,28 @@ public final class Xcsp2jacop {
         default -> fzArgs.add(args[i]);
       }
     }
+    long limit = timeLimit(fzArgs);
+    Thread dog =
+        watchdog && limit > 0
+            ? startWatchdog(stdout, t0 + (limit + WATCHDOG_MARGIN_MS) * 1_000_000)
+            : null;
+    try {
+      return run(stdout, t0, file, fzArgs, keep, only, limit);
+    } finally {
+      if (dog != null) {
+        dog.interrupt();
+      }
+    }
+  }
+
+  private static int run(
+      PrintStream stdout,
+      long t0,
+      String file,
+      List<String> fzArgs,
+      Path keep,
+      boolean only,
+      long limit) {
     Path fzn;
     XcspReader reader;
     try {
@@ -138,8 +212,15 @@ public final class Xcsp2jacop {
       Thread hook = new Thread(filter::finish);
       Runtime.getRuntime().addShutdownHook(hook);
       System.setOut(filtered);
+      current = filter;
       if (reader.objective != null && !fzArgs.contains("-a")) {
         fzArgs.add(0, "-a");
+      }
+      if (limit > 0) {
+        // the time limit runs from the start, reading included
+        int i = fzArgs.indexOf("-t");
+        long left = limit - (System.nanoTime() - t0) / 1_000_000;
+        fzArgs.set(i + 1, Long.toString(Math.max(1, left)));
       }
       fzArgs.add(fzn.toAbsolutePath().toString());
       int status;
@@ -149,6 +230,7 @@ public final class Xcsp2jacop {
         filtered.flush();
         System.setOut(stdout);
         filter.finish();
+        current = null;
         Runtime.getRuntime().removeShutdownHook(hook);
         if (keep == null) {
           Files.deleteIfExists(fzn);
