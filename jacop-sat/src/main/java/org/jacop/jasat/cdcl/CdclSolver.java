@@ -2976,7 +2976,7 @@ public final class CdclSolver {
       noteLowWatched(ref, c);
     }
     if (conflicts >= nextReduce) {
-      nextReduce = conflicts + reduceBase + reduceInc * ++reductions;
+      nextReduce = conflicts + reduceGap(++reductions);
       reduceDb();
     } else if (learntsTooLarge()) {
       reduceForMemory();
@@ -3359,7 +3359,7 @@ public final class CdclSolver {
         continue;
       }
       if (conflicts >= nextReduce) {
-        nextReduce = conflicts + reduceBase + reduceInc * ++reductions;
+        nextReduce = conflicts + reduceGap(++reductions);
         reduceDb();
         vivifyDue = vivification;
       } else if (learntsTooLarge()) {
@@ -4496,6 +4496,31 @@ public final class CdclSolver {
     purge();
   }
 
+  private final double reduceSqrt =
+      Double.parseDouble(System.getProperty("jacop.jasat.reduceSqrt", "0"));
+  private final double reduceFraction =
+      Double.parseDouble(System.getProperty("jacop.jasat.reduceFraction", "0.5"));
+  private final double reduceHigh =
+      Double.parseDouble(System.getProperty("jacop.jasat.reduceHigh", "0"));
+
+  private long reduceGap(long count) {
+    if (reduceSqrt > 0 && external == null) {
+      return (long) (reduceSqrt * Math.sqrt(count));
+    }
+    return reduceBase + reduceInc * count;
+  }
+
+  private int reduceTarget(int candidates) {
+    if (external != null) {
+      return candidates / 2;
+    }
+    double f = reduceFraction;
+    if (reduceHigh > 0) {
+      f = reduceHigh - (reduceHigh - reduceFraction) / Math.log10(reductions + 9.0);
+    }
+    return (int) (candidates * f);
+  }
+
   private void reduceDb() {
     long[] keys = new long[numLearnts];
     int candidates = 0;
@@ -4519,7 +4544,8 @@ public final class CdclSolver {
       keys[candidates++] = ((long) (MAX_LBD - lbdOf(meta)) << 55) | (act << 32) | i;
     }
     Arrays.sort(keys, 0, candidates);
-    for (int c = 0; c < candidates / 2; c++) {
+    int target = reduceTarget(candidates);
+    for (int c = 0; c < target; c++) {
       deleteClause(learnts[(int) keys[c]]);
     }
     purge();
