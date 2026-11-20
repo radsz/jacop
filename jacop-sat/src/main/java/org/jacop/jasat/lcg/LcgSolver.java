@@ -1813,24 +1813,24 @@ public final class LcgSolver implements ExternalPropagator {
     int[] d = lines.durations();
     int[] r = lines.uses();
     long[] use = new long[variables.length];
-    int shared = -1;
+    int overloaded = -1;
     for (int i = 0; i < starts.length; i++) {
       if (d[i] > 0 && r[i] > 0) {
         use[slot[i]] += r[i];
         if (use[slot[i]] > cap) {
-          shared = slot[i];
+          overloaded = slot[i];
         }
       }
     }
-    if (shared < 0) {
+    if (overloaded < 0) {
       return false;
     }
-    int s = variables[shared];
+    int s = variables[overloaded];
     String limitAbove = proofAtLeast(lines.limit(), cap + 1);
     if ("1".equals(limitAbove)) {
       return false;
     }
-    for (ValueEnumeration e = dom[shared].valueEnumeration(); e.hasMoreElements(); ) {
+    for (ValueEnumeration e = dom[overloaded].valueEnumeration(); e.hasMoreElements(); ) {
       int v = e.nextElement();
       StringBuilder step = new StringBuilder("rup");
       String from = proofAtLeast(s, v);
