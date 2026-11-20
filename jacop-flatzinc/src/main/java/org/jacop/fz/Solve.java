@@ -1449,7 +1449,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (modelRoot == null) {
       return null;
     }
-    return new ObjectiveDetector(new Support(store, dictionary, sat))
+    return new ObjectiveDetector(new Support(store, dictionary, sat), dictionary.unusedVariables)
         .collect(modelRoot, objective, k == 1);
   }
 
