@@ -411,6 +411,13 @@ public class Geost extends Constraint
   private int currentLevel;
 
   /**
+   * The store level at which the constraint was imposed. Removing that level removes the constraint
+   * and empties the timestamps made by impose, so the levels removed from then on are ignored until
+   * the constraint is imposed again.
+   */
+  private int imposedAt;
+
+  /**
    * It specifies the first position of the variables being removed from grounded list upon
    * backtracking.
    *
@@ -1743,6 +1750,7 @@ public class Geost extends Constraint
     genInternalConstraints();
 
     store.registerRemoveLevelLateListener(this);
+    imposedAt = store.level;
 
     setStart = new TimeStampInt(store, store.level);
     setStart.update(0);
@@ -1843,6 +1851,13 @@ public class Geost extends Constraint
       return;
     }
 
+    if (level <= imposedAt) {
+      // the constraint went with the level of its imposition
+      // (removeLevelLate, called next, finds it too)
+      imposedAt = Integer.MAX_VALUE;
+      return;
+    }
+
     if (DEBUG_MAIN || DEBUG_SHAPE_SKIP || DEBUG_VAR_SKIP || DEBUG_OBJECT_GROUNDING) {
       log.debug("removeLevel({})", store.level);
     }
@@ -1863,6 +1878,12 @@ public class Geost extends Constraint
 
     // added. to mask a bug if multiple remove levels are being executed for the same level.
     if (level > currentLevel) {
+      return;
+    }
+
+    if (level <= imposedAt) {
+      // the constraint went with the level of its imposition
+      imposedAt = Integer.MAX_VALUE;
       return;
     }
 

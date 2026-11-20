@@ -125,6 +125,13 @@ public class Knapsack extends Constraint
   private TimeStampInt positionOfCriticalItem;
 
   /**
+   * The store level at which the constraint was imposed. Removing that level removes the constraint
+   * and empties the timestamps made by impose, so the levels removed from then on are ignored until
+   * the constraint is imposed again.
+   */
+  private int imposedAt;
+
+  /**
    * It stores all the leaves of the knapsack tree in one array. The leaves are sorted from the most
    * efficient to the least efficient.
    */
@@ -339,6 +346,12 @@ public class Knapsack extends Constraint
 
     if (positionOfCriticalItem == null) {
       // impose found the constraint inconsistent, so the tree is never updated
+      return;
+    }
+
+    if (level <= imposedAt) {
+      // the constraint went with the level of its imposition
+      imposedAt = Integer.MAX_VALUE;
       return;
     }
 
@@ -888,6 +901,7 @@ public class Knapsack extends Constraint
   public void impose(Store store) {
 
     store.registerRemoveLevelLateListener(this);
+    imposedAt = store.level;
 
     hashForUpdate = new HashMap<>();
 

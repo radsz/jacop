@@ -11893,4 +11893,77 @@ class SingleConstraintTest extends TestHelper {
       assertThat(x[1].singleton(0)).as("level " + level).isTrue();
     }
   }
+
+  /**
+   * Knapsack, NetworkFlow and Geost listen to removeLevelLate and read there timestamps made by
+   * impose. Imposed during search and then backtracked below the level of imposition, whose removal
+   * empties those timestamps, they threw ArrayIndexOutOfBoundsException, also at the levels removed
+   * later by the search.
+   */
+  @Test
+  void constraintsImposedAboveTheRootSurviveBacktrackingBelowIt() {
+    for (int kind = 0; kind < 4; kind++) {
+      Store store = new Store();
+      IntVar[] x = {
+        new IntVar(store, "x0", 0, 2), new IntVar(store, "x1", 0, 2), new IntVar(store, "x2", 0, 2)
+      };
+      IntVar y = new IntVar(store, "y", 0, 10);
+      IntVar z = new IntVar(store, "z", 0, 10);
+      Knapsack knapsack =
+          new Knapsack(new int[] {1, 2}, new int[] {1, 1}, new IntVar[] {x[0], x[1]}, y, z);
+      if (kind == 3) {
+        // LcgSolver.lend: imposed at the root, removed, imposed again one level up
+        store.impose(knapsack);
+        assertThat(store.consistency()).isTrue();
+        knapsack.removeConstraint();
+      }
+      store.setLevel(1);
+      switch (kind) {
+        case 0, 3 -> {
+          if (kind == 3) {
+            store.clearEntailed(knapsack);
+          }
+          knapsack.impose(store);
+        }
+        case 1 ->
+            store.imposeDecomposition(
+                new SoftAlldifferent(
+                    x, new IntVar(store, "cost", 0, 3), ViolationMeasure.VARIABLE_BASED));
+        default -> {
+          List<Shape> shapes = List.of(new Shape(0, new int[] {0}, new int[] {1}));
+          List<GeostObject> objects = new ArrayList<>();
+          for (int i = 0; i < 2; i++) {
+            objects.add(
+                new GeostObject(
+                    i,
+                    new IntVar[] {x[i]},
+                    new IntVar(store, 0, 0),
+                    new IntVar(store, 0, 0),
+                    new IntVar(store, 1, 1),
+                    new IntVar(store, 1, 1)));
+          }
+          store.impose(
+              new Geost(objects, List.of(new NonOverlapping(objects, new int[] {0, 1})), shapes));
+        }
+      }
+      assertThat(store.consistency()).as("kind %d", kind).isTrue();
+      store.setLevel(2);
+      x[0].domain.in(2, x[0], 1, 1);
+      assertThat(store.consistency()).as("kind %d", kind).isTrue();
+      store.removeLevel(2);
+      store.setLevel(1);
+      store.removeLevel(1);
+      store.setLevel(0);
+      // the search goes on without the constraint
+      store.setLevel(1);
+      x[1].domain.in(1, x[1], 0, 0);
+      store.setLevel(2);
+      x[2].domain.in(2, x[2], 0, 0);
+      store.removeLevel(2);
+      store.setLevel(1);
+      store.removeLevel(1);
+      store.setLevel(0);
+      assertThat(x[1].getSize()).as("kind %d", kind).isEqualTo(3);
+    }
+  }
 }

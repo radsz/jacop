@@ -96,6 +96,13 @@ public class NetworkFlow extends Constraint
   /** Disables the queue variable function during consistency. */
   private boolean disableQueueVariable;
 
+  /**
+   * The store level at which the constraint was imposed. Removing that level removes the constraint
+   * and empties the timestamps made by impose, so the levels removed from then on are ignored until
+   * the constraint is imposed again.
+   */
+  private int imposedAt;
+
   /** Pairs of a variable of the caller and the copy the network uses for one of its roles. */
   private final List<IntVar[]> copies = new ArrayList<>();
 
@@ -422,6 +429,7 @@ public class NetworkFlow extends Constraint
     // register with store
     queueIndex = QUEUE_INDEX;
     store.registerRemoveLevelLateListener(this);
+    imposedAt = store.level;
     super.impose(store);
 
     for (IntVar[] pair : copies) {
@@ -559,6 +567,12 @@ public class NetworkFlow extends Constraint
 
   @Override
   public void removeLevelLate(int level) {
+
+    if (level <= imposedAt) {
+      // the constraint went with the level of its imposition
+      imposedAt = Integer.MAX_VALUE;
+      return;
+    }
 
     if (SHOW_LEVEL) {
       log.debug("");
