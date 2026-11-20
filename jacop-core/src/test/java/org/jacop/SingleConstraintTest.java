@@ -11785,4 +11785,32 @@ class SingleConstraintTest extends TestHelper {
     store.impose(new org.jacop.constraints.cumulative.CumulativeBasic(s, d, r, limit));
     assertThat(store.consistency()).isFalse();
   }
+
+  /**
+   * Assignment propagated only the recent pruning of a changed variable, which is empty when the
+   * change belongs to a level below the one of the consistency: a constraint imposed after the
+   * change (Alldistinct) raised the store level, and x = [1, 0, 2], d = [0, 1, 2] was accepted.
+   */
+  @Test
+  void assignmentSeesChangesBeforeARaisedLevel() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    IntVar[] d = new IntVar[3];
+    for (int i = 0; i < 3; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 2);
+      d[i] = new IntVar(store, "d" + i, 0, 2);
+    }
+    IntVar u = new IntVar(store, "u", 0, 1);
+    IntVar w = new IntVar(store, "w", 0, 1);
+    store.impose(new Assignment(x, d));
+    assertThat(store.consistency()).isTrue();
+    int[] xv = {1, 0, 2};
+    int[] dv = {0, 1, 2};
+    for (int i = 0; i < 3; i++) {
+      x[i].domain.in(store.level, x[i], xv[i], xv[i]);
+      d[i].domain.in(store.level, d[i], dv[i], dv[i]);
+    }
+    store.impose(new Alldistinct(new IntVar[] {u, w}));
+    assertThat(store.consistency()).isFalse();
+  }
 }
