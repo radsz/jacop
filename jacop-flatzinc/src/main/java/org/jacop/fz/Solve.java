@@ -6413,14 +6413,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   /**
    * Runs free search with the FreeSearch engine. It branches on the set variables first, then on
    * the integer and Boolean variables, then on the objective and on the float variables. The
-   * settings of --free-config select the heuristics; by default dom/wdeg weighted by conflict
-   * history search (CHS, Habet and Terrioux, J. Heuristics 2021) with last conflict and
-   * solution-based phase saving, and nogoods learned at each restart. Satisfaction restarts
-   * geometrically from 100 failures, growing by 1.5; optimisation from 10 failures, growing by
-   * 1.05, starts that sequence again after each solution, forgets the weights every 32 restarts and
-   * spends one failure in twenty on probes of the objective near its lower bound.
+   * settings of --free-config select the heuristics; by default dom/wdeg with last conflict and
+   * solution-based phase saving, its weights by conflict history search (CHS, Habet and Terrioux,
+   * J. Heuristics 2021) for a satisfaction problem and by failure counts for optimisation, and
+   * nogoods learned at each restart. Satisfaction restarts geometrically from 100 failures, growing
+   * by 1.5; optimisation from 10 failures, growing by 1.05, starts that sequence again after each
+   * solution, forgets the weights every 32 restarts and spends one failure in twenty on probes of
+   * the objective near its lower bound.
    */
   private boolean executeFreeSearch(Var costVar) {
+    freeSatisfaction = costVar == null;
     DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
     searchVars.defaultVars();
     boolean objectiveLast = "1".equals(options.freeConfig("objective-last", "1"));
@@ -6774,6 +6776,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     };
   }
 
+  // whether the plain CP free search solves a satisfaction problem; selects the default heuristic
+  private boolean freeSatisfaction = true;
+
   /**
    * Adds the free search branching on the given variables: the set variables first, then the
    * integer and Boolean variables, then the objective and the float variables. The settings of
@@ -6787,7 +6792,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       BooleanVar[] bools,
       FloatVar[] floats,
       IntVar objective) {
-    String heuristic = options.freeConfig("heuristic", "chs");
+    // CHS decides more satisfaction problems; on optimisation it found worse solutions
+    String heuristic = options.freeConfig("heuristic", freeSatisfaction ? "chs" : "domwdeg");
     int lastConflict = Integer.parseInt(options.freeConfig("lc", "1"));
     boolean phase = "1".equals(options.freeConfig("phase", "1"));
     if (sets.length > 0) {

@@ -8153,9 +8153,12 @@ Version 5.0 (unreleased)
    and Terrioux, "Conflict history based heuristic for constraint
    satisfaction problem solving", J. Heuristics 27, 2021), where it used
    dom/wdeg, in the plain CP search of --lcg off and of the hand-over from
-   lazy clause generation. On 94 hard XCSP 2022-2025 CSP instances at 240 s
-   it decides 63 instead of 59 under -f (total time -8 %) and 49 instead of
-   41 under -f --lcg off (-13 %); wide-quick is unchanged. --free-config
+   lazy clause generation, for satisfaction problems; optimisation keeps
+   dom/wdeg, since CHS found worse solutions there. On 94 hard XCSP
+   2022-2025 CSP instances at 240 s it decides 63 instead of 59 under -f
+   (total time -8 %) and 49 instead of 41 under -f --lcg off (-13 %); at
+   600 s on the 23 of them that reach the plain CP search 10 instead of
+   8 (-9 %, none lost). --free-config
    heuristic=domwdeg restores dom/wdeg. Three more heuristics are available
    for experiments: heuristic=pick, pick/dom (Audemard, Lecoutre and
    Prud'homme, "Guiding Backtrack Search by Tracking Variables During
