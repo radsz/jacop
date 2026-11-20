@@ -6147,4 +6147,30 @@ class FlatzincFrontEndTest {
       }
     }
   }
+
+  /** float_lin_* over no variable is the constant test 0 rel c; LinearFloat rejected it. */
+  @Test
+  void anEmptyFloatLinearRowIsAConstantTest() throws IOException {
+    String head = "var bool: b :: output_var;\n";
+    String[][] cases = {
+      {"float_lin_le([], [], 0.0)", "b = false; b = true;"},
+      {"float_lin_le([], [], -1.0)", ""},
+      {"float_lin_eq([], [], 1.0)", ""},
+      {"float_lin_ne([], [], 1.0)", "b = false; b = true;"},
+      {"float_lin_lt([], [], 0.0)", ""},
+      {"float_lin_lt_reif([], [], 1.0, b)", "b = true;"},
+      {"float_lin_eq_reif([], [], 1.0, b)", "b = false;"}
+    };
+    for (String[] c : cases) {
+      String model = head + "constraint " + c[0] + ";\nsolve satisfy;\n";
+      String[] out = run(model, "-a");
+      String what = model + out[0] + out[1];
+      Set<String> expected =
+          c[1].isEmpty()
+              ? Set.of("=====UNSATISFIABLE=====")
+              : new TreeSet<>(Arrays.asList(c[1].split(" (?=b)")));
+      assertEquals(expected, solveAll(model), what);
+      assertTrue(out[0].contains(c[1].isEmpty() ? "=====UNSATISFIABLE=====" : "=========="), what);
+    }
+  }
 }
