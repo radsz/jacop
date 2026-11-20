@@ -88,6 +88,9 @@ public class NetworkFlow extends Constraint
   /** The set of queued variables. */
   private final Set<IntVar> queue;
 
+  /** The lowest level of the queued changes. */
+  private int queuedLevel = Integer.MAX_VALUE;
+
   final Statistics statistics = new Statistics();
 
   /** The cost variable. */
@@ -446,6 +449,7 @@ public class NetworkFlow extends Constraint
         return;
       }
       queue.add((IntVar) variable);
+      queuedLevel = Math.min(queuedLevel, level);
     }
   }
 
@@ -460,12 +464,16 @@ public class NetworkFlow extends Constraint
     network.increaseLevel();
     try {
       disableQueueVariable = true;
+      // a level at or below the imposition is never removed while the constraint is there
+      network.lateLevel = queuedLevel > imposedAt ? queuedLevel : Integer.MAX_VALUE;
       for (IntVar variable : queue) {
         VarHandler handler = map.get(variable);
         handler.processEvent(variable, network);
       }
     } finally {
       queue.clear();
+      queuedLevel = Integer.MAX_VALUE;
+      network.lateLevel = Integer.MAX_VALUE;
       disableQueueVariable = false;
     }
     return changed;
@@ -563,6 +571,7 @@ public class NetworkFlow extends Constraint
   @Override
   public void removeLevel(int level) {
     queue.clear();
+    queuedLevel = Integer.MAX_VALUE;
   }
 
   @Override
@@ -580,7 +589,7 @@ public class NetworkFlow extends Constraint
       log.debug("");
     }
 
-    network.backtrack();
+    network.backtrack(level);
   }
 
   /* Identifiers */

@@ -12251,4 +12251,40 @@ class SingleConstraintTest extends TestHelper {
     profit.domain.in(1, profit, 0, 0);
     assertThat(store.consistency()).isFalse();
   }
+
+  /** SoftGCC over x0 in 1..2 and x1 in 1..3 with hard and soft counters of the values 0 and 1. */
+  private static IntVar[] softGccRaisedLevelModel(Store store) {
+    IntVar[] x = {new IntVar(store, "x0", 1, 2), new IntVar(store, "x1", 1, 3)};
+    IntVar h0 = new IntVar(store, "h0", 0, 0);
+    h0.addDom(2, 2);
+    IntVar[] hard = {h0, new IntVar(store, "h1", 0, 2)};
+    IntVar[] soft = {new IntVar(store, "s0", 0, 2), new IntVar(store, "s1", 1, 1)};
+    IntVar cost = new IntVar(store, "cost", 0, 4);
+    store.imposeDecomposition(
+        new SoftGCC(x, hard, new int[] {0, 1}, soft, cost, ViolationMeasure.VALUE_BASED));
+    return new IntVar[] {x[0], x[1], hard[0], hard[1], soft[0], soft[1], cost};
+  }
+
+  /**
+   * NetworkFlow (here of SoftGCC) processed at level 2 a change made at level 1, as the store
+   * raised its level before the consistency (Store.raiseLevelBeforeConsistency). Removing level 2
+   * restored the arc from the domains of level 1 and nothing restored it when level 1 was removed,
+   * so the search lost solutions.
+   */
+  @Test
+  void networkFlowRestoresArcsOfChangesSeenOneLevelUp() {
+    Store reference = new Store();
+    int expected = noOfAllSolutions(reference, softGccRaisedLevelModel(reference));
+
+    Store store = new Store();
+    IntVar[] vars = softGccRaisedLevelModel(store);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    vars[3].domain.in(1, vars[3], 0, 1);
+    store.raiseLevelBeforeConsistency = true;
+    assertThat(store.consistency()).isTrue();
+    assertThat(store.level).isEqualTo(2);
+    backToRoot(store);
+    assertThat(noOfAllSolutions(store, vars)).isEqualTo(expected);
+  }
 }
