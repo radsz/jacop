@@ -908,6 +908,72 @@ class FreeSearchTest {
   }
 
   @Test
+  void resumedSearchKeepsItsNogoodsAndProvesUnsatisfiability() {
+    // eight pigeons, seven holes, searched in slices of 2 ms of the virtual clock each: a fresh
+    // search would start its proof again in every slice, the resumed one goes on with the nogoods
+    // of the earlier slices and of the runs their limit stopped
+    Store store = new Store();
+    IntVar[] p = new IntVar[8];
+    for (int i = 0; i < p.length; i++) {
+      p[i] = new IntVar(store, "p" + i, 0, 6);
+    }
+    for (int i = 0; i < p.length; i++) {
+      for (int j = i + 1; j < p.length; j++) {
+        store.impose(new XneqY(p[i], p[j]));
+      }
+    }
+    FreeSearch search =
+        FreeSearch.builder(store, new SimpleSelect<>(p, null, new IndomainMin<>()))
+            .restarts(new LubyCalculator(2))
+            .nogoodsFromRestarts(true)
+            .virtualClock(true)
+            .build();
+    Status status = Status.UNKNOWN;
+    int slices = 0;
+    while (status == Status.UNKNOWN && slices < 5000) {
+      status = search.resume(0, 2);
+      slices++;
+      // each slice leaves the store as it found it
+      assertEquals(7, p[0].getSize());
+      assertEquals(0, store.countWatches());
+    }
+    assertEquals(Status.UNSATISFIABLE, status);
+    assertTrue(slices > 1, "the proof took one slice");
+  }
+
+  @Test
+  void resumedSearchInSlicesMatchesBruteForce() {
+    Random rnd = new Random(11);
+    for (int k = 0; k < INSTANCES; k++) {
+      Instance instance = Instance.random(rnd);
+      boolean sat = instance.bruteForce()[0] > 0;
+      for (var branching : branchings()) {
+        Model model = new Model(instance);
+        int[] found = {0};
+        FreeSearch search =
+            branching
+                .apply(model)
+                .builder(model.store)
+                .restarts(new LubyCalculator(1))
+                .nogoodsFromRestarts(true)
+                .virtualClock(true)
+                .onSolution(
+                    s -> {
+                      model.checkSolution();
+                      found[0]++;
+                    })
+                .build();
+        Status status = Status.UNKNOWN;
+        for (int slice = 0; status == Status.UNKNOWN && slice < 100_000; slice++) {
+          status = search.resume(0, 1);
+        }
+        assertEquals(sat ? Status.SATISFIED : Status.UNSATISFIABLE, status, instance.toString());
+        assertEquals(sat ? 1 : 0, found[0], instance.toString());
+      }
+    }
+  }
+
+  @Test
   void boundImpactPicksTheValueWithTheBestBoundAndLeavesTheStore() {
     Store store = new Store();
     IntVar x = new IntVar(store, "x", 1, 3);
