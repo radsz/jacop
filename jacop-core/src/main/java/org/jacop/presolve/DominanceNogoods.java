@@ -1041,74 +1041,96 @@ public final class DominanceNogoods {
     Arrays.fill(definition, -1);
     boolean[] used = new boolean[relation.length];
     for (int c : varCons[obj]) {
-      if (relation[c] == EQ && freeVars[c].length == 0 && covers(c, obj, true)) {
-        definition[obj] = c;
-        definitionWeight[obj] = weight(c, obj);
-        used[c] = true;
-        break;
+      if (relation[c] == EQ && freeVars[c].length == 0) {
+        RowSums sums = new RowSums(c);
+        if (sums.covers(obj, true)) {
+          definition[obj] = c;
+          definitionWeight[obj] = sums.weight(obj);
+          used[c] = true;
+          break;
+        }
       }
     }
     for (int c = 0; c < relation.length; c++) {
       if (used[c] || relation[c] != EQ || freeVars[c].length > 0 || linVars[c].length < 2) {
         continue;
       }
+      // the bounds of the row are summed once, so that a row of n terms is checked in O(n)
+      RowSums sums = new RowSums(c);
       int best = -1;
       for (int v : linVars[c]) {
         if (v != obj
             && definition[v] < 0
             && valueDefinition[v] < 0
-            && covers(c, v, false)
+            && sums.covers(v, false)
             && (best < 0 || vars.get(v).getSize() > vars.get(best).getSize())) {
           best = v;
         }
       }
       if (best >= 0) {
         definition[best] = c;
-        definitionWeight[best] = weight(c, best);
+        definitionWeight[best] = sums.weight(best);
         used[c] = true;
       }
     }
   }
 
-  private long weight(int c, int v) {
-    for (int k = 0; k < linVars[c].length; k++) {
-      if (linVars[c][k] == v) {
-        return linWeights[c][k];
-      }
-    }
-    return 0;
-  }
-
   /**
-   * True if v has unit weight in the equality c and an interval domain that holds every value the
-   * rest of c gives it (for the objective, every value on the improving side).
+   * The bounds of -sum(weights * vars) of an equality and, for each variable, its first weight and
+   * the part of these bounds its terms give.
    */
-  private boolean covers(int c, int v, boolean objectiveSide) {
-    long w = weight(c, v);
-    if (Math.abs(w) != 1) {
-      return false;
-    }
-    IntDomain d = vars.get(v).dom();
-    if (d.getSize() != (long) d.max() - d.min() + 1) {
-      return false;
-    }
-    long low = 0;
-    long high = 0;
-    for (int k = 0; k < linVars[c].length; k++) {
-      int u = linVars[c][k];
-      if (u == v) {
-        continue;
+  private final class RowSums {
+    private final int c;
+    private long low;
+    private long high;
+    // variable -> {first weight, low part, high part}
+    private final Map<Integer, long[]> terms = new HashMap<>();
+
+    RowSums(int c) {
+      this.c = c;
+      for (int k = 0; k < linVars[c].length; k++) {
+        IntVar x = vars.get(linVars[c][k]);
+        long a = -linWeights[c][k];
+        long lo = Math.min(a * x.min(), a * x.max());
+        long hi = Math.max(a * x.min(), a * x.max());
+        low += lo;
+        high += hi;
+        long[] t = terms.computeIfAbsent(linVars[c][k], v -> new long[] {-a, 0, 0});
+        t[1] += lo;
+        t[2] += hi;
       }
-      long a = -w * linWeights[c][k];
-      IntVar x = vars.get(u);
-      low += Math.min(a * x.min(), a * x.max());
-      high += Math.max(a * x.min(), a * x.max());
     }
-    // w * v + rest = k, so v = w * k - w * rest
-    long k = w * constants[c];
-    if (objectiveSide) {
-      return minimize ? d.min() <= k + low : d.max() >= k + high;
+
+    long weight(int v) {
+      long[] t = terms.get(v);
+      return t == null ? 0 : t[0];
     }
-    return d.min() <= k + low && d.max() >= k + high;
+
+    /**
+     * True if v has unit weight in the equality and an interval domain that holds every value the
+     * rest of the equality gives it (for the objective, every value on the improving side).
+     */
+    boolean covers(int v, boolean objectiveSide) {
+      long[] t = terms.get(v);
+      if (t == null || Math.abs(t[0]) != 1) {
+        return false;
+      }
+      IntDomain d = vars.get(v).dom();
+      if (d.getSize() != (long) d.max() - d.min() + 1) {
+        return false;
+      }
+      // the bounds of -w * (sum of the other terms): the sums are of -1 * terms, negated for w = -1
+      long restLow = low - t[1];
+      long restHigh = high - t[2];
+      long w = t[0];
+      long lo = w > 0 ? restLow : -restHigh;
+      long hi = w > 0 ? restHigh : -restLow;
+      // w * v + rest = k, so v = w * k - w * rest
+      long k = w * constants[c];
+      if (objectiveSide) {
+        return minimize ? d.min() <= k + lo : d.max() >= k + hi;
+      }
+      return d.min() <= k + lo && d.max() >= k + hi;
+    }
   }
 }
