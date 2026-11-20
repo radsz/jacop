@@ -1018,6 +1018,15 @@ public final class CdclSolver {
   }
 
   /**
+   * Takes back {@link #cancel()}: later calls of {@link #solve} run again. Not safe while a search
+   * runs.
+   */
+  public void uncancel() {
+    cancelled = false;
+    interrupted = false;
+  }
+
+  /**
    * Whether the clock of the solver is virtual (system property {@code jacop.virtualClock}): {@link
    * #now} then counts {@link #work}, {@link #VIRTUAL_WORK_PER_MS} per millisecond, instead of
    * reading the system clock, so that a run with a time limit stops at the same point and makes the

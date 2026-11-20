@@ -8257,6 +8257,15 @@ public final class LcgSolver implements ExternalPropagator {
     sat.cancel();
   }
 
+  /**
+   * Takes back {@link #stop()}, so that {@link #solve} and {@link #minimize} run again with the
+   * learnt clauses kept. Not safe while a search runs.
+   */
+  public void resume() {
+    stopRequested = false;
+    sat.uncancel();
+  }
+
   @Override
   public int[] externalClause() {
     if (structural.isEmpty()
