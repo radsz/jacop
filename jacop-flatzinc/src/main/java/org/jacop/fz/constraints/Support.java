@@ -1483,7 +1483,7 @@ public class Support implements ParserTreeConstants {
   Map<SimpleNode, ControlSubstitution> controlSubstitutions = new IdentityHashMap<>();
 
   /** The substitutions by eliminated control, for detectors that read controls as literals. */
-  final Map<IntVar, ControlSubstitution> substitutedControls = new IdentityHashMap<>();
+  Map<IntVar, ControlSubstitution> substitutedControls = new IdentityHashMap<>();
 
   private ControlSubstitution activeControl;
 
@@ -1513,11 +1513,14 @@ public class Support implements ParserTreeConstants {
 
   /**
    * Forgets the constraint nodes posted with a substituted control once all constraints are posted,
-   * since through their parents they hold the parse tree of every such constraint.
+   * since through their parents they hold the parse tree of every such constraint, and the
+   * substitutions by eliminated control, which only detectors read (4.5 MB of rcpsp_max
+   * psp_ubo500_33 during the search).
    */
   public void releaseControlSubstitutions() {
-    // a new map, since a cleared one keeps its table
+    // new maps, since a cleared one keeps its table
     controlSubstitutions = new IdentityHashMap<>();
+    substitutedControls = new IdentityHashMap<>();
   }
 
   /**

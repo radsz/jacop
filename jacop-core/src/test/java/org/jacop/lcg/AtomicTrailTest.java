@@ -651,6 +651,47 @@ class AtomicTrailTest {
   }
 
   @Test
+  void booleanVariablesAreNumberedWithoutABoxedMap() throws ReflectiveOperationException {
+    // the trail kept an identity map from every Boolean variable to a boxed number, though each
+    // variable keeps its number itself: 11 MB of the 413 MB of MiniZinc Challenge 2010 rcpsp_max
+    // psp_ubo500_33 during LCG search
+    Store store = new Store();
+    BooleanVar[] b = new BooleanVar[100];
+    for (int i = 0; i < b.length; i++) {
+      b[i] = new BooleanVar(store, "b" + i);
+    }
+    AtomicTrail trail = new AtomicTrail(store);
+    int[] ids = new int[b.length];
+    for (int i = 0; i < b.length; i++) {
+      ids[i] = trail.id(b[i]);
+    }
+    java.lang.reflect.Field map = AtomicTrail.class.getDeclaredField("booleanIds");
+    map.setAccessible(true);
+    assertThat((java.util.Map<?, ?>) map.get(trail)).isEmpty();
+    assertThat(Arrays.stream(ids).distinct().count()).isEqualTo(b.length);
+    // a second trail takes some variables over; both keep their numbers when they alternate
+    AtomicTrail other = new AtomicTrail(store);
+    int[] otherIds = new int[b.length];
+    for (int i = 0; i < b.length; i += 2) {
+      otherIds[i] = other.id(b[i]);
+    }
+    for (int round = 0; round < 3; round++) {
+      for (int i = 0; i < b.length; i++) {
+        assertThat(trail.id(b[i])).isEqualTo(ids[i]);
+      }
+      for (int i = 0; i < b.length; i += 2) {
+        assertThat(other.id(b[i])).isEqualTo(otherIds[i]);
+      }
+    }
+    // a variable first numbered by the second trail gets a new number there, not a taken one
+    int fresh = other.id(b[1]);
+    for (int i = 0; i < b.length; i += 2) {
+      assertThat(fresh).isNotEqualTo(otherIds[i]);
+    }
+    assertThat(trail.id(b[1])).isEqualTo(ids[1]);
+  }
+
+  @Test
   void entryMarksAreFreshForEveryCallAndCoverThePosition() {
     AtomicTrail trail = new AtomicTrail(new Store());
     int first = trail.newEntryMark(10);
