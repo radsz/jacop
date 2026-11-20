@@ -7274,6 +7274,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private IntVar[][] definedLast(IntVar[] vars, boolean allDefined) {
     Set<Var> defined = Collections.newSetFromMap(new IdentityHashMap<>());
     defined.addAll(dictionary.definedVariables);
+    // b of a half-reified b -> c (int_lin_ne_imp and the other *_imp) is named defined, but c does
+    // not fix it: on XCSP 2023 WordDesign1 (words 0..3, Hamming distance at least 4 by the sum of
+    // b -> x[i] != y[i]) every b is such a variable, and branching on the 1,200 letters alone
+    // found no solution of words-065/075/085 in 600 s, where dom/wdeg over the b took 23-32 s
+    dictionary.halfDefinedVariables.forEach(defined::remove);
     List<IntVar> first = new ArrayList<>();
     List<IntVar> last = new ArrayList<>();
     for (IntVar x : vars) {
