@@ -3131,6 +3131,18 @@ class GlobalConstraints implements ParserTreeConstants {
     }
   }
 
+  // an automaton over no variable accepts the empty word only: it holds when the start state is
+  // final and fails otherwise; true when the sequence is empty, so nothing is left to post
+  private static boolean emptyWord(IntVar[] x, int q0, IntDomain finalStates) {
+    if (x.length > 0) {
+      return false;
+    }
+    if (!finalStates.contains(q0)) {
+      throw Store.failException;
+    }
+    return true;
+  }
+
   void gen_jacop_regular(SimpleNode node) {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     int numStates = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
@@ -3139,6 +3151,10 @@ class GlobalConstraints implements ParserTreeConstants {
     int q0 = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(4));
     IntDomain F = support.getSetLiteral(node, 5);
     int minIndex = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(6));
+
+    if (emptyWord(x, q0, F)) {
+      return;
+    }
 
     // ---- KK, 2018-07-27
     // regular must not have duplicated variables; we create all
@@ -3466,6 +3482,10 @@ class GlobalConstraints implements ParserTreeConstants {
     int q0 = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(4));
     IntDomain F = support.getSetLiteral(node, 5);
     support.getInt((ASTScalarFlatExpr) node.jjtGetChild(6)); // the minimum index, unused
+
+    if (emptyWord(x, q0, F)) {
+      return;
+    }
 
     // ---- KK, 2018-07-27
     // regular must not have duplicated variables; we create all

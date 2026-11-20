@@ -200,6 +200,22 @@ class FlatzincFrontEndTest {
     assertTrue(out.contains("=====UNSATISFIABLE====="), out);
   }
 
+  /** The empty word is accepted only when the start state is final. */
+  @Test
+  void aRegularOverNoVariableFailsWhenTheStartStateIsNotFinal() throws IOException {
+    String head = "var 0..1: y :: output_var;\n";
+    String tail = "solve satisfy;\n";
+    for (String call :
+        new String[] {
+          "jacop_regular([],2,2,[1,2,2,2],1,%s,1)", "jacop_regular_set([],2,3..4,[1,2,2,2],1,%s,3)"
+        }) {
+      String rejected = head + "constraint " + String.format(call, "{2}") + ";\n" + tail;
+      assertTrue(run(rejected, "-a")[0].contains("=====UNSATISFIABLE====="), rejected);
+      String accepted = head + "constraint " + String.format(call, "{1}") + ";\n" + tail;
+      assertEquals(Set.of("y = 0;", "y = 1;"), solveAll(accepted), accepted);
+    }
+  }
+
   /** x repeated three times with weights of 1,500,000,000 each: the merged item passed an int. */
   @Test
   void aKnapsackWhoseRepeatedItemPassesIntIsPostedAsSums() throws IOException {
