@@ -6122,4 +6122,29 @@ class FlatzincFrontEndTest {
       assertEquals(Set.of("y = 0;", "y = 1;"), solveAll(model.formatted("{}")));
     }
   }
+
+  /** An index of array_float_element beyond the array selects no value and gave an exception. */
+  @Test
+  void aFloatElementIndexBeyondTheArraySelectsNoValue() throws IOException {
+    String head = "var 1.0..1.0: f :: output_var;\nvar 2.0..2.0: g :: output_var;\n";
+    String[][] cases = {
+      {"var 3..3: i :: output_var;\nconstraint array_float_element(i, [0.0, 2.0], 2.0);\n", "0"},
+      {"var 2..3: i :: output_var;\nconstraint array_float_element(i, [0.0, 2.0], 2.0);\n", "1"},
+      {"var 2..4: i :: output_var;\nconstraint array_var_float_element(i, [f, g], g);\n", "1"},
+      {"var 3..3: i :: output_var;\nconstraint array_var_float_element(i, [f, g], f);\n", "0"}
+    };
+    for (String[] c : cases) {
+      String model = head + c[0] + "solve satisfy;\n";
+      for (String[] options : new String[][] {{"-a"}, {"-a", "--lcg", "off"}}) {
+        String[] out = run(model, options);
+        String what = model + out[0] + out[1];
+        assertFalse(out[1].contains("Exception"), what);
+        if (c[1].equals("0")) {
+          assertTrue(out[0].contains("=====UNSATISFIABLE====="), what);
+        } else {
+          assertTrue(out[0].contains("i = 2;") && out[0].contains("=========="), what);
+        }
+      }
+    }
+  }
 }

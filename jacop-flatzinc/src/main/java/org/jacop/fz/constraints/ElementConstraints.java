@@ -322,10 +322,13 @@ class ElementConstraints implements ParserTreeConstants {
   }
 
   void poseElementFloat(IntVar p1, double[] p2, FloatVar p3) {
-    p1.domain.in(store.level, p1, 1, IntDomain.MAX_INT);
+    // the index lies in 1..p2.length; the values copied below start at p1.min()
+    if (p2.length == 0) {
+      throw Store.failException;
+    }
+    p1.domain.in(store.level, p1, 1, p2.length);
 
-    int newP2Length = p1.max() - p1.min() + 1;
-    int listLength = Math.min(p2.length, newP2Length);
+    int listLength = p1.max() - p1.min() + 1;
     double[] newP2 = new double[listLength];
     for (int i = 0; i < listLength; i++) {
       newP2[i] = p2[p1.min() - 1 + i];
