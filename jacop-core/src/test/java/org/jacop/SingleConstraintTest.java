@@ -12089,4 +12089,26 @@ class SingleConstraintTest extends TestHelper {
     assertThat(m.multiply(-1).getSize()).isEqualTo(4);
     assertThat(m.multiply(-1).contains(-3)).isTrue();
   }
+
+  @Test
+  void negatedXplusClteqZWithLargeConstantKeepsItsSolutions() {
+    // not (x + c <= z) bounded x from below by z.min() - c + 1, which wrapped to a large positive
+    // int for c near the largest int, so Not and Reified failed while every tuple was a solution
+    int c = 2147483646;
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", IntDomain.MIN_INT, IntDomain.MIN_INT);
+    IntVar z = new IntVar(store, "z", -32768, -32768);
+    z.addDom(536870909, 536870909);
+    store.impose(new Not(new XplusClteqZ(x, c, z)));
+    assertThat(countSolutions(store, new IntVar[] {x, z}, new Random(1))).isEqualTo(2);
+
+    Store implied = new Store();
+    IntVar b = new IntVar(implied, "b", 0, 1);
+    IntVar x2 = new IntVar(implied, "x", IntDomain.MIN_INT, IntDomain.MIN_INT);
+    IntVar z2 = new IntVar(implied, "z", -32768, -32768);
+    z2.addDom(536870909, 536870909);
+    implied.impose(new Not(new XplusClteqZImplied(b, x2, c, z2)));
+    // b = 1 and x + c > z, which holds for both values of z
+    assertThat(countSolutions(implied, new IntVar[] {b, x2, z2}, new Random(1))).isEqualTo(2);
+  }
 }
