@@ -67,6 +67,7 @@ import org.jacop.constraints.XplusClteqZImplied;
 import org.jacop.constraints.XplusClteqZImpliedNot;
 import org.jacop.constraints.cumulative.MultiCumulative;
 import org.jacop.constraints.diffn.DiffnK;
+import org.jacop.constraints.lp.PartitionCuts;
 import org.jacop.constraints.regular.MultiCostRegular;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -2067,13 +2068,29 @@ public class Support implements ParserTreeConstants {
           Explainable,
           PbEncodable,
           ConflictRows,
-          Linearizations.Relaxable {
+          Linearizations.Relaxable,
+          PartitionCuts.Equality {
 
     final IntVar x;
     final IntVar y;
     final IntVar b;
     final boolean isReified;
     final int fzNumberId;
+
+    @Override
+    public IntVar left() {
+      return x;
+    }
+
+    @Override
+    public IntVar right() {
+      return y;
+    }
+
+    @Override
+    public IntVar indicator() {
+      return isReified ? b : null;
+    }
 
     FzXeqY(IntVar x, IntVar y, IntVar b, boolean isReified) {
       super(new IntVar[] {x, y, b});

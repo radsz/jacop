@@ -491,6 +491,166 @@ class ObjectivePresolveTest {
 
   private static boolean lastReformulated;
 
+  /**
+   * Fixture pairs of a segment are in an at-most-one set and the segment is used when one of them
+   * is: the objective's cost per pair becomes a cost per used segment, without shifting.
+   */
+  @Test
+  void literalsOfAnExclusiveDisjunctionWithOneCostAreContracted() {
+    Store store = new Store();
+    IntVar obj = new IntVar(store, "obj", -100, 100);
+    ObjectivePresolve presolve = new ObjectivePresolve(obj, false);
+    List<IntVar> vars = new ArrayList<>(List.of(obj));
+    List<Integer> coefs = new ArrayList<>(List.of(-1));
+    IntVar[] used = new IntVar[2];
+    for (int s = 0; s < 2; s++) {
+      IntVar[] pairs = bools(store, 3);
+      store.impose(new SumBool(pairs, "<=", new IntVar(store, 1, 1)));
+      presolve.addAtMostOne(pairs);
+      used[s] = new IntVar(store, "used" + s, 0, 1);
+      store.imposeDecomposition(new OrBool(pairs, used[s]));
+      presolve.addOr(used[s], pairs);
+      for (IntVar b : pairs) {
+        // the objective holds the 0/1 integer of each pair, as bool2int gives it
+        IntVar term = new IntVar(store, 0, 1);
+        store.impose(new XeqY(term, b));
+        presolve.addEquality(b, term);
+        vars.add(term);
+        coefs.add(-5);
+      }
+    }
+    IntVar width = new IntVar(store, "width", 0, 20);
+    vars.add(width);
+    coefs.add(1);
+    equation(
+        store,
+        presolve,
+        vars.toArray(new IntVar[0]),
+        coefs.stream().mapToInt(Integer::intValue).toArray(),
+        0,
+        obj);
+    assertThat(store.consistency()).isTrue();
+
+    LinearInt equation = presolve.reformulate();
+    assertThat(equation).isNotNull();
+    assertThat(presolve.contracted()).isEqualTo(2);
+    assertThat(presolve.shifted()).isZero();
+    assertThat(equation.arguments()).containsExactlyInAnyOrder(obj, used[0], used[1], width);
+  }
+
+  /** Without an at-most-one set, the literals of a disjunction are not contracted. */
+  @Test
+  void literalsThatCanBothBeOneAreNotContracted() {
+    Store store = new Store();
+    IntVar obj = new IntVar(store, "obj", -100, 100);
+    ObjectivePresolve presolve = new ObjectivePresolve(obj, true);
+    IntVar[] b = bools(store, 3);
+    IntVar used = new IntVar(store, "used", 0, 1);
+    store.imposeDecomposition(new OrBool(b, used));
+    presolve.addOr(used, b);
+    presolve.addAtMostOne(new IntVar[] {b[0], b[1]});
+    equation(
+        store, presolve, new IntVar[] {obj, b[0], b[1], b[2]}, new int[] {-1, 2, 2, 2}, 0, obj);
+    assertThat(store.consistency()).isTrue();
+    assertThat(presolve.reformulate()).isNull();
+    assertThat(presolve.contracted()).isZero();
+  }
+
+  /**
+   * Random groups of literals, with an at-most-one set or not, disjunctions over them and costs
+   * that are equal within a group or not, have the same solutions with the reformulation imposed.
+   */
+  @Test
+  void randomContractionsKeepTheirSolutions() {
+    Random random = new Random(20261119L);
+    int contracted = 0;
+    for (int run = 0; run < 300; run++) {
+      long seed = random.nextLong();
+      List<List<Integer>> without = contractionSolutions(seed, false);
+      List<List<Integer>> with = contractionSolutions(seed, true);
+      assertThat(new HashSet<>(with)).as("seed %d", seed).isEqualTo(new HashSet<>(without));
+      assertThat(with).as("seed %d", seed).hasSameSizeAs(without);
+      if (lastReformulated) {
+        contracted++;
+      }
+    }
+    assertThat(contracted).isGreaterThan(50);
+  }
+
+  private static List<List<Integer>> contractionSolutions(long seed, boolean reformulate) {
+    Random r = new Random(seed);
+    Store store = new Store();
+    boolean minimize = r.nextBoolean();
+    IntVar obj = new IntVar(store, "obj", -1000, 1000);
+    ObjectivePresolve presolve = new ObjectivePresolve(obj, minimize);
+    List<IntVar> all = new ArrayList<>();
+    List<IntVar> vars = new ArrayList<>(List.of(obj));
+    List<Integer> coefs = new ArrayList<>(List.of(-1));
+    int groups = 1 + r.nextInt(3);
+    for (int g = 0; g < groups; g++) {
+      IntVar[] b = bools(store, 2 + r.nextInt(3));
+      all.addAll(Arrays.asList(b));
+      if (r.nextInt(4) > 0) {
+        // an at-most-one set over the group, sometimes on equal copies of its literals
+        IntVar[] set = b;
+        if (r.nextBoolean()) {
+          set = bools(store, b.length);
+          for (int i = 0; i < b.length; i++) {
+            store.impose(new XeqY(set[i], b[i]));
+            presolve.addEquality(b[i], set[i]);
+          }
+        }
+        store.impose(new SumBool(set, "<=", new IntVar(store, 1, 1)));
+        presolve.addAtMostOne(set);
+      }
+      IntVar used = new IntVar(store, "u" + g, 0, 1);
+      all.add(used);
+      store.imposeDecomposition(new OrBool(b, used));
+      presolve.addOr(used, b);
+      int cost = r.nextInt(11) - 5;
+      for (IntVar lit : b) {
+        IntVar term = lit;
+        if (r.nextBoolean()) {
+          term = new IntVar(store, 0, 1);
+          store.impose(new XeqY(term, lit));
+          presolve.addEquality(lit, term);
+        }
+        vars.add(term);
+        coefs.add(r.nextInt(5) == 0 ? r.nextInt(11) - 5 : cost);
+      }
+      if (r.nextInt(4) == 0) {
+        // the disjunction is in the objective already
+        vars.add(used);
+        coefs.add(r.nextInt(5) - 2);
+      }
+    }
+    equation(
+        store,
+        presolve,
+        vars.toArray(new IntVar[0]),
+        coefs.stream().mapToInt(Integer::intValue).toArray(),
+        r.nextInt(7) - 3,
+        obj);
+    all.add(obj);
+    lastReformulated = false;
+    if (!store.consistency()) {
+      return List.of();
+    }
+    if (reformulate) {
+      LinearInt equation = presolve.reformulate();
+      if (equation != null) {
+        lastReformulated = presolve.contracted() > 0;
+        int before = minimize ? obj.min() : obj.max();
+        store.impose(equation);
+        if (!store.consistency()) {
+          return List.of();
+        }
+        assertThat(minimize ? obj.min() >= before : obj.max() <= before).isTrue();
+      }
+    }
+    return allSolutions(store, all.toArray(new IntVar[0]));
+  }
+
   /** How the random models are solved: as given, with the equation, with cost variables too. */
   private enum Mode {
     NONE,
