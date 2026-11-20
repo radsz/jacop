@@ -35,7 +35,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import org.jacop.constraints.Alldifferent;
@@ -463,5 +466,108 @@ class AdaptiveLnsTest {
       }
       lns.outcome(AdaptiveLns.Outcome.LIMIT);
     }
+  }
+
+  /**
+   * The decision variables a node stands for are those a plain breadth-first walk from it meets
+   * first (over constraints of at most NEAR_ARITY variables, else over all of them), in the order
+   * it meets them, as before the walk was limited to shortest paths.
+   */
+  @Test
+  void nearMatchesThePlainWalk() {
+    Random random = new Random(7);
+    int checked = 0;
+    for (int run = 0; run < 300; run++) {
+      Store s = new Store();
+      int decisions = 2 + random.nextInt(8);
+      int others = 5 + random.nextInt(60);
+      IntVar[] all = new IntVar[decisions + others];
+      for (int i = 0; i < all.length; i++) {
+        all[i] = new IntVar(s, "v" + i, 0, 10);
+      }
+      int constraints = 3 + random.nextInt(40);
+      for (int c = 0; c < constraints; c++) {
+        int size = 2 + random.nextInt(random.nextBoolean() ? 7 : 14);
+        // most constraints over the other variables only, so that walks take several levels
+        int from = random.nextInt(4) == 0 ? 0 : decisions;
+        List<IntVar> scope = new ArrayList<>();
+        for (int k = 0; k < size; k++) {
+          IntVar v = all[from + random.nextInt(all.length - from)];
+          if (!scope.contains(v)) {
+            scope.add(v);
+          }
+        }
+        if (scope.size() < 2) {
+          continue;
+        }
+        int[] w = new int[scope.size()];
+        Arrays.fill(w, 1);
+        s.impose(new LinearInt(scope.toArray(new IntVar[0]), w, "<=", 5 * scope.size()));
+      }
+      if (!s.consistency()) {
+        continue;
+      }
+      IntVar[] vars = Arrays.copyOf(all, decisions);
+      AdaptiveLns lns = new AdaptiveLns(s, vars, new IntVar(s, "cost", 0, 1000), new Random(run));
+      int[][] conVars = lns.constraintNodes();
+      int n = lns.nodeCount();
+      List<List<Integer>> varCons = new ArrayList<>();
+      for (int u = 0; u < n; u++) {
+        varCons.add(new ArrayList<>());
+      }
+      for (int c = 0; c < conVars.length; c++) {
+        for (int u : conVars[c]) {
+          varCons.get(u).add(c);
+        }
+      }
+      for (int u = decisions; u < n; u++) {
+        int[] expected = plainWalk(u, AdaptiveLns.NEAR_ARITY, decisions, conVars, varCons);
+        if (expected.length == 0) {
+          expected = plainWalk(u, Integer.MAX_VALUE, decisions, conVars, varCons);
+        }
+        assertEquals(
+            Arrays.toString(expected), Arrays.toString(lns.near(u)), "run " + run + " node " + u);
+        checked++;
+      }
+    }
+    assertTrue(checked > 1000, "checked " + checked);
+  }
+
+  // the walk of AdaptiveLns before it kept to shortest paths
+  private static int[] plainWalk(
+      int u, int arity, int decisions, int[][] conVars, List<List<Integer>> varCons) {
+    Set<Integer> seenVar = new HashSet<>();
+    Set<Integer> seenCon = new HashSet<>();
+    List<Integer> found = new ArrayList<>();
+    List<Integer> level = new ArrayList<>(List.of(u));
+    seenVar.add(u);
+    while (!level.isEmpty() && found.isEmpty()) {
+      List<Integer> next = new ArrayList<>();
+      for (int v : level) {
+        for (int c : varCons.get(v)) {
+          if (conVars[c].length > arity || !seenCon.add(c)) {
+            continue;
+          }
+          for (int w : conVars[c]) {
+            if (seenVar.add(w)) {
+              if (w < decisions) {
+                found.add(w);
+              } else {
+                next.add(w);
+              }
+            }
+          }
+        }
+      }
+      level = next;
+    }
+    if (found.size() > AdaptiveLns.MAX_NEAR) {
+      List<Integer> some = new ArrayList<>();
+      for (int k = 0; k < AdaptiveLns.MAX_NEAR; k++) {
+        some.add(found.get(k * found.size() / AdaptiveLns.MAX_NEAR));
+      }
+      found = some;
+    }
+    return found.stream().mapToInt(Integer::intValue).toArray();
   }
 }

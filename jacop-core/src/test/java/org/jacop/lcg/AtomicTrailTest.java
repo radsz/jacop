@@ -2739,4 +2739,71 @@ class AtomicTrailTest {
     assertThat(cited).contains(hole);
     trail.detach();
   }
+
+  /**
+   * Random dives of bound changes, single removals and intersections with domains with holes, and
+   * backtracks over one or several levels: after every step the shadow of every variable is its
+   * domain. The shadows follow the atoms on the trail instead of copying the domains.
+   */
+  @Test
+  void shadowsFollowTheDomainsThroughChangesAndBacktracks() {
+    Random rnd = new Random(7);
+    for (int run = 0; run < 300; run++) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[4];
+      for (int k = 0; k < x.length; k++) {
+        int lo = rnd.nextInt(20) - 10;
+        x[k] = new IntVar(store, "x" + k, lo, lo + 5 + rnd.nextInt(k == 3 ? 200 : 40));
+        for (int h = rnd.nextInt(4); h > 0; h--) {
+          int v = x[k].min() + 1 + rnd.nextInt(x[k].max() - x[k].min() - 1);
+          x[k].domain.subtractAdapt(v);
+          x[k].refreshBounds();
+        }
+      }
+      AtomicTrail trail = new AtomicTrail(store);
+      int base = store.level;
+      for (int step = 0; step < 60; step++) {
+        if (store.level > base && rnd.nextInt(4) == 0) {
+          int to = base + 1 + rnd.nextInt(store.level - base);
+          boolean deferred = rnd.nextBoolean();
+          if (deferred) {
+            trail.beginBacktrack();
+          }
+          for (int l = store.level; l >= to; l--) {
+            store.removeLevel(l);
+          }
+          store.setLevel(to - 1);
+          if (deferred) {
+            trail.endBacktrack();
+          }
+        } else {
+          store.setLevel(store.level + 1);
+          IntVar y = x[rnd.nextInt(x.length)];
+          int v = y.min() + rnd.nextInt(y.max() - y.min() + 1);
+          try {
+            switch (rnd.nextInt(4)) {
+              case 0 -> y.domain.inMin(store.level, y, v);
+              case 1 -> y.domain.inMax(store.level, y, v);
+              case 2 -> y.domain.inComplement(store.level, y, v);
+              default -> {
+                int lo = y.min() + rnd.nextInt(3);
+                IntervalDomain d = new IntervalDomain(lo, Math.max(lo, y.max() - rnd.nextInt(3)));
+                for (int h = rnd.nextInt(5); h > 0 && d.getSize() > 2; h--) {
+                  d.subtractAdapt(d.min() + 1 + rnd.nextInt(d.max() - d.min() - 1));
+                }
+                y.domain.in(store.level, y, d);
+              }
+            }
+          } catch (FailException e) {
+            store.removeLevel(store.level);
+            store.setLevel(store.level - 1);
+          }
+        }
+        for (IntVar y : x) {
+          trail.checkShadow(y);
+        }
+      }
+      trail.detach();
+    }
+  }
 }

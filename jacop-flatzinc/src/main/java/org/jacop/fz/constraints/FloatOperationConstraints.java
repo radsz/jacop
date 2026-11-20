@@ -46,6 +46,7 @@ import org.jacop.floats.constraints.PeqC;
 import org.jacop.floats.constraints.PeqQ;
 import org.jacop.floats.constraints.PgtC;
 import org.jacop.floats.constraints.PgteqC;
+import org.jacop.floats.constraints.PiecewiseLinear;
 import org.jacop.floats.constraints.PmulCeqR;
 import org.jacop.floats.constraints.PmulQeqR;
 import org.jacop.floats.constraints.PowPeqR;
@@ -157,6 +158,14 @@ class FloatOperationConstraints implements ParserTreeConstants {
     } else {
       support.pose(new HyperbolicPeqR(x, function, y));
     }
+  }
+
+  void gen_jacop_piecewise_linear(SimpleNode node) {
+    FloatVar x = support.getFloatVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+    FloatVar y = support.getFloatVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+    double[] xKnot = support.getFloatArray((SimpleNode) node.jjtGetChild(2));
+    double[] yKnot = support.getFloatArray((SimpleNode) node.jjtGetChild(3));
+    support.pose(new PiecewiseLinear(x, y, xKnot, yKnot));
   }
 
   void gen_float_sinh(SimpleNode node) {

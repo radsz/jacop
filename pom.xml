@@ -389,6 +389,7 @@ setup to run configuration. -->
                                 <include>**/AffineSubstitutionTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/CyclicDistanceFlatzincTest.java</include>
+                                <include>**/IndexFunctionFlatzincTest.java</include>
                                 <include>**/TableMddFlatzincTest.java</include>
                                 <include>**/CostAlldifferentFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
@@ -467,6 +468,7 @@ setup to run configuration. -->
                                 <include>**/FreeFirstFlatzincTest.java</include>
                                 <include>**/NValueBlocksFlatzincTest.java</include>
                                 <include>**/PureClauseFlatzincTest.java</include>
+                                <include>**/ClausalFlatzincTest.java</include>
                                 <include>**/RootProbingFlatzincTest.java</include>
                                 <include>**/FixedCompletionFlatzincTest.java</include>
                                 <include>**/GoalsFlatzincTest.java</include>
@@ -676,6 +678,7 @@ setup to run configuration. -->
                                 <include>**/AffineSubstitutionTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/CyclicDistanceFlatzincTest.java</include>
+                                <include>**/IndexFunctionFlatzincTest.java</include>
                                 <include>**/TableMddFlatzincTest.java</include>
                                 <include>**/CostAlldifferentFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
@@ -755,6 +758,7 @@ setup to run configuration. -->
                                 <include>**/FreeFirstFlatzincTest.java</include>
                                 <include>**/NValueBlocksFlatzincTest.java</include>
                                 <include>**/PureClauseFlatzincTest.java</include>
+                                <include>**/ClausalFlatzincTest.java</include>
                                 <include>**/RootProbingFlatzincTest.java</include>
                                 <include>**/FixedCompletionFlatzincTest.java</include>
                                 <include>**/GoalsFlatzincTest.java</include>
@@ -958,6 +962,7 @@ setup to run configuration. -->
                                 <include>**/AffineSubstitutionTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/CyclicDistanceFlatzincTest.java</include>
+                                <include>**/IndexFunctionFlatzincTest.java</include>
                                 <include>**/TableMddFlatzincTest.java</include>
                                 <include>**/CostAlldifferentFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
@@ -1037,6 +1042,7 @@ setup to run configuration. -->
                                 <include>**/FreeFirstFlatzincTest.java</include>
                                 <include>**/NValueBlocksFlatzincTest.java</include>
                                 <include>**/PureClauseFlatzincTest.java</include>
+                                <include>**/ClausalFlatzincTest.java</include>
                                 <include>**/RootProbingFlatzincTest.java</include>
                                 <include>**/FixedCompletionFlatzincTest.java</include>
                                 <include>**/GoalsFlatzincTest.java</include>
@@ -1238,6 +1244,7 @@ setup to run configuration. -->
                                 <include>**/AffineSubstitutionTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/CyclicDistanceFlatzincTest.java</include>
+                                <include>**/IndexFunctionFlatzincTest.java</include>
                                 <include>**/TableMddFlatzincTest.java</include>
                                 <include>**/CostAlldifferentFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
