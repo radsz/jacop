@@ -754,6 +754,46 @@ public class LinearRelaxation extends Constraint
   /** Statistics: subtour elimination cuts of trees and paths added. */
   public long treeCuts;
 
+  // triangle and clique cuts of the partitions of pair indicators ({@link PartitionCuts}) at the
+  // root, after the tree cuts and before the MIR cuts; for an objective only
+  // (-Dorg.jacop.lp.partitionCuts=false turns them off)
+  private static final boolean PARTITION_CUTS =
+      !FALSE.equals(System.getProperty("org.jacop.lp.partitionCuts"));
+
+  // the separations of the partition cuts, one for each group of linked variables
+  private List<PartitionCuts> partitions = new ArrayList<>();
+
+  // the most rounds of partition cuts
+  private static final int PARTITION_ROUNDS =
+      Integer.getInteger("org.jacop.lp.partitionRounds", 100);
+
+  // the least share of the bound that the partition cuts must raise it by to be kept: on
+  // wedding_optimal_chart they raise 311 to 308 (optimum 276), and the search without LCG then
+  // solves the relaxation at 44,620 nodes instead of 17 (2.7 s -> 40 s)
+  private static final double PARTITION_GAIN =
+      Double.parseDouble(System.getProperty("org.jacop.lp.partitionGain", "0.02"));
+
+  // the tag and source of the partition rows and cuts
+  private static final String PARTITION = "partition";
+
+  // the most rows between the objective and a pair literal of a partition whose cuts are made
+  private static final int PARTITION_REACH = Integer.getInteger("org.jacop.lp.partitionReach", 3);
+
+  /** Statistics: triangle and clique cuts of the partitions of pair indicators added. */
+  public long partitionCuts;
+
+  /** Statistics: the objective bound after the partition cuts, before the MIR cuts, or NaN. */
+  public double partitionBound = Double.NaN;
+
+  /**
+   * The number of partitions of pair indicators whose cuts the relaxation makes at the root.
+   *
+   * @return the number of partitions
+   */
+  public int partitionConstraints() {
+    return partitions.size();
+  }
+
   /** Statistics: the objective bound after the tree cuts, before the MIR cuts, or NaN. */
   public double treeBound = Double.NaN;
 
@@ -1386,6 +1426,33 @@ public class LinearRelaxation extends Constraint
         tags.putIfAbsent(f, "given");
       }
     }
+    // over the root domains only, so that the cuts hold for the whole search; the pair literals
+    // that no row of the model holds get a row, so that they are columns
+    List<PartitionCuts> partitions =
+        PARTITION_CUTS && objective != null && store.level == 0
+            ? PartitionCuts.of(constraints)
+            : new ArrayList<>();
+    if (!partitions.isEmpty()) {
+      // only a partition whose pair literals the objective sums, at most three rows away (the
+      // 2026 community-detection rnd_n100_e50_s50_d30_c10_p50 needs three): on
+      // work-task-variation the rows of the others made each solve dearer and the search worse
+      Set<IntVar> reach = objectiveReach(localForms, objective, PARTITION_REACH);
+      partitions.removeIf(p -> Arrays.stream(p.literals()).noneMatch(reach::contains));
+    }
+    if (!partitions.isEmpty()) {
+      Set<IntVar> present = Collections.newSetFromMap(new IdentityHashMap<>());
+      for (LinearForm f : localForms) {
+        present.addAll(Arrays.asList(f.vars()));
+      }
+      for (PartitionCuts p : partitions) {
+        List<LinearForm> rows = p.columnRows(present);
+        localForms.addAll(rows);
+        tag(tags, rows, PARTITION);
+        for (LinearForm f : rows) {
+          present.addAll(Arrays.asList(f.vars()));
+        }
+      }
+    }
     int pairCliques = 0;
     // for an objective only, whose bound they raise: on satisfaction models (rubik) the longer
     // rows only make each call dearer
@@ -1674,6 +1741,8 @@ public class LinearRelaxation extends Constraint
     r.energy = resources;
     r.hall = hall;
     r.trees = trees;
+    // over the root domains only, so that the cuts hold for the whole search
+    r.partitions = partitions;
     return r.rows() + r.extraColumns.length < 2 ? null : r;
   }
 
@@ -4556,6 +4625,14 @@ public class LinearRelaxation extends Constraint
           return status;
         }
       }
+      if (!partitions.isEmpty()) {
+        long t0 = System.nanoTime();
+        int status = partitionRounds();
+        timed(PARTITION, t0);
+        if (status != LpSolver.OPTIMAL) {
+          return status;
+        }
+      }
     }
     // the bounds of the first solve, which hold everywhere, also for the cuts made at restarts;
     // with restartBounds those of the root level now, which hold while it stays
@@ -5237,6 +5314,117 @@ public class LinearRelaxation extends Constraint
     return (int) result[0];
   }
 
+  // the variables reached from the objective over at most depth rows of forms
+  private static Set<IntVar> objectiveReach(List<LinearForm> forms, IntVar objective, int depth) {
+    Map<IntVar, List<LinearForm>> rows = new IdentityHashMap<>();
+    for (LinearForm f : forms) {
+      for (IntVar v : f.vars()) {
+        rows.computeIfAbsent(v, k -> new ArrayList<>()).add(f);
+      }
+    }
+    Set<IntVar> reached = Collections.newSetFromMap(new IdentityHashMap<>());
+    Set<LinearForm> used = Collections.newSetFromMap(new IdentityHashMap<>());
+    reached.add(objective);
+    List<IntVar> front = List.of(objective);
+    for (int d = 0; d < depth && !front.isEmpty(); d++) {
+      List<IntVar> next = new ArrayList<>();
+      for (IntVar v : front) {
+        for (LinearForm f : rows.getOrDefault(v, List.of())) {
+          if (used.add(f)) {
+            for (IntVar w : f.vars()) {
+              if (reached.add(w)) {
+                next.add(w);
+              }
+            }
+          }
+        }
+      }
+      front = next;
+    }
+    return reached;
+  }
+
+  /**
+   * Rounds of triangle and clique cuts of the partitions of pair indicators ({@link PartitionCuts})
+   * at the root, like the tree cuts. An indicator that is not a column moves to the right-hand side
+   * at the bound that keeps the cut valid.
+   *
+   * @return the status of the last solve
+   */
+  private int partitionRounds() {
+    Map<IntVar, Integer> columnOf = new IdentityHashMap<>();
+    for (int j = 0; j < lp.columns(); j++) {
+      columnOf.put(x[j], j);
+    }
+    int[][] columns = new int[partitions.size()][];
+    for (int c = 0; c < partitions.size(); c++) {
+      IntVar[] list = partitions.get(c).literals();
+      columns[c] = new int[list.length];
+      for (int a = 0; a < list.length; a++) {
+        Integer j = columnOf.get(list[a]);
+        columns[c][a] = j == null ? -1 : j;
+      }
+    }
+    long[] result =
+        separatedRounds(
+            () -> {
+              List<MirCut> found = new ArrayList<>();
+              for (int c = 0; c < partitions.size(); c++) {
+                PartitionCuts p = partitions.get(c);
+                IntVar[] list = p.literals();
+                double[] value = new double[list.length];
+                for (int a = 0; a < value.length; a++) {
+                  value[a] = columns[c][a] >= 0 ? lp.value(columns[c][a]) : list[a].min();
+                }
+                for (PartitionCuts.Cut cut : p.separate(value, 4 * CUTS_PER_ROUND)) {
+                  MirCut row = row(cut, list, columns[c]);
+                  if (row != null) {
+                    row.source = PARTITION;
+                    found.add(row);
+                  }
+                }
+              }
+              return found;
+            },
+            PARTITION_ROUNDS,
+            true,
+            true,
+            PARTITION_GAIN);
+    partitionCuts += result[1];
+    if (result[0] == LpSolver.OPTIMAL) {
+      partitionBound = lp.value(0);
+    }
+    return (int) result[0];
+  }
+
+  // the partition cut as a row over the columns; a literal that is not a column moves to the
+  // right-hand side at its least value for a positive weight and its largest for a negative one
+  private static MirCut row(PartitionCuts.Cut cut, IntVar[] list, int[] column) {
+    Map<Integer, Long> weights = new java.util.TreeMap<>();
+    long rhs = cut.rhs();
+    for (int i = 0; i < cut.literals().length; i++) {
+      int a = cut.literals()[i];
+      long w = cut.weights()[i];
+      if (column[a] < 0) {
+        rhs -= w * (w > 0 ? list[a].min() : list[a].max());
+      } else {
+        weights.merge(column[a], w, Long::sum);
+      }
+    }
+    weights.values().removeIf(w -> w == 0);
+    if (weights.isEmpty()) {
+      return null;
+    }
+    int[] cs = new int[weights.size()];
+    long[] ws = new long[weights.size()];
+    int k = 0;
+    for (Map.Entry<Integer, Long> e : weights.entrySet()) {
+      cs[k] = e.getKey();
+      ws[k++] = e.getValue();
+    }
+    return MirCut.row(cs, ws, rhs, cut.efficacy());
+  }
+
   // the tree cut as a row sum w x <= rhs over the columns; a node that is not a column moves to
   // the right-hand side at its largest value, an edge at its least; null when no column is left
   private static MirCut row(TreeCuts.Cut cut, TreeCuts t, int[] column) {
@@ -5309,7 +5497,23 @@ public class LinearRelaxation extends Constraint
    */
   private long[] separatedRounds(
       java.util.function.Supplier<List<MirCut>> separation, int rounds, boolean toSparse) {
+    return separatedRounds(separation, rounds, toSparse, false, 0);
+  }
+
+  // as above; with roomFirst, a dense tableau without room for a round of cuts moves to the sparse
+  // simplex before the first round (and back if no cut is kept): the tried rows can fill the dense
+  // tableau up to its cap before any cut (community detection rnd_n50_e2500 of the Challenge 2021:
+  // 1,610 rows and 2,934 violated triangle cuts, none of which fitted); cuts that raise the bound
+  // by less than minGain of it are dropped again
+  private long[] separatedRounds(
+      java.util.function.Supplier<List<MirCut>> separation,
+      int rounds,
+      boolean toSparse,
+      boolean roomFirst,
+      double minGain) {
     double start = lp.value(0);
+    // whether the rows and cuts moved to the sparse simplex for good, after which the cuts stay
+    boolean committed = false;
     int firstCount = rows();
     LpSolver first = lp.copy();
     int[] firstRows = lpRow;
@@ -5318,6 +5522,14 @@ public class LinearRelaxation extends Constraint
     int stall = 0;
     int status = DualSimplex.OPTIMAL;
     Set<List<Long>> seen = new HashSet<>();
+    if (roomFirst && simplex == Simplex.DENSE) {
+      long m = (long) lp.rows() + CUTS_PER_ROUND;
+      if (m * (m + lp.columns()) > MAX_TABLEAU && moveToSparse(true)) {
+        first = lp.copy();
+        firstRows = lpRow;
+        forced = true;
+      }
+    }
     for (int round = 0; round < rounds && stall < CAPACITY_STALL; round++) {
       if (toSparse
           && simplex == Simplex.DENSE
@@ -5328,6 +5540,7 @@ public class LinearRelaxation extends Constraint
         // needs about 1,300 tree cuts, which the dense cap stops at a third of the bound's gain);
         // the bound has moved, so the cuts are not dropped at the end either
         forgetDense();
+        committed = true;
       }
       List<MirCut> found = separation.get();
       found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
@@ -5368,6 +5581,7 @@ public class LinearRelaxation extends Constraint
             forced = true;
           } else {
             forgetDense();
+            committed = true;
           }
           for (MirCut row : chosen) {
             seen.remove(key(row));
@@ -5383,10 +5597,13 @@ public class LinearRelaxation extends Constraint
       boolean moved = Math.abs(lp.value(0) - before) > 1e-6 * (1 + Math.abs(before));
       stall = moved ? 0 : stall + 1;
     }
+    double gain = Math.abs(lp.value(0) - start);
     if (status == DualSimplex.OPTIMAL
         && added > 0
-        && Math.abs(lp.value(0) - start) <= 1e-6 * (1 + Math.abs(start))) {
-      // cuts that do not move the bound only make each solve dearer
+        && (gain <= 1e-6 * (1 + Math.abs(start))
+            || !committed && gain < minGain * Math.max(1, Math.abs(start)))) {
+      // cuts that do not move the bound, or by less than minGain of it, only make each solve
+      // dearer
       dropCuts(added, first, firstRows);
       added = 0;
     }
@@ -6915,6 +7132,9 @@ public class LinearRelaxation extends Constraint
     }
     for (TreeCuts t : trees) {
       c.trees.add(t.copy(map));
+    }
+    for (PartitionCuts p : partitions) {
+      c.partitions.add(p.copy(map));
     }
     return c;
   }
