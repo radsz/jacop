@@ -3230,7 +3230,10 @@ public class LinearRelaxation extends Constraint
       rootBoundsAt = Arrays.copyOf(rootBoundsAt, 2 * rootBoundsSize);
       rootBoundsLevel = Arrays.copyOf(rootBoundsLevel, 2 * rootBoundsSize);
     }
-    if (rootReducedSkips > 0) {
+    // a bound at the lowest level seen (a solution's bound in branch and bound) is always
+    // propagated; the back-off is for the bounds that assumptions and decisions give
+    rootReducedFloor = Math.min(rootReducedFloor, store.level);
+    if (rootReducedSkips > 0 && store.level > rootReducedFloor) {
       rootReducedSkips--;
       rootReducedSkipped++;
       return;
@@ -3257,10 +3260,15 @@ public class LinearRelaxation extends Constraint
   // decisions on its terms its upper bound falls at every one of them. In the core-guided phase on
   // Security-CPS test61 (MaxSAT Evaluation 2021: 16,010 soft clauses, 20,347 columns), each call
   // assumes the softs one by one and every assumption scanned the root forms again, without a
-  // pruning: 0.9 s a core instead of 0.23 s. Passes that prune nothing back off exponentially
+  // pruning: 0.9 s a core instead of 0.23 s. Passes that prune nothing back off exponentially, above
+  // the lowest level only: skipping the bounds of the solutions there lost the proof of MaxSAT 2021
+  // titanic_train_5_DNF_2_1 (237 at 150 s; 214 at 240 s)
   private static final int ROOT_REDUCED_MAX_PERIOD = 128;
   private int rootReducedPeriod = 1;
   private int rootReducedSkips;
+
+  // the lowest store level at which the root reduced costs were asked for
+  private int rootReducedFloor = Integer.MAX_VALUE;
 
   /** The passes of the root reduced costs skipped by their back-off. */
   public long rootReducedSkipped;
