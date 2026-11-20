@@ -2042,6 +2042,10 @@ class GlobalConstraints implements ParserTreeConstants {
    */
   void poseTableRows(IntVar[] v, int[] tbl) {
     int size = v.length;
+    if (size == 0) {
+      // the row count of a table without columns is lost: an empty array has no rows
+      throw Store.failException;
+    }
     if (size == 2) {
       support.permutationElementSums.addTable(v, tbl);
     }
@@ -2670,6 +2674,11 @@ class GlobalConstraints implements ParserTreeConstants {
     // Keep the tuples that can match the domains and project them onto the distinct variables
     // that are not fixed; a tuple that gives two values to the same variable cannot match.
     int size = v.length;
+    if (size == 0) {
+      // no columns: the empty array has no rows, so the table is false
+      b.domain.in(store.level, b, 0, 0);
+      return;
+    }
     Map<IntVar, Integer> position = new LinkedHashMap<>();
     for (IntVar x : v) {
       if (!x.singleton()) {
@@ -3765,6 +3774,13 @@ class GlobalConstraints implements ParserTreeConstants {
   void gen_jacop_lex_chain(SimpleNode node, boolean strict) {
     IntVar[] a = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     int vectors = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+    if (a.length == 0) {
+      // no vectors, or vectors of length 0: all equal, so a strict chain has at most one
+      if (strict && vectors > 1) {
+        throw Store.failException;
+      }
+      return;
+    }
     int n = a.length / vectors;
 
     // vector j is column j of the matrix that a lists row by row

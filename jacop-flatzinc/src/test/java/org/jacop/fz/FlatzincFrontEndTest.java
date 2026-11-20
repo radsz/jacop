@@ -5935,4 +5935,43 @@ class FlatzincFrontEndTest {
       }
     }
   }
+
+  @Test
+  void emptyLexChainsAndTablesAnswer() throws IOException {
+    // a chain of vectors of length 0 holds, unless it is strict over two vectors or more; a table
+    // without columns has no rows and is false (a negative one true)
+    String[][] cases = {
+      {"jacop_lex_chain_less_int([],0)", "6"},
+      {"jacop_lex_chain_less_bool([],0)", "6"},
+      {"jacop_lex_chain_lesseq_int([],0)", "6"},
+      {"jacop_lex_chain_lesseq_bool([],0)", "6"},
+      {"jacop_lex_chain_less_int([],1)", "6"},
+      {"jacop_lex_chain_less_int([],2)", "0"},
+      {"jacop_lex_chain_lesseq_int([],3)", "6"},
+      {"jacop_table_int([],[])", "0"},
+      {"jacop_table_int_reif([],[],b)", "6"},
+      {"jacop_table_int_imp([],[],b)", "6"},
+      {"jacop_table_int_reif([],[],true)", "0"},
+      {"jacop_negative_table_int([],[])", "6"}
+    };
+    for (String[] c : cases) {
+      // domains of three values let -f compile the model into clauses (ClausalCompiler)
+      String model =
+          "var 0..2: y:: output_var;\nvar 0..2: z:: output_var;\nvar bool: b:: output_var;\n"
+              + "constraint bool_eq(b,false);\nconstraint int_le(y,z);\nconstraint "
+              + c[0]
+              + ";\nsolve satisfy;\n";
+      int expected = Integer.parseInt(c[1]);
+      for (String[] options :
+          new String[][] {{"-a"}, {"-a", "--lcg"}, {"-a", "--lcg", "off"}, {"-f", "--lcg"}}) {
+        String[] out = run(model, options);
+        String what = c[0] + " " + Arrays.toString(options) + "\n" + out[0] + out[1];
+        int solutions = out[0].split("----------", -1).length - 1;
+        // -f looks for one solution
+        boolean all = "-a".equals(options[0]);
+        assertEquals(all || expected == 0 ? expected : 1, solutions, what);
+        assertTrue(out[0].contains(solutions == 0 ? "=====UNSATISFIABLE=====" : "y = "), what);
+      }
+    }
+  }
 }
