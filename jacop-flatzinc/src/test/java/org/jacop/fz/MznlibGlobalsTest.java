@@ -79,6 +79,7 @@ class MznlibGlobalsTest {
         "hook_regular_reif",
         "hook_cost_regular",
         "hook_cost_regular_holes",
+        "hook_dag",
         "hook_cost_regular_cost_in_word",
         "hook_multicost_regular",
         "hook_mdd",

@@ -191,7 +191,8 @@ public class VariablesParameters implements ParserTreeConstants {
               ident,
               clampedInterval.getClamped(),
               clampedInterval.lowClamped(),
-              clampedInterval.highClamped()));
+              clampedInterval.highClamped(),
+              false));
     }
   }
 
@@ -279,6 +280,10 @@ public class VariablesParameters implements ParserTreeConstants {
         ident = ((ASTVarDeclItem) node).getIdent();
         varInt = new IntVar(store, ident, MIN_INT, MAX_INT);
         initAndRegisterIntVar(store, ident, varInt, node, initChild, table, outputVar);
+        if (table.getVariable(ident) == varInt && !varInt.singleton()) {
+          // an unbounded declaration is narrowed to JaCoP's range too
+          dictionary.noteUnboundedDomain(ident);
+        }
         break;
       case 1: // int interval
         generateIntIntervalVariable(store, node, initChild, table, outputVar);
@@ -613,10 +618,14 @@ public class VariablesParameters implements ParserTreeConstants {
       boolean outputArray,
       OutputArrayAnnotation outArrayAnn) {
     int size = computeArraySize(node);
-    IntVar[] varArrayInt =
-        initChild < node.jjtGetNumChildren()
-            ? getScalarFlatExpr_ArrayVar(store, node, initChild)
-            : createIntVarArray(store, ident, size, MIN_INT, MAX_INT, table);
+    IntVar[] varArrayInt;
+    if (initChild < node.jjtGetNumChildren()) {
+      varArrayInt = getScalarFlatExpr_ArrayVar(store, node, initChild);
+    } else {
+      varArrayInt = createIntVarArray(store, ident, size, MIN_INT, MAX_INT, table);
+      // unbounded declarations are narrowed to JaCoP's range too
+      dictionary.noteUnboundedDomain(ident);
+    }
     registerIntArray(table, ident, varArrayInt, outputArray, outArrayAnn);
   }
 
@@ -1461,6 +1470,11 @@ public class VariablesParameters implements ParserTreeConstants {
   int[] getArrayOfScalarFlatExpr(SimpleNode node, int index, int size) {
     SimpleNode child = (SimpleNode) node.jjtGetChild(index);
     int count = child.jjtGetNumChildren();
+    int[] packed = child.packedInts();
+    if (packed != null && count == size) {
+      // the declaration is dropped once read, and nothing changes a parameter array
+      return packed;
+    }
     if (count == size) {
       int[] aa = new int[size];
       for (int i = 0; i < count; i++) {

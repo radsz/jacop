@@ -55,6 +55,13 @@ final class LiteralMap {
 
   private static final int[] EMPTY = new int[0];
 
+  /**
+   * The map of every variable with no literal of a kind yet, shared and never changed: it has no
+   * value, so it answers {@link #NONE}, {@link Long#MAX_VALUE} and {@link Long#MIN_VALUE}. A
+   * variable gets a map of its own before its first literal of the kind is put.
+   */
+  static final LiteralMap NO_LITERALS = new LiteralMap(0, -1);
+
   private final int min;
   private final long span;
 

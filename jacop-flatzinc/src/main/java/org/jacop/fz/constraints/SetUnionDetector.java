@@ -372,6 +372,16 @@ public class SetUnionDetector implements ParserTreeConstants {
    * post 100,884 propagators; with the channels it posts 31,358.
    */
   private void poseLiterals() {
+    poseLiterals(support, made);
+  }
+
+  /**
+   * Posts the literals in made as {@link #poseLiterals()} does, and clears made.
+   *
+   * @param support the support of the FlatZinc front end.
+   * @param made the new literals [x = v], by x and v.
+   */
+  static void poseLiterals(Support support, Map<IntVar, Map<Integer, IntVar>> made) {
     for (Map.Entry<IntVar, Map<Integer, IntVar>> e : made.entrySet()) {
       IntVar x = e.getKey();
       Map<Integer, IntVar> values = e.getValue();

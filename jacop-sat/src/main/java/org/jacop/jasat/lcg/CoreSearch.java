@@ -1217,6 +1217,11 @@ public final class CoreSearch {
   private long markWork = -1;
   private long markBound;
 
+  /** The lower bound at the last {@link #mark}. */
+  long markBound() {
+    return markBound;
+  }
+
   /** Marks the solver's work and the lower bound now, from which {@link #canReach} measures. */
   void mark() {
     markWork = sat.work();

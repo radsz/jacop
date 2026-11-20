@@ -2512,8 +2512,29 @@ public class LinearRelaxation extends Constraint
     Map<IntVar, LinearForm> definition = new IdentityHashMap<>();
     Map<IntVar, Long> weight = new IdentityHashMap<>();
     Set<LinearForm> definitions = Collections.newSetFromMap(new IdentityHashMap<>());
+    // rows with a single variable left to define first, again while that defines more: the row of
+    // an inner block of a tree of sums (LinearSplit) also holds the sums of the blocks below it,
+    // and taking its first such variable, when the row came before theirs, defined a lower sum by
+    // it and left the inner sum without a definition, a free column of the relaxation (XCSP 2025
+    // BusScheduling-c2: 536 of 7,199 sums, no first solution in 120 s)
+    for (int pass = 0; pass < MAX_DEFINITION_PASSES; pass++) {
+      int before = definitions.size();
+      for (LinearForm f : forms) {
+        if (f.relation() == LinearForm.EQ && !definitions.contains(f)) {
+          define(
+              f,
+              onlyUndefined(f, substituted, objective, definition),
+              definition,
+              weight,
+              definitions);
+        }
+      }
+      if (definitions.size() == before) {
+        break;
+      }
+    }
     for (LinearForm f : forms) {
-      if (f.relation() != LinearForm.EQ) {
+      if (f.relation() != LinearForm.EQ || definitions.contains(f)) {
         continue;
       }
       IntVar s = null;
@@ -2530,9 +2551,7 @@ public class LinearRelaxation extends Constraint
         }
       }
       if (s != null && count == 1) {
-        definition.put(s, f);
-        weight.put(s, f.weights()[indexOf(f, s)]);
-        definitions.add(f);
+        define(f, s, definition, weight, definitions);
       }
     }
     if (definition.isEmpty()) {
@@ -2571,6 +2590,44 @@ public class LinearRelaxation extends Constraint
       }
     }
     return result;
+  }
+
+  // passes over the rows that define the only variable left in them (the depth of a tree of sums)
+  private static final int MAX_DEFINITION_PASSES = 16;
+
+  private static void define(
+      LinearForm f,
+      IntVar s,
+      Map<IntVar, LinearForm> definition,
+      Map<IntVar, Long> weight,
+      Set<LinearForm> definitions) {
+    if (s != null) {
+      definition.put(s, f);
+      weight.put(s, f.weights()[indexOf(f, s)]);
+      definitions.add(f);
+    }
+  }
+
+  // the only variable of f that is substituted and has no definition yet, if it has weight 1 or -1
+  // and occurs once, else null
+  private static IntVar onlyUndefined(
+      LinearForm f,
+      Set<? extends IntVar> substituted,
+      IntVar objective,
+      Map<IntVar, LinearForm> definition) {
+    IntVar s = null;
+    int at = -1;
+    for (int k = 0; k < f.vars().length; k++) {
+      IntVar v = f.vars()[k];
+      if (substituted.contains(v) && v != objective && !definition.containsKey(v)) {
+        if (s != null) {
+          return null;
+        }
+        s = v;
+        at = k;
+      }
+    }
+    return s != null && Math.abs(f.weights()[at]) == 1 ? s : null;
   }
 
   // the number of terms a row may grow to while its defined variables are replaced
