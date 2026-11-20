@@ -241,6 +241,19 @@ public class LinearRelaxation extends Constraint
   private static final int POOL_AGE = Integer.getInteger("org.jacop.lp.poolAge", 100);
   private static final boolean POOL_EXTRA = Boolean.getBoolean("org.jacop.lp.poolExtra");
   private static final boolean POOL_CUTS = Boolean.getBoolean("org.jacop.lp.poolCuts");
+  // whether the MIR cuts of the rows also substitute variable bounds x <= a u, x >= a u
+  // (MirCut.ofVariableBounds)
+  // whether clause rows over columns already in the relaxation are outside the share of the
+  // further rows (fitsSimplex)
+  static final boolean CLAUSE_ROWS = Boolean.getBoolean("org.jacop.lp.clauseRows");
+  static final boolean VB_MIR = Boolean.getBoolean("org.jacop.lp.vbMir");
+  private MirCut.VariableBounds variableBounds;
+
+  /** The MIR cuts made with variable bounds substituted. */
+  public long vbCuts;
+
+  private static final boolean DBG_CENSUS = Boolean.getBoolean("dbgCensus");
+  private static final java.util.Map<String, Integer> DBG_NONE = new java.util.TreeMap<>();
   private static final long WORK = Long.getLong("org.jacop.lp.work", 20_000_000L);
   private static final long ROOT_WORK = Long.getLong("org.jacop.lp.rootWork", 1_000_000_000L);
 
@@ -1410,7 +1423,18 @@ public class LinearRelaxation extends Constraint
         List<LinearForm> rows = Linearizations.of(c);
         relaxed.addAll(rows);
         tag(tags, rows, "lin:" + c.getClass().getSimpleName());
+        if (DBG_CENSUS && rows.isEmpty()) {
+          DBG_NONE.merge(c.getClass().getSimpleName(), 1, Integer::sum);
+        }
+      } else if (DBG_CENSUS) {
+        DBG_NONE.merge(
+            (f == null ? "linked/off:" : "ne/unary:") + c.getClass().getSimpleName(),
+            1,
+            Integer::sum);
       }
+    }
+    if (DBG_CENSUS) {
+      System.out.println("%% DBG no LP rows from: " + DBG_NONE + " extra=" + extra.size());
     }
     // like the linearized rows, they are kept only when they help the root relaxation: the
     // clauses of lazy clause generation make thousands of rows on some models (rel2onto: 65 rows
@@ -1646,6 +1670,9 @@ public class LinearRelaxation extends Constraint
                 + first
                 + (bySparse && leading.isEmpty() ? encoded : 0)
             : Long.MAX_VALUE;
+    if (Boolean.getBoolean("dbgShareAll")) {
+      share = Long.MAX_VALUE;
+    }
     if (!fitsSimplex(localForms, candidates, simplex, auto, share, own, further)
         && objective != null) {
       // not all fit: after the value encodings, the rows nearest to the objective first, since rows
@@ -2548,7 +2575,12 @@ public class LinearRelaxation extends Constraint
       for (IntVar v : f.vars()) {
         added += vars.contains(v) ? 0 : 1;
       }
-      boolean ownShare = own.contains(f);
+      // a clause row over columns the relaxation has already adds no column: with
+      // org.jacop.lp.clauseRows it is not counted in the share (unit commitment L10: 2,668 of
+      // them past the share, among them every x + not x = 1 of the commitments, and without them
+      // the relaxation as a MIP has the optimum 1,633,000 instead of 1,703,450)
+      boolean ownShare =
+          own.contains(f) || CLAUSE_ROWS && added == 0 && ClauseSimplification.isClause(f);
       if (simplex == Simplex.DENSE
           ? (rows + 1) * (rows + 1 + vars.size() + added + 1) > MAX_TABLEAU
           : nonzeros + f.vars().length > MAX_NONZEROS
@@ -2556,7 +2588,7 @@ public class LinearRelaxation extends Constraint
         return false;
       }
       if (denseCap && simplex != Simplex.DENSE && !ownShare && counted >= share) {
-        if (own.isEmpty()) {
+        if (own.isEmpty() && !CLAUSE_ROWS) {
           return false;
         }
         // the share of the others is full: the rows with a share of their own may still come
@@ -4669,10 +4701,26 @@ public class LinearRelaxation extends Constraint
     }
     int original = rows();
     long cutsAtStart = cuts;
+    if (System.getProperty("dbgDumpLp") != null && !restarting) {
+      dbgDumpLp(System.getProperty("dbgDumpLp"), original, lo, hi);
+    }
     // the rows themselves, sorted once: each round then costs their length, not rows x columns
     Aggregate[] unitRows = new Aggregate[original];
     for (int i = 0; i < original; i++) {
       unitRows[i] = rowAggregate(i);
+    }
+    if (VB_MIR && variableBounds == null) {
+      List<int[]> rc = new ArrayList<>();
+      List<long[]> rw = new ArrayList<>();
+      List<Long> up = new ArrayList<>();
+      List<Long> down = new ArrayList<>();
+      for (Aggregate g : unitRows) {
+        rc.add(g.columns());
+        rw.add(g.coef());
+        up.add(g.hasUpper() ? g.upper() : null);
+        down.add(g.hasLower() ? g.lower() : null);
+      }
+      variableBounds = MirCut.VariableBounds.of(n, rc, rw, up, down, lo, hi);
     }
     Set<List<Long>> seen = new HashSet<>();
     if (!restarting) {
@@ -5976,6 +6024,14 @@ public class LinearRelaxation extends Constraint
       mir(unitRows[i], value, lo, hi, found);
     }
     labelled(found, unitBefore, "mir");
+    if (variableBounds != null && !coversOnly) {
+      int vbBefore = found.size();
+      for (Aggregate row : unitRows) {
+        vbMir(row, value, lo, hi, found, variableBounds);
+      }
+      vbCuts += found.size() - vbBefore;
+      labelled(found, vbBefore, "vbmir");
+    }
     Set<MirCut> covers = Collections.newSetFromMap(new IdentityHashMap<>());
     if (coverOn) {
       int coverBefore = found.size();
@@ -6243,6 +6299,38 @@ public class LinearRelaxation extends Constraint
     }
   }
 
+  // the MIR cuts of both sides of a row after the substitution of variable bounds
+  private static void vbMir(
+      Aggregate g,
+      double[] value,
+      long[] lo,
+      long[] hi,
+      List<MirCut> found,
+      MirCut.VariableBounds bounds) {
+    if (g == null) {
+      return;
+    }
+    if (g.hasUpper()) {
+      MirCut c = MirCut.ofVariableBounds(g.columns(), g.coef(), g.upper(), value, lo, hi, bounds);
+      if (c != null) {
+        found.add(c);
+      }
+    }
+    if (g.hasLower() && g.lower() != Long.MIN_VALUE) {
+      long[] neg = new long[g.coef().length];
+      for (int k = 0; k < neg.length; k++) {
+        if (g.coef()[k] == Long.MIN_VALUE) {
+          return;
+        }
+        neg[k] = -g.coef()[k];
+      }
+      MirCut c = MirCut.ofVariableBounds(g.columns(), neg, -g.lower(), value, lo, hi, bounds);
+      if (c != null) {
+        found.add(c);
+      }
+    }
+  }
+
   private static void mir(Aggregate g, double[] value, long[] lo, long[] hi, List<MirCut> found) {
     if (g == null) {
       return;
@@ -6334,6 +6422,23 @@ public class LinearRelaxation extends Constraint
           keptStatus = trialStatus;
         }
       }
+    }
+    if (DBG_CENSUS) {
+      System.out.println(
+          "%% DBG extra k="
+              + k
+              + " prefixes="
+              + Arrays.toString(prefixes)
+              + " kept="
+              + kept
+              + " plain="
+              + plain
+              + " tiered="
+              + tiered
+              + " lead="
+              + lead
+              + " base="
+              + before);
     }
     searchStartMin = null;
     searchStartMax = null;
@@ -7156,5 +7261,50 @@ public class LinearRelaxation extends Constraint
   @Override
   public String toString() {
     return id() + " : LinearRelaxation(" + x.length + " columns, " + rows() + " rows)";
+  }
+
+  // DEBUG (remove before PR): writes the rows and root bounds as an LP file, all columns integer
+  private void dbgDumpLp(String file, int count, long[] lo, long[] hi) {
+    try (java.io.PrintWriter w = new java.io.PrintWriter(file)) {
+      w.println(maximize ? "Maximize" : "Minimize");
+      w.println(" obj: x0");
+      w.println("Subject To");
+      for (int i = 0; i < count; i++) {
+        StringBuilder b = new StringBuilder();
+        for (int k = 0; k < rowColumns[i].length; k++) {
+          long c = rowWeights[i][k];
+          b.append(c >= 0 ? " + " : " - ")
+              .append(Math.abs(c))
+              .append(" x")
+              .append(rowColumns[i][k]);
+        }
+        if (hasHi[i] && hasLo[i] && rowHi[i] == rowLo[i]) {
+          w.println(" r" + i + ":" + b + " = " + rowHi[i]);
+        } else {
+          if (hasHi[i]) {
+            w.println(" r" + i + "u:" + b + " <= " + rowHi[i]);
+          }
+          if (hasLo[i]) {
+            w.println(" r" + i + "l:" + b + " >= " + rowLo[i]);
+          }
+        }
+      }
+      w.println("Bounds");
+      for (int j = 0; j < lo.length; j++) {
+        w.println(" " + lo[j] + " <= x" + j + " <= " + hi[j]);
+      }
+      w.println("General");
+      for (int j = 0; j < lo.length; j++) {
+        w.println(" x" + j);
+      }
+      w.println("End");
+      try (java.io.PrintWriter m = new java.io.PrintWriter(file + ".map")) {
+        for (int j = 0; j < lo.length; j++) {
+          m.println(j + " " + (j < x.length ? x[j].id() : "?"));
+        }
+      }
+    } catch (java.io.IOException e) {
+      throw new IllegalStateException(e);
+    }
   }
 }
