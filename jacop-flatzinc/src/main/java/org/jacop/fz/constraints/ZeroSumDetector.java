@@ -339,8 +339,12 @@ public class ZeroSumDetector implements ParserTreeConstants {
         }
       }
       replaced.add(d.node);
-      if (kept.contains(d.s) && support.options.presolve() != Options.Presolve.OFF) {
-        // presolve may eliminate terms; the sum keeps the value of s right
+      if (kept.contains(d.s)
+          && (support.options.presolve() != Options.Presolve.OFF
+              || support.dictionary.isDeclaredEqual(d.s)
+              || support.dictionary.isAliasTarget(d.s))) {
+        // presolve may eliminate terms; the sum keeps the value of s right. A variable declared
+        // equal to s, or an alias of it, is printed from s, which must keep its value
         support.pose(groundSum(d));
       } else {
         // s is not constrained otherwise: its value follows from the terms when a solution is
