@@ -246,6 +246,136 @@ class PermutationElementSumsFlatzincTest {
     return fzn.append("solve satisfy;\n").toString();
   }
 
+  @Test
+  void randomFunctionTablesKeepAllSolutions() throws IOException {
+    Random random = new Random(5);
+    int fired = 0;
+    for (int trial = 0; trial < 100; trial++) {
+      String fzn = randomTableModel(random);
+      Set<String> off;
+      System.setProperty(SUMS, "false");
+      try {
+        off = solutions(run(fzn, "-a"));
+      } finally {
+        System.clearProperty(SUMS);
+      }
+      String on = run(fzn, "-a", "--search-statistics");
+      if (on.contains("permutationElementCounts=") && !on.contains("permutationElementCounts=0")) {
+        fired++;
+      }
+      assertEquals(off, solutions(on), "trial " + trial + "\n" + fzn);
+    }
+    assertTrue(fired > 10, "fired " + fired);
+  }
+
+  // n indices x_k all different over 0..u-1 (mostly u = n, a permutation), and for most k a table
+  // of the pairs (x_k,
+  // g_k) or (g_k, x_k) with g_k = f(x_k) for one function f of few values, sometimes with a pair
+  // more (no function then), and a linear constraint on the g_k
+  private static String randomTableModel(Random random) {
+    int n = 3 + random.nextInt(3);
+    int u = n + (random.nextInt(4) == 0 ? 1 : 0);
+    // two groups half of the time: the counts are posted only for at most u / 2 distinct values
+    int groups = 2 + random.nextInt(2);
+    int[] f = new int[u];
+    for (int j = 0; j < u; j++) {
+      f[j] = random.nextInt(groups);
+    }
+    StringBuilder fzn = new StringBuilder();
+    StringBuilder xs = new StringBuilder();
+    StringBuilder gs = new StringBuilder();
+    StringBuilder ws = new StringBuilder();
+    for (int k = 0; k < n; k++) {
+      fzn.append("var 0..").append(u - 1).append(": x_").append(k);
+      fzn.append(";\nvar 0..2: g_").append(k).append(";\n");
+      xs.append(k == 0 ? "" : ",").append("x_").append(k);
+      gs.append(k == 0 ? "" : ",").append("g_").append(k);
+      ws.append(k == 0 ? "" : ",").append(1 + random.nextInt(3));
+    }
+    fzn.append("array [1..").append(n).append("] of var int: x:: output_array([1..").append(n);
+    fzn.append("]) = [").append(xs).append("];\n");
+    fzn.append("array [1..").append(n).append("] of var int: g:: output_array([1..").append(n);
+    fzn.append("]) = [").append(gs).append("];\n");
+    fzn.append("constraint jacop_alldiff([").append(xs).append("]);\n");
+    for (int k = 0; k < n; k++) {
+      if (random.nextInt(16) == 0) {
+        continue;
+      }
+      boolean swap = random.nextBoolean();
+      StringBuilder pairs = new StringBuilder();
+      for (int j = 0; j < u; j++) {
+        pair(pairs, swap, j, f[j]);
+      }
+      if (random.nextInt(10) == 0) {
+        pair(pairs, swap, random.nextInt(u), random.nextInt(3));
+      }
+      fzn.append("constraint jacop_table_int([");
+      fzn.append(swap ? "g_" + k + ",x_" + k : "x_" + k + ",g_" + k);
+      fzn.append("],[").append(pairs).append("]);\n");
+    }
+    int sum = random.nextInt(4 * n) + 1;
+    fzn.append("constraint int_lin_le([").append(ws).append("],[").append(gs).append("],");
+    fzn.append(sum).append(");\n");
+    return fzn.append("solve satisfy;\n").toString();
+  }
+
+  private static void pair(StringBuilder pairs, boolean swap, int x, int g) {
+    pairs.append(pairs.isEmpty() ? "" : ",");
+    pairs.append(swap ? g + "," + x : x + "," + g);
+  }
+
+  // the mystery shopper (CSPLib prob004) in miniature: n visitees, each visited by one of n
+  // visitors a week over w weeks, a permutation each week; the visitor groups, a table of the
+  // visitor, differ over the weeks of a visitee, so each of the w groups visits each visitee once
+  private static String shopper(int[] groupSizes) {
+    int w = groupSizes.length;
+    int n = Arrays.stream(groupSizes).sum();
+    StringBuilder pairs = new StringBuilder();
+    int v = 0;
+    for (int g = 0; g < w; g++) {
+      for (int k = 0; k < groupSizes[g]; k++) {
+        pairs.append(v == 0 ? "" : ",").append(v++).append(',').append(g);
+      }
+    }
+    StringBuilder fzn = new StringBuilder();
+    for (int i = 0; i < n; i++) {
+      for (int t = 0; t < w; t++) {
+        fzn.append("var 0..").append(n - 1).append(": r_").append(i).append('_').append(t);
+        fzn.append(":: output_var;\nvar 0..").append(w - 1).append(": rg_").append(i).append('_');
+        fzn.append(t).append(";\n");
+      }
+    }
+    for (int t = 0; t < w; t++) {
+      StringBuilder week = new StringBuilder();
+      for (int i = 0; i < n; i++) {
+        week.append(i == 0 ? "" : ",").append("r_").append(i).append('_').append(t);
+        fzn.append("constraint jacop_table_int([r_").append(i).append('_').append(t);
+        fzn.append(",rg_").append(i).append('_').append(t).append("],[").append(pairs);
+        fzn.append("]);\n");
+      }
+      fzn.append("constraint jacop_alldiff([").append(week).append("]);\n");
+    }
+    for (int i = 0; i < n; i++) {
+      StringBuilder groups = new StringBuilder();
+      for (int t = 0; t < w; t++) {
+        groups.append(t == 0 ? "" : ",").append("rg_").append(i).append('_').append(t);
+      }
+      fzn.append("constraint jacop_alldiff([").append(groups).append("]);\n");
+    }
+    return fzn.append("solve satisfy;\n").toString();
+  }
+
+  @Test
+  void shopperWithUnequalGroupsIsRefutedByTheCounts() throws IOException {
+    // 3 groups over 3 weeks: each group makes 3 s visits, which must be the 11 visitees
+    String out = run(shopper(new int[] {4, 4, 3}), "-s", "--search-statistics");
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+    assertTrue(out.contains("%%%mzn-stat: permutationElementCounts=3\n"), out);
+    // equal groups have solutions, and the counts keep them
+    out = run(shopper(new int[] {3, 3, 3}), "-s", "--search-statistics");
+    assertTrue(out.contains("----------"), out);
+  }
+
   private static void element(StringBuilder fzn, String x, String array, String y, int first) {
     if (first == 1) {
       fzn.append("constraint array_int_element(").append(x).append(',').append(array);
