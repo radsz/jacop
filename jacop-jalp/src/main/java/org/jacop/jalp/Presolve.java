@@ -551,7 +551,8 @@ final class Presolve {
     "parallelrow",
     "parallelcol",
     "forcingrow",
-    "dominatedcol"
+    "dominatedcol",
+    "aggregatedcol"
   };
 
   // writes the reductions to the trace (org.jacop.jalp.trace)
