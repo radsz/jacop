@@ -8371,7 +8371,8 @@ Version 5.0 (unreleased)
    the 2-partition inequalities with one node on one side. A value Boolean
    b <-> x = v counts as the pair of x with an anchor node of value v, so
    a node fixed by value precedence keeps its pairs. Only partitions whose
-   pairs the objective sums within three rows get cuts. Community
+   pairs the objective sums within three rows get cuts, and the cuts are
+   kept only if they raise the root bound by 2 % or more. Community
    detection Zakhary.s12.k3 of the Challenge 2024 is proved at the root
    (-f 96 s -> 3 s), Zakhary.s12.k4 157 s -> 4 s, mexican.s26.k4 215 s ->
    2 s. On the 34 Challenge instances where a partition is found, at

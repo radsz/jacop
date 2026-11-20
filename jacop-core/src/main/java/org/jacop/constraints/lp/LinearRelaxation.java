@@ -767,6 +767,12 @@ public class LinearRelaxation extends Constraint
   private static final int PARTITION_ROUNDS =
       Integer.getInteger("org.jacop.lp.partitionRounds", 100);
 
+  // the least share of the bound that the partition cuts must raise it by to be kept: on
+  // wedding_optimal_chart they raise 311 to 308 (optimum 276), and the search without LCG then
+  // solves the relaxation at 44,620 nodes instead of 17 (2.7 s -> 40 s)
+  private static final double PARTITION_GAIN =
+      Double.parseDouble(System.getProperty("org.jacop.lp.partitionGain", "0.02"));
+
   // the tag and source of the partition rows and cuts
   private static final String PARTITION = "partition";
 
@@ -5376,7 +5382,8 @@ public class LinearRelaxation extends Constraint
             },
             PARTITION_ROUNDS,
             true,
-            true);
+            true,
+            PARTITION_GAIN);
     partitionCuts += result[1];
     if (result[0] == LpSolver.OPTIMAL) {
       partitionBound = lp.value(0);
@@ -5484,19 +5491,23 @@ public class LinearRelaxation extends Constraint
    */
   private long[] separatedRounds(
       java.util.function.Supplier<List<MirCut>> separation, int rounds, boolean toSparse) {
-    return separatedRounds(separation, rounds, toSparse, false);
+    return separatedRounds(separation, rounds, toSparse, false, 0);
   }
 
   // as above; with roomFirst, a dense tableau without room for a round of cuts moves to the sparse
   // simplex before the first round (and back if no cut is kept): the tried rows can fill the dense
   // tableau up to its cap before any cut (community detection rnd_n50_e2500 of the Challenge 2021:
-  // 1,610 rows and 2,934 violated triangle cuts, none of which fitted)
+  // 1,610 rows and 2,934 violated triangle cuts, none of which fitted); cuts that raise the bound
+  // by less than minGain of it are dropped again
   private long[] separatedRounds(
       java.util.function.Supplier<List<MirCut>> separation,
       int rounds,
       boolean toSparse,
-      boolean roomFirst) {
+      boolean roomFirst,
+      double minGain) {
     double start = lp.value(0);
+    // whether the rows and cuts moved to the sparse simplex for good, after which the cuts stay
+    boolean committed = false;
     int firstCount = rows();
     LpSolver first = lp.copy();
     int[] firstRows = lpRow;
@@ -5523,6 +5534,7 @@ public class LinearRelaxation extends Constraint
         // needs about 1,300 tree cuts, which the dense cap stops at a third of the bound's gain);
         // the bound has moved, so the cuts are not dropped at the end either
         forgetDense();
+        committed = true;
       }
       List<MirCut> found = separation.get();
       found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
@@ -5563,6 +5575,7 @@ public class LinearRelaxation extends Constraint
             forced = true;
           } else {
             forgetDense();
+            committed = true;
           }
           for (MirCut row : chosen) {
             seen.remove(key(row));
@@ -5578,10 +5591,13 @@ public class LinearRelaxation extends Constraint
       boolean moved = Math.abs(lp.value(0) - before) > 1e-6 * (1 + Math.abs(before));
       stall = moved ? 0 : stall + 1;
     }
+    double gain = Math.abs(lp.value(0) - start);
     if (status == DualSimplex.OPTIMAL
         && added > 0
-        && Math.abs(lp.value(0) - start) <= 1e-6 * (1 + Math.abs(start))) {
-      // cuts that do not move the bound only make each solve dearer
+        && (gain <= 1e-6 * (1 + Math.abs(start))
+            || !committed && gain < minGain * Math.max(1, Math.abs(start)))) {
+      // cuts that do not move the bound, or by less than minGain of it, only make each solve
+      // dearer
       dropCuts(added, first, firstRows);
       added = 0;
     }
