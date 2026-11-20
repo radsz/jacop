@@ -244,20 +244,19 @@ public class LinearRelaxation extends Constraint
   private static final int POOL_AGE = Integer.getInteger("org.jacop.lp.poolAge", 100);
   private static final boolean POOL_EXTRA = Boolean.getBoolean("org.jacop.lp.poolExtra");
   private static final boolean POOL_CUTS = Boolean.getBoolean("org.jacop.lp.poolCuts");
+  // whether the clause rows over columns already in the relaxation that are past the share of the
+  // further rows are tried after them (fitsSimplex, addExtraRows)
+  static final boolean CLAUSE_ROWS = Boolean.getBoolean("org.jacop.lp.clauseRows");
   // whether the MIR cuts of the rows also substitute variable bounds x <= a u, x >= a u
   // (MirCut.ofVariableBounds)
-  // whether clause rows over columns already in the relaxation are outside the share of the
-  // further rows (fitsSimplex)
-  static final boolean CLAUSE_ROWS = Boolean.getBoolean("org.jacop.lp.clauseRows");
   static final boolean VB_MIR = Boolean.getBoolean("org.jacop.lp.vbMir");
+  // the variable bounds of the rows, read once at the first cut round
   private MirCut.VariableBounds variableBounds;
   private boolean variableBoundsRead;
 
   /** The MIR cuts made with variable bounds substituted. */
   public long vbCuts;
 
-  private static final boolean DBG_CENSUS = Boolean.getBoolean("dbgCensus");
-  private static final java.util.Map<String, Integer> DBG_NONE = new java.util.TreeMap<>();
   private static final long WORK = Long.getLong("org.jacop.lp.work", 20_000_000L);
   private static final long ROOT_WORK = Long.getLong("org.jacop.lp.rootWork", 1_000_000_000L);
 
@@ -1457,18 +1456,7 @@ public class LinearRelaxation extends Constraint
         List<LinearForm> rows = Linearizations.of(c);
         relaxed.addAll(rows);
         tag(tags, rows, "lin:" + c.getClass().getSimpleName());
-        if (DBG_CENSUS && rows.isEmpty()) {
-          DBG_NONE.merge(c.getClass().getSimpleName(), 1, Integer::sum);
-        }
-      } else if (DBG_CENSUS) {
-        DBG_NONE.merge(
-            (f == null ? "linked/off:" : "ne/unary:") + c.getClass().getSimpleName(),
-            1,
-            Integer::sum);
       }
-    }
-    if (DBG_CENSUS) {
-      System.out.println("%% DBG no LP rows from: " + DBG_NONE + " extra=" + extra.size());
     }
     // like the linearized rows, they are kept only when they help the root relaxation: the
     // clauses of lazy clause generation make thousands of rows on some models (rel2onto: 65 rows
@@ -1704,9 +1692,6 @@ public class LinearRelaxation extends Constraint
                 + first
                 + (bySparse && leading.isEmpty() ? encoded : 0)
             : Long.MAX_VALUE;
-    if (Boolean.getBoolean("dbgShareAll")) {
-      share = Long.MAX_VALUE;
-    }
     List<LinearForm> tail = CLAUSE_ROWS ? new ArrayList<>() : null;
     if (!fitsSimplex(localForms, candidates, simplex, auto, share, own, further, tail)
         && objective != null) {
@@ -4827,9 +4812,6 @@ public class LinearRelaxation extends Constraint
     }
     int original = rows();
     long cutsAtStart = cuts;
-    if (System.getProperty("dbgDumpLp") != null && !restarting) {
-      dbgDumpLp(System.getProperty("dbgDumpLp"), original, lo, hi);
-    }
     // the rows themselves, sorted once: each round then costs their length, not rows x columns
     Aggregate[] unitRows = new Aggregate[original];
     for (int i = 0; i < original; i++) {
@@ -6552,23 +6534,6 @@ public class LinearRelaxation extends Constraint
         }
       }
     }
-    if (DBG_CENSUS) {
-      System.out.println(
-          "%% DBG extra k="
-              + k
-              + " prefixes="
-              + Arrays.toString(prefixes)
-              + " kept="
-              + kept
-              + " plain="
-              + plain
-              + " tiered="
-              + tiered
-              + " lead="
-              + lead
-              + " base="
-              + before);
-    }
     searchStartMin = null;
     searchStartMax = null;
     leadKept = full != null && lead > 0 && kept == lead;
@@ -7390,50 +7355,5 @@ public class LinearRelaxation extends Constraint
   @Override
   public String toString() {
     return id() + " : LinearRelaxation(" + x.length + " columns, " + rows() + " rows)";
-  }
-
-  // DEBUG (remove before PR): writes the rows and root bounds as an LP file, all columns integer
-  private void dbgDumpLp(String file, int count, long[] lo, long[] hi) {
-    try (java.io.PrintWriter w = new java.io.PrintWriter(file)) {
-      w.println(maximize ? "Maximize" : "Minimize");
-      w.println(" obj: x0");
-      w.println("Subject To");
-      for (int i = 0; i < count; i++) {
-        StringBuilder b = new StringBuilder();
-        for (int k = 0; k < rowColumns[i].length; k++) {
-          long c = rowWeights[i][k];
-          b.append(c >= 0 ? " + " : " - ")
-              .append(Math.abs(c))
-              .append(" x")
-              .append(rowColumns[i][k]);
-        }
-        if (hasHi[i] && hasLo[i] && rowHi[i] == rowLo[i]) {
-          w.println(" r" + i + ":" + b + " = " + rowHi[i]);
-        } else {
-          if (hasHi[i]) {
-            w.println(" r" + i + "u:" + b + " <= " + rowHi[i]);
-          }
-          if (hasLo[i]) {
-            w.println(" r" + i + "l:" + b + " >= " + rowLo[i]);
-          }
-        }
-      }
-      w.println("Bounds");
-      for (int j = 0; j < lo.length; j++) {
-        w.println(" " + lo[j] + " <= x" + j + " <= " + hi[j]);
-      }
-      w.println("General");
-      for (int j = 0; j < lo.length; j++) {
-        w.println(" x" + j);
-      }
-      w.println("End");
-      try (java.io.PrintWriter m = new java.io.PrintWriter(file + ".map")) {
-        for (int j = 0; j < lo.length; j++) {
-          m.println(j + " " + (j < x.length ? x[j].id() : "?"));
-        }
-      }
-    } catch (java.io.IOException e) {
-      throw new IllegalStateException(e);
-    }
   }
 }
