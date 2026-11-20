@@ -150,6 +150,7 @@ import org.jacop.constraints.diffn.DiffnK;
 import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.graph.BoundedPath;
 import org.jacop.constraints.graph.ColouredSpanningTreeBound;
+import org.jacop.constraints.graph.Dag;
 import org.jacop.constraints.graph.Path;
 import org.jacop.constraints.graph.Reachable;
 import org.jacop.constraints.graph.Steiner;
@@ -455,6 +456,7 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("DReachable", graph("Reachable", true)),
         Arguments.of("Connected", graph("Connected", false)),
         Arguments.of("DConnected", graph("Connected", true)),
+        Arguments.of("Dag", graph("Dag", true)),
         Arguments.of("Tree", graph("Tree", false)),
         Arguments.of("DTree", graph("Tree", true)),
         Arguments.of("Path", graph("Path", false)),
@@ -1714,7 +1716,7 @@ class GlobalConstraintBruteForceTest {
       }
       int roots =
           switch (kind) {
-            case "Connected" -> 0;
+            case "Connected", "Dag" -> 0;
             case "Path" -> 2;
             default -> 1;
           };
@@ -1739,6 +1741,7 @@ class GlobalConstraintBruteForceTest {
                       new Reachable(fromNumber, toNumber, x[n + m], ns, es, base, directed));
               case "Connected" ->
                   store.impose(new Reachable(fromNumber, toNumber, null, ns, es, base, directed));
+              case "Dag" -> store.impose(new Dag(fromNumber, toNumber, ns, es, base));
               case "Tree" ->
                   store.imposeDecomposition(
                       new Tree(fromNumber, toNumber, x[n + m], ns, es, base, directed));
@@ -1755,6 +1758,7 @@ class GlobalConstraintBruteForceTest {
             return switch (kind) {
               case "Reachable" -> GraphSemantics.reachable(from, to, ns, es, r, directed);
               case "Connected" -> GraphSemantics.connected(from, to, ns, es, directed);
+              case "Dag" -> GraphSemantics.dag(from, to, ns, es);
               case "Tree" ->
                   directed
                       ? GraphSemantics.dtree(from, to, ns, es, r)
