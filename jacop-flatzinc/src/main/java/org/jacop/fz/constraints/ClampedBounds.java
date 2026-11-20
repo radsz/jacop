@@ -115,6 +115,12 @@ public final class ClampedBounds {
   private static final int HULL = 7;
   private static final int POW = 8;
 
+  // int_eq_reif(u, v, b): b -> {u, v}, read to bound a variable that an if-then-else makes equal
+  // to one of several values
+  private final Map<IntVar, List<IntVar[]>> equalityReifications = new IdentityHashMap<>();
+  // jacop_if_then_else_bool(c, x, true): {c, x}
+  private final List<IntVar[][]> trueIfThenElses = new ArrayList<>();
+
   /**
    * Collects the linear rows of the model and the occurrences of its narrowed variables.
    *
@@ -143,6 +149,63 @@ public final class ClampedBounds {
       }
     }
     support.forEachConstraint(astTree, node -> collect(support, node));
+    for (IntVar[][] ite : trueIfThenElses) {
+      chosenValue(ite[0], ite[1]);
+    }
+  }
+
+  /*
+   * jacop_if_then_else_bool(c, x, true) makes x[i] true for the first true c[i]. When every x[i]
+   * that can be chosen is defined by int_eq_reif(v, a[i], x[i]) over one variable v and a
+   * condition is fixed true, every solution gives v one of the a[i]: v lies in their hull.
+   */
+  private void chosenValue(IntVar[] c, IntVar[] x) {
+    List<List<IntVar[]>> chosen = new ArrayList<>();
+    boolean total = false;
+    for (int i = 0; i < c.length && i < x.length && !total; i++) {
+      if (c[i].singleton(0) || x[i].singleton(0)) {
+        continue; // never chosen, or chosen only in no solution
+      }
+      List<IntVar[]> pairs = equalityReifications.get(x[i]);
+      if (pairs == null || x[i].singleton(1)) {
+        return;
+      }
+      chosen.add(pairs);
+      total = c[i].singleton(1);
+    }
+    if (!total || chosen.isEmpty()) {
+      return;
+    }
+    for (IntVar[] first : chosen.getFirst()) {
+      for (IntVar v : first) {
+        if (v.singleton()) {
+          continue;
+        }
+        IntVar[] values = new IntVar[chosen.size()];
+        for (int i = 0; i < chosen.size() && values != null; i++) {
+          values[i] = otherSide(chosen.get(i), v);
+          if (values[i] == null) {
+            values = null;
+          }
+        }
+        if (values != null) {
+          functions.add(withArgs(HULL, v, values));
+        }
+      }
+    }
+  }
+
+  // the other side of a reified equality over v, or null
+  private static IntVar otherSide(List<IntVar[]> pairs, IntVar v) {
+    for (IntVar[] p : pairs) {
+      if (p[0] == v && p[1] != v) {
+        return p[1];
+      }
+      if (p[1] == v && p[0] != v) {
+        return p[0];
+      }
+    }
+    return null;
   }
 
   private int id(IntVar v) {
@@ -272,6 +335,20 @@ public final class ClampedBounds {
           IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(1));
           IntVar z = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
           functions.add(withArgs(HULL, z, x));
+        }
+        case "int_eq_reif" -> {
+          IntVar u = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+          IntVar v = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+          IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+          equalityReifications.computeIfAbsent(b, _ -> new ArrayList<>()).add(new IntVar[] {u, v});
+        }
+        case "jacop_if_then_else_bool" -> {
+          IntVar[] c = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+          IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+          IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+          if (y.singleton(1)) {
+            trueIfThenElses.add(new IntVar[][] {c, x});
+          }
         }
         case "bool2int" -> {
           IntVar z = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));

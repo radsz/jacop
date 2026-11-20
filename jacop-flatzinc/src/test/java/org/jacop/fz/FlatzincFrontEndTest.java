@@ -1558,6 +1558,34 @@ class FlatzincFrontEndTest {
     assertTrue(out[0].endsWith("m = 25;\n----------\n==========\n"), out[0]);
   }
 
+  /**
+   * An unbounded variable that an if-then-else makes equal to one of several values (MZNC 2025
+   * work-task-variation: jacop_if_then_else_bool over int_eq_reif) lies in their hull, so the
+   * optimality claim stands.
+   */
+  @Test
+  void unboundedVariableChosenByAnIfThenElseIsBoundedByItsValues() throws IOException {
+    String model =
+        """
+        var int: m;
+        var int: cost :: output_var;
+        var 0..7: y;
+        var bool: c;
+        var bool: b1;
+        var bool: b2;
+        constraint int_eq_reif(m, 0, b1);
+        constraint int_eq_reif(m, y, b2);
+        constraint jacop_if_then_else_bool([c, %s], [b1, b2], true);
+        constraint int_lin_eq([1, -1], [cost, m], 0);
+        solve maximize cost;
+        """;
+    String[] out = run(model.formatted("true"));
+    assertTrue(out[0].endsWith("cost = 7;\n----------\n==========\n"), out[0]);
+    // no condition is fixed true: when none holds, m is free, and nothing is claimed
+    out = run(model.formatted("c"));
+    assertTrue(out[0].contains("----------\n") && !out[0].contains("=========="), out[0]);
+  }
+
   @Test
   void timeOutOfTheCompletionSearchIsNotReportedUnsatisfiable() throws IOException {
     // hakank's farmer_and_cows: the annotated search labels x, and the search that completes the
