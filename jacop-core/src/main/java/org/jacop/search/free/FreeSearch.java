@@ -180,6 +180,8 @@ public final class FreeSearch {
   private final int maxNogoodLength;
   private RestartNoGoods nogoods;
   private boolean runEndedByFailure;
+  // set by resume: the nogoods stay for the next call, and a run the limit stops learns them too
+  private boolean resumable;
   private IntVar[] nogoodVars = new IntVar[16];
   private int[] nogoodValues = new int[16];
 
@@ -345,8 +347,11 @@ public final class FreeSearch {
 
   /**
    * Runs the search again after {@link #solve} ended at its limit, with new limits: the restart
-   * sequence, the heuristics' weights and the saved phases go on where they stopped, while the
-   * nogoods of the earlier runs are dropped. The store must be at the level of the first call.
+   * sequence, the heuristics' weights, the saved phases and the nogoods learned from restarts go on
+   * where they stopped, and the run the limit stopped gives its nogoods too, so that the searches
+   * of all calls together refute what one search of their length would. The store must be at the
+   * level of the first call, with the same domains or narrower ones, and the nogoods must still
+   * hold: the search must have no objective bound, or one that only tightens.
    *
    * @param deadline the wall-clock deadline in epoch milliseconds, or 0 for none
    * @param timeLimit the time limit in milliseconds, counted from now (on the virtual clock when it
@@ -357,6 +362,7 @@ public final class FreeSearch {
     deadlineMillis = deadline;
     timeLimitMillis = timeLimit;
     limitReached = false;
+    resumable = true;
     return solve();
   }
 
@@ -378,11 +384,20 @@ public final class FreeSearch {
       // changes made at the root stay in a level of their own, removed at the end
       store.setLevel(startLevel + 1);
       rootLevel = store.level;
-      if (learnNogoods) {
+      boolean refuted = false;
+      if (learnNogoods && resumable && nogoods != null) {
+        store.impose(nogoods);
+        try {
+          nogoods.reattach();
+        } catch (FailException _) {
+          // a nogood of one literal empties a domain: the earlier calls refuted the whole tree
+          refuted = true;
+        }
+      } else if (learnNogoods) {
         nogoods = new RestartNoGoods(store, maxNogoods, maxNogoodLength);
         store.impose(nogoods);
       }
-      if (!store.consistency()) {
+      if (refuted || !store.consistency()) {
         exhausted = true;
       } else {
         for (SearchMonitor m : monitors) {
@@ -459,6 +474,13 @@ public final class FreeSearch {
         return true;
       }
       if (end == RunEnd.STOP) {
+        if (resumable && nogoods != null && !conditionalRun && !probe) {
+          // the next call goes on without the subtrees this run refuted
+          int depth = stackSize;
+          unwind();
+          runEndedByFailure = false;
+          learnNogoods(depth);
+        }
         return false;
       }
       restartCount++;

@@ -103,6 +103,10 @@ public final class RestartNoGoods extends Constraint {
   private int pendingSize;
 
   private boolean failedAtRoot;
+  // the nogoods of one literal, which prune at the root at once instead of being kept
+  private int[] unitVar = new int[4];
+  private int[] unitValue = new int[4];
+  private int unitCount;
   private long added;
   private long deleted;
 
@@ -134,6 +138,36 @@ public final class RestartNoGoods extends Constraint {
   public void detach() {
     for (int i = 0; i < varCount; i++) {
       store.deregisterWatchedLiteralConstraint(vars[i], this);
+    }
+  }
+
+  /**
+   * Attaches the nogoods again after {@link #detach}, for a search that goes on from a root whose
+   * domains are those of the earlier root or narrower: the variables are watched again, the nogoods
+   * of one literal prune again, and each variable fixed now is queued so that the next propagation
+   * visits the nogoods it makes true. The nogoods must still be implied at the new root, as those
+   * of a search without an objective bound or with a bound that only tightens are.
+   */
+  public void reattach() {
+    for (int i = 0; i < varCount; i++) {
+      store.registerWatchedLiteralConstraint(vars[i], this);
+    }
+    pendingSize = 0;
+    if (failedAtRoot) {
+      store.addChanged(this);
+      return;
+    }
+    for (int u = 0; u < unitCount; u++) {
+      IntVar x = vars[unitVar[u]];
+      x.domain.inComplement(store.level, x, unitValue[u]);
+    }
+    for (int i = 0; i < varCount; i++) {
+      if (vars[i].singleton()) {
+        queueVariable(store.level, vars[i]);
+      }
+    }
+    if (pendingSize > 0) {
+      store.addChanged(this);
     }
   }
 
@@ -195,6 +229,12 @@ public final class RestartNoGoods extends Constraint {
     }
     if (size == 1) {
       IntVar x = vars[litVar[first]];
+      if (unitCount == unitVar.length) {
+        unitVar = Arrays.copyOf(unitVar, 2 * unitCount);
+        unitValue = Arrays.copyOf(unitValue, 2 * unitCount);
+      }
+      unitVar[unitCount] = litVar[first];
+      unitValue[unitCount++] = litValue[first];
       x.domain.inComplement(store.level, x, litValue[first]);
       return;
     }
