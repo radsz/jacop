@@ -8534,6 +8534,18 @@ Version 5.0 (unreleased)
    with an 80,000-variable all-different ran out of a 4 GB heap at the
    root, and now reaches its answer in 9 s. The cuts are the same.
 
+478. The JaLP presolve treats a long row of column singletons in linear
+   time. The implied-free test of each singleton read the whole row; it
+   now first tests the row activity, kept while no bound, column or
+   entry changes, and reads the row only when that test does not fail
+   by more than its rounding error. The search for parallel columns
+   tried every earlier column of the same pattern; it now tries only
+   those of about the same cost over their first entry, latest first.
+   The reductions are the same (20,000 random LPs, with the activity
+   test on every row). A row of 100,000 singletons that differ in cost
+   is solved in 0.2 s instead of about a minute (50,000: 16 s), and a 40,000
+   term FlatZinc sum of bool2int over a conjunction from 32 s to 25 s.
+
 Version 4.11
 =============
 
