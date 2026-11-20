@@ -282,8 +282,8 @@ public class Options {
                 relaxation has value columns, or under -f tree cuts),
                 rect-placement=first|always|off (with --lcg: the runs of the default
                 branching place the rectangles of diffn constraints one at a time, bottom-left,
-                before the other decisions until the first solution (first, default), in all
-                of them (always), or never),
+                before the other decisions until the first solution (first, default; not in
+                satisfaction models), in all of them (always), or never),
                 slot-dive=on|off (with --lcg, optimisation: before the search a dive without
                 learning fills the variables of a cardinality with fixed counts that covers the
                 search variables in model order, largest value first, and its solution starts

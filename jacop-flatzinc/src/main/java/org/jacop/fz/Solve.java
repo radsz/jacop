@@ -4699,12 +4699,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     SelectChoicePoint<? extends Var> ints = lcgDefaultIntSelect(costVar);
     IntVar[][] rectangles = openRectangles();
     rectangleCount = rectangles.length;
-    if (rectangles.length > 0 && !"off".equals(options.freeConfig("rect-placement", "first"))) {
+    String placement = options.freeConfig("rect-placement", "first");
+    // in a satisfaction model "until the first solution" is every run, as with always, and a
+    // static placement leaves dom/wdeg and activity nothing to learn: XCSP 2023 SquarePackingSuite
+    // (squares 1..n in a box of their total area) -21 took 15 s instead of 1 s, -23 and -27 found
+    // no solution in 240 s instead of 146 s and 20-60 s
+    if ("first".equals(placement) && costVar == null) {
+      placement = "off";
+    }
+    if (rectangles.length > 0 && !"off".equals(placement)) {
       // a packing model: the rectangles placed one at a time, bottom-left, before the rest. On the
       // coal stockyard of XCSP 2024 Cargo (stockpiles as rectangles of day by pad position with a
       // variable stay) set times on the stacking starts found no first solution in 600 s on
       // Cargo-16, 19 and 20: the early starts make the stays long and the pads overflow
-      boolean always = "always".equals(options.freeConfig("rect-placement", "first"));
+      boolean always = "always".equals(placement);
       // until the first solution only: placed in every run of this branching, Cargo-07 lost its
       // proof and Cargo-10 ended at 25,850 and 7,750 instead of 5,645 (two seeds at 240 s)
       RectanglePlacementSelect place =
