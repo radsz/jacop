@@ -115,7 +115,7 @@ public class AbsoluteDifferenceDetector implements ParserTreeConstants {
       IntVar y,
       Integer first,
       Integer last,
-      List<SimpleNode> holes) {}
+      List<Disequality> holes) {}
 
   private final List<Rewrite> rewrites = new ArrayList<>();
 
@@ -223,7 +223,7 @@ public class AbsoluteDifferenceDetector implements ParserTreeConstants {
     int bounds = 0;
     int holes = 0;
     for (Rewrite r : rewrites) {
-      if (!all() && !inCliques.containsAll(r.holes())) {
+      if (!all() && !r.holes().stream().allMatch(d -> inCliques.contains(d.token()))) {
         continue;
       }
       if (r.first() != null) {
@@ -237,8 +237,8 @@ public class AbsoluteDifferenceDetector implements ParserTreeConstants {
         bounds++;
       }
       holes += r.holes().size();
-      for (Disequality d : disequalities) {
-        if (r.holes().contains(d.token()) && !inCliques.contains(d.token())) {
+      for (Disequality d : r.holes()) {
+        if (!inCliques.contains(d.token())) {
           // x - y != d, that is y + d != x
           support.pose(new XplusCneqZ(d.y(), d.d(), d.x()));
         }
@@ -320,12 +320,11 @@ public class AbsoluteDifferenceDetector implements ParserTreeConstants {
       // no value of x - y is allowed: the constraints are posted and fail
       return;
     }
-    List<SimpleNode> tokens = new ArrayList<>();
+    List<Disequality> inside = new ArrayList<>();
     for (int h : holes) {
-      SimpleNode token = new SimpleNode(JJTCONSTELEM);
-      tokens.add(token);
-      disequalities.add(new Disequality(x, y, h, token));
+      inside.add(new Disequality(x, y, h, new SimpleNode(JJTCONSTELEM)));
     }
+    disequalities.addAll(inside);
     // the values cut off at the ends are disequalities too, which may complete a clique: the
     // corner pair of a queens diagonal has its only excluded difference at the end of the range
     for (long w = lo; w < first && w < lo + maxHoles(); w++) {
@@ -344,7 +343,7 @@ public class AbsoluteDifferenceDetector implements ParserTreeConstants {
             y,
             first > lo ? first : null,
             last < hi ? last : null,
-            tokens));
+            inside));
   }
 
   // in no alias, no declared equality and not output

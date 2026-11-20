@@ -8679,6 +8679,26 @@ Version 5.0 (unreleased)
    18 s, brazil58 proved in 174 s), 25 unsolved tours worse; -f 27 -> 28
    proved, time 11,642 -> 11,044 s, 11 tours worse.
 
+487. The FlatZinc front end rewrites an absolute difference that only
+   excludes values: t = x - y and a = |t|, with t and a used nowhere
+   else, become bounds on x - y and x - y != d for the at most 8 values d
+   (-Dorg.jacop.fz.absoluteDifference.maxHoles) that the domains of t and
+   a exclude inside the range of x - y. The disequalities are read by the
+   all-different detection as stated ones, and a rewrite is made only
+   when all of them end up in all-different constraints (or there are
+   none), so MiniZinc's flattening of abs(q[i] - q[j]) != j - i in
+   n-queens models loses its 2 auxiliary variables and 2 constraints per
+   pair and the diagonals become all-different constraints with offsets.
+   Lone disequalities are not kept: on Rlfap-graph-01 (XCSP 2022, about
+   5 per pair, no clique) they explain worse under lazy clause generation
+   than |t| (optimum proved in 13 s without, not in 240 s with them).
+   CPAI08 at 240 s, solutions checked: queens-100 41 -> 2.5 s, queens-180
+   52 -> 11 s, queens-400 unknown -> 27 s, queens-500 out of memory ->
+   50 s, queensKnights 81-94 -> 6 s. XCSP 2022 BlockedQueens and Rlfap
+   (33 instances, 240 s): total time 3,472 -> 3,253 s, Rlfap-scen-10
+   proved in 44 s; no instance of the wide set fires. Off with
+   -Dorg.jacop.fz.absoluteDifference=false and under --proof.
+
 Version 4.11
 =============
 
