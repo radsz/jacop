@@ -295,6 +295,7 @@ setup to run configuration. -->
                                 <include>**/TspRoutesFlatzincTest.java</include>
                                 <include>**/TspEdgeEliminationFlatzincTest.java</include>
                                 <include>**/TspEdgeEliminationTest.java</include>
+                                <include>**/TspKOptTest.java</include>
                                 <include>**/OrBoolWatchedTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
@@ -390,6 +391,7 @@ setup to run configuration. -->
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/CyclicDistanceFlatzincTest.java</include>
                                 <include>**/IndexFunctionFlatzincTest.java</include>
+                                <include>**/ProductOfSumsFlatzincTest.java</include>
                                 <include>**/TableMddFlatzincTest.java</include>
                                 <include>**/CostAlldifferentFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
@@ -579,6 +581,7 @@ setup to run configuration. -->
                                 <include>**/TspRoutesFlatzincTest.java</include>
                                 <include>**/TspEdgeEliminationFlatzincTest.java</include>
                                 <include>**/TspEdgeEliminationTest.java</include>
+                                <include>**/TspKOptTest.java</include>
                                 <include>**/OrBoolWatchedTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
@@ -679,6 +682,7 @@ setup to run configuration. -->
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/CyclicDistanceFlatzincTest.java</include>
                                 <include>**/IndexFunctionFlatzincTest.java</include>
+                                <include>**/ProductOfSumsFlatzincTest.java</include>
                                 <include>**/TableMddFlatzincTest.java</include>
                                 <include>**/CostAlldifferentFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
@@ -863,6 +867,7 @@ setup to run configuration. -->
                                 <include>**/TspRoutesFlatzincTest.java</include>
                                 <include>**/TspEdgeEliminationFlatzincTest.java</include>
                                 <include>**/TspEdgeEliminationTest.java</include>
+                                <include>**/TspKOptTest.java</include>
                                 <include>**/OrBoolWatchedTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
@@ -963,6 +968,7 @@ setup to run configuration. -->
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/CyclicDistanceFlatzincTest.java</include>
                                 <include>**/IndexFunctionFlatzincTest.java</include>
+                                <include>**/ProductOfSumsFlatzincTest.java</include>
                                 <include>**/TableMddFlatzincTest.java</include>
                                 <include>**/CostAlldifferentFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
@@ -1147,6 +1153,7 @@ setup to run configuration. -->
                                 <include>**/TspRoutesFlatzincTest.java</include>
                                 <include>**/TspEdgeEliminationFlatzincTest.java</include>
                                 <include>**/TspEdgeEliminationTest.java</include>
+                                <include>**/TspKOptTest.java</include>
                                 <include>**/OrBoolWatchedTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
@@ -1245,6 +1252,7 @@ setup to run configuration. -->
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/CyclicDistanceFlatzincTest.java</include>
                                 <include>**/IndexFunctionFlatzincTest.java</include>
+                                <include>**/ProductOfSumsFlatzincTest.java</include>
                                 <include>**/TableMddFlatzincTest.java</include>
                                 <include>**/CostAlldifferentFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>

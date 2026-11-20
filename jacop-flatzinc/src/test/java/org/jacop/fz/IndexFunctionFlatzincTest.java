@@ -190,6 +190,35 @@ class IndexFunctionFlatzincTest {
     }
   }
 
+  /**
+   * A disjunction of two precedences whose durations are looked up by the modes of the tasks keeps
+   * every comparison open for each combination of modes: unfolding it would replace its one
+   * ordering literal by a clause and two reified comparisons per combination (EchoSched).
+   */
+  @Test
+  void disjunctionsWithLookedUpDurationsStayFolded() throws IOException {
+    String model =
+        """
+        var 0..20: s1;
+        var 0..20: s2;
+        var 1..2: m1;
+        var 1..2: m2;
+        var {3, 7}: d1 :: var_is_introduced :: is_defined_var;
+        var {2, 5}: d2 :: var_is_introduced :: is_defined_var;
+        var bool: b1 :: var_is_introduced :: is_defined_var;
+        var bool: b2 :: var_is_introduced :: is_defined_var;
+        constraint array_int_element(m1, [3, 7], d1) :: defines_var(d1);
+        constraint array_int_element(m2, [5, 2], d2) :: defines_var(d2);
+        constraint int_lin_le_imp([1, 1, -1], [s1, d1, s2], 0, b1) :: defines_var(b1);
+        constraint int_lin_le_imp([1, 1, -1], [s2, d2, s1], 0, b2) :: defines_var(b2);
+        constraint bool_clause([b1, b2], []);
+        solve satisfy;
+        """;
+    String on = run(model, true, "-a", "-debug");
+    assertTrue(on.contains("unfolded clauses: 0 "), on);
+    assertEquals(solutions(run(model, false, "-a")), solutions(on));
+  }
+
   private static int solutions(String out) {
     return out.split("----------", -1).length - 1;
   }

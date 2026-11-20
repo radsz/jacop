@@ -74,6 +74,11 @@ final class FunctionalModel {
   // the largest domain of a decision variable, whose values are all tried by a move
   static final int DOMAIN_LIMIT = 64;
 
+  // the most variables a function other than a sum or a product reads: it is evaluated whole after
+  // every trial move, so a count over 10,000 variables made each step of the walk take seconds and
+  // the walk kept 90 % of the time without a solution
+  static final int FUNCTION_INPUTS = 1024;
+
   /** The decision variables. */
   final IntVar[] vars;
 
@@ -344,6 +349,11 @@ final class FunctionalModel {
     }
     if (!nonlinear || decisions < 2) {
       return no(log, nonlinear ? decisions + " decision variables" : "only linear definitions");
+    }
+    for (int v = 0; v < n; v++) {
+      if (kind[v] == FunctionalTabuSearch.FUNCTION && inputs[v].length > FUNCTION_INPUTS) {
+        return no(log, "a function of " + inputs[v].length + " variables: " + definition.get(v));
+      }
     }
     try {
       FunctionalModel model =
