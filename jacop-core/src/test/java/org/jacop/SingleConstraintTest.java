@@ -4272,6 +4272,61 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void channelImplyWakesForXAfterManyZeroFlagsThatNeedNoWake() {
+    // b = 0 never prunes for ChannelImply, so the flag changes are recorded without a wake-up;
+    // once more of them were recorded than there are items, a change of x must still wake it
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 5);
+    IntVar b0 = new IntVar(store, "b0", 0, 1);
+    IntVar b1 = new IntVar(store, "b1", 0, 1);
+    store.impose(new ChannelImply(x, new IntVar[] {b0, b1}, new int[] {0, 1}));
+    assertThat(store.consistency()).isTrue();
+    for (int round = 0; round < 3; round++) {
+      store.setLevel(1);
+      b0.domain.in(1, b0, 0, 0);
+      assertThat(store.consistency()).isTrue();
+      store.removeLevel(1);
+      store.setLevel(0);
+    }
+    store.setLevel(1);
+    x.domain.in(1, x, 2, 5);
+    assertThat(store.consistency()).isTrue();
+    assertThat(b0.singleton(0)).isTrue();
+    assertThat(b1.singleton(0)).isTrue();
+  }
+
+  @Test
+  void channelReifFollowsOnlyTheChangedFlagsAcrossBacktracks() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 5);
+    IntVar[] b = new IntVar[6];
+    for (int i = 0; i < 6; i++) {
+      b[i] = new IntVar(store, "b" + i, 0, 1);
+    }
+    store.impose(new ChannelReif(x, b, new int[] {0, 1, 2, 3, 4, 5}));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    b[2].domain.in(1, b[2], 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.domain.contains(2)).isFalse();
+    store.setLevel(2);
+    b[4].domain.in(2, b[4], 1, 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.singleton(4)).isTrue();
+    for (int i = 0; i < 6; i++) {
+      assertThat(b[i].singleton(i == 4 ? 1 : 0)).as("b%d", i).isTrue();
+    }
+    store.removeLevel(2);
+    store.setLevel(1);
+    assertThat(x.domain.contains(4)).isTrue();
+    store.setLevel(2);
+    b[5].domain.in(2, b[5], 0, 0);
+    b[0].domain.in(2, b[0], 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.domain.toString()).isEqualTo("{1, 3..4}");
+  }
+
+  @Test
   void reachableWithAnOpenRootRemovesNodesNoRootValueReaches() {
     // undirected, root in {0..2, 4}: once node 4 is out, node 3 (only a self-loop) is reached from
     // no root value, but it stayed selectable since no node was selected yet

@@ -270,12 +270,17 @@ abstract class AbstractChannel extends Constraint
 
   @Override
   public void queueVariable(int level, Var v) {
-    if (!incremental || xChanged) {
+    if (!incremental) {
       return;
     }
     if (v == x) {
       xChanged = true;
       wakeUp = true;
+      return;
+    }
+    if (xChanged) {
+      // a full pass follows; it still has to wake up for a 0/1 variable that matters
+      wakeUp |= wakes(v);
       return;
     }
     Integer original = itemOf.get(v.id());
@@ -286,8 +291,7 @@ abstract class AbstractChannel extends Constraint
     if (i < position.value()) {
       return;
     }
-    IntVar b = item[i].b();
-    if (b.min() == 1 || b.max() == 0 && lcgReified()) {
+    if (wakes(v)) {
       wakeUp = true;
     }
     if (pendingSize == n) {
@@ -296,6 +300,12 @@ abstract class AbstractChannel extends Constraint
       return;
     }
     pending[pendingSize++] = original;
+  }
+
+  // whether the change of a 0/1 variable can prune: b = 1 always, b = 0 only for ChannelReif
+  private boolean wakes(Var v) {
+    IntVar b = (IntVar) v;
+    return b.min() == 1 || b.max() == 0 && lcgReified();
   }
 
   @Override
