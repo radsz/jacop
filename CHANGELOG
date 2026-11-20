@@ -8508,6 +8508,24 @@ Version 5.0 (unreleased)
    instances with element or circuit at 240 s 6,369 -> 6,387 s, with only
    3 of them running route neighbourhoods (the rest run unchanged code).
 
+476. Free search (-f) on satisfaction problems no longer hands over from
+   lazy clause generation to search without learning for good when the
+   satisfaction probe finds learning weak or slow: the two alternate in
+   slices whose budgets double, LCG keeps its clauses, trail and
+   activities between its slices (LcgSolver.lend), and search without
+   learning resumes the same FreeSearch, keeping its weights and its
+   restart nogoods (Lecoutre, Sais, Tabary and Vidal, "Nogood recording
+   from restarts", IJCAI 2007) from slice to slice. After weak learning
+   search without learning gets three times LCG's time
+   (lcg-sat-cp-share), after slow learning the same time
+   (lcg-sat-slow-share). Paired runs at 600 s, -f: the 41 instances the
+   hand-over affects 25 -> 29 and 23 -> 28 solved over two seeds, time
+   0.85 and 0.87 (BlockedQueens-50 proved in 295 and 323 s, Antichain1-126
+   and -252 solved, BlockedQueens-48 still open); 93 XCSP CSP instances
+   solved slowly before 71 -> 80, time 0.89 (MagicSquare-mdd-09 and
+   Crossword-m18-ogd2008-vg-16-17 lost); the 53 satisfaction instances of
+   the wide set 47 -> 47, time 0.91.
+
 Version 4.11
 =============
 
