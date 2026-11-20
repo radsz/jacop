@@ -8562,6 +8562,21 @@ Version 5.0 (unreleased)
    3,749 -> 3,720 s; default search 10 = 10 proved, 3,751 -> 3,662 s
    (BusScheduling c1a 89 -> 30 s, r5a 69 -> 32 s).
 
+476. FlatZinc objective presolve contracts disjunctions: when the
+   literals of r <-> or(b) exclude each other, now also because they
+   share an at-most-one sum(b) <= 1 or an exactly-one set, and all have
+   the same cost in the objective, their terms become one term on r
+   (sum(c * b) = c * r). CP-SAT's presolve makes the same step through
+   its exactly-one sets (Perron, Didier and Gay, The CP-SAT-LP Solver,
+   CP 2023). In MiniZinc Challenge 2026 kitchen the cost of each placed
+   fixture becomes a cost per used segment, 272 objective terms -> 156,
+   and learnt clauses and cores no longer name single fixtures. With -f
+   at 600 s larger.instance (optimum 470) is proved in 3 of 5 runs
+   (355 to 405 s), never before in 5 runs; kitchen_b1 35 -> 16 s; the
+   other three instances are unchanged. On the 240 wide instances it
+   fires only on kitchen. -Dorg.jacop.presolve.objectiveContraction=false
+   turns it off.
+
 Version 4.11
 =============
 
