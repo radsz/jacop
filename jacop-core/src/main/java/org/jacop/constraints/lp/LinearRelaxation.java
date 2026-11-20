@@ -3229,20 +3229,12 @@ public class LinearRelaxation extends Constraint
     if (rootLevel < 0) {
       rootLevel = store.level;
       rootObjective = objectiveBound();
-    } else if (store.level <= rootLevel
-        && (objectiveBound() != rootObjective
-            || rootRecutOn && restartSolvesOn && calls > 0 && rootBoundsChanged())) {
+    } else if (store.level <= rootLevel && rootChanged()) {
       boolean recut = objectiveBound() == rootObjective;
       rootObjective = objectiveBound();
-      if (restartSolvesOn
-          && rootBoundsChanged()
-          && (recut || ++restartsWaited >= restartPeriod || rootRecutOn && gapShrunk())
-          && (!rootRecutOn || restartTimeLeft())) {
+      if (restartSolvesOn && restartDue(recut)) {
         restartsWaited = 0;
-        if (recut) {
-          rootRecuts++;
-        }
-        restartGap = Math.abs(objectiveBound() - lp.value(0));
+        countRestart(recut);
         restartSolve(store);
         checkGround();
         return;
@@ -3339,6 +3331,29 @@ public class LinearRelaxation extends Constraint
       restartPeriod = 1;
       restartsWaited = 0;
     }
+  }
+
+  // whether the bound of the objective changed at the root level since the last check, or, with
+  // org.jacop.lp.rootRecut, the bounds of the root level changed after the first solve
+  private boolean rootChanged() {
+    return objectiveBound() != rootObjective
+        || rootRecutOn && restartSolvesOn && calls > 0 && rootBoundsChanged();
+  }
+
+  // whether a restart solve is due: the root bounds changed, and the solve was waited for, re-cuts
+  // the root (recut), or follows an incumbent that closed a tenth of the gap, within its time share
+  private boolean restartDue(boolean recut) {
+    return rootBoundsChanged()
+        && (recut || ++restartsWaited >= restartPeriod || rootRecutOn && gapShrunk())
+        && (!rootRecutOn || restartTimeLeft());
+  }
+
+  // counts a restart solve and records the gap it starts from
+  private void countRestart(boolean recut) {
+    if (recut) {
+      rootRecuts++;
+    }
+    restartGap = Math.abs(objectiveBound() - lp.value(0));
   }
 
   // whether the incumbent closed at least a tenth of the gap left at the last restart solve: each
