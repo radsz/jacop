@@ -179,6 +179,26 @@ class MddLinearSumFlatzincTest {
     assertEquals(solutions(run(cut, "false", "-a")), solutions(kept));
   }
 
+  @Test
+  void diagramsSharingTheirNodeArraysAreCheckedEachOnItsOwn() throws IOException {
+    // both diagrams have the shape of x0 + x1 = 2 and name the same node and target arrays, but
+    // the second one's labels make it y0 + y1 = 3 with y0 >= 1
+    String fzn =
+        "array[1..6] of int: F = [1,1,1,2,3,4];\n"
+            + "array[1..6] of int: T = [2,3,4,0,0,0];\n"
+            + "array[1..4] of int: L = [1,2,2,2];\n"
+            + "var 0..2: x0:: output_var;\n"
+            + "var 0..2: x1:: output_var;\n"
+            + "var 0..3: y0:: output_var;\n"
+            + "var 0..3: y1:: output_var;\n"
+            + "constraint jacop_mdd([x0,x1],L,F,[{0},{1},{2},{2},{1},{0}],T);\n"
+            + "constraint jacop_mdd([y0,y1],L,F,[{1},{2},{3},{2},{1},{0}],T);\n"
+            + "solve satisfy;\n";
+    String off = run(fzn, "false", "-a");
+    assertEquals(9, solutions(off).size(), off);
+    assertEquals(solutions(off), solutions(run(fzn, null, "-a")));
+  }
+
   private String run(String model, String property, String... options) throws IOException {
     MddLinearSum.reset();
     Path fzn = tmp.resolve("model.fzn");
