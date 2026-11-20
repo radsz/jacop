@@ -1402,6 +1402,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.treeCuts
             + "\n%%%mzn-stat: lpTreeBound="
             + r.treeBound
+            + "\n%%%mzn-stat: lpPartitions="
+            + r.partitionConstraints()
+            + "\n%%%mzn-stat: lpPartitionCuts="
+            + r.partitionCuts
+            + "\n%%%mzn-stat: lpPartitionBound="
+            + r.partitionBound
             + "\n%%%mzn-stat: lpJumpSolves="
             + r.jumpSolves
             + "\n%%%mzn-stat: lpJumpPivots="
@@ -1465,9 +1471,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       Consumer<Constraint> remove) {
     long start = timer.getCpuTime();
     List<Constraint> reformulation = presolve.reformulate(target);
-    if (reformulation.size() == 1 && !halves(presolve, reformulation.getFirst())) {
+    if (reformulation.size() == 1
+        && !halves(presolve, reformulation.getFirst())
+        && !(presolve.contracted() > 0 && shorter(presolve, reformulation.getFirst()))) {
       // no cost variables and an equation as long as the objective's definition: the stronger root
-      // bound alone did not pay on vrp under lazy clause generation (four of six instances worse)
+      // bound alone did not pay on vrp under lazy clause generation (four of six instances worse);
+      // an equation shortened by contracted disjunctions replaces the definition (kitchen)
       reformulation = List.of();
     }
     Constraint replaced =
@@ -1494,10 +1503,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + (reformulation.isEmpty() ? 0 : presolve.expanded())
               + "\n%%%mzn-stat: presolveObjectiveShifted="
               + (reformulation.isEmpty() ? 0 : presolve.shifted())
+              + "\n%%%mzn-stat: presolveObjectiveContracted="
+              + (reformulation.isEmpty() ? 0 : presolve.contracted())
               + "\n%%%mzn-stat: presolveObjectiveReplaced="
               + (replaced == null ? 0 : 1));
     }
     return !reformulation.isEmpty();
+  }
+
+  /** True if the equation has fewer variables than the objective's definition. */
+  private static boolean shorter(ObjectivePresolve presolve, Constraint equation) {
+    IntVar[] vars = presolve.definitionVariables();
+    return vars != null && equation.arguments().size() < vars.length;
   }
 
   /** True if the equation has at most half as many variables as the objective's definition. */
