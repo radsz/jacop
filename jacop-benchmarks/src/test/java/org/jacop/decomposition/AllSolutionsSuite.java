@@ -763,6 +763,9 @@ class AllSolutionsSuite {
     }
     keep(c, check, verdict, text, options, ref, r);
     Files.deleteIfExists(file);
+    if (r.lcgIgnored) {
+      note = note.isEmpty() ? "lcg ignored" : note + "; lcg ignored";
+    }
     record(c, sha, check, verdict, r, note);
   }
 

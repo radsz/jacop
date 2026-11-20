@@ -70,6 +70,8 @@ final class SolverRun {
   Status status = Status.ERROR;
   long solutions;
   long nodes = -1;
+  // the solver printed "--lcg ignored" and searched without LCG
+  boolean lcgIgnored;
   long millis;
   String error = "";
 
@@ -210,6 +212,9 @@ final class SolverRun {
       String t = line.strip();
       if (t.startsWith("%%%mzn-stat: nodes=")) {
         nodes = Long.parseLong(t.substring("%%%mzn-stat: nodes=".length()).strip());
+      }
+      if (t.startsWith("%% --lcg ignored")) {
+        lcgIgnored = true;
       }
       if (t.isEmpty() || t.startsWith("%")) {
         continue;
