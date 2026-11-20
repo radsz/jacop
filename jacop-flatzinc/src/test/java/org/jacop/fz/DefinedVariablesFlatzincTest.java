@@ -73,6 +73,30 @@ class DefinedVariablesFlatzincTest {
     assertThat(tables.definedVariables).contains(c);
   }
 
+  // XCSP 2026 BACPj (500 courses, 100 periods) has no defines_var annotations: free search
+  // branched on the loads and found no solution in 240 s, on the bins it finds one in 9 s
+  @Test
+  void theLoadsOfABinPackingAreDefinedByIt() throws IOException {
+    Path model = dir.resolve("loads.fzn");
+    Files.writeString(
+        model,
+        """
+        predicate jacop_bin_packing(array [int] of var int: bin, array [int] of var int: cap,
+            array [int] of int: w, int: min_bin);
+        var 1..2: x1 :: output_var;
+        var 1..2: x2 :: output_var;
+        var 1..2: x3 :: output_var;
+        var 0..9: l1 :: output_var;
+        var 0..9: l2 :: output_var;
+        constraint jacop_bin_packing([x1, x2, x3], [l1, l2], [2, 3, 4], 1);
+        solve minimize l1;
+        """);
+    Tables tables = load(model);
+    assertThat(tables.definedVariables)
+        .contains(tables.getVariable("l1"), tables.getVariable("l2"))
+        .doesNotContain(tables.getVariable("x1"), tables.getVariable("x2"));
+  }
+
   private static Tables load(Path model) {
     PrintStream out = System.out;
     try (PrintStream quiet = new PrintStream(OutputStream.nullOutputStream())) {
