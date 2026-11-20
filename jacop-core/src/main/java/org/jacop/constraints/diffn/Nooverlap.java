@@ -664,7 +664,7 @@ public class Nooverlap extends Constraint
       }
     }
     if (xLengthMin > 0 && yLengthMin > 0) {
-      int maxNumberRectangles = (xMax - xMin) / xLengthMin * ((yMax - yMin) / yLengthMin);
+      long maxNumberRectangles = (long) ((xMax - xMin) / xLengthMin) * ((yMax - yMin) / yLengthMin);
       if (maxNumberRectangles < count) {
         throw Store.failException;
       }

@@ -12132,4 +12132,31 @@ class SingleConstraintTest extends TestHelper {
     assertThat(j.value()).isEqualTo(-1);
     assertThat(w.value()).isEqualTo(-4);
   }
+
+  @Test
+  void diffnCountsRectanglesOfAWideWindowInLong() {
+    // the energy check bounded the number of rectangles that fit in the window by
+    // (width / minWidth) * (height / minHeight) in int, which wrapped to a negative count for a
+    // window of 268435455 by 268435456 / 4, so a lone rectangle failed
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", -268435456, -268435456);
+    IntVar x1 = new IntVar(store, "x1", 32768, 32768);
+    x1.addDom(268435454, 268435454);
+    IntVar y0 = new IntVar(store, "y0", -268435456, -268435456);
+    IntVar y1 = new IntVar(store, "y1", -536870910, -536870910);
+    IntVar zero = new IntVar(store, "zero", 0, 0);
+    IntVar one = new IntVar(store, "one", 1, 1);
+    IntVar h1 = new IntVar(store, "h1", 4, 4);
+    h1.addDom(268435456, 268435456);
+    store.impose(
+        Diffn.builder()
+            .origin1(new IntVar[] {x0, x1})
+            .origin2(new IntVar[] {y0, y1})
+            .length1(new IntVar[] {zero, one})
+            .length2(new IntVar[] {zero, h1})
+            .strict(true)
+            .build());
+    // the point (x0, y0) lies left of every placement of the second rectangle
+    assertThat(countSolutions(store, new IntVar[] {x1, h1}, new Random(1))).isEqualTo(4);
+  }
 }
