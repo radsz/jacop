@@ -355,6 +355,9 @@ public final class RevisedDualSimplex {
   private boolean feasibility;
 
   private long totalPivots;
+
+  // the number of this instance in the trace (org.jacop.jalp.trace), 0 without one
+  private final int traceSolve = Trace.OUT == null ? 0 : Trace.nextSolve();
   private long factorizations;
   private long ops;
 
@@ -1230,6 +1233,9 @@ public final class RevisedDualSimplex {
       upper[p] = !toLower;
       at[p] = bound;
       totalPivots++;
+      if (Trace.OUT != null) {
+        Trace.pivot(traceSolve, totalPivots, feasibility ? 1 : 2, q, p, r, theta, thetaD, fromRow);
+      }
       if (outsideValid) {
         for (int k = 0; k < alphaLen; k++) {
           noteRow(alphaIdx[k]);
@@ -2742,6 +2748,9 @@ public final class RevisedDualSimplex {
         new Presolve(n, rowIdx, rowVal, colIdx, colVal, colLen, cost, trueCost, boundLo, boundHi);
     boolean reduced = p.run();
     presolveReductions = p.counts();
+    if (Trace.OUT != null) {
+      p.trace();
+    }
     ops += p.ops();
     if (PRESOLVE_TRACE) {
       System.err.println(
@@ -3125,6 +3134,9 @@ public final class RevisedDualSimplex {
    * weights not known yet are computed exactly.
    */
   private void factorize() {
+    if (Trace.OUT != null) {
+      Trace.factor(traceSolve, totalPivots, "-");
+    }
     outsideValid = false;
     int[][] ci = new int[m][];
     double[][] cv = new double[m][];
@@ -3482,6 +3494,9 @@ public final class RevisedDualSimplex {
       upper[p] = leavesAtUpper;
       at[p] = leavesAtUpper ? hi[p] : lo[p];
       totalPivots++;
+      if (Trace.OUT != null) {
+        Trace.pivot(traceSolve, totalPivots, 3, q, p, r, 0, 0, 0);
+      }
       if (reset || devex[p] > DEVEX_RESET) {
         Arrays.fill(devex, 0, cols, 1);
       }

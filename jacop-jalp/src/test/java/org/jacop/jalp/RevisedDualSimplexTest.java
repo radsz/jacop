@@ -582,6 +582,33 @@ class RevisedDualSimplexTest {
   }
 
   @Test
+  void impliedFreeColumnOfAnEquationIsAggregated() {
+    // x + y + z = 4 with y, z in [0, 1] implies x in [2, 4], inside its bounds [0, 10]; x is in
+    // two more rows (x + w >= 3, x - y <= 3.5), so it is substituted out with its equation.
+    // min x + w = 3 (x in [2, 3], w = 3 - x)
+    double inf = Double.POSITIVE_INFINITY;
+    int[][] cols = {{0, 1, 2}, {0, 3}, {0, 1}};
+    double[][] vals = {{1, 1, 1}, {1, 1}, {1, -1}};
+    double[] lo = {4, 3, -inf};
+    double[] hi = {4, inf, 3.5};
+    double[] cost = {1, 0, 0, 1};
+    for (boolean presolve : new boolean[] {false, true}) {
+      RevisedDualSimplex lp = new RevisedDualSimplex(cols, vals, lo, hi, cost, true);
+      lp.setExact(true);
+      lp.setPresolve(presolve);
+      lp.setBounds(0, 0, 10);
+      lp.setBounds(1, 0, 1);
+      lp.setBounds(2, 0, 1);
+      lp.setBounds(3, 0, 10);
+      assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      assertThat(lp.objective()).isCloseTo(3, org.assertj.core.data.Offset.offset(1e-9));
+      if (presolve) {
+        assertThat(lp.presolveReductions()[Presolve.AGGREGATED_COLUMN]).isEqualTo(1);
+      }
+    }
+  }
+
+  @Test
   void dominatedColumnIsFixedByTheDualBoundOfAColumnSingleton() {
     // x + s + t = 4 and x - v <= 2, s >= 0 without upper bound and cost 1 bounds the dual of row 0
     // by 1, so the reduced cost of x (cost 3) is at least 2: x = 0 in every optimum. min 4
@@ -710,7 +737,7 @@ class RevisedDualSimplexTest {
     // the chunks of the chunked solves, apart so that they leave the problems as they were
     Random chunks = new Random(29);
     Random parallels = new Random(31);
-    int[] reductions = new int[9];
+    int[] reductions = new int[10];
     int runs = Integer.getInteger("jalp.test.runs", 3000) / 3;
     int reduced = 0;
     int optimal = 0;

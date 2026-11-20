@@ -97,6 +97,7 @@ final class Presolve {
   private static final byte PARALLEL_COLUMN = 6;
   static final byte FORCING_ROW = 7;
   static final byte DOMINATED_COLUMN = 8;
+  static final byte AGGREGATED_COLUMN = 9;
 
   // entries of parallel rows or columns, and costs of parallel columns, that differ by more than
   // this, relative, from the multiple are not parallel
@@ -126,6 +127,26 @@ final class Presolve {
   // (org.jacop.jalp.presolveTight)
   private static final boolean TIGHT_RULE =
       Boolean.parseBoolean(System.getProperty("org.jacop.jalp.presolveTight", "true"));
+
+  // whether implied free columns of equations with other rows are substituted out
+  // (org.jacop.jalp.presolveAggregate)
+  private static final boolean AGGREGATE_RULE =
+      Boolean.parseBoolean(System.getProperty("org.jacop.jalp.presolveAggregate", "true"));
+
+  // the longest equation (org.jacop.jalp.aggregateRow) and the longest column
+  // (org.jacop.jalp.aggregateColumn) an aggregation takes
+  private static final int AGGREGATE_ROW = Integer.getInteger("org.jacop.jalp.aggregateRow", 16);
+  private static final int AGGREGATE_COLUMN =
+      Integer.getInteger("org.jacop.jalp.aggregateColumn", 8);
+
+  // the most entries one aggregation may add (org.jacop.jalp.aggregateFill), and the most all of
+  // them together may add, relative to the entries of the problem given
+  private static final int AGGREGATE_FILL = Integer.getInteger("org.jacop.jalp.aggregateFill", 16);
+  private static final double AGGREGATE_GROWTH = 1.0;
+
+  // the pivot of an aggregation is at least this share of the largest entry of its equation and of
+  // its column
+  private static final double AGGREGATE_PIVOT = 0.01;
 
   // the rows made equations by tightRow
   int tightRows;
@@ -198,6 +219,9 @@ final class Presolve {
 
   private int rowsLeft;
   private int colsLeft;
+  // the entries of the problem given, and the entries the aggregations added
+  private long givenEntries;
+  private long aggregateFill;
   private long ops;
   // the bounds, columns and entries change only with epoch incremented, so that a row activity of
   // the same epoch still holds
@@ -260,6 +284,7 @@ final class Presolve {
       rVal[i] = rowVal[i].clone();
       rLen[i] = rIdx[i].length;
       rowCount[i] = rLen[i];
+      givenEntries += rLen[i];
       ops += rLen[i];
     }
     cIdx = new int[n][];
@@ -372,6 +397,9 @@ final class Presolve {
       }
       if (DOMINATED_RULE && !changed) {
         changed = dominatedColumns() > 0;
+      }
+      if (AGGREGATE_RULE && !changed) {
+        changed = aggregate() > 0;
       }
     }
     return true;
@@ -502,16 +530,35 @@ final class Presolve {
   /**
    * Returns how many reductions of each kind were made: rows dropped, singleton rows, columns
    * fixed, free columns, doubletons, parallel rows, parallel columns, forcing rows, dominated
-   * columns.
+   * columns, aggregated columns.
    *
    * @return the counts
    */
   int[] counts() {
-    int[] c = new int[9];
+    int[] c = new int[10];
     for (int t = 0; t < records; t++) {
       c[kind[t]]++;
     }
     return c;
+  }
+
+  private static final String[] KIND_NAMES = {
+    "droprow",
+    "singletonrow",
+    "fixcol",
+    "freecol",
+    "doubleton",
+    "parallelrow",
+    "parallelcol",
+    "forcingrow",
+    "dominatedcol"
+  };
+
+  // writes the reductions to the trace (org.jacop.jalp.trace)
+  void trace() {
+    for (int t = 0; t < records; t++) {
+      Trace.reduction(KIND_NAMES[kind[t]], recRow[t], recCol[t], recOther[t]);
+    }
   }
 
   // 1 when the row was reduced, 0 when not, -1 when its bounds cannot hold
@@ -990,6 +1037,136 @@ final class Presolve {
     }
     return (lo[k] == Double.NEGATIVE_INFINITY || kLo >= lo[k] - SAME * (1 + Math.abs(lo[k])))
         && (hi[k] == Double.POSITIVE_INFINITY || kHi <= hi[k] + SAME * (1 + Math.abs(hi[k])));
+  }
+
+  /**
+   * Aggregation (free column substitution, Andersen and Andersen, section 3.3, and the aggregator
+   * of HiGHS): in an equation a x = b of three or more columns, a column x_k whose bounds the
+   * equation implies is x_k = (b - sum_{j != k} a_j x_j) / a_k; that is substituted into its other
+   * rows, its cost moves onto the other columns of the equation, and the equation and x_k go. The
+   * reduced problem has a row and a column fewer and the entries the substitution adds. Only short
+   * equations and columns are taken, with a pivot not much smaller than the other entries of its
+   * equation and column, and the fill is bounded per substitution and in all. The postsolve makes
+   * x_k basic and the slack of the equation nonbasic, with the dual that makes the reduced cost of
+   * x_k 0 (as for a doubleton). With HiGHS's trace on app1-2 (MIPLIB 2017): 13,294 such columns in
+   * rows of 6 entries and columns of 4, which JaLP left in the problem.
+   *
+   * @return the number of columns substituted
+   */
+  private int aggregate() {
+    int found = 0;
+    for (int i = 0; i < m; i++) {
+      if (!rowAlive[i]
+          || rowLo[i] != rowHi[i]
+          || rowCount[i] < 3
+          || rowCount[i] > AGGREGATE_ROW
+          || aggregateFill > AGGREGATE_GROWTH * givenEntries) {
+        continue;
+      }
+      int[] idx = rIdx[i];
+      double[] val = rVal[i];
+      double rowMax = 0;
+      for (int e = 0; e < rLen[i]; e++) {
+        if (colAlive[idx[e]]) {
+          rowMax = Math.max(rowMax, Math.abs(val[e]));
+        }
+      }
+      // the column with the fewest entries among those the equation implies free
+      int best = -1;
+      double bestA = 0;
+      for (int e = 0; e < rLen[i]; e++) {
+        int k = idx[e];
+        double a = val[e];
+        if (!colAlive[k]
+            || a == 0
+            || colCount[k] < 2
+            || colCount[k] > AGGREGATE_COLUMN
+            || Math.abs(a) < Math.max(SMALL_ENTRY, AGGREGATE_PIVOT * rowMax)
+            || best >= 0 && colCount[k] >= colCount[best]) {
+          continue;
+        }
+        if ((rowCount[i] - 1) * (colCount[k] - 1) - (rowCount[i] + colCount[k] - 1) > AGGREGATE_FILL
+            || !pivotInColumn(k, a)
+            || !impliedFree(i, k, a, rowLo[i])) {
+          continue;
+        }
+        best = k;
+        bestA = a;
+      }
+      if (best >= 0) {
+        substitute(i, best, bestA);
+        found++;
+      }
+    }
+    return found;
+  }
+
+  // whether the entry a of column k is at least AGGREGATE_PIVOT of its largest live entry
+  private boolean pivotInColumn(int k, double a) {
+    int[] ci = cIdx[k];
+    double[] cv = cVal[k];
+    ops += cLen[k];
+    for (int e = 0; e < cLen[k]; e++) {
+      if (rowAlive[ci[e]] && Math.abs(a) < AGGREGATE_PIVOT * Math.abs(cv[e])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // x_k = (b - rest of equation i) / a substituted into the other rows of x_k; the equation and
+  // x_k go
+  private void substitute(int i, int k, double a) {
+    double b = rowLo[i];
+    int t = record(AGGREGATED_COLUMN, i, k);
+    recNum[0][t] = a;
+    recNum[3][t] = wcost[k];
+    recLenA[t] = logLen[k];
+    int[] idx = rIdx[i];
+    double[] val = rVal[i];
+    int len = rLen[i];
+    // the equation's entries as they are now: the substitutions below may grow the other rows only
+    int[] eqCols = new int[rowCount[i]];
+    double[] eqVals = new double[rowCount[i]];
+    int eqLen = 0;
+    double ratio = wcost[k] / a;
+    double tr = wtrue[k] / a;
+    for (int f = 0; f < len; f++) {
+      int j = idx[f];
+      if (j != k && colAlive[j] && val[f] != 0) {
+        eqCols[eqLen] = j;
+        eqVals[eqLen++] = val[f];
+        wcost[j] -= ratio * val[f];
+        wtrue[j] -= tr * val[f];
+      }
+    }
+    removeRow(i);
+    colAlive[k] = false;
+    colsLeft--;
+    epoch++;
+    int[] ci = cIdx[k];
+    double[] cv = cVal[k];
+    int cl = cLen[k];
+    ops += cl;
+    for (int e = 0; e < cl; e++) {
+      int r = ci[e];
+      double ar = cv[e];
+      if (!rowAlive[r] || ar == 0) {
+        continue;
+      }
+      rowCount[r]--;
+      // a_r x_k = a_r (b - rest) / a
+      double shift = ar * b / a;
+      if (shift != 0) {
+        rowLo[r] -= shift;
+        rowHi[r] -= shift;
+      }
+      int before = rowCount[r];
+      for (int f = 0; f < eqLen; f++) {
+        addEntry(r, eqCols[f], -ar * eqVals[f] / a);
+      }
+      aggregateFill += Math.max(0, rowCount[r] - before);
+    }
   }
 
   // an equation a_j x_j + a_k x_k = b: x_k = (b - a_j x_j) / a_k is substituted into the other rows
@@ -1572,6 +1749,14 @@ final class Presolve {
           break;
         case FORCING_ROW:
           forcingBasis(t, i, y, basic, upper);
+          break;
+        case AGGREGATED_COLUMN:
+          // the column basic, the equation's slack nonbasic; d_k = 0 sets the dual
+          basic[j] = true;
+          basic[n + i] = false;
+          upper[n + i] = false;
+          y[i] = 0;
+          y[i] = reducedCost(recNum[3][t], j, recLenA[t], y) / recNum[0][t];
           break;
         case DOMINATED_COLUMN:
           basic[j] = false;
