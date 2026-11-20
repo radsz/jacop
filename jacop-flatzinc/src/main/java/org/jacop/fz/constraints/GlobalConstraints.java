@@ -470,7 +470,7 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   private boolean cumulativeResourceSumWithinCapacity(IntVar[] r, IntVar b) {
-    int resSum = 0;
+    long resSum = 0;
     for (IntVar v : r) {
       resSum += v.max();
     }
@@ -3508,8 +3508,11 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar P = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(4));
 
-    if (Arrays.stream(x).anyMatch(v -> !v.singleton() && (v == W || v == P))) {
-      // Knapsack rejects a quantity that is also the capacity or the profit
+    if (Arrays.stream(x).anyMatch(v -> !v.singleton() && (v == W || v == P))
+        || mergedBeyondInt(x, weights)
+        || mergedBeyondInt(x, profits)) {
+      // Knapsack rejects a quantity that is also the capacity or the profit, and it merges the
+      // items of one variable into an item with an int weight and profit
       support.pose(new LinearInt(x, weights, "==", W));
       support.pose(new LinearInt(x, profits, "==", P));
       return;
@@ -3525,6 +3528,18 @@ class GlobalConstraints implements ParserTreeConstants {
             .build()
             // a proof derives the rows of the relaxation, not the prunings of the dynamic program
             .dynamicProgramming(support.options.proof() == null));
+  }
+
+  // true when the coefficients of one variable listed several times add up beyond an int
+  private static boolean mergedBeyondInt(IntVar[] x, int[] coefficients) {
+    Map<IntVar, Long> merged = new IdentityHashMap<>();
+    for (int i = 0; i < x.length; i++) {
+      long sum = merged.merge(x[i], (long) coefficients[i], Long::sum);
+      if (sum != (int) sum) {
+        return true;
+      }
+    }
+    return false;
   }
 
   void gen_jacop_sequence(SimpleNode node) {

@@ -11735,4 +11735,54 @@ class SingleConstraintTest extends TestHelper {
     assertThat(x.dom().getSize()).isEqualTo(6);
     assertThat(y.dom().getSize()).isEqualTo(11);
   }
+
+  /**
+   * The fixed part of the sum passes an int (5 * 500,000,000) before negative terms bring the sum
+   * back: the trailed fixed part was clamped to the largest int and later taken for the sum.
+   */
+  @Test
+  public void testSumKeepsAFixedPartBeyondInt() {
+    Store store = new Store();
+    IntVar[] v = new IntVar[100];
+    for (int i = 0; i < 5; i++) {
+      v[i] = new IntVar(store, "x" + i, 500000000, 500000000);
+    }
+    for (int i = 5; i < 10; i++) {
+      v[i] = new IntVar(store, "y" + i, -500000000, 0);
+    }
+    for (int i = 10; i < v.length; i++) {
+      v[i] = new IntVar(store, "z" + i, 0, 0);
+    }
+    IntVar sum = new IntVar(store, "S", -536870000, 536870000);
+    store.impose(new Sum(v, sum));
+    IntVar[] decisions = Arrays.copyOfRange(v, 5, 11);
+    decisions[5] = sum;
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    assertThat(search.labeling(store, new SimpleSelect<>(decisions, null, new IndomainMin<>())))
+        .isTrue();
+    long real = 0;
+    for (IntVar x : v) {
+      real += x.value();
+    }
+    assertThat((long) sum.value()).isEqualTo(real);
+  }
+
+  /** Five mandatory parts of 500,000,000 overlap: their profile wrapped in int below the limit. */
+  @Test
+  public void testCumulativeBasicFailsOnAProfileBeyondInt() {
+    Store store = new Store();
+    int n = 5;
+    IntVar[] s = new IntVar[n];
+    IntVar[] d = new IntVar[n];
+    IntVar[] r = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      s[i] = new IntVar(store, "s" + i, 0, 0);
+      d[i] = new IntVar(store, "d" + i, 2, 2);
+      r[i] = new IntVar(store, "r" + i, 500000000, 500000000);
+    }
+    IntVar limit = new IntVar(store, "limit", 500000000, 500000000);
+    store.impose(new org.jacop.constraints.cumulative.CumulativeBasic(s, d, r, limit));
+    assertThat(store.consistency()).isFalse();
+  }
 }

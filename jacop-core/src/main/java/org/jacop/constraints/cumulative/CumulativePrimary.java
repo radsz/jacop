@@ -278,7 +278,9 @@ class CumulativePrimary extends Constraint implements Copyable<CumulativePrimary
     conflict.clear();
     releaseCount = 0;
 
-    // current value of the PROFILE for mandatory parts
+    // current value of the PROFILE for mandatory parts; summed in long, since a few mandatory parts
+    // of large resource use pass an int, and read saturated, which is above any limit
+    long profile = 0;
     int curProfile = 0;
 
     for (int i = 0; i < count; i++) {
@@ -291,7 +293,8 @@ class CumulativePrimary extends Constraint implements Copyable<CumulativePrimary
 
       switch (type) {
         case PROFILE:
-          curProfile += eventValue[seq];
+          profile += eventValue[seq];
+          curProfile = (int) Math.min(profile, Integer.MAX_VALUE);
           if (state[index] != NONE) {
             sweepPruningHandleOwnProfile(index, eventValue[seq] > 0);
           }

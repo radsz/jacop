@@ -182,6 +182,52 @@ class FlatzincFrontEndTest {
         .toString();
   }
 
+  /** Five tasks using 500,000,000 each: their sum wrapped below the capacity in int. */
+  @Test
+  void aCumulativeWhoseResourceSumPassesIntIsStillPosted() throws IOException {
+    String model =
+        """
+        var 0..7: s0 :: output_var;
+        var 0..7: s1 :: output_var;
+        var 0..7: s2 :: output_var;
+        var 0..7: s3 :: output_var;
+        var 0..7: s4 :: output_var;
+        constraint jacop_cumulative([s0,s1,s2,s3,s4],[2,2,2,2,2],
+          [500000000,500000000,500000000,500000000,500000000],500000000);
+        solve satisfy;
+        """;
+    String out = run(model)[0];
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+  }
+
+  /** x repeated three times with weights of 1,500,000,000 each: the merged item passed an int. */
+  @Test
+  void aKnapsackWhoseRepeatedItemPassesIntIsPostedAsSums() throws IOException {
+    String model =
+        """
+        var 0..1: x :: output_var;
+        var 0..536870000: W :: output_var;
+        var 0..10: P :: output_var;
+        constraint jacop_knapsack([1500000000,1500000000,1500000000],[1,1,1],W,P,[x,x,x]);
+        solve satisfy;
+        """;
+    assertEquals(Set.of("P = 0; W = 0; x = 0;"), solveAll(model));
+  }
+
+  /** Five elements of weight 500,000,000: the sum of the possible elements wrapped in int. */
+  @Test
+  void aSetSumWhoseWeightsPassIntKeepsItsSolutions() throws IOException {
+    String model =
+        """
+        var set of 1..5: s :: output_var;
+        var 0..536870000: t :: output_var;
+        constraint jacop_sum_set([1,2,3,4,5],
+          [500000000,500000000,500000000,500000000,500000000], s, t);
+        solve satisfy;
+        """;
+    assertEquals(6, solveAll(model).size());
+  }
+
   @Test
   void completionSearchBacktracksToTheLastConflict() throws IOException {
     // The variables the annotation leaves out are labelled by a search JaCoP adds. Without last
