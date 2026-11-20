@@ -8508,6 +8508,24 @@ Version 5.0 (unreleased)
    instances with element or circuit at 240 s 6,369 -> 6,387 s, with only
    3 of them running route neighbourhoods (the rest run unchanged code).
 
+476. New constraint TspKOpt(x, offset, d, length): k-opt dominance for a
+   symmetric travelling salesman tour x with arc lengths d (Isoart and
+   Regin, A k-Opt Based Constraint for the TSP, CP 2021; Jonker and
+   Volgenant, Nonoptimal edges for the symmetric traveling salesman
+   problem, Operations Research 1984; 2-opt and 3-opt moves of Lin, Bell
+   System Technical Journal 1965). Once a tour no longer
+   than length.max has been seen, it removes every arc that a 2-opt move
+   with a fixed arc, or a 3-opt move on paths of fixed arcs, would make
+   strictly shorter, and fails a path that such a move shortens. Strict
+   improvement keeps every optimal tour. Removals and failures are
+   explained for LCG. The FlatZinc front end posts it on pure symmetric
+   TSP models (the ones TspEdgeElimination detects) with
+   -Dorg.jacop.fz.tspKOpt=true; it is off by default, since tours of
+   instances that are not solved end worse. TSPLIB, 42 instances at
+   600 s: default 16 -> 17 proved, time 16,065 -> 15,413 s (gr48 245 ->
+   18 s, brazil58 proved in 174 s), 25 unsolved tours worse; -f 27 -> 28
+   proved, time 11,642 -> 11,044 s, 11 tours worse.
+
 Version 4.11
 =============
 
