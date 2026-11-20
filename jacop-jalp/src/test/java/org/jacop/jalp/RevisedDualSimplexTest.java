@@ -520,6 +520,43 @@ class RevisedDualSimplexTest {
     assertThat(lp.pivots()).isEqualTo(lp.reducedPivots());
   }
 
+  /**
+   * A row of n column singletons that differ in cost alone took n^2 steps at presolve: the
+   * implied-free test of each singleton read the whole row (40,000 terms of a FlatZinc sum, 9 s),
+   * and the search for parallel columns tried every earlier column of the same pattern (50,000
+   * columns, 16 s).
+   */
+  @Test
+  void columnSingletonsOfALongRowArePresolvedInLinearTime() {
+    int n = 100_000;
+    int[] idx = new int[n];
+    double[] val = new double[n];
+    double[] cost = new double[n];
+    for (int j = 0; j < n; j++) {
+      idx[j] = j;
+      val[j] = 1;
+      cost[j] = 1 + (double) j / n;
+    }
+    RevisedDualSimplex lp =
+        new RevisedDualSimplex(
+            new int[][] {idx},
+            new double[][] {val},
+            new double[] {3},
+            new double[] {Double.POSITIVE_INFINITY},
+            cost,
+            true);
+    for (int j = 0; j < n; j++) {
+      lp.setBounds(j, 0, 1);
+    }
+    int status =
+        org.junit.jupiter.api.Assertions.assertTimeoutPreemptively(
+            java.time.Duration.ofSeconds(10), () -> lp.solve(1_000_000));
+    assertThat(status).isEqualTo(RevisedDualSimplex.OPTIMAL);
+    // the three cheapest columns at 1
+    double best = 3 + 3.0 / n;
+    assertThat(lp.objective()).isCloseTo(best, offset(1e-6));
+  }
+
   @Test
   void forcingRowFixesItsColumnsAndPostsolvesAnOptimalBasis() {
     // x + y <= 0 over x, y in [0, 5] holds only at x = y = 0; then x + 2y + z >= 2 makes z >= 2.

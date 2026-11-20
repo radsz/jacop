@@ -8447,7 +8447,12 @@ Version 5.0 (unreleased)
    smaller instances (67 to 299 distances) keep the minimum, and with it
    the proofs of caterpillar13 and 16. -Dorg.jacop.fz.cyclicDistance=true
    still rewrites every model, and =false none. No other instance of the
-   wide set or of the XCSP 2022-2025 sets has the pattern.
+   wide set or of the XCSP 2022-2025 sets has the pattern. Since the
+   detector now reads every model, it keeps the definitions of the terms
+   of a linear equation by position instead of copying the other terms
+   for each one: an equation of n terms took n^2 time and memory (the
+   1,176,224-term objective of rcpsp-wet-diverse j90_48_4 ran out of
+   memory at -Xmx4G in this pass).
 
 470. The FlatZinc front end rewrites products of two functions of one small
    index (MiniZinc's (good[p] = g) * num[p], both looked up by the chosen
@@ -8562,7 +8567,48 @@ Version 5.0 (unreleased)
    3,749 -> 3,720 s; default search 10 = 10 proved, 3,751 -> 3,662 s
    (BusScheduling c1a 89 -> 30 s, r5a 69 -> 32 s).
 
-476. FlatZinc objective presolve contracts disjunctions: when the
+479. The FlatZinc front end writes a sum of conjunctions over all pairs of
+   two sets of Boolean variables, sum(i in A, j in B) w *
+   bool2int(a[i] /\ b[j]), as w * sum(a) * sum(b) when the conjunctions
+   and their bool2int have no other use (ProductOfSumsDetector, system
+   property org.jacop.fz.productOfSums, groups of at least
+   org.jacop.fz.productOfSums.minTerms = 64 conjunctions). The
+   hypervolume objective of diverse solution models (2019 Challenge
+   rcpsp-wet-diverse, after Ingmar, Garcia de la Banda, Stuckey and
+   Tack, Modelling diversity of solutions, AAAI 2020) flattens to this
+   form: j90_48_4 posts 1,176,224 conjunctions, which become two
+   SumBool and one XmulYeqZ. With -f at -Xmx4G it ran out of memory
+   before the search; it now finds objective 694,296 within 600 s with a
+   live heap of 1.5 GB.
+
+480. The Hall cuts of an all-different in the linear relaxation
+   (AlldifferentCuts.separate) list the variables only of the cuts they
+   return. A long constraint has a violated prefix of almost every
+   length, and listing them all took quadratic memory: a FlatZinc model
+   with an 80,000-variable all-different ran out of a 4 GB heap at the
+   root, and now reaches its answer in 9 s. The cuts are the same.
+
+481. The JaLP presolve treats a long row of column singletons in linear
+   time. The implied-free test of each singleton read the whole row; it
+   now first tests the row activity, kept while no bound, column or
+   entry changes, and reads the row only when that test does not fail
+   by more than its rounding error. The search for parallel columns
+   tried every earlier column of the same pattern; it now tries only
+   those of about the same cost over their first entry, latest first.
+   The reductions are the same (20,000 random LPs, with the activity
+   test on every row). A row of 100,000 singletons that differ in cost
+   is solved in 0.2 s instead of about a minute (50,000: 16 s), and a 40,000
+   term FlatZinc sum of bool2int over a conjunction from 32 s to 25 s.
+
+482. The tabu search of functional models (FunctionalModel, CHANGELOG
+   419) leaves to the solver a model with a function other than a sum
+   or a product over more than 1,024 variables, which the search
+   evaluates whole after every trial move. With the cost a count over
+   3,000 variables the walk took 54 s of a 60 s run for 128 steps and
+   gave no answer at a 20 s limit; the solver answers in 2 s. Low
+   autocorrelation sequences still take the tabu search.
+
+483. FlatZinc objective presolve contracts disjunctions: when the
    literals of r <-> or(b) exclude each other, now also because they
    share an at-most-one sum(b) <= 1 or an exactly-one set, and all have
    the same cost in the objective, their terms become one term on r
