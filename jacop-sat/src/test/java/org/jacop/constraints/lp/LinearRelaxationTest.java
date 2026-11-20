@@ -339,6 +339,42 @@ class LinearRelaxationTest {
     }
   }
 
+  /**
+   * Root re-cuts (org.jacop.lp.rootRecut): the restart solves also run when the bounds of the root
+   * level changed without a better bound of the cost, and at the root of a search that starts a
+   * level above the first solve (LinearRelaxation.searchRoot); they keep the optimum of every
+   * model, as depth-first search finds it.
+   */
+  @ParameterizedTest
+  @EnumSource(LinearRelaxation.Simplex.class)
+  void keepsTheOptimumWithRootRecuts(LinearRelaxation.Simplex simplex) {
+    boolean was = LinearRelaxation.restartSolvesOn;
+    boolean bounds = LinearRelaxation.restartBoundsOn;
+    boolean recut = LinearRelaxation.rootRecutOn;
+    try {
+      LinearRelaxation.restartSolvesOn = true;
+      LinearRelaxation.restartBoundsOn = true;
+      LinearRelaxation.rootRecutOn = true;
+      long solves = 0;
+      long recuts = 0;
+      for (int run = 0; run < RUNS; run++) {
+        for (boolean above : new boolean[] {false, true}) {
+          LinearRelaxation r = restarts(run, simplex, above);
+          if (r != null) {
+            solves += r.restartSolves;
+            recuts += r.rootRecuts;
+          }
+        }
+      }
+      assertThat(solves).isPositive();
+      assertThat(recuts).isPositive();
+    } finally {
+      LinearRelaxation.restartSolvesOn = was;
+      LinearRelaxation.restartBoundsOn = bounds;
+      LinearRelaxation.rootRecutOn = recut;
+    }
+  }
+
   // solves each model with restarts after each solution; returns the restart solves and the root
   // reduced-cost prunings
   private static long[] restarts(LinearRelaxation.Simplex simplex) {
@@ -357,6 +393,13 @@ class LinearRelaxationTest {
   // the restarts of one model, checked against depth-first search; its relaxation, or null without
   // an objective
   private static LinearRelaxation restarts(long run, LinearRelaxation.Simplex simplex) {
+    return restarts(run, simplex, false);
+  }
+
+  // the same; with above, the search starts a level above the first solve, which it gives the
+  // relaxation as its root level, as free search does
+  private static LinearRelaxation restarts(
+      long run, LinearRelaxation.Simplex simplex, boolean above) {
     long[] expected = search(new Model(run));
     Model model = new Model(run);
     if (model.objective == null) {
@@ -368,6 +411,10 @@ class LinearRelaxationTest {
     IntVar[] vars = Arrays.copyOf(model.x, model.x.length + 1);
     vars[model.x.length] = cost;
     long best = Long.MIN_VALUE;
+    if (above && model.store.consistency()) {
+      model.store.setLevel(model.store.level + 1);
+      r.searchRoot(model.store.level);
+    }
     while (model.store.consistency()) {
       DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
       search.setPrintInfo(false);
