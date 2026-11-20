@@ -6073,4 +6073,41 @@ class FlatzincFrontEndTest {
     assertTrue(out[0].contains("=====UNSATISFIABLE====="), out[0] + out[1]);
     assertEquals(0, lastStatus, out[0] + out[1]);
   }
+
+  @Test
+  void diffnProjectionOverAWideSpanIsLeftOut() throws IOException {
+    // the cumulative projection of diffn bounds its span by first + span = last, whose int bounds
+    // reach twice the distance from the lowest origin to the highest end: XplusYeqZ rejected it
+    // and the model ended in "Evaluation of model resulted in an overflow"
+    String model =
+        """
+        var {-536870910,536870908}: x0:: output_var;
+        var {-268435455,536870909}: x1:: output_var;
+        var {-536870910,32768}: y0:: output_var;
+        var {0,536870908}: w0:: output_var;
+        var {0,268435455}: h1:: output_var;
+        constraint jacop_diff2_strict([x0,x1],[y0,-46340],[w0,2],[65536,h1]);
+        solve satisfy;
+        """;
+    long expected = 0;
+    int[] xs0 = {-536870910, 536870908};
+    int[] xs1 = {-268435455, 536870909};
+    int[] ys0 = {-536870910, 32768};
+    int[] ws0 = {0, 536870908};
+    int[] hs1 = {0, 268435455};
+    for (long a : xs0) {
+      for (long b : xs1) {
+        for (long c : ys0) {
+          for (long w : ws0) {
+            for (long h : hs1) {
+              if (a + w <= b || c + 65536 <= -46340 || b + 2 <= a || -46340 + h <= c) {
+                expected++;
+              }
+            }
+          }
+        }
+      }
+    }
+    assertEquals(expected, solveAllInOrder(model).size());
+  }
 }

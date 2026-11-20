@@ -1487,10 +1487,14 @@ class GlobalConstraints implements ParserTreeConstants {
       // with the other axis fixed, rectangles apart along it never meet and diffn knows it; the
       // projection then only adds cost (accap), unless all of them cross one line (filters)
       // the projections are redundant: local search does not evaluate them
-      if (!fixedApart(y, ly) && !cumulativeTasks.contains(taskKey(x, lx, ly))) {
+      if (!fixedApart(y, ly)
+          && !cumulativeTasks.contains(taskKey(x, lx, ly))
+          && spanFitsInt(y, ly)) {
         support.implied(() -> poseCumulative(x, lx, ly, span(y, ly)));
       }
-      if (!fixedApart(x, lx) && !cumulativeTasks.contains(taskKey(y, ly, lx))) {
+      if (!fixedApart(x, lx)
+          && !cumulativeTasks.contains(taskKey(y, ly, lx))
+          && spanFitsInt(x, lx)) {
         support.implied(() -> poseCumulative(y, ly, lx, span(x, lx)));
       }
     }
@@ -1530,6 +1534,18 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   /** A variable equal to max(o[i] + l[i]) - min(o[i]), the span of the intervals along one axis. */
+  // first + span = last adds bounds in int, up to twice the distance from the lowest origin to the
+  // highest end
+  private static boolean spanFitsInt(IntVar[] o, IntVar[] l) {
+    long low = Long.MAX_VALUE;
+    long high = Long.MIN_VALUE;
+    for (int i = 0; i < o.length; i++) {
+      low = Math.min(low, o[i].min());
+      high = Math.max(high, (long) o[i].max() + l[i].max());
+    }
+    return 2 * (high - low) <= Integer.MAX_VALUE;
+  }
+
   private IntVar span(IntVar[] o, IntVar[] l) {
     Store localStore = support.store;
     IntVar[] end = new IntVar[o.length];
