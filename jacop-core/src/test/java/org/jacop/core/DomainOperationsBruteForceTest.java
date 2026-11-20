@@ -770,4 +770,29 @@ class DomainOperationsBruteForceTest {
     result.removeAll(b);
     return result;
   }
+
+  @Test
+  void emptyDomainArgumentsAddAndHoldNothing() {
+    IntDomain[] empties = {new IntervalDomain(), new SmallDenseDomain(), new BoundDomain()};
+    for (IntDomain empty : empties) {
+      String what = empty.getClass().getSimpleName();
+      IntervalDomain interval = new IntervalDomain(5, 9);
+      interval.addDom(empty);
+      assertThat(interval).as(what).hasToString("{5..9}");
+      interval.setDomain(empty);
+      assertThat(interval.isEmpty()).as(what).isTrue();
+      SmallDenseDomain dense = new SmallDenseDomain(5, 9);
+      dense.addDom(empty);
+      assertThat(dense).as(what).hasToString("{5..9}");
+      assertThat(dense.intersectAdapt(empty)).as(what).isEqualTo(IntDomain.GROUND);
+      assertThat(dense.isEmpty()).as(what).isTrue();
+      BoundDomain bound = new BoundDomain(5, 9);
+      assertThat(bound.contains(empty)).as(what).isTrue();
+      assertThat(bound.union(empty)).as(what).hasToString("{5..9}");
+      bound.setDomain(empty);
+      assertThat(bound.isEmpty()).as(what).isTrue();
+      assertThat(bound.getSize()).as(what).isZero();
+    }
+    assertThat(new BoundDomain().intervalEnumeration().hasMoreElements()).isFalse();
+  }
 }

@@ -1299,6 +1299,14 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public int intersectAdapt(IntDomain domain) {
 
+    if (domain.isEmpty()) {
+      if (isEmpty()) {
+        return NONE;
+      }
+      clear();
+      return GROUND;
+    }
+
     if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
       return intersectAdapt(window(domain, 0));
     }
