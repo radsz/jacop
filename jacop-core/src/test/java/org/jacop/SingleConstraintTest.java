@@ -12067,4 +12067,26 @@ class SingleConstraintTest extends TestHelper {
     assertThat(d.intersectAdapt(m + 1, m + 3)).isEqualTo(IntDomain.GROUND);
     assertThat(d.isEmpty()).isTrue();
   }
+
+  @Test
+  void intervalAndSmallDenseDomainsTakeTheValuesOfOtherDomains() {
+    // setDomain(SmallDenseDomain) kept only the values already in the interval domain, which was
+    // cleared first, so it ended empty
+    IntervalDomain iv = new IntervalDomain(5, 7);
+    iv.setDomain(new SmallDenseDomain(3, 7));
+    assertThat(iv.toString()).isEqualTo("{3..7}");
+    // intersectAdapt with an affine view left the small dense domain unchanged
+    Store store = new Store();
+    IntVar u = new IntVar(store, "u", new IntervalDomain(-30, -10));
+    IntDomain view = new org.jacop.core.AffineView(store, "v", u, -1, 0).domain;
+    SmallDenseDomain d = new SmallDenseDomain(0, 20);
+    assertThat(d.intersectAdapt(view)).isEqualTo(IntDomain.BOUND);
+    assertThat(d.toString()).isEqualTo("{10..20}");
+    // multiply by a negative constant sized its result by a negative capacity
+    IntervalDomain m = new IntervalDomain(1, 3);
+    m.unionAdapt(5, 5);
+    assertThat(m.multiply(-2).toString()).isEqualTo("{-10, -6, -4, -2}");
+    assertThat(m.multiply(-1).getSize()).isEqualTo(4);
+    assertThat(m.multiply(-1).contains(-3)).isTrue();
+  }
 }

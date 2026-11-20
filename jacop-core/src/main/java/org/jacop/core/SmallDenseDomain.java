@@ -1398,11 +1398,8 @@ public class SmallDenseDomain extends IntDomain {
       return computeEventType(singleton, previousMin, minBound, previousMax, max);
     }
 
-    if (ASSERTS_ENABLED) {
-      throw new IllegalStateException(
-          String.valueOf("Not implemented for class " + domain.getClass()));
-    }
-    return -1;
+    // any other domain, such as an affine view, through the values within the bit window
+    return intersectAdapt(window(domain, 0));
   }
 
   @Override

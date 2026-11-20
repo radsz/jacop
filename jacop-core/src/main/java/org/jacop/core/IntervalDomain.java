@@ -1387,7 +1387,8 @@ public class IntervalDomain extends IntDomain {
       throw new IllegalStateException("Assertion failed");
     }
 
-    IntervalDomain temp = new IntervalDomain(getSize() * mul);
+    // one interval per value at most
+    IntervalDomain temp = new IntervalDomain(getSize());
 
     if (mul > 0) {
 
@@ -1396,7 +1397,7 @@ public class IntervalDomain extends IntDomain {
         int i1Max = bounds[2 * m + 1];
         for (int i = i1Min; i <= i1Max; i++) {
           int value = i * mul;
-          temp.appendInterval(value, value);
+          temp.unionAdapt(value, value);
         }
       }
 
@@ -1407,7 +1408,7 @@ public class IntervalDomain extends IntDomain {
         int i1Max = bounds[2 * m + 1];
         for (int i = i1Max; i >= i1Min; i--) {
           int value = i * mul;
-          temp.appendInterval(value, value);
+          temp.unionAdapt(value, value);
         }
       }
     }
@@ -1495,9 +1496,7 @@ public class IntervalDomain extends IntDomain {
 
         int next = enumer.nextElement();
 
-        if (this.contains(next)) {
-          this.unionAdapt(next, next);
-        }
+        this.unionAdapt(next, next);
       }
 
     } else {
