@@ -188,7 +188,10 @@ public class Options {
             --default-search <value> search for a model without search annotation; one of
                 "free" (default; as with -f), "input" (input order, splitting the domains)
             --free-config <key=value,...> settings of the new free search engine, for experiments:
-                heuristic=domwdeg|cacd|chs|afc, lc=<k>, phase=0|1, restarts=geometric|luby|none,
+                heuristic=chs|domwdeg|cacd|pick|frba|rr|afc (chs default for satisfaction,
+                domwdeg for optimisation; rr: round robin over runs of
+                rr-set=cacd;pick;frba, rr-runs=<runs each> (1); pick-mode=3|0), lc=<k>, phase=0|1,
+                restarts=geometric|luby|none,
                 set-heuristic=input|afc (set variables: input order (default) or largest
                 accumulated failure count and degree),
                 scale=<failures>, base=<growth of geometric restarts> (100, 1.5; optimisation 10, 1.05),

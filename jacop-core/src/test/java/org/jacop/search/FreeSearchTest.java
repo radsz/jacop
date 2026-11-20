@@ -62,12 +62,15 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.search.free.DomWdeg;
+import org.jacop.search.free.FrbaDom;
 import org.jacop.search.free.FreeSearch;
 import org.jacop.search.free.FreeSearch.Status;
 import org.jacop.search.free.IndomainBoundImpact;
 import org.jacop.search.free.IndomainLastSolution;
 import org.jacop.search.free.LastConflict;
+import org.jacop.search.free.PickDom;
 import org.jacop.search.free.RestartNoGoods;
+import org.jacop.search.free.RoundRobinSelect;
 import org.jacop.search.free.SearchMonitor;
 import org.jacop.search.free.SharedSolution;
 import org.jacop.search.lns.AdaptiveLns;
@@ -345,6 +348,30 @@ class FreeSearchTest {
           DomWdeg chs = new DomWdeg(concat(m), phase, DomWdeg.Weighting.CHS);
           LastConflict lc = new LastConflict(chs, phase, 1);
           return new Branching(lc, phase, chs, lc);
+        },
+        m -> {
+          IndomainLastSolution phase = new IndomainLastSolution(concat(m), new IndomainMin<>());
+          PickDom pick = new PickDom(concat(m), phase);
+          return new Branching(pick, phase, pick);
+        },
+        m -> {
+          IndomainLastSolution phase = new IndomainLastSolution(concat(m), new IndomainMax<>());
+          FrbaDom frba = new FrbaDom(concat(m), phase);
+          LastConflict lc = new LastConflict(frba, phase, 1);
+          return new Branching(lc, phase, frba, lc);
+        },
+        m -> {
+          // the round robin of ACE-rr, a heuristic per run, each learning from every run
+          IndomainLastSolution phase = new IndomainLastSolution(concat(m), new IndomainMin<>());
+          RoundRobinSelect rr =
+              new RoundRobinSelect(
+                  List.of(
+                      new DomWdeg(concat(m), phase, DomWdeg.Weighting.CACD),
+                      new PickDom(concat(m), phase, 0),
+                      new FrbaDom(concat(m), phase)),
+                  1);
+          LastConflict lc = new LastConflict(rr, phase, 1);
+          return new Branching(lc, phase, rr, lc);
         });
   }
 
@@ -635,6 +662,38 @@ class FreeSearchTest {
         assertTrue(seen[0] < search.getFailures(), "period " + period);
       }
     }
+  }
+
+  @Test
+  void roundRobinGivesEveryHeuristicItsRuns() {
+    // pigeonhole: 7 pigeons in 6 holes takes many runs of 1 failure to refute
+    Store store = new Store();
+    IntVar[] p = new IntVar[7];
+    for (int i = 0; i < p.length; i++) {
+      p[i] = new IntVar(store, "p" + i, 1, 6);
+    }
+    for (int i = 0; i < p.length; i++) {
+      for (int j = i + 1; j < p.length; j++) {
+        store.impose(new XneqY(p[i], p[j]));
+      }
+    }
+    PickDom pick = new PickDom(p, new IndomainMin<>());
+    RoundRobinSelect rr =
+        new RoundRobinSelect(
+            List.of(
+                new DomWdeg(p, new IndomainMin<>(), DomWdeg.Weighting.CACD),
+                pick,
+                new FrbaDom(p, new IndomainMin<>())),
+            2);
+    FreeSearch search =
+        FreeSearch.builder(store, rr).monitor(rr).restarts(new LubyCalculator(1)).build();
+    assertEquals(Status.UNSATISFIABLE, search.solve());
+    for (int i = 0; i < 3; i++) {
+      assertTrue(rr.runs(i) >= 2, rr.toString());
+    }
+    assertTrue(Math.abs(rr.runs(0) - rr.runs(2)) <= 2, rr.toString());
+    // pick/dom learned from the failures of all runs, through the store's domain tracker
+    assertTrue(store.domainTracker == pick);
   }
 
   @Test

@@ -8623,7 +8623,27 @@ Version 5.0 (unreleased)
    fires only on kitchen. -Dorg.jacop.presolve.objectiveContraction=false
    turns it off.
 
-479. New constraint TspKOpt(x, offset, d, length): k-opt dominance for a
+484. Free search (-f) branches with conflict history search, CHS (Habet
+   and Terrioux, "Conflict history based heuristic for constraint
+   satisfaction problem solving", J. Heuristics 27, 2021), where it used
+   dom/wdeg, in the plain CP search of --lcg off and of the hand-over from
+   lazy clause generation, for satisfaction problems; optimisation keeps
+   dom/wdeg, since CHS found worse solutions there. On 94 hard XCSP
+   2022-2025 CSP instances at 240 s it decides 63 instead of 59 under -f
+   (total time -8 %) and 49 instead of 41 under -f --lcg off (-13 %); at
+   600 s on the 23 of them that reach the plain CP search 10 instead of
+   8 (-9 %, none lost). --free-config
+   heuristic=domwdeg restores dom/wdeg. Three more heuristics are available
+   for experiments: heuristic=pick, pick/dom (Audemard, Lecoutre and
+   Prud'homme, "Guiding Backtrack Search by Tracking Variables During
+   Constraint Propagation", CP 2023), heuristic=frba, frba/dom (Li, Yin and
+   Li, "Failure Based Variable Ordering Heuristics for Solving CSPs", CP
+   2021), and heuristic=rr, a round robin of heuristics over the runs
+   between restarts in which all of them learn from every run, as in ACE's
+   portfolio of the XCSP 2025 competition (rr-set=cacd;pick;frba,
+   rr-runs=1).
+
+485. New constraint TspKOpt(x, offset, d, length): k-opt dominance for a
    symmetric travelling salesman tour x with arc lengths d (Isoart and
    Regin, A k-Opt Based Constraint for the TSP, CP 2021; Jonker and
    Volgenant, Nonoptimal edges for the symmetric traveling salesman

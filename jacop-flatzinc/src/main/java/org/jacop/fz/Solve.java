@@ -157,10 +157,13 @@ import org.jacop.search.SmallestMin;
 import org.jacop.search.SplitSelect;
 import org.jacop.search.WeightedDegree;
 import org.jacop.search.free.DomWdeg;
+import org.jacop.search.free.FrbaDom;
 import org.jacop.search.free.FreeSearch;
 import org.jacop.search.free.IndomainBoundImpact;
 import org.jacop.search.free.IndomainLastSolution;
 import org.jacop.search.free.LastConflict;
+import org.jacop.search.free.PickDom;
+import org.jacop.search.free.RoundRobinSelect;
 import org.jacop.search.free.SearchMonitor;
 import org.jacop.search.lns.AdaptiveLns;
 import org.jacop.search.ls.BinCompletion;
@@ -6633,12 +6636,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * Runs free search with the FreeSearch engine. It branches on the set variables first, then on
    * the integer and Boolean variables, then on the objective and on the float variables. The
    * settings of --free-config select the heuristics; by default dom/wdeg with last conflict and
-   * solution-based phase saving, and nogoods learned at each restart. Satisfaction restarts
-   * geometrically from 100 failures, growing by 1.5; optimisation from 10 failures, growing by
-   * 1.05, starts that sequence again after each solution, forgets the dom/wdeg weights every 32
-   * restarts and spends one failure in twenty on probes of the objective near its lower bound.
+   * solution-based phase saving, its weights by conflict history search (CHS, Habet and Terrioux,
+   * J. Heuristics 2021) for a satisfaction problem and by failure counts for optimisation, and
+   * nogoods learned at each restart. Satisfaction restarts geometrically from 100 failures, growing
+   * by 1.5; optimisation from 10 failures, growing by 1.05, starts that sequence again after each
+   * solution, forgets the weights every 32 restarts and spends one failure in twenty on probes of
+   * the objective near its lower bound.
    */
   private boolean executeFreeSearch(Var costVar) {
+    freeSatisfaction = costVar == null;
     DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
     searchVars.defaultVars();
     boolean objectiveLast = "1".equals(options.freeConfig("objective-last", "1"));
@@ -7009,6 +7015,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     };
   }
 
+  // whether the plain CP free search solves a satisfaction problem; selects the default heuristic
+  private boolean freeSatisfaction = true;
+
   /**
    * Adds the free search branching on the given variables: the set variables first, then the
    * integer and Boolean variables, then the objective and the float variables. The settings of
@@ -7022,7 +7031,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       BooleanVar[] bools,
       FloatVar[] floats,
       IntVar objective) {
-    String heuristic = options.freeConfig("heuristic", "domwdeg");
+    // CHS decides more satisfaction problems; on optimisation it found worse solutions
+    String heuristic = options.freeConfig("heuristic", freeSatisfaction ? "chs" : "domwdeg");
     int lastConflict = Integer.parseInt(options.freeConfig("lc", "1"));
     boolean phase = "1".equals(options.freeConfig("phase", "1"));
     if (sets.length > 0) {
@@ -7076,17 +7086,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         selects.add(new SimpleSelect<>(bools, new AfcMax<>(store), values));
       }
     } else if (vars.length > 0) {
-      DomWdeg.Weighting weighting =
-          switch (heuristic) {
-            case "cacd" -> DomWdeg.Weighting.CACD;
-            case "chs" -> DomWdeg.Weighting.CHS;
-            default -> DomWdeg.Weighting.WDEG;
-          };
-      DomWdeg domWdeg = new DomWdeg(vars, values, weighting).flushEvery(flushEvery);
-      monitors.add(domWdeg);
-      SelectChoicePoint<IntVar> select = domWdeg;
+      SelectChoicePoint<IntVar> select;
+      if ("rr".equals(heuristic)) {
+        // ACE-rr: the heuristics take turns over the runs and all learn from every run
+        List<SelectChoicePoint<IntVar>> rotation = new ArrayList<>();
+        for (String name : options.freeConfig("rr-set", "cacd;pick;frba").split(";")) {
+          rotation.add(conflictHeuristic(name, vars, values));
+        }
+        select =
+            new RoundRobinSelect(rotation, Integer.parseInt(options.freeConfig("rr-runs", "1")));
+      } else {
+        select = conflictHeuristic(heuristic, vars, values);
+      }
+      monitors.add((SearchMonitor) select);
       if (lastConflict > 0) {
-        LastConflict lc = new LastConflict(domWdeg, values, lastConflict);
+        LastConflict lc = new LastConflict(select, values, lastConflict);
         monitors.add(lc);
         select = lc;
       }
@@ -7098,6 +7112,24 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (floats.length > 0) {
       selects.add(new SplitSelectFloat<>(store, floats, new LargestDomainFloat<>()));
     }
+  }
+
+  /**
+   * The conflict-driven variable heuristic of free search named by --free-config heuristic (or an
+   * entry of rr-set): domwdeg, cacd, chs, pick (pick/dom) or frba (frba/dom).
+   */
+  private SelectChoicePoint<IntVar> conflictHeuristic(
+      String name, IntVar[] vars, Indomain<IntVar> values) {
+    return switch (name) {
+      case "pick" ->
+          new PickDom(vars, values, Integer.parseInt(options.freeConfig("pick-mode", "3")));
+      case "frba" -> new FrbaDom(vars, values);
+      case "cacd" -> new DomWdeg(vars, values, DomWdeg.Weighting.CACD).flushEvery(flushEvery);
+      case "chs" -> new DomWdeg(vars, values, DomWdeg.Weighting.CHS).flushEvery(flushEvery);
+      case "domwdeg", "wdeg" ->
+          new DomWdeg(vars, values, DomWdeg.Weighting.WDEG).flushEvery(flushEvery);
+      default -> throw new IllegalArgumentException("heuristic=" + name);
+    };
   }
 
   /**
