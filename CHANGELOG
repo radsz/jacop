@@ -8679,6 +8679,16 @@ Version 5.0 (unreleased)
    18 s, brazil58 proved in 174 s), 25 unsolved tours worse; -f 27 -> 28
    proved, time 11,642 -> 11,044 s, 11 tours worse.
 
+487. New XCSP3 front end org.jacop.fz.xcsp.Xcsp2jacop and launcher
+   xcsp-jacop: it reads an XCSP3-core instance (.xml, .xml.lzma or
+   .xml.xz) with the JDK's streaming XML parser, posts it as FlatZinc over
+   JaCoP's built-ins, solves it with the FlatZinc front end and all its
+   options (-t, -f, -p, LCG) and prints the XCSP3 competition output
+   (s, o, v and c lines). Tables are filtered by the domains of their
+   variables and stored once per content, so Inglenook of XCSP 2026 (a
+   26-million-pair table on one line) is read in 4 s instead of 270 s and
+   6 GB through pycsp3 and MiniZinc.
+
 Version 4.11
 =============
 

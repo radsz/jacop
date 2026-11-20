@@ -136,6 +136,9 @@ final class FznModel {
   }
 
   FznVar aux(long min, long max) {
+    if (min < MIN || max > MAX) {
+      clipped = true;
+    }
     min = Math.max(min, MIN);
     max = Math.min(max, MAX);
     if (min > max) {
@@ -393,6 +396,18 @@ final class FznModel {
       return;
     }
     linear(op, normalize(op, l), null);
+  }
+
+  /** Posts a literal as true. */
+  void post(Lit l) {
+    if (l.isConstant()) {
+      if (l.isFalse()) {
+        fail();
+      }
+      return;
+    }
+    FznVar b = l.b();
+    restrict(b, Dom.value(l.neg() ? 0 : 1));
   }
 
   /**
@@ -699,18 +714,6 @@ final class FznModel {
 
   // ------------------------------------------------------------------ Boolean constraints
 
-  /** Posts a literal as true. */
-  void post(Lit l) {
-    if (l.isConstant()) {
-      if (l.isFalse()) {
-        fail();
-      }
-      return;
-    }
-    FznVar b = l.b();
-    restrict(b, Dom.value(l.neg() ? 0 : 1));
-  }
-
   /** Posts the disjunction of literals. */
   void clause(List<Lit> lits) {
     List<String> pos = new ArrayList<>();
@@ -922,10 +925,20 @@ final class FznModel {
   }
 
   /** Names of output variables, set by the reader. */
+  /**
+   * True once a domain was cut to JaCoP's integer range [{@link #MIN}, {@link #MAX}]: the model
+   * then may have lost solutions, so unsatisfiability and optimality are not proved.
+   */
+  boolean clipped;
+
   final java.util.Set<FznVar> outputVars = new java.util.HashSet<>();
 
   private void declare(Writer w, FznVar x) throws IOException {
     Dom d = x.dom;
+    if (!d.isEmpty() && (d.min() < MIN || d.max() > MAX)) {
+      clipped = true;
+      d = d.intersect(MIN, MAX);
+    }
     if (d.isEmpty()) {
       inconsistent = true;
       d = Dom.value(0);

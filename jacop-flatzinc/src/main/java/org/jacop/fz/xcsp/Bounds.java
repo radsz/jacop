@@ -54,7 +54,7 @@ final class Bounds {
     return x == Long.MIN_VALUE ? Long.MAX_VALUE : Math.abs(x);
   }
 
-  /** x to the power y, saturated; y >= 0. */
+  /** Returns x to the power y (y >= 0), saturated. */
   static long pow(long x, long y) {
     long r = 1;
     for (long i = 0; i < y; i++) {

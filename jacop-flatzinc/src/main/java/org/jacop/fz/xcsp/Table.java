@@ -57,6 +57,9 @@ final class Table {
 
   long paramStar;
 
+  /** The values of each column without a star, once computed. */
+  Dom[] columns;
+
   private long hash = 1;
 
   // the characters of the number or range being read
@@ -67,6 +70,19 @@ final class Table {
 
   Table(boolean negative) {
     this.negative = negative;
+  }
+
+  /** A positive table holding the given cells. */
+  static Table of(int[] cells, int size, int arity, boolean starred) {
+    Table t = new Table(false);
+    t.cells = cells;
+    t.size = size;
+    t.arity = arity;
+    t.starred = starred;
+    for (int i = 0; i < size; i++) {
+      t.hash = 31 * t.hash + cells[i];
+    }
+    return t;
   }
 
   int rows() {

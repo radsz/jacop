@@ -282,6 +282,56 @@ class XcspReaderTest {
   }
 
   @Test
+  void naryComparisonsInLiterals() throws IOException {
+    // RotatingRostering of XCSP 2025
+    check(
+        vars(4, 0, 2),
+        "<intension> imp(eq(x[0],x[1],x[2]),ne(x[0],x[3])) </intension>",
+        4,
+        0,
+        2,
+        t -> !(t[0] == t[1] && t[1] == t[2]) || t[0] != t[3]);
+    check(
+        vars(4, 0, 2),
+        "<group><intension> imp(eq(%0,%1,%2),ne(%0,%3)) </intension><args> x[0] x[1] x[2] x[3] </args>"
+            + "<args> x[1] x[2] x[3] x[0] </args></group>",
+        4,
+        0,
+        2,
+        t ->
+            (!(t[0] == t[1] && t[1] == t[2]) || t[0] != t[3])
+                && (!(t[1] == t[2] && t[2] == t[3]) || t[1] != t[0]));
+  }
+
+  /** A domain beyond JaCoP's integer range is cut, so no UNSATISFIABLE or OPTIMUM is claimed. */
+  @Test
+  void clippedDomainsClaimNoProof() throws IOException {
+    String csp =
+        "<instance format=\"XCSP3\" type=\"CSP\"><variables><var id=\"x\"> 0..9999999999 </var></variables>"
+            + "<constraints><intension> gt(x,1000000000) </intension></constraints></instance>";
+    assertTrue(competitionOutput(csp).contains("s UNKNOWN"), competitionOutput(csp));
+    String cop =
+        "<instance format=\"XCSP3\" type=\"COP\"><variables><var id=\"x\"> 0..9999999999 </var></variables>"
+            + "<constraints><intension> lt(x,5000000000) </intension></constraints><objectives><minimize> x </minimize></objectives></instance>";
+    String out = competitionOutput(cop);
+    assertTrue(out.contains("s SATISFIABLE") && out.contains("o 0"), out);
+  }
+
+  private String competitionOutput(String xml) throws IOException {
+    Path in = tmp.resolve("model.xml");
+    Files.writeString(in, xml, StandardCharsets.UTF_8);
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream captured = new ByteArrayOutputStream();
+    try {
+      System.setOut(new PrintStream(captured, true, StandardCharsets.UTF_8));
+      Xcsp2jacop.run(new String[] {"-t", "10000", in.toString()});
+    } finally {
+      System.setOut(originalOut);
+    }
+    return captured.toString(StandardCharsets.UTF_8);
+  }
+
+  @Test
   void extension() throws IOException {
     check(
         vars(3, 0, 2),
@@ -293,6 +343,16 @@ class XcspReaderTest {
             t[0] == 0 && t[2] == 1
                 || t[0] == 2 && t[1] == 1
                 || t[0] == 1 && t[1] == 1 && t[2] == 1);
+    // rows outside the domains are dropped and the domains narrowed to the columns
+    check(
+        vars(3, 0, 3),
+        "<intension> eq(x[0],1) </intension><group><extension><list> %0 %1 </list>"
+            + "<supports> (0,1)(1,2)(1,3)(2,0)(3,3)(2,*) </supports>"
+            + "</extension><args> x[0] x[1] </args><args> x[1] x[2] </args></group>",
+        3,
+        0,
+        3,
+        t -> t[0] == 1 && (t[1] == 2 || t[1] == 3) && (t[1] == 2 || t[2] == 3));
     check(
         vars(3, 0, 2),
         "<extension><list> x[] </list><conflicts> (0,*,1)(2,1,2) </conflicts></extension>",
@@ -409,6 +469,23 @@ class XcspReaderTest {
         0,
         1,
         t -> t[0] < t[2] || t[0] == t[2] && t[1] < t[3]);
+    check(
+        vars(6, 0, 2),
+        "<lex><list> x[0..1] </list><list> x[2..3] </list><list> x[4..5] </list><operator> le </operator></lex>",
+        6,
+        0,
+        2,
+        t -> Arrays.compare(t, 0, 2, t, 2, 4) <= 0 && Arrays.compare(t, 2, 4, t, 4, 6) <= 0);
+    check(
+        "<array id=\"y\" size=\"[2][3]\"> 0..1 </array>",
+        "<lex><matrix> y[][] </matrix><operator> lt </operator></lex>",
+        6,
+        0,
+        1,
+        t ->
+            Arrays.compare(t, 0, 3, t, 3, 6) < 0
+                && Arrays.compare(new int[] {t[0], t[3]}, new int[] {t[1], t[4]}) < 0
+                && Arrays.compare(new int[] {t[1], t[4]}, new int[] {t[2], t[5]}) < 0);
     check(vars(3, 0, 2), "<circuit> x[] </circuit>", 3, 0, 2, XcspReaderTest::subcircuit);
     check(
         vars(4, 0, 1),

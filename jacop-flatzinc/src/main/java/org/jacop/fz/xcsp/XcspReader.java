@@ -150,12 +150,12 @@ public final class XcspReader {
   }
 
   /** An XCSP3 array of variables. */
-  static final class XArray {
+  static final class ArrayOfVars {
     final String id;
     final int[] dims;
     final FznVar[] cells;
 
-    XArray(String id, int[] dims) {
+    ArrayOfVars(String id, int[] dims) {
       this.id = id;
       this.dims = dims;
       long n = 1;
@@ -183,12 +183,12 @@ public final class XcspReader {
   }
 
   /** A declared XCSP3 variable, in declaration order, for the output. */
-  record Declared(String id, XArray array, FznVar var) {}
+  record Declared(String id, ArrayOfVars array, FznVar var) {}
 
   final FznModel m;
   final ExprCompiler ec;
   private final Map<String, FznVar> singles = new HashMap<>();
-  private final Map<String, XArray> arrays = new HashMap<>();
+  private final Map<String, ArrayOfVars> arrays = new HashMap<>();
   final List<Declared> declared = new ArrayList<>();
   private final Map<String, Table> tableKeys = new HashMap<>();
 
@@ -443,22 +443,42 @@ public final class XcspReader {
     String id = e.attr("id");
     String as = e.attr("as");
     if (as != null) {
-      XArray like = arrays.get(as);
+      ArrayOfVars like = arrays.get(as);
       if (like == null) {
         throw new XcspException("unknown array " + as);
       }
-      XArray a = new XArray(id, like.dims.clone());
-      for (int i = 0; i < a.cells.length; i++) {
-        if (like.cells[i] != null) {
-          a.cells[i] =
-              newXcspVar(a.cellId(i), like.cells[i].dom, symbolic.containsKey(like.cells[i]));
+      String size = e.attr("size");
+      ArrayOfVars a = new ArrayOfVars(id, size != null ? dims(size) : like.dims.clone());
+      if (a.cells.length == like.cells.length) {
+        for (int i = 0; i < a.cells.length; i++) {
+          if (like.cells[i] != null) {
+            a.cells[i] =
+                newXcspVar(a.cellId(i), like.cells[i].dom, symbolic.containsKey(like.cells[i]));
+          }
+        }
+      } else {
+        // another size (pycsp3 writes it for auxiliary arrays): the domain shared by all cells
+        FznVar first = null;
+        for (FznVar v : like.cells) {
+          if (v != null && first == null) {
+            first = v;
+          } else if (v != null && !v.dom.equals(first.dom)) {
+            throw new XcspException(
+                "array " + id + " as " + as + " of another size with several domains");
+          }
+        }
+        if (first == null) {
+          throw new XcspException("array " + id + " as an empty array");
+        }
+        for (int i = 0; i < a.cells.length; i++) {
+          a.cells[i] = newXcspVar(a.cellId(i), first.dom, symbolic.containsKey(first));
         }
       }
       arrays.put(id, a);
       declared.add(new Declared(id, a, null));
       return;
     }
-    XArray a = new XArray(id, dims(e.attr("size")));
+    ArrayOfVars a = new ArrayOfVars(id, dims(e.attr("size")));
     arrays.put(id, a);
     boolean sym = isSymbolic(e);
     Dom[] doms = new Dom[a.cells.length];
@@ -496,7 +516,7 @@ public final class XcspReader {
   }
 
   // the flat cells of an array reference such as x[1][] or x[2..4][0]
-  private static List<Integer> cellsOf(XArray a, String ref) {
+  private static List<Integer> cellsOf(ArrayOfVars a, String ref) {
     int open = ref.indexOf('[');
     if (open < 0) {
       throw new XcspException("not an array reference: " + ref);
@@ -538,7 +558,7 @@ public final class XcspReader {
     return out;
   }
 
-  private static void collect(XArray a, int[][] ranges, int d, int flat, List<Integer> out) {
+  private static void collect(ArrayOfVars a, int[][] ranges, int d, int flat, List<Integer> out) {
     if (d == a.dims.length) {
       out.add(flat);
       return;
@@ -559,7 +579,7 @@ public final class XcspReader {
     }
     int open = id.indexOf('[');
     if (open > 0) {
-      XArray a = arrays.get(id.substring(0, open));
+      ArrayOfVars a = arrays.get(id.substring(0, open));
       if (a != null) {
         List<Integer> c = cellsOf(a, id);
         if (c.size() == 1 && a.cells[c.get(0)] != null) {
@@ -670,7 +690,7 @@ public final class XcspReader {
     }
     int open = t.indexOf('[');
     if (open > 0) {
-      XArray a = arrays.get(t.substring(0, open));
+      ArrayOfVars a = arrays.get(t.substring(0, open));
       if (a != null) {
         for (int cell : cellsOf(a, t)) {
           if (a.cells[cell] != null) {
@@ -1006,6 +1026,12 @@ public final class XcspReader {
     if (t.arity != xs.size()) {
       throw new XcspException("table of arity " + t.arity + " on " + xs.size() + " variables");
     }
+    if (!t.negative) {
+      t = supported(xs, t);
+      if (t == null) {
+        return;
+      }
+    }
     String vars = array(xs);
     if (t.negative && t.starred) {
       negativeShortTable(xs, t);
@@ -1032,6 +1058,80 @@ public final class XcspReader {
     } else {
       m.constraint("jacop_table_int(" + vars + "," + param + ")");
     }
+  }
+
+  /**
+   * The rows of a positive table on variables that are supported by their domains, the table itself
+   * when all are; narrows each variable to the values of its column. Null when the table is
+   * entailed or failed. Inglenook of XCSP 2026 shares a table of 26 million pairs over a path whose
+   * first variable is fixed, so few rows are left.
+   */
+  private Table supported(List<Expr> xs, Table t) {
+    int a = t.arity;
+    FznVar[] v = new FznVar[a];
+    for (int j = 0; j < a; j++) {
+      if (xs.get(j).kind != Expr.Kind.VAR) {
+        return t;
+      }
+      v[j] = xs.get(j).var;
+    }
+    int rows = t.rows();
+    int[] cells = t.cells;
+    int[] kept = null;
+    int keptSize = 0;
+    for (int r = 0; r < rows; r++) {
+      boolean ok = true;
+      for (int j = 0; j < a && ok; j++) {
+        int c = cells[r * a + j];
+        ok = c == Table.STAR || v[j].dom.contains(c);
+      }
+      if (ok) {
+        if (kept != null) {
+          System.arraycopy(cells, r * a, kept, keptSize, a);
+          keptSize += a;
+        }
+      } else if (kept == null) {
+        kept = new int[Math.max(a, r * a)];
+        System.arraycopy(cells, 0, kept, 0, r * a);
+        keptSize = r * a;
+      }
+      if (kept != null && keptSize + a > kept.length) {
+        kept = java.util.Arrays.copyOf(kept, (int) Math.min(t.size, 2L * kept.length + a));
+      }
+    }
+    Table result = t;
+    if (kept != null) {
+      if (keptSize == 0) {
+        m.fail();
+        return null;
+      }
+      boolean starred = false;
+      for (int i = 0; i < keptSize && !starred; i++) {
+        starred = kept[i] == Table.STAR;
+      }
+      result = Table.of(java.util.Arrays.copyOf(kept, keptSize), keptSize, a, starred);
+    }
+    // the values of each column
+    if (result.columns == null) {
+      int n = result.rows();
+      long[] values = new long[n];
+      result.columns = new Dom[a];
+      for (int j = 0; j < a; j++) {
+        boolean star = false;
+        for (int r = 0; r < n && !star; r++) {
+          int c = result.cells[r * a + j];
+          star = c == Table.STAR;
+          values[r] = c;
+        }
+        result.columns[j] = star ? null : Dom.of(values, n);
+      }
+    }
+    for (int j = 0; j < a; j++) {
+      if (result.columns[j] != null) {
+        m.restrict(v[j], v[j].dom.intersect(result.columns[j]));
+      }
+    }
+    return result;
   }
 
   private static Dom unaryValues(Table t) {
@@ -1195,7 +1295,7 @@ public final class XcspReader {
     // a two-dimensional array reference such as x[][]
     String ref = t;
     int open = ref.indexOf('[');
-    XArray a = arrays.get(ref.substring(0, open));
+    ArrayOfVars a = arrays.get(ref.substring(0, open));
     if (a == null || a.dims.length < 2) {
       throw new XcspException("bad matrix " + t);
     }
@@ -1312,15 +1412,22 @@ public final class XcspReader {
               + ")");
       return;
     }
+    // the built-in takes the vectors as the columns of a matrix listed row by row
     List<Expr> flat = new ArrayList<>();
-    for (List<Expr> l : lists) {
-      flat.addAll(l);
+    int length = lists.get(0).size();
+    for (int i = 0; i < length; i++) {
+      for (List<Expr> l : lists) {
+        if (l.size() != length) {
+          throw new XcspException("lex over lists of different lengths");
+        }
+        flat.add(l.get(i));
+      }
     }
     m.constraint(
         (strict ? "jacop_lex_chain_less_int(" : "jacop_lex_chain_lesseq_int(")
             + array(flat)
             + ","
-            + lists.get(0).size()
+            + lists.size()
             + ")");
   }
 
@@ -1953,7 +2060,7 @@ public final class XcspReader {
 
   private String[] mddParams(List<Transition> ts) {
     // nodes: root has no incoming arc, the terminal no outgoing one
-    Map<String, Integer> number = new LinkedHashMap<>();
+    final Map<String, Integer> number = new LinkedHashMap<>();
     Map<String, List<Transition>> out = new HashMap<>();
     Set<String> hasIn = new java.util.HashSet<>();
     for (Transition t : ts) {

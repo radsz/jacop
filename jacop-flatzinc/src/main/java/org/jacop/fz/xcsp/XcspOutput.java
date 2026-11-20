@@ -59,6 +59,12 @@ final class XcspOutput extends OutputStream {
   private boolean finished;
   private long solutions;
 
+  /**
+   * True when a domain was cut to JaCoP's integer range: solutions stay solutions, but neither
+   * unsatisfiability nor optimality is proved.
+   */
+  boolean clipped;
+
   XcspOutput(
       PrintStream out,
       boolean optimization,
@@ -110,15 +116,15 @@ final class XcspOutput extends OutputStream {
       case "----------" -> solution();
       case "==========" -> {
         if (optimization && last != null) {
-          out.println("s OPTIMUM FOUND");
+          out.println(clipped ? "s SATISFIABLE" : "s OPTIMUM FOUND");
           values(last);
         } else if (last == null) {
-          out.println("s UNSATISFIABLE");
+          out.println(clipped ? "s UNKNOWN" : "s UNSATISFIABLE");
         }
         finished = true;
       }
       case "=====UNSATISFIABLE=====" -> {
-        out.println("s UNSATISFIABLE");
+        out.println(clipped ? "s UNKNOWN" : "s UNSATISFIABLE");
         finished = true;
       }
       case "=====UNKNOWN=====", "=====UNBOUNDED=====", "=====ERROR=====" -> {

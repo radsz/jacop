@@ -129,6 +129,11 @@ public final class Xcsp2jacop {
               outputs.slots,
               outputs.symbols,
               reader.objective != null ? reader.objective.name : null);
+      filter.clipped = reader.m.clipped;
+      if (reader.m.clipped) {
+        stdout.println(
+            "c domains cut to JaCoP's integer range: no UNSATISFIABLE or OPTIMUM claims");
+      }
       PrintStream filtered = new PrintStream(filter, true, java.nio.charset.StandardCharsets.UTF_8);
       Thread hook = new Thread(filter::finish);
       Runtime.getRuntime().addShutdownHook(hook);
@@ -201,7 +206,7 @@ public final class Xcsp2jacop {
         r.m.outputVars.add(d.var());
         continue;
       }
-      XcspReader.XArray a = d.array();
+      XcspReader.ArrayOfVars a = d.array();
       List<FznVar> cells = new ArrayList<>();
       List<String> cellIds = new ArrayList<>();
       for (int i = 0; i < a.cells.length; i++) {

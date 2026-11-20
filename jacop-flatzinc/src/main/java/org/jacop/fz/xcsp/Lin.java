@@ -105,6 +105,13 @@ final class Lin {
     }
   }
 
+  void add(Lin o, long k) {
+    for (int i = 0; i < o.n; i++) {
+      add(o.v[i], Math.multiplyExact(o.a[i], k));
+    }
+    c = Math.addExact(c, Math.multiplyExact(o.c, k));
+  }
+
   private int find(FznVar x) {
     if (index != null) {
       Integer i = index.get(x);
@@ -131,13 +138,6 @@ final class Lin {
         index.put(v[j], j);
       }
     }
-  }
-
-  void add(Lin o, long k) {
-    for (int i = 0; i < o.n; i++) {
-      add(o.v[i], Math.multiplyExact(o.a[i], k));
-    }
-    c = Math.addExact(c, Math.multiplyExact(o.c, k));
   }
 
   Lin copy() {
