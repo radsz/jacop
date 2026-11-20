@@ -5880,4 +5880,24 @@ class FlatzincFrontEndTest {
       assertFalse(out[1].contains("problem detected"), out[1]);
     }
   }
+
+  @Test
+  void emptyReifiedLinearIsAConstantTest() throws IOException {
+    // an empty sum was posted as a LinearInt, which needs at least one variable
+    String[][] cases = {
+      {"int_lin_lt_reif([],[],0,b)", "[b = false;] =========="},
+      {"int_lin_lt_reif([],[],1,b)", "[b = true;] =========="},
+      {"bool_lin_lt_reif([],[],0,b)", "[b = false;] =========="},
+      {"int_lin_lt_imp([],[],0,b)", "[b = false;] =========="},
+      {"int_lin_ge_imp([],[],1,b)", "[b = false;] =========="},
+      {"int_lin_gt_imp([],[],-1,b)", "[b = false;, b = true;] =========="},
+      {"int_lin_le_reif([],[],-1,b)", "[b = false;] =========="},
+      {"int_lin_ne_reif([],[],0,b)", "[b = false;] =========="},
+      {"int_lin_eq_reif([],[],0,b)", "[b = true;] =========="}
+    };
+    for (String[] c : cases) {
+      String model = "var bool: b:: output_var;\nconstraint " + c[0] + ";\nsolve satisfy;\n";
+      assertEquals(c[1], normalised(run(model, "-a")[0], false), model);
+    }
+  }
 }

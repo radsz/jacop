@@ -226,6 +226,28 @@ class LinearConstraints implements ParserTreeConstants {
     }
     IntVar p4 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
 
+    if (p2.length == 0) {
+      // the empty sum is the constant test 0 rel p3, which LinearInt rejects
+      boolean holds =
+          switch (operation) {
+            case Support.EQ -> p3 == 0;
+            case Support.NE -> p3 != 0;
+            case Support.LT -> 0 < p3;
+            case Support.LE -> 0 <= p3;
+            case Support.GT -> 0 > p3;
+            case Support.GE -> 0 >= p3;
+            default ->
+                throw new IllegalArgumentException(
+                    "%% ERROR: Relation in linear constraint not supported.");
+          };
+      if (isReified) {
+        p4.domain.inValue(store.level, p4, holds ? 1 : 0);
+      } else if (!holds) {
+        p4.domain.inValue(store.level, p4, 0);
+      }
+      return;
+    }
+
     switch (operation) {
       case Support.EQ:
         intLinReifEq(p1, p2, p3, p4, p2Fixed, s, isReified);
