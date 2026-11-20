@@ -1158,18 +1158,20 @@ public class Options {
 
   /**
    * Whether the satisfaction models of -a and -n N (N &gt; 1) are solved with LCG, which enumerates
-   * their solutions with blocking clauses: when --lcg is given, and also by default when the
-   * property org.jacop.fz.lcgAll is on (it is off by default: LCG on by default then gives way to
-   * search without learning, as before).
+   * their solutions with blocking clauses: when --lcg is given, and by default when LCG is on by
+   * default and neither -p, --proof nor --presolve is given. The property org.jacop.fz.lcgAll=off
+   * turns the default off, so LCG on by default gives way to search without learning, as before.
    *
    * @return true when LCG solves a model with many solutions to print
    */
   public boolean lcgEnumerates() {
-    return lcg && (lcgGiven || LCG_ALL);
+    return lcg
+        && (lcgGiven
+            || LCG_ALL && threads == 1 && proof == null && presolve == Presolve.OFF);
   }
 
-  // org.jacop.fz.lcgAll=on: LCG on by default also enumerates the solutions of -a and -n N
-  private static final boolean LCG_ALL = "on".equals(System.getProperty("org.jacop.fz.lcgAll"));
+  // org.jacop.fz.lcgAll=off: LCG on by default leaves the solutions of -a and -n N to search
+  private static final boolean LCG_ALL = !"off".equals(System.getProperty("org.jacop.fz.lcgAll"));
 
   /**
    * Turns off LCG that is on by default, for a model it does not support (float variables, more

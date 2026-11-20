@@ -8679,6 +8679,29 @@ Version 5.0 (unreleased)
    18 s, brazil58 proved in 174 s), 25 unsolved tours worse; -f 27 -> 28
    proved, time 11,642 -> 11,044 s, 11 tours worse.
 
+487. Lazy clause generation enumerates the solutions of satisfaction
+   problems with -a and -n N (N > 1): every solution adds a blocking clause
+   and the search ends, unsatisfiable, once all solutions are printed
+   (Chu and Stuckey, Lazy clause generation reengineered, CP 2009; the
+   all-solutions mode of Chuffed). When every decision is on a printed
+   variable the clause is the negated decisions, otherwise one literal per
+   printed variable (the members of a printed set by their mirrors).
+   Before, -a and -n N dropped LCG and searched without learning. It is
+   on by default with LCG, except under -p, --proof and --presolve;
+   -Dorg.jacop.fz.lcgAll=off restores the old behaviour. Outputs that are
+   not solver variables fall back to search without learning, as
+   "%% --lcg ignored" reports. The FlatZinc satisfaction tests (1,261) print the
+   same solution sets. Wide set, 53 satisfaction instances with -a at
+   240 s: decided 23 -> 26, total time 7,555 -> 7,089 s, the 23 decided by
+   both 355 -> 171 s (search_stress2 06_05 94 -> 0.5 s, amaze 46 -> 2 s,
+   fillomino 7x7_0 and cryptanalysis obj16 all solutions found).
+   @RESULTS@
+   AllDisjoint and PartitionSet explain their pruning for LCG element by
+   element (an element leaving a set is explained by another set holding
+   it, an element of the universe joining a set by every other set being
+   without it), and Reified and Not of AinB and AeqB explain entailment
+   and disentailment, instead of the generic reason of all set atoms.
+
 Version 4.11
 =============
 
