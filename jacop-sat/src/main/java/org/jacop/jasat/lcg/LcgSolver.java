@@ -691,9 +691,9 @@ public final class LcgSolver implements ExternalPropagator {
       // the trail took the same root domain when it was made: one copy per variable, not two
       IntDomain atTrail = trail.rootDomain(x);
       root[i] = atTrail.eq(x.dom()) ? atTrail : x.dom().cloneLight();
-      ge[i] = new LiteralMap(root[i].min(), root[i].max());
-      eq[i] = new LiteralMap(root[i].min(), root[i].max());
-      linked[i] = new LiteralMap(root[i].min(), root[i].max());
+      ge[i] = LiteralMap.NO_LITERALS;
+      eq[i] = LiteralMap.NO_LITERALS;
+      linked[i] = LiteralMap.NO_LITERALS;
       if (!root[i].singleton()) {
         heapOf(i).insert(i);
         if (root[i].min() < 0 || root[i].max() > 1) {
@@ -1005,7 +1005,7 @@ public final class LcgSolver implements ExternalPropagator {
       model.constraint(c);
     }
     for (IntVar[][] clause : proofClauses) {
-      model.clause(clause[0], clause[1]);
+      model.solverClause(clause[0], clause[1]);
     }
     proofCardinality = model.cardinalityLines();
     proofEqualities = model.equalityLines();
@@ -2884,6 +2884,21 @@ public final class LcgSolver implements ExternalPropagator {
     return d;
   }
 
+  /**
+   * The literal map of a variable in one of {@link #ge}, {@link #eq} and {@link #linked}, made at
+   * its first literal: most variables never get literals of some kind, and a map of each kind for
+   * every variable from the start took 210 MB of XCSP 2022 RoomMate-sr0700 (1.46 million
+   * variables), three quarters of them never used.
+   */
+  private LiteralMap own(LiteralMap[] maps, int i) {
+    LiteralMap m = maps[i];
+    if (m == LiteralMap.NO_LITERALS) {
+      m = new LiteralMap(root[i].min(), root[i].max());
+      maps[i] = m;
+    }
+    return m;
+  }
+
   /** The variable of [x >= v] for v in (root min, root max], created when missing, linked. */
   private int geVar(int i, int v) {
     int d = ge[i].get(v);
@@ -2894,7 +2909,7 @@ public final class LcgSolver implements ExternalPropagator {
       return d;
     }
     int lit = newLiteral(i, GE_KIND, v);
-    ge[i].put(v, lit);
+    own(ge, i).put(v, lit);
     link(i, v, lit);
     return lit;
   }
@@ -2918,7 +2933,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (above != LiteralMap.NONE) {
       structural.add(new int[] {-above, lit}); // [x >= above] -> [x >= v]
     }
-    linked[i].put(v, lit);
+    own(linked, i).put(v, lit);
     if (!RELEASE || sat.value(lit) != 0) {
       return;
     }
@@ -2956,7 +2971,7 @@ public final class LcgSolver implements ExternalPropagator {
       return geVar(i, v);
     }
     int lit = newLiteral(i, GE_KIND, v);
-    ge[i].put(v, lit);
+    own(ge, i).put(v, lit);
     addTransient(lit);
     return lit;
   }
@@ -3038,7 +3053,7 @@ public final class LcgSolver implements ExternalPropagator {
       return d;
     }
     int lit = newLiteral(i, EQ_KIND, v);
-    eq[i].put(v, lit);
+    own(eq, i).put(v, lit);
     linkEq(i, v, lit);
     return lit;
   }
@@ -3058,7 +3073,7 @@ public final class LcgSolver implements ExternalPropagator {
       return eqVar(i, v);
     }
     int lit = newLiteral(i, EQ_KIND, v);
-    eq[i].put(v, lit);
+    own(eq, i).put(v, lit);
     addTransient(lit);
     return lit;
   }
@@ -3838,6 +3853,52 @@ public final class LcgSolver implements ExternalPropagator {
   public long probeHalfWays;
 
   /**
+   * Whether the search is too slow for branch and bound to prove the optimum (fewer than
+   * jacop.lcg.coreProbeSlowRate conflicts per second of work), while the cores of the probe raised
+   * the lower bound fast enough to meet the best solution of branch and bound within the work of
+   * the core-guided phase ({@link CoreSearch#canReach}, from the mark set before the probe). The
+   * probe then found no solution of its own because the solutions are far from its bound, not
+   * because the cores are weak, and slow branch and bound gives way to search without learning,
+   * which proves nothing: on multi-agent path finding (MiniZinc Challenge 2022 ins_g16_p10_a30) the
+   * probe raised the bound from 30 to 110 in 2 % of the work and stopped without a solution;
+   * skipping the phase left the proof to branch and bound, which did not prove the optimum 334 in
+   * 1200 s, while the phase proves it in 119 s.
+   */
+  private boolean probeRateReaches() {
+    if (!PROBE_RATE) {
+      return false;
+    }
+    long bestCost = bestObjective();
+    if (bestCost == Long.MAX_VALUE
+        || (double) sat.conflicts * 1000 * WORK_PER_MS >= PROBE_SLOW_RATE * sat.work()
+        || coreSearch.lowerBound <= coreSearch.markBound()
+        || !coreSearch.canReach(bestCost, (long) (coreShare * workLeft()))) {
+      return false;
+    }
+    probeRateKeeps++;
+    return true;
+  }
+
+  // -Djacop.lcg.coreProbeRate=false: the probe skip also when the cores of the probe rose fast
+  // enough to meet the best solution within the phase
+  private static final boolean PROBE_RATE =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.coreProbeRate", "true"));
+
+  // the conflicts per second of work (WORK_PER_MS * 1000) under which the search counts as too slow
+  // for branch and bound to prove the optimum (see probeRateReaches): ma-path-finding made 3 to 9
+  // by
+  // the probe's end, the instances where the skip pays (city-position, gt-sort, trains,
+  // java-routing, fox-geese-corn) 260 to 470
+  private static final double PROBE_SLOW_RATE =
+      Double.parseDouble(System.getProperty("jacop.lcg.coreProbeSlowRate", "50"));
+
+  /**
+   * Statistics: core-guided phases run after a probe without a solution of its own, as the probe
+   * raised the lower bound fast enough (see {@link #probeRateReaches}).
+   */
+  public long probeRateKeeps;
+
+  /**
    * Whether the core-guided probe raised the lower bound at least as far as it is still below the
    * best solution, so that the rest of the phase runs even without a solution of the probe's own:
    * on MaxSAT Evaluation 2024's xai-mindset2 iris the probe's cores took the bound from 0 to 77 in
@@ -3961,6 +4022,7 @@ public final class LcgSolver implements ExternalPropagator {
       }
       if (coreProbeShare > 0) {
         long stops = coreSearch.noSolutionStops;
+        coreSearch.mark();
         result = runCores(coreProbeShare, coreDelayBudget, false);
         if (result != CdclSolver.UNKNOWN || sat.now() > sat.deadline()) {
           return result;
@@ -3976,7 +4038,8 @@ public final class LcgSolver implements ExternalPropagator {
           && probeWithoutSolution
           && best != null
           && best != given
-          && !halfWayAfterProbe()) {
+          && !halfWayAfterProbe()
+          && !probeRateReaches()) {
         // the probe found no solution of its own while branch and bound did: the rest of the phase
         // stops the same way after a third of its work and gives the time back
         probeSkips++;
@@ -5560,6 +5623,9 @@ public final class LcgSolver implements ExternalPropagator {
         if (c instanceof Alldistinct) {
           permutationsAsClauses++;
         }
+      } else if (gccCandidate(c) && encodeAsClauses(c)) {
+        constraintsAsClauses++;
+        gccsAsClauses++;
       } else if (!LAZY_COUNTERS && defaultCounter(c) && encodeAsCounter(c)) {
         defaultCounters++;
         constraintsAsClauses++;
@@ -5870,6 +5936,53 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** Statistics: counting constraints that became unary counters by default. */
   public long defaultCounters;
+
+  /**
+   * Whether a closed global cardinality with fixed counts ({@code CountValuesBounds}, the counts
+   * add up to the number of variables) over variables of at most {@link #GCC_DOM} values becomes
+   * clauses before search, with the larger limit of {@code jacop.lcg.clauses.counter}, by the
+   * system property {@code jacop.lcg.gccClauses} (default true). It is a sequential counter per
+   * counted value, so a learnt clause can state partial counts (Abio and Stuckey, CP 2012; Abio,
+   * Nieuwenhuis, Oliveras, Rodriguez-Carbonell and Stuckey, CP 2013). A default counter is limited
+   * to {@link #COUNTERS_LIMIT} clauses for the whole constraint and is encoded lazily; a rostering
+   * GCC counts each of its few values over many days and needs more (XCSP 2025
+   * RotatingRostering-052-2-3: 7 GCCs over 52 variables of 4 values, about 9,900 clauses each,
+   * unknown at 600 s as propagators, unsatisfiable in about 10 s as clauses).
+   */
+  static final boolean GCC_CLAUSES = !FALSE.equals(System.getProperty("jacop.lcg.gccClauses"));
+
+  /** The most values of a variable of such a GCC, {@code jacop.lcg.gccClauses.dom}. */
+  static final int GCC_DOM = Integer.getInteger("jacop.lcg.gccClauses.dom", 4);
+
+  /** Statistics: global cardinalities given to the solver as clauses by {@link #GCC_CLAUSES}. */
+  public long gccsAsClauses;
+
+  private boolean gccCandidate(Constraint c) {
+    if (!GCC_CLAUSES
+        || !COUNTERS
+        || c.getClass() != org.jacop.constraints.CountValuesBounds.class
+        || CLAUSE_SET.contains(c.getClass().getSimpleName())
+        || !argumentsFit(c)) {
+      return false;
+    }
+    // a closed GCC: every variable takes one of the counted values, each a fixed number of times
+    // (the days of a rotating roster); an open one, such as the shifts of a rotating workforce
+    // with free days off, searches slower as clauses (RotatingWorkforce2-100-00 16 s to unknown)
+    org.jacop.constraints.CountValuesBounds gcc = (org.jacop.constraints.CountValuesBounds) c;
+    long total = 0;
+    for (int[] b : gcc.countBounds()) {
+      total += b[1];
+    }
+    if (!gcc.fixedCounts() || total != gcc.listLength()) {
+      return false;
+    }
+    for (org.jacop.core.Var v : c.arguments()) {
+      if (v.getSize() > GCC_DOM) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   private boolean defaultCounter(Constraint c) {
     return COUNTERS

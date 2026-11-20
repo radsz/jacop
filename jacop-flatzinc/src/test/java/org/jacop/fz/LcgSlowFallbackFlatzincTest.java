@@ -276,6 +276,26 @@ class LcgSlowFallbackFlatzincTest {
   }
 
   @Test
+  void theWindowSeesSolutionsFoundBeforeTheFirstCheck() {
+    long s = 1_000_000_000L;
+    int noCost = Integer.MAX_VALUE;
+    // the checks sample the best cost from the first one on: a cost improved from 4,100 to 3,900
+    // at 20 s, and the check at 24 s, whose only sample was 3,900, saw no gain over its 12 s
+    // window (celar graph11, MiniZinc Challenge 2013, gave way and ended at 13,387, not 3,080)
+    List<long[]> improvements = List.of(new long[] {5 * s, noCost}, new long[] {20 * s, 4_100});
+    long before = Solve.costAt(improvements, 12 * s, 3_900);
+    assertEquals(4_100, before);
+    assertTrue(Solve.stillProgressing(24 * s, 12 * s, 0.005, Long.MIN_VALUE, before, 3_900));
+    assertFalse(Solve.stillProgressing(24 * s, 12 * s, 0.005, Long.MIN_VALUE, 3_900, 3_900));
+    // the first solution inside the window
+    assertEquals(noCost, Solve.costAt(improvements, 4 * s, 3_900));
+    // nothing improved since the start of the window: the sampled cost
+    assertEquals(3_900, Solve.costAt(improvements, 21 * s, 3_900));
+    // a sample taken after the improvement inside the window was already the higher cost
+    assertEquals(4_500, Solve.costAt(improvements, 12 * s, 4_500));
+  }
+
+  @Test
   void aBoundRaiseCountsOnlyWhenItClosesAShareOfTheGap() {
     // CVRPLIB X-n110-k13: the bound rose from 4 to 5 against a best cost of 59,211
     assertFalse(Solve.boundClosesGap(4, 5, 0.005, 59_211));

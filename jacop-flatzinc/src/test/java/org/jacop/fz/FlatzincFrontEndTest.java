@@ -45,7 +45,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -1140,7 +1142,7 @@ class FlatzincFrontEndTest {
     assertEquals("x = 3;\n----------\n==========\n", out[0]);
     assertTrue(out[1].contains("1 variable domain reaches beyond"), out[1]);
     assertTrue(out[1].contains("(first: x 0..4722438400)"), out[1]);
-    // bounded only through a non-linear constraint: no claim
+    // bounded through a function of a bounded variable: still optimal
     out =
         run(
             """
@@ -1149,7 +1151,18 @@ class FlatzincFrontEndTest {
             constraint int_abs(y, x);
             solve maximize x;
             """);
-    assertTrue(out[0].endsWith("x = 3;\n----------\n"), out[0]);
+    assertTrue(out[0].endsWith("x = 3;\n----------\n==========\n"), out[0]);
+    // bounded only through a constraint the bounds of the rows do not read: no claim
+    out =
+        run(
+            """
+            var 0..4722438400: x :: output_var;
+            var 0..3: y;
+            constraint set_in(x, {0, 1, 4, 9});
+            constraint int_le(y, x);
+            solve maximize x;
+            """);
+    assertTrue(out[0].endsWith("x = 9;\n----------\n"), out[0]);
 
     // no claim of unsatisfiability: the solutions may lie in the values cut off
     out =
@@ -1194,16 +1207,17 @@ class FlatzincFrontEndTest {
             solve maximize c;
             """);
     assertEquals("c = 10;\ny = 5;\n----------\n==========\n", out[0]);
-    // without a row that bounds them: no claim
+    // without a row or a function the bounds read: no claim
     out =
         run(
             """
             var 0..2014326920: c :: output_var;
             var 1..5: y :: output_var;
-            constraint int_times(y, y, c);
+            constraint set_in(c, {1, 4, 9, 16, 25});
+            constraint int_le(y, c);
             solve maximize c;
             """);
-    assertTrue(out[0].endsWith("c = 25;\ny = 5;\n----------\n"), out[0]);
+    assertTrue(out[0].endsWith("c = 25;\ny = 1;\n----------\n"), out[0]);
     // an array element of the objective's array narrowed too; a[2] <= 4 bounds it
     out =
         run(
@@ -1405,6 +1419,145 @@ class FlatzincFrontEndTest {
     assertEquals(1, lastStatus);
   }
 
+  /**
+   * A linear row over fixed variables is decided when it is posted; its sum was taken in int, so
+   * 2147483647 * 1 - 2147483647 * 3 wrapped to 2 and the row failed.
+   */
+  @Test
+  void linearRowOverFixedVariablesIsSummedWithoutOverflow() throws IOException {
+    String row = "[2147483647, -2147483647], [x, y], -2147483647";
+    String fixed = "var 1..1: x :: output_var;\nvar 3..3: y :: output_var;\n";
+    String[] out = run(fixed + "constraint int_lin_le(" + row + ");\nsolve satisfy;\n");
+    assertEquals("x = 1;\ny = 3;\n----------\n", out[0]);
+    out = run(fixed + "constraint int_lin_eq(" + row + ");\nsolve satisfy;\n");
+    assertTrue(out[0].endsWith("=====UNSATISFIABLE=====\n"), out[0]);
+    for (String[] reified :
+        new String[][] {{"eq", "false"}, {"ne", "true"}, {"lt", "true"}, {"le", "true"}}) {
+      out =
+          run(
+              fixed
+                  + "var bool: b :: output_var;\nconstraint int_lin_"
+                  + reified[0]
+                  + "_reif("
+                  + row
+                  + ", b);\nsolve satisfy;\n");
+      assertEquals("x = 1;\ny = 3;\nb = " + reified[1] + ";\n----------\n", out[0], reified[0]);
+    }
+  }
+
+  /**
+   * A variable named twice in a linear row, as merged aliases leave it, has its coefficients added;
+   * a sum beyond int wrapped around: 2^31 * i <= 2^30 accepted i = 1.
+   */
+  @Test
+  void repeatedVariableWithCoefficientsSummingBeyondIntKeepsTheRow() throws IOException {
+    String[] out =
+        run(
+            """
+            var 0..1: i :: output_var;
+            constraint int_lin_le([1073741824, 1073741824], [i, i], 1073741824);
+            solve satisfy;
+            """,
+            "-a");
+    assertEquals("i = 0;\n----------\n==========\n", out[0]);
+    // the same row reached through equal subexpressions: x = y makes b1 and b2 one variable
+    assertEquals(
+        12,
+        solveAll(
+                """
+                var 0..3: x :: output_var;
+                var 0..3: y :: output_var;
+                var bool: b1;
+                var bool: b2;
+                var 0..1: i1;
+                var 0..1: i2;
+                constraint int_eq_reif(x, y, b1);
+                constraint int_eq_reif(y, x, b2);
+                constraint bool2int(b1, i1);
+                constraint bool2int(b2, i2);
+                constraint int_lin_le([2147483647, 2147483647], [i1, i2], 2147483647);
+                solve satisfy;
+                """)
+            .size());
+  }
+
+  /**
+   * A variable declared without bounds (var int) is created over JaCoP's integer range, so a value
+   * beyond the range, which MiniZinc's 64-bit integers allow, is cut off as for a narrowed domain:
+   * no unsatisfiability or optimality is claimed unless the rows of the model keep the variable
+   * within the range.
+   */
+  @Test
+  void unboundedVariableBeyondTheRangeClaimsNothing() throws IOException {
+    // m = 1000000000 * x is a solution of the model; JaCoP's range cuts it off
+    String[] out =
+        run(
+            """
+            var int: m :: output_var;
+            var 1..2: x :: output_var;
+            constraint int_lin_eq([1, -1000000000], [m, x], 0);
+            solve satisfy;
+            """);
+    assertTrue(out[0].endsWith("=====UNKNOWN=====\n"), out[0]);
+    out =
+        run(
+            """
+            var int: m;
+            var 0..2000: x :: output_var;
+            constraint int_lin_eq([1, -1000000], [m, x], 0);
+            constraint int_le(600, x);
+            solve maximize x;
+            """);
+    assertTrue(out[0].contains("=====UNKNOWN====="), out[0]);
+    // an array declared without bounds
+    out =
+        run(
+            """
+            array [1..2] of var int: a;
+            var 1..2: x :: output_var;
+            constraint int_lin_eq([1, -1000000000], [a[1], x], 0);
+            solve satisfy;
+            """);
+    assertTrue(out[0].endsWith("=====UNKNOWN=====\n"), out[0]);
+
+    // kept within the range by the rows and the functions of the model: the claims stand
+    out =
+        run(
+            """
+            var int: m :: output_var;
+            var 0..5: x :: output_var;
+            constraint int_lin_eq([1, -1], [m, x], 10);
+            constraint int_le(m, 3);
+            solve satisfy;
+            """);
+    assertEquals("=====UNSATISFIABLE=====\n", out[0]);
+    out =
+        run(
+            """
+            var int: m :: output_var;
+            var 0..2: x :: output_var;
+            constraint int_lin_eq([1, -1], [m, x], 10);
+            solve satisfy;
+            """,
+            "-a");
+    assertTrue(out[0].endsWith("----------\n==========\n"), out[0]);
+    out =
+        run(
+            """
+            array [1..3] of int: c = [4, 9, 2];
+            var int: m :: output_var;
+            var int: e;
+            var int: p;
+            var 1..3: i;
+            var 0..5: x;
+            constraint array_int_element(i, c, e);
+            constraint int_times(x, x, p);
+            constraint jacop_maximum(m, [e, p]);
+            solve maximize m;
+            """);
+    assertTrue(out[0].endsWith("m = 25;\n----------\n==========\n"), out[0]);
+  }
+
   @Test
   void timeOutOfTheCompletionSearchIsNotReportedUnsatisfiable() throws IOException {
     // hakank's farmer_and_cows: the annotated search labels x, and the search that completes the
@@ -1457,15 +1610,18 @@ class FlatzincFrontEndTest {
     // LCG's deadline was the whole -t counted from the start of LCG search, so a run whose model
     // took long to read and set up overran -t by that long (nside, rcpsp-wet-diverse, the
     // ma-path-finding instances, by 1 to 3 s at 60 s); with -p every LCG thread did, and the
-    // portfolio answered at -t + 2 s. Random 3-SAT at the threshold keeps LCG busy for more than 30
-    // s (400 variables were solved in 2 s once activity bumped every analysed variable).
+    // portfolio answered at -t + 2 s. Random 3-SAT just above the threshold (ratio 4.6,
+    // unsatisfiable
+    // with high probability) keeps LCG busy for more than 60 s. At ratio 4.3 the formula is
+    // satisfiable: found after 25 s on one machine, but in under 2 s on the CI runners (and 400
+    // variables were solved in 2 s once activity bumped every analysed variable).
     Random r = new Random(1);
     int n = 600;
     StringBuilder model = new StringBuilder();
     for (int i = 0; i < n; i++) {
       model.append("var bool: x").append(i).append(";\n");
     }
-    for (int c = 0; c < 2580; c++) {
+    for (int c = 0; c < 2760; c++) {
       StringJoiner pos = new StringJoiner(",");
       StringJoiner neg = new StringJoiner(",");
       Set<Integer> vars = new TreeSet<>();
@@ -1609,13 +1765,13 @@ class FlatzincFrontEndTest {
     link(items, kept, 0);
     link(items, other, 1);
 
-    Solve.releaseAllBut(solve);
+    Solve.releaseAllBut(root, solve);
 
     assertNull(root.jjtGetChild(0));
     assertSame(end, root.jjtGetChild(1));
     assertSame(solve, end.jjtGetChild(0));
-    // kept still reaches its item list, but the list no longer holds the other items
-    assertSame(items, kept.jjtGetParent());
+    // the list no longer holds the items, and a kept item does not reach its list
+    assertThrows(UnsupportedOperationException.class, kept::jjtGetParent);
     for (int i = 0; i < items.jjtGetNumChildren(); i++) {
       assertNull(items.jjtGetChild(i));
     }
@@ -2035,6 +2191,66 @@ class FlatzincFrontEndTest {
     assertTrue(all.contains("=====UNSATISFIABLE====="), all);
     String proof = run(fzn, "--proof", prefix)[0];
     assertTrue(proof.contains("=====UNSATISFIABLE====="), proof);
+  }
+
+  @Test
+  void networkFlowUnderProofIsProved() throws IOException {
+    // Two units from node 1 to node 3, directly at cost 5 or through node 2 at cost 1 + 1. Under
+    // --proof NetworkFlow had no OPB encoding and the proof stopped; with fixed weights it is now
+    // posted as its rows, which the proof derives from.
+    String fzn =
+        """
+        var 0..2: f1:: output_var;
+        var 0..2: f2:: output_var;
+        var 0..2: f3:: output_var;
+        var 0..20: cost:: output_var;
+        array [1..3] of var int: f = [f1,f2,f3];
+        array [1..3] of var int: w = [5,1,1];
+        constraint jacop_networkflow([1,3,1,2,2,3],f,w,[2,0,-2],cost);
+        solve minimize cost;
+        """;
+    String prefix = tmp.resolve("networkflow").toString();
+    String out = run(fzn, "--proof", prefix)[0];
+    assertTrue(out.contains("cost = 4;"), out);
+    assertTrue(!out.contains("does not support"), out);
+    String proof = Files.readString(Path.of(prefix + ".pbp"), StandardCharsets.UTF_8);
+    assertTrue(proof.contains("conclusion BOUNDS 4 4"), proof);
+  }
+
+  @Test
+  void selfCountingUnderProofIsProved() throws IOException {
+    // A magic sequence of length 4: x[i] counts the value i in x, as in nmseq. The cardinality
+    // detector's GCC had counters among its counted variables, which the OPB model left out, so
+    // the proof stopped; under --proof those counters are now copies linked by equalities.
+    StringBuilder fzn = new StringBuilder();
+    StringBuilder constraints = new StringBuilder();
+    for (int i = 0; i < 4; i++) {
+      fzn.append("var 0..3: x").append(i).append(":: output_var;\n");
+    }
+    int b = 0;
+    for (int i = 0; i < 4; i++) {
+      StringBuilder ints = new StringBuilder();
+      for (int j = 0; j < 4; j++) {
+        fzn.append("var bool: b").append(b).append(";\n");
+        fzn.append("var 0..1: i").append(b).append(";\n");
+        constraints.append("constraint int_eq_reif(x").append(j).append(",").append(i);
+        constraints.append(",b").append(b).append(");\n");
+        constraints.append("constraint bool2int(b").append(b).append(",i").append(b).append(");\n");
+        ints.append(j == 0 ? "" : ",").append("i").append(b);
+        b++;
+      }
+      constraints.append("constraint int_lin_eq([1,1,1,1,-1],[").append(ints).append(",x");
+      constraints.append(i).append("],0);\n");
+    }
+    fzn.append(constraints);
+    fzn.append("solve satisfy;\n");
+    String prefix = tmp.resolve("selfcounting").toString();
+    String out = run(fzn.toString(), "--proof", prefix, "-debug")[0];
+    assertTrue(out.contains("redundant GCC"), out);
+    assertTrue(out.contains("----------"), out);
+    assertTrue(!out.contains("does not support"), out);
+    String proof = Files.readString(Path.of(prefix + ".pbp"), StandardCharsets.UTF_8);
+    assertTrue(proof.contains("end pseudo-Boolean proof"), proof);
   }
 
   @Test
@@ -2959,6 +3175,183 @@ class FlatzincFrontEndTest {
     }
   }
 
+  /** Pigeons x0..x(n-1) in 1..holes, pairwise different by binary tables (minus one pair). */
+  private static String tablePigeons(int n, int holes, boolean dropPair) {
+    StringBuilder ne = new StringBuilder();
+    for (int a = 1; a <= holes; a++) {
+      for (int b = 1; b <= holes; b++) {
+        if (a != b && !(dropPair && a == 1 && b == 2)) {
+          ne.append(ne.isEmpty() ? "" : ",").append(a).append(',').append(b);
+        }
+      }
+    }
+    StringBuilder fzn = new StringBuilder();
+    fzn.append("predicate jacop_table_int(array [int] of var int: x,array [int] of int: t);\n");
+    fzn.append("array [1..").append(ne.toString().split(",").length).append("] of int: T = [");
+    fzn.append(ne).append("];\n");
+    for (int i = 0; i < n; i++) {
+      fzn.append("var 1..").append(holes).append(": x").append(i).append(" :: output_var;\n");
+    }
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        fzn.append("constraint jacop_table_int([x").append(i).append(",x").append(j);
+        fzn.append("],T);\n");
+      }
+    }
+    return fzn.append("solve satisfy;\n").toString();
+  }
+
+  @Test
+  void binaryTablesOfDisequalitiesBecomeAllDifferent() throws IOException {
+    // XCSP3 pigeonsPlus writes x_i != x_j as binary tables; read as disequalities they give an
+    // all-different over 13 pigeons in 12 holes, which fails at the root; the tables alone search
+    // for hours (pigeonsPlus-11-04 took millions of failures)
+    String out =
+        assertTimeoutPreemptively(
+            Duration.ofSeconds(60),
+            () -> run(tablePigeons(13, 12, false), "--lcg", "off", "-t", "5000"))[0];
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+  }
+
+  @Test
+  void binaryTableMissingOnlySomeEqualPairsIsNoDisequality() throws IOException {
+    // (1,2) is missing as well, so the table is no disequality: the solutions stay those of the
+    // tables (4 pigeons in 4 holes, 1 never at a smaller index than 2: 12 of 24)
+    String model = tablePigeons(4, 4, true);
+    Set<String> withDetection = solveAll(model);
+    System.setProperty("org.jacop.fz.alldifferent", "false");
+    try {
+      assertEquals(solveAll(model), withDetection);
+    } finally {
+      System.clearProperty("org.jacop.fz.alldifferent");
+    }
+    assertEquals(12, withDetection.size(), withDetection.toString());
+  }
+
+  /** The pigeon-hole problem as XCSP3 writes it: conflict tables over 0/1, n holes. */
+  private static String conflictTableHoles(int pigeons, int n) {
+    StringBuilder fzn = new StringBuilder();
+    fzn.append("predicate jacop_negative_table_int(array [int] of var int: x,");
+    fzn.append("array [int] of int: t);\n");
+    fzn.append("array [1..").append(n).append("] of int: T1 = [0");
+    fzn.append(",0".repeat(n - 1)).append("];\n");
+    fzn.append("array [1..2] of int: T2 = [1,1];\n");
+    for (int p = 0; p < pigeons; p++) {
+      for (int h = 0; h < n; h++) {
+        // a Boolean seen through its 0/1 integer, as MiniZinc flattens bool2int arguments
+        fzn.append("var bool: b").append(p).append('_').append(h).append(" :: output_var;\n");
+        fzn.append("var 0..1: x").append(p).append('_').append(h).append(" :: is_defined_var;\n");
+      }
+    }
+    for (int p = 0; p < pigeons; p++) {
+      for (int h = 0; h < n; h++) {
+        fzn.append("constraint bool2int(b").append(p).append('_').append(h).append(",x").append(p);
+        fzn.append('_').append(h).append(") :: defines_var(x").append(p).append('_').append(h);
+        fzn.append(");\n");
+      }
+    }
+    for (int p = 0; p < pigeons; p++) {
+      fzn.append("constraint jacop_negative_table_int([");
+      for (int h = 0; h < n; h++) {
+        fzn.append(h == 0 ? "" : ",").append('x').append(p).append('_').append(h);
+      }
+      fzn.append("],T1);\n");
+    }
+    for (int h = 0; h < n; h++) {
+      for (int p = 0; p < pigeons; p++) {
+        for (int q = p + 1; q < pigeons; q++) {
+          fzn.append("constraint jacop_negative_table_int([x").append(p).append('_');
+          fzn.append(h).append(",x").append(q).append('_').append(h).append("],T2);\n");
+        }
+      }
+    }
+    return fzn.append("solve satisfy;\n").toString();
+  }
+
+  @Test
+  void negativeTablesOverBooleansAreClausesTheRootRefutationSees() throws IOException {
+    // hole-10 (XCSP 2017): the forbidden rows of 0/1 tables are clauses, so the model is a pure
+    // clause model; its root clause refutation must run before JaSAT takes it (nothing at the
+    // root woke it), and refutes the pigeons at once, where JaSAT does not finish
+    String out =
+        assertTimeoutPreemptively(
+            Duration.ofSeconds(60),
+            () ->
+                run(
+                    conflictTableHoles(11, 10),
+                    "--lcg",
+                    "on",
+                    "--search-statistics",
+                    "-t",
+                    "5000"))[0];
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+    assertTrue(out.contains("lpRefutation=refuted"), out);
+    // 3 pigeons in 3 holes, at least one hole each and none shared: 3! = 6 ways, as clauses too
+    assertEquals(6, solveAll(conflictTableHoles(3, 3)).size());
+    assertTrue(
+        run(conflictTableHoles(3, 3), "--search-statistics")[0].contains("negativeTableClauses=1"));
+    // with a constraint other than a clause the tables stay tables (StillLife: sums and tables ran
+    // 1.4-3x slower with the tables as clauses)
+    String mixed =
+        conflictTableHoles(3, 3)
+            .replace("solve ", "constraint int_lin_le([1,1],[x0_0,x1_1],2);\nsolve ");
+    assertFalse(run(mixed, "--search-statistics")[0].contains("negativeTableClauses"));
+    assertEquals(6, solveAll(mixed).size());
+  }
+
+  /** Courses of credit 1..n over 3 periods, as XCSP3 BACP rows: credit in the period column. */
+  private static String tableCourses(int n) {
+    StringBuilder par = new StringBuilder();
+    StringBuilder var = new StringBuilder();
+    StringBuilder con = new StringBuilder();
+    par.append("predicate jacop_table_int(array [int] of var int: x,array [int] of int: t);\n");
+    par.append("predicate jacop_maximum(var int: m,array [int] of var int: x);\n");
+    for (int i = 1; i <= n; i++) {
+      par.append("array [1..12] of int: T").append(i).append(" = [").append(i);
+      par.append(",0,0,0,0,").append(i).append(",0,1,0,0,").append(i).append(",2];\n");
+      for (int j = 0; j < 3; j++) {
+        var.append("var 0..").append(i).append(": c").append(i).append('_').append(j);
+        var.append(" :: output_var;\n");
+      }
+      var.append("var 0..2: p").append(i).append(" :: output_var;\n");
+      con.append("constraint jacop_table_int([c").append(i).append("_0,c").append(i);
+      con.append("_1,c").append(i).append("_2,p").append(i).append("],T").append(i).append(");\n");
+    }
+    for (int j = 0; j < 3; j++) {
+      var.append("var 0..100: l").append(j).append(" :: output_var;\n");
+      StringBuilder w = new StringBuilder("-1");
+      StringBuilder x = new StringBuilder("l").append(j);
+      for (int i = 1; i <= n; i++) {
+        w.append(",1");
+        x.append(",c").append(i).append('_').append(j);
+      }
+      con.append("constraint int_lin_eq([").append(w).append("],[").append(x).append("],0);\n");
+    }
+    var.append("var 0..100: m :: output_var;\n");
+    con.append("constraint jacop_maximum(m,[l0,l1,l2]);\n");
+    return par.append(var).append(con).append("solve minimize m;\n").toString();
+  }
+
+  @Test
+  void tableColumnsWithConstantSumPostTheSum() throws IOException {
+    // every row of a course table holds its credit in one period column, so the credit columns
+    // sum to the credit; the sum is posted (Bacp-m1-08a, XCSP 2018, proved in 0.2 s instead of
+    // not in 240 s) and the optimum stays the same
+    String model = tableCourses(4);
+    String out = run(model, "-s", "--search-statistics")[0];
+    assertTrue(out.contains("%%%mzn-stat: impliedTableSums=1"), out);
+    // credits 1..4 over 3 periods: the largest load is at least 10 / 3, so 4
+    assertTrue(out.contains("m = 4;") && out.contains("=========="), out);
+    System.setProperty("org.jacop.fz.tableSums", "false");
+    try {
+      String off = run(model, "--search-statistics")[0];
+      assertFalse(off.contains("impliedTableSums"), off);
+      assertTrue(off.contains("m = 4;") && off.contains("=========="), off);
+    } finally {
+      System.clearProperty("org.jacop.fz.tableSums");
+    }
+  }
+
   @Test
   void intComparisonWithConstantAndFixedBooleanKeepsExactlyTheSolutions() throws IOException {
     // int_ne_reif(x, c, false) left x unconstrained instead of fixing it to c, and the half-reified
@@ -3333,11 +3726,12 @@ class FlatzincFrontEndTest {
   @Test
   void lcgFreeSearchReturnsToClausesAfterEachPruningOnSatisfactionModels() throws IOException {
     // the full fixpoint of the store (#317) paid on optimisation models but not on satisfaction
-    // models: nonogram non_fast_3 took 39 to 57 s instead of 4 to 6 s
+    // models: nonogram non_fast_3 took 39 to 57 s instead of 4 to 6 s; four values, so the model
+    // is not compiled to clauses (org.jacop.fz.clausal.maxDomain)
     String model =
         """
-        var 1..3: x :: output_var;
-        var 1..3: y :: output_var;
+        var 1..4: x :: output_var;
+        var 1..4: y :: output_var;
         constraint int_lin_le([1,1], [x,y], 4);
         constraint int_ne(x, y);
         %s;
@@ -4444,9 +4838,118 @@ class FlatzincFrontEndTest {
   }
 
   /**
-   * A node of the parse tree keeps its id, its parent and its children only: the parser and a value
-   * of the node, never read, cost 8 bytes of each of the 20 million nodes of XCSP 2022
-   * RoomMate-sr0700 (163 MB while the model is read).
+   * A scalar expression keeps its identifier, string or float in one field: they are the largest
+   * part of the parse tree (7.8 million of XCSP 2022 RoomMate-sr0700, 48 bytes each with a field
+   * for each, 40 now), and a node holds only one of them.
+   */
+  @Test
+  void scalarExpressionsKeepOneFieldForIdentStringOrFloat() {
+    List<String> fields =
+        Arrays.stream(ASTScalarFlatExpr.class.getDeclaredFields())
+            .filter(f -> !Modifier.isStatic(f.getModifiers()))
+            .map(Field::getName)
+            .sorted()
+            .toList();
+    assertEquals(List.of("intValue", "text", "type"), fields);
+    ASTScalarFlatExpr ident = new ASTScalarFlatExpr(ParserTreeConstants.JJTSCALARFLATEXPR);
+    ident.setType(2);
+    ident.setIdent("x");
+    assertEquals("x", ident.getIdent());
+    assertNull(ident.getString());
+    assertEquals(0.0, ident.getFloat());
+    ASTScalarFlatExpr string = new ASTScalarFlatExpr(ParserTreeConstants.JJTSCALARFLATEXPR);
+    string.setType(4);
+    string.setString("\"s\"");
+    assertEquals("\"s\"", string.getString());
+    assertNull(string.getIdent());
+    ASTScalarFlatExpr real = new ASTScalarFlatExpr(ParserTreeConstants.JJTSCALARFLATEXPR);
+    real.setType(5);
+    real.setFloat(2.5);
+    assertEquals(2.5, real.getFloat());
+    assertNull(real.getIdent());
+    assertNull(real.getString());
+    ASTScalarFlatExpr access = new ASTScalarFlatExpr(ParserTreeConstants.JJTSCALARFLATEXPR);
+    access.setType(3);
+    access.setIdent("a");
+    access.setInt(4);
+    assertEquals("a", access.getIdent());
+    assertEquals(4, access.getInt());
+  }
+
+  /**
+   * The body of a half-reified constraint of enforcement inlining is kept as a compact set, not as
+   * the identity set it is collected in, whose table of 64 slots took 272 bytes for the one or two
+   * variables of most bodies (53 MB of XCSP 2022 RoomMate-sr0300 while the model is read).
+   */
+  @Test
+  @SuppressWarnings("unchecked")
+  void halfReifiedBodiesOfEnforcementInliningAreCompact() throws Exception {
+    Class<?> imp = Class.forName("org.jacop.fz.constraints.EnforcementInliner$Imp");
+    Constructor<?> make = imp.getDeclaredConstructors()[0];
+    make.setAccessible(true);
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    IntVar y = new IntVar(store, "y", 0, 3);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    Set<IntVar> collected = Collections.newSetFromMap(new IdentityHashMap<>());
+    collected.add(x);
+    collected.add(y);
+    Object made = make.newInstance(null, b, collected);
+    Method body = imp.getDeclaredMethod("body");
+    body.setAccessible(true);
+    Set<IntVar> kept = (Set<IntVar>) body.invoke(made);
+    assertEquals(Set.of(x, y), kept);
+    assertTrue(kept.contains(x));
+    assertFalse(kept.contains(b));
+    assertFalse(kept.getClass().getName().contains("SetFromMap"), kept.getClass().getName());
+  }
+
+  /**
+   * A variable of enforcement inlining keeps its only clause without a list: a list for each
+   * variable was 48 bytes of each of the 1.46 million variables of XCSP 2022 RoomMate-sr0700 while
+   * the model is read. The clauses count, list and drop their dead ones as before.
+   */
+  @Test
+  void variablesOfEnforcementInliningKeepOneClauseWithoutAList() throws Exception {
+    Class<?> info = Class.forName("org.jacop.fz.constraints.EnforcementInliner$Info");
+    Class<?> clause = Class.forName("org.jacop.fz.constraints.EnforcementInliner$Clause");
+    Constructor<?> makeInfo = info.getDeclaredConstructor();
+    makeInfo.setAccessible(true);
+    Constructor<?> makeClause = clause.getDeclaredConstructors()[0];
+    makeClause.setAccessible(true);
+    Method add = info.getDeclaredMethod("add", clause);
+    Method live = info.getDeclaredMethod("live");
+    Method clauses = info.getDeclaredMethod("clauses");
+    for (Method m : new Method[] {add, live, clauses}) {
+      m.setAccessible(true);
+    }
+    Field held = info.getDeclaredField("clauses");
+    held.setAccessible(true);
+    Field dead = clause.getDeclaredField("dead");
+    dead.setAccessible(true);
+
+    Object v = makeInfo.newInstance();
+    Object first = makeClause.newInstance(null, new ArrayList<>(), new ArrayList<>());
+    Object second = makeClause.newInstance(null, new ArrayList<>(), new ArrayList<>());
+    add.invoke(v, first);
+    assertSame(first, held.get(v));
+    assertEquals(List.of(first), clauses.invoke(v));
+    add.invoke(v, second);
+    assertEquals(List.of(first, second), clauses.invoke(v));
+    assertEquals(2, live.invoke(v));
+    dead.setBoolean(first, true);
+    assertEquals(1, live.invoke(v));
+    assertSame(second, held.get(v));
+    dead.setBoolean(second, true);
+    assertEquals(0, live.invoke(v));
+    assertEquals(List.of(), clauses.invoke(v));
+  }
+
+  /**
+   * A node of the parse tree keeps its id and its children only: the parser and a value of the
+   * node, never read, cost 8 bytes of each of the 20 million nodes of XCSP 2022 RoomMate-sr0700
+   * (163 MB while the model is read), and the parent took the 7.8 million scalar expressions from
+   * 32 to 40 bytes each; the readers of a parent now get it from the root.
    */
   @Test
   void parseTreeNodesKeepNoParserOrValue() {
@@ -4456,7 +4959,103 @@ class FlatzincFrontEndTest {
             .map(Field::getName)
             .sorted()
             .toList();
-    assertEquals(List.of("children", "id", "parent"), fields);
+    assertEquals(List.of("children", "id"), fields);
+  }
+
+  /**
+   * A node with one child keeps the child itself, not an array of one: most annotations, annotation
+   * expressions and constraint items without annotations have one child, an array of 24 bytes for
+   * each of about 5 million nodes of XCSP 2022 RoomMate-sr0700. The children read, copy and release
+   * as before.
+   */
+  /**
+   * A detector that reads the annotations of a constraint (the sequence detector skips the window
+   * rows that define a variable) gets the constraint item with its element, since a node does not
+   * keep its parent.
+   */
+  @Test
+  void constraintElementsComeWithTheirItems(@TempDir Path dir) throws Exception {
+    Path fzn = dir.resolve("items.fzn");
+    Files.writeString(
+        fzn,
+        """
+        var 0..1: a;
+        var 0..1: b;
+        var 0..2: s :: is_defined_var;
+        constraint int_lin_eq([1,1,-1],[a,b,s],0) :: defines_var(s);
+        constraint int_lin_le([1,1],[a,b],1);
+        solve satisfy;
+        """,
+        StandardCharsets.UTF_8);
+    SimpleNode tree;
+    Parser parser;
+    try (java.io.FileInputStream in = new java.io.FileInputStream(fzn.toFile())) {
+      parser = new Parser(in);
+      parser.setOptions(new Options(new String[] {fzn.toString()}));
+      tree = parser.parseModel();
+    }
+    Method each =
+        org.jacop.fz.constraints.Support.class.getDeclaredMethod(
+            "forEachConstraintItem", SimpleNode.class, java.util.function.BiConsumer.class);
+    each.setAccessible(true);
+    List<SimpleNode> items = new ArrayList<>();
+    List<ASTConstElem> elements = new ArrayList<>();
+    java.util.function.BiConsumer<SimpleNode, ASTConstElem> collect =
+        (item, element) -> {
+          items.add(item);
+          elements.add(element);
+        };
+    each.invoke(parser.cc.support, tree, collect);
+    assertEquals(2, items.size());
+    for (int i = 0; i < 2; i++) {
+      assertSame(elements.get(i), items.get(i).jjtGetChild(0));
+    }
+    assertEquals(2, items.get(0).jjtGetNumChildren());
+    assertEquals("defines_var", ((ASTAnnotation) items.get(0).jjtGetChild(1)).getAnnId());
+    assertEquals(1, items.get(1).jjtGetNumChildren());
+  }
+
+  @Test
+  void nodesWithOneChildKeepNoArray() {
+    SimpleNode one = new SimpleNode(ParserTreeConstants.JJTANNOTATION);
+    SimpleNode child = new SimpleNode(ParserTreeConstants.JJTANNEXPR);
+    child.jjtSetParent(one);
+    one.jjtAddChild(child, 0);
+    assertFalse(one.children instanceof Node[]);
+    assertEquals(1, one.jjtGetNumChildren());
+    assertSame(child, one.jjtGetChild(0));
+    assertThrows(ArrayIndexOutOfBoundsException.class, () -> one.jjtGetChild(1));
+    SimpleNode copy = one.copy();
+    assertEquals(1, copy.jjtGetNumChildren());
+    assertNotSame(child, copy.jjtGetChild(0));
+
+    // the parser adds the children of a node from the last one
+    SimpleNode three = new SimpleNode(ParserTreeConstants.JJTCONSTELEM);
+    SimpleNode[] kids = new SimpleNode[3];
+    for (int i = 2; i >= 0; i--) {
+      kids[i] = new SimpleNode(ParserTreeConstants.JJTSCALARFLATEXPR);
+      three.jjtAddChild(kids[i], i);
+    }
+    assertEquals(3, three.jjtGetNumChildren());
+    for (int i = 0; i < 3; i++) {
+      assertSame(kids[i], three.jjtGetChild(i));
+    }
+    // and a child added after the first one turns the child into an array
+    SimpleNode two = new SimpleNode(ParserTreeConstants.JJTCONSTELEM);
+    two.jjtAddChild(kids[0], 0);
+    two.jjtAddChild(kids[1], 1);
+    assertEquals(2, two.jjtGetNumChildren());
+    assertSame(kids[0], two.jjtGetChild(0));
+    assertSame(kids[1], two.jjtGetChild(1));
+
+    // a released child keeps its place
+    one.releaseChildren();
+    assertEquals(1, one.jjtGetNumChildren());
+    assertNull(one.jjtGetChild(0));
+    three.releaseChild(1);
+    assertEquals(3, three.jjtGetNumChildren());
+    assertNull(three.jjtGetChild(1));
+    assertSame(kids[2], three.jjtGetChild(2));
   }
 
   @Test
@@ -4554,6 +5153,113 @@ class FlatzincFrontEndTest {
     for (HybridTable h : binary) {
       assertEquals(0, h.keyColumn());
     }
+  }
+
+  @Test
+  void tablesOfSevenColumnsOverOneRelationShareTheirCells(@TempDir Path dir) throws Exception {
+    // only tables of at most TableCliques.MAX_ARITY (6) columns shared their tuples:
+    // pigeonsPlus-08-08 (XCSP 2017) posts one table of 5.8 million rows on eight lists of eight
+    // variables, and with its own tuples and cells for each table it ran out of 4 GB. The rows here
+    // (sum divisible by 3) have no exact reformulation.
+    StringJoiner cells = new StringJoiner(",");
+    int count = 0;
+    for (int code = 0; code < 2187; code++) {
+      int sum = 0;
+      StringJoiner row = new StringJoiner(",");
+      for (int i = 0, rest = code; i < 7; i++, rest /= 3) {
+        sum += rest % 3;
+        row.add(Integer.toString(rest % 3));
+      }
+      if (sum % 3 == 0) {
+        cells.add(row.toString());
+        count++;
+      }
+    }
+    StringBuilder m = new StringBuilder();
+    m.append("array [1..").append(7 * count).append("] of int: t = [").append(cells).append("];\n");
+    for (int i = 0; i < 21; i++) {
+      m.append("var 0..2: x").append(i).append(":: output_var;\n");
+    }
+    m.append("constraint jacop_table_int([x0,x1,x2,x3,x4,x5,x6],t);\n");
+    m.append("constraint jacop_table_int([x7,x8,x9,x10,x11,x12,x13],t);\n");
+    // the same rows written in the constraint, read from the packed array literal
+    m.append("constraint jacop_table_int([x14,x15,x16,x17,x18,x19,x20],[")
+        .append(cells)
+        .append("]);\n");
+    m.append("solve satisfy;\n");
+    Path file = dir.resolve("tables.fzn");
+    Files.writeString(file, m.toString());
+    PrintStream out = System.out;
+    Store store;
+    try (PrintStream quiet = new PrintStream(OutputStream.nullOutputStream())) {
+      System.setOut(quiet);
+      FlatzincLoader loader = new FlatzincLoader(new String[] {file.toString()});
+      loader.load();
+      store = loader.getStore();
+    } finally {
+      System.setOut(out);
+    }
+    java.lang.reflect.Field shared = HybridTable.class.getDeclaredField("shared");
+    shared.setAccessible(true);
+    List<HybridTable> tables = new ArrayList<>();
+    Set<Object> indexes = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (org.jacop.constraints.Constraint c : store.getConstraints()) {
+      if (c instanceof HybridTable h && h.columnCount() == 7) {
+        tables.add(h);
+        indexes.add(shared.get(h));
+      }
+    }
+    assertEquals(3, tables.size());
+    assertEquals(1, indexes.size());
+  }
+
+  @Test
+  void arrayLiteralsOfIntLiteralsArePackedAndReadAsNodes() {
+    // the parser keeps an array literal of int literals as one int[] (a table of pigeonsPlus-11-07
+    // has 70 million entries, 3.4 GB as nodes); its children are read as int literal nodes
+    SimpleNode array = new SimpleNode(ParserTreeConstants.JJTARRAYLITERAL);
+    array.setPackedInts(new int[] {3, -1, 7});
+    assertEquals(3, array.jjtGetNumChildren());
+    ASTScalarFlatExpr second = (ASTScalarFlatExpr) array.jjtGetChild(1);
+    assertEquals(0, second.getType());
+    assertEquals(-1, second.getInt());
+    assertSame(array, second.jjtGetParent());
+    SimpleNode copy = array.copy();
+    assertSame(array.packedInts(), copy.packedInts());
+    // a change of a child turns the packed children into nodes
+    ASTScalarFlatExpr replaced = SimpleNode.intLiteral(5);
+    array.jjtAddChild(replaced, 2);
+    assertNull(array.packedInts());
+    assertEquals(3, ((ASTScalarFlatExpr) array.jjtGetChild(0)).getInt());
+    assertSame(replaced, array.jjtGetChild(2));
+    assertEquals(7, ((ASTScalarFlatExpr) copy.jjtGetChild(2)).getInt());
+  }
+
+  @Test
+  void arrayLiteralsMixingIntLiteralsWithOtherElementsKeepTheirOrder() throws IOException {
+    // ints then a variable then ints, negative ints, sets that start with an int literal
+    String fzn =
+        """
+        array [1..4] of int: c = [2,-1,3,1];
+        array [1..2] of set of int: s = [1..2,3..4];
+        var 0..4: x:: output_var;
+        var 0..4: y:: output_var;
+        array [1..4] of var int: v = [1,x,-2,y];
+        constraint int_lin_eq(c,v,-7);
+        constraint set_in(x,s[2]);
+        constraint int_lin_le([1,1],[x,y],5);
+        solve satisfy;
+        """;
+    // 2 - x - 6 + y = -7: y = x - 3
+    Set<String> expected = new TreeSet<>();
+    for (int x = 3; x <= 4; x++) {
+      for (int y = 0; y <= 4; y++) {
+        if (2 - x - 6 + y == -7 && x + y <= 5) {
+          expected.add("x = " + x + "; y = " + y + ";");
+        }
+      }
+    }
+    assertEquals(expected, solveAll(fzn));
   }
 
   @Test
