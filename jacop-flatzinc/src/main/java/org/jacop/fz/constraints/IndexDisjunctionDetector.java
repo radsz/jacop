@@ -76,6 +76,9 @@ import org.jacop.fz.SimpleNode;
  * @version 5.0
  */
 public class IndexDisjunctionDetector implements ParserTreeConstants {
+  private static final Set<String> KINDS =
+      Set.of(
+          "array_int_element", "array_var_int_element", "jacop_array_var_int_element_nonshifted");
 
   private static final int MAX_POSITIONS =
       Integer.getInteger("org.jacop.fz.indexDisjunction.max", 64);
@@ -340,6 +343,10 @@ public class IndexDisjunctionDetector implements ParserTreeConstants {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
+    // the index variables are of elements
+    if (!support.hasConstraint(astTree, KINDS)) {
+      return;
+    }
     List<ASTConstElem> relations = new ArrayList<>();
     support.forEachConstraint(
         astTree,

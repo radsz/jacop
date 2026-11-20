@@ -72,6 +72,7 @@ import org.jacop.fz.SimpleNode;
  * @version 5.0
  */
 public class ProductOfSumsDetector implements ParserTreeConstants {
+  private static final Set<String> KINDS = Set.of("array_bool_and");
 
   // the fewest conjunctions of a rewritten group
   private final int minTerms = Integer.getInteger("org.jacop.fz.productOfSums.minTerms", 64);
@@ -134,6 +135,10 @@ public class ProductOfSumsDetector implements ParserTreeConstants {
    * @return the conjunction and bool2int nodes it replaces, which must not be posted.
    */
   public Set<SimpleNode> detect(SimpleNode astTree) {
+    // the terms are conjunctions
+    if (!support.hasConstraint(astTree, KINDS)) {
+      return skipped;
+    }
     support.forEachConstraint(astTree, this::collect);
     // the variables of the search annotations, the objective and the output stay
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {

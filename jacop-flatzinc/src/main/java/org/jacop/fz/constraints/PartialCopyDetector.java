@@ -66,6 +66,7 @@ import org.jacop.fz.SimpleNode;
  * @version 5.0
  */
 public class PartialCopyDetector implements ParserTreeConstants {
+  private static final Set<String> KINDS = Set.of("int_eq_imp");
 
   private final Support support;
 
@@ -110,6 +111,10 @@ public class PartialCopyDetector implements ParserTreeConstants {
    * @return the constraint nodes of the merged copies, which must not be posted.
    */
   public Set<SimpleNode> detect(SimpleNode astTree) {
+    // a copy is defined by half-reified equalities
+    if (!support.hasConstraint(astTree, KINDS)) {
+      return new HashSet<>();
+    }
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {

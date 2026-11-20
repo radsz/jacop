@@ -134,6 +134,8 @@ import org.jacop.fz.SimpleNode;
  * and comb cuts).
  */
 public class GiantTourDetector implements ParserTreeConstants {
+  private static final Set<String> KINDS =
+      Set.of("jacop_circuit", "jacop_circuit_offset", "jacop_subcircuit");
 
   // the fewest customers worth a Routes
   private static final int MIN_CUSTOMERS = 3;
@@ -255,6 +257,10 @@ public class GiantTourDetector implements ParserTreeConstants {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
+    // a giant tour is a circuit
+    if (!support.hasConstraint(astTree, KINDS)) {
+      return;
+    }
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {

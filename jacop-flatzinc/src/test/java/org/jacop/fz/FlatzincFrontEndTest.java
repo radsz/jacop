@@ -923,6 +923,104 @@ class FlatzincFrontEndTest {
     return fzn.toString();
   }
 
+  /**
+   * The detectors that skip a model without the constraint kinds they rewrite leave the model and
+   * the search as they are: a weighted clause model (the shape of the MaxSAT models, whose 2
+   * million clauses each detector pass read for seconds) and a model with a cyclic distance, whose
+   * detector still runs, give the same model and optimum with the gates on and off.
+   */
+  @Test
+  void detectorGatesKeepTheModelAndTheSearch() throws IOException {
+    StringBuilder clauses = new StringBuilder();
+    for (int i = 1; i <= 12; i++) {
+      clauses.append("var bool: x").append(i).append(";\n");
+    }
+    StringBuilder body = new StringBuilder();
+    Random random = new Random(7);
+    for (int c = 0; c < 30; c++) {
+      int a = 1 + random.nextInt(12);
+      int b = 1 + random.nextInt(12);
+      int d = 1 + random.nextInt(12);
+      body.append("constraint bool_clause([x").append(a).append(",x").append(b);
+      body.append("],[x").append(d).append("]);\n");
+    }
+    StringBuilder terms = new StringBuilder();
+    StringBuilder weights = new StringBuilder();
+    for (int i = 1; i <= 12; i++) {
+      clauses.append("var 0..1: b").append(i).append(":: is_defined_var;\n");
+      body.append("constraint bool2int(x").append(i).append(",b").append(i);
+      body.append("):: defines_var(b").append(i).append(");\n");
+      terms.append(i > 1 ? "," : "").append("b").append(i);
+      weights.append(i > 1 ? "," : "").append(1 + i % 4);
+    }
+    String clauseModel =
+        clauses
+            + "var 0..100: objective:: output_var:: is_defined_var;\n"
+            + body
+            + "constraint int_lin_eq(["
+            + weights
+            + ",-1],["
+            + terms
+            + ",objective],0):: defines_var(objective);\n"
+            + "solve minimize objective;\n";
+    String cyclic =
+        """
+        array [1..3] of var 0..9: x:: output_array([1..3]);
+        var -9..9: e1;
+        var -9..9: e2;
+        var 0..9: a1;
+        var 0..9: a2;
+        var 0..9: c1;
+        var 0..9: c2;
+        var 0..9: m1;
+        var 0..9: m2;
+        var 0..18: objective:: output_var;
+        constraint int_lin_eq([1,-1,-1],[x[1],x[2],e1],0);
+        constraint int_lin_eq([1,-1,-1],[x[2],x[3],e2],0);
+        constraint int_abs(e1,a1);
+        constraint int_abs(e2,a2);
+        constraint int_lin_eq([1,1],[a1,c1],10);
+        constraint int_lin_eq([1,1],[a2,c2],10);
+        constraint int_min(a1,c1,m1);
+        constraint int_min(a2,c2,m2);
+        constraint int_lin_eq([1,1,-1],[m1,m2,objective],0);
+        constraint int_ne(x[1],x[3]);
+        solve maximize objective;
+        """;
+    String gates = System.getProperty("org.jacop.fz.detectorGates");
+    try {
+      for (String model : List.of(clauseModel, cyclic)) {
+        System.clearProperty("org.jacop.fz.detectorGates");
+        String[] on = run(model, "-s", "-a");
+        System.setProperty("org.jacop.fz.detectorGates", "false");
+        String[] off = run(model, "-s", "-a");
+        // the search of a second run in one JVM may differ (static random, clocks): the model and
+        // the optimum are compared
+        assertEquals(modelStatistics(off[0]), modelStatistics(on[0]), model);
+        assertEquals(optimum(off[0]), optimum(on[0]), model);
+      }
+    } finally {
+      restoreProperty("org.jacop.fz.detectorGates", gates);
+    }
+  }
+
+  /** The last objective line of a run. */
+  private static String optimum(String out) {
+    int at = out.lastIndexOf("objective = ");
+    assertTrue(at >= 0, out);
+    return out.substring(at, out.indexOf(';', at));
+  }
+
+  /** The variables and propagators of the model of a run with -s. */
+  private static String modelStatistics(String out) {
+    return out.lines()
+        .filter(
+            l ->
+                l.startsWith("%%%mzn-stat: variables=")
+                    || l.startsWith("%%%mzn-stat: propagators="))
+        .collect(Collectors.joining("\n"));
+  }
+
   /** The search statistics of a run with -s, without the times and the memory. */
   private static String searchStatistics(String out) {
     return out.lines()

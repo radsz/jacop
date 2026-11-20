@@ -77,6 +77,7 @@ import org.jacop.set.core.SetVar;
  * @version 5.0
  */
 public class SetUnionDetector implements ParserTreeConstants {
+  private static final Set<String> KINDS = Set.of("set_union");
 
   /**
    * At least this many singletons in a replaced chain. A short chain has few inner unions to save,
@@ -166,6 +167,10 @@ public class SetUnionDetector implements ParserTreeConstants {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
+    // only unions are replaced
+    if (!support.hasConstraint(astTree, KINDS)) {
+      return;
+    }
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {

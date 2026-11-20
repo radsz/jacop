@@ -94,6 +94,8 @@ import org.jacop.fz.SimpleNode;
  * @version 5.0
  */
 public class IndexFunctionDetector implements ParserTreeConstants {
+  private static final Set<String> KINDS =
+      Set.of("int_times", "int_lin_le_imp", "int_le_imp", "int_lt_imp", "int_eq_imp", "int_ne_imp");
 
   /** The largest domain of an index whose functions are expanded. */
   static final int MAX_VALUES = 64;
@@ -214,6 +216,10 @@ public class IndexFunctionDetector implements ParserTreeConstants {
    * @return the int_times constraint nodes it replaces, which must not be posted.
    */
   public Set<SimpleNode> detect(SimpleNode astTree) {
+    // products are rewritten and clauses unfolded only over half-reified comparisons
+    if (!support.hasConstraint(astTree, KINDS)) {
+      return replaced;
+    }
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       switch (node.getId()) {
