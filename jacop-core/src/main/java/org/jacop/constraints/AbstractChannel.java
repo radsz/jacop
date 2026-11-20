@@ -43,6 +43,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStampInt;
 import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
@@ -58,6 +59,24 @@ abstract class AbstractChannel extends Constraint
   final Item[] item;
   final Map<Integer, IntVar> valueMap = new HashMap<>();
   TimeStampInt position;
+
+  // Incremental mode, used when the 0/1 variables are distinct and none of them is x: a call
+  // after changes of 0/1 variables only (x unchanged) visits just the items of those variables.
+  private boolean incremental;
+  // the item of each 0/1 variable, by its original index
+  private Map<String, Integer> itemOf;
+  // original index -> current position in item, and back
+  private int[] positionOf;
+  private int[] originalAt;
+  // original indices of the items whose 0/1 variable changed since the last call
+  private int[] pending;
+  private int pendingSize;
+  private boolean xChanged;
+  private boolean wakeUp;
+  // 1 once a call has completed at this level or below: the state is then a fixpoint of this
+  // constraint, which the visit of the changed items alone needs; backtracking past the first
+  // completed call makes it 0 again
+  private TimeStampInt completed;
 
   AbstractChannel(int numberId, IntVar x, IntVar[] bs, int[] value, String constraintName) {
     checkInputForNullness(new String[] {"x", "bs"}, new Object[] {x}, bs);
@@ -182,6 +201,14 @@ abstract class AbstractChannel extends Constraint
       Item tmp = item[i];
       item[i] = item[j];
       item[j] = tmp;
+      if (incremental) {
+        int oi = originalAt[i];
+        int oj = originalAt[j];
+        originalAt[i] = oj;
+        originalAt[j] = oi;
+        positionOf[oj] = i;
+        positionOf[oi] = j;
+      }
     }
   }
 
@@ -211,6 +238,69 @@ abstract class AbstractChannel extends Constraint
   public void impose(Store store) {
     super.impose(store);
     position = new TimeStampInt(store, 0);
+    setUpIncremental(store);
+  }
+
+  private void setUpIncremental(Store store) {
+    // keyed by name, so that no identity hash code is drawn (search orders depend on them);
+    // distinct names mean distinct variables
+    Map<String, Integer> of = new HashMap<>();
+    for (int i = 0; i < n; i++) {
+      IntVar b = item[i].b();
+      if (b == x || of.put(b.id(), i) != null) {
+        incremental = false;
+        return;
+      }
+    }
+    itemOf = of;
+    positionOf = new int[n];
+    originalAt = new int[n];
+    for (int i = 0; i < n; i++) {
+      positionOf[i] = i;
+      originalAt[i] = i;
+    }
+    pending = new int[n];
+    pendingSize = 0;
+    completed = new TimeStampInt(store, 0);
+    // the first call visits every item
+    xChanged = true;
+    wakeUp = true;
+    incremental = true;
+  }
+
+  @Override
+  public void queueVariable(int level, Var v) {
+    if (!incremental || xChanged) {
+      return;
+    }
+    if (v == x) {
+      xChanged = true;
+      wakeUp = true;
+      return;
+    }
+    Integer original = itemOf.get(v.id());
+    if (original == null) {
+      return;
+    }
+    int i = positionOf[original];
+    if (i < position.value()) {
+      return;
+    }
+    IntVar b = item[i].b();
+    if (b.min() == 1 || b.max() == 0 && lcgReified()) {
+      wakeUp = true;
+    }
+    if (pendingSize == n) {
+      // more changes than items since the last call (failures in between): visit them all
+      xChanged = true;
+      return;
+    }
+    pending[pendingSize++] = original;
+  }
+
+  @Override
+  public boolean wakeNeeded() {
+    return !incremental || wakeUp;
   }
 
   /**
@@ -239,6 +329,24 @@ abstract class AbstractChannel extends Constraint
 
   @Override
   public void consistency(final Store store) {
+
+    if (incremental) {
+      try {
+        if (xChanged || completed.value() == 0 || !pendingPass(store)) {
+          // one pass is enough: with distinct 0/1 variables, the changes of a pass do not affect
+          // the items it has visited
+          singlePass(store);
+        }
+        if (completed.value() == 0) {
+          completed.update(1);
+        }
+      } finally {
+        pendingSize = 0;
+        xChanged = false;
+        wakeUp = false;
+      }
+      return;
+    }
 
     // The same b variable may be used for several values, so fixing b for one value can affect an
     // item that was already visited; repeat the pass until it does not change any domain.
@@ -297,6 +405,42 @@ abstract class AbstractChannel extends Constraint
         // x is also one of the b variables and was fixed during this pass to a value without an
         // item; the next pass sets the remaining b to 0
         return true;
+      }
+      propagateWhenXisSingleton(store, start);
+    }
+    return true;
+  }
+
+  // visits the items whose 0/1 variable changed while x did not; false if all items must be visited
+  private boolean pendingPass(final Store store) {
+    int start = position.value();
+    int startBefore = start;
+    for (int k = 0; k < pendingSize; k++) {
+      int i = positionOf[pending[k]];
+      if (i < start) {
+        continue;
+      }
+      IntVar b = item[i].b();
+      if (b.max() == 0) {
+        handleBmaxZero(store, i);
+        swap(start, i);
+        start++;
+      } else if (b.min() == 1) {
+        handleBminOne(store, i);
+      }
+    }
+    if (start != startBefore) {
+      position.update(start);
+    }
+    if (start == n) {
+      if (!x.singleton()) {
+        removeConstraint();
+      }
+      return true;
+    }
+    if (x.singleton()) {
+      if (!valueMap.containsKey(x.value())) {
+        return false;
       }
       propagateWhenXisSingleton(store, start);
     }
