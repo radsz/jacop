@@ -6748,6 +6748,32 @@ class LcgSolverTest {
    * regular constraints of handball19 (elitserien 2014) this way, and the search then reported the
    * objective 0 as optimal against the optimum 3.
    */
+  /**
+   * The failed probes of root probing leave the variable weights of dom/wdeg alone: counted, they
+   * started the search of XCSP 2022 BlockedQueens-56 on the probed values, and it found no solution
+   * in 600 s instead of 8-15 s.
+   */
+  @Test
+  void probingKeepsTheFailureWeights() {
+    Store store = new Store();
+    store.variableWeightManagement = true;
+    IntVar x = new IntVar(store, "x", 0, 2);
+    IntVar y = new IntVar(store, "y", new IntervalDomain(0, 0));
+    y.addDom(2, 2);
+    IntVar z = new IntVar(store, "z", new IntervalDomain(0, 0));
+    z.addDom(2, 2);
+    // x = 0 and x = 2 force y = z, which y != z refutes; bounds propagation finds neither
+    store.impose(new XneqY(x, y));
+    store.impose(new XneqY(x, z));
+    store.impose(new XneqY(y, z));
+    LcgSolver solver = new LcgSolver(store);
+    assertThat(solver.probeRoot(1_000_000_000L)).isTrue();
+    assertThat(solver.probeFailed).isPositive();
+    assertThat(x.dom().getSize()).isOne();
+    assertThat(List.of(x.weight, y.weight, z.weight)).containsOnly(1);
+    assertThat(store.variableWeightManagement).isTrue();
+  }
+
   @Test
   void releasedRegularPropagatesAboveTheRoot() {
     Store store = new Store();
