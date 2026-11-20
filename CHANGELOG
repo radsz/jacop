@@ -8546,6 +8546,14 @@ Version 5.0 (unreleased)
    is solved in 0.2 s instead of about a minute (50,000: 16 s), and a 40,000
    term FlatZinc sum of bool2int over a conjunction from 32 s to 25 s.
 
+479. The tabu search of functional models (FunctionalModel, CHANGELOG
+   419) leaves to the solver a model with a function other than a sum
+   or a product over more than 1,024 variables, which the search
+   evaluates whole after every trial move. With the cost a count over
+   3,000 variables the walk took 54 s of a 60 s run for 128 steps and
+   gave no answer at a 20 s limit; the solver answers in 2 s. Low
+   autocorrelation sequences still take the tabu search.
+
 Version 4.11
 =============
 

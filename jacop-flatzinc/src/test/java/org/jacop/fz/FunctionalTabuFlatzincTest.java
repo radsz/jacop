@@ -31,6 +31,8 @@
 package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -45,6 +47,9 @@ import java.util.List;
 import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.jacop.constraints.Count;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -269,6 +274,33 @@ class FunctionalTabuFlatzincTest {
     fzn.append(squares).append(",z],0):: defines_var(z);\n");
     fzn.append("solve minimize z;\n");
     return fzn.toString();
+  }
+
+  /**
+   * A function over many variables is evaluated whole after every trial move: with the cost a count
+   * over 3,000 variables the walk took 54 s of a 60 s run (128 steps), and at 20 s there was no
+   * answer; the solver alone takes 2 s. Such a model is left to the solver; a short count still
+   * makes a functional model.
+   */
+  @Test
+  void functionsOfManyVariablesAreLeftToTheSolver() {
+    for (int n : new int[] {50, 3000}) {
+      Store store = new Store();
+      IntVar[] y = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        y[i] = new IntVar(store, "y" + i, 0, 9);
+      }
+      IntVar z = new IntVar(store, "z", 0, n);
+      store.impose(new Count(y, z, 3));
+      List<String> why = new ArrayList<>();
+      FunctionalModel model = FunctionalModel.detect(store, List.of(), z, List.of(), why::add);
+      if (n <= FunctionalModel.FUNCTION_INPUTS) {
+        assertNotNull(model, why.toString());
+      } else {
+        assertNull(model);
+        assertTrue(why.get(0).startsWith("a function of " + n + " variables"), why.toString());
+      }
+    }
   }
 
   @Test
