@@ -8623,6 +8623,62 @@ Version 5.0 (unreleased)
    fires only on kitchen. -Dorg.jacop.presolve.objectiveContraction=false
    turns it off.
 
+484. Free search (-f) on satisfaction problems no longer hands over from
+   lazy clause generation to search without learning for good when the
+   satisfaction probe finds learning weak or slow: the two alternate in
+   slices whose budgets double, LCG keeps its clauses, trail and
+   activities between its slices (LcgSolver.lend), and search without
+   learning resumes the same FreeSearch, keeping its weights and its
+   restart nogoods (Lecoutre, Sais, Tabary and Vidal, "Nogood recording
+   from restarts", IJCAI 2007) from slice to slice. After weak learning
+   search without learning gets three times LCG's time
+   (lcg-sat-cp-share), after slow learning the same time
+   (lcg-sat-slow-share). Paired runs at 600 s, -f: the 41 instances the
+   hand-over affects 25 -> 29 and 23 -> 28 solved over two seeds, time
+   0.85 and 0.87 (BlockedQueens-50 proved in 295 and 323 s, Antichain1-126
+   and -252 solved, BlockedQueens-48 still open); 93 XCSP CSP instances
+   solved slowly before 71 -> 80, time 0.89 (MagicSquare-mdd-09 and
+   Crossword-m18-ogd2008-vg-16-17 lost); the 53 satisfaction instances of
+   the wide set 47 -> 47, time 0.91.
+
+485. Free search (-f) branches with conflict history search, CHS (Habet
+   and Terrioux, "Conflict history based heuristic for constraint
+   satisfaction problem solving", J. Heuristics 27, 2021), where it used
+   dom/wdeg, in the plain CP search of --lcg off and of the hand-over from
+   lazy clause generation, for satisfaction problems; optimisation keeps
+   dom/wdeg, since CHS found worse solutions there. On 94 hard XCSP
+   2022-2025 CSP instances at 240 s it decides 63 instead of 59 under -f
+   (total time -8 %) and 49 instead of 41 under -f --lcg off (-13 %); at
+   600 s on the 23 of them that reach the plain CP search 10 instead of
+   8 (-9 %, none lost). --free-config
+   heuristic=domwdeg restores dom/wdeg. Three more heuristics are available
+   for experiments: heuristic=pick, pick/dom (Audemard, Lecoutre and
+   Prud'homme, "Guiding Backtrack Search by Tracking Variables During
+   Constraint Propagation", CP 2023), heuristic=frba, frba/dom (Li, Yin and
+   Li, "Failure Based Variable Ordering Heuristics for Solving CSPs", CP
+   2021), and heuristic=rr, a round robin of heuristics over the runs
+   between restarts in which all of them learn from every run, as in ACE's
+   portfolio of the XCSP 2025 competition (rr-set=cacd;pick;frba,
+   rr-runs=1).
+
+486. New constraint TspKOpt(x, offset, d, length): k-opt dominance for a
+   symmetric travelling salesman tour x with arc lengths d (Isoart and
+   Regin, A k-Opt Based Constraint for the TSP, CP 2021; Jonker and
+   Volgenant, Nonoptimal edges for the symmetric traveling salesman
+   problem, Operations Research 1984; 2-opt and 3-opt moves of Lin, Bell
+   System Technical Journal 1965). Once a tour no longer
+   than length.max has been seen, it removes every arc that a 2-opt move
+   with a fixed arc, or a 3-opt move on paths of fixed arcs, would make
+   strictly shorter, and fails a path that such a move shortens. Strict
+   improvement keeps every optimal tour. Removals and failures are
+   explained for LCG. The FlatZinc front end posts it on pure symmetric
+   TSP models (the ones TspEdgeElimination detects) with
+   -Dorg.jacop.fz.tspKOpt=true; it is off by default, since tours of
+   instances that are not solved end worse. TSPLIB, 42 instances at
+   600 s: default 16 -> 17 proved, time 16,065 -> 15,413 s (gr48 245 ->
+   18 s, brazil58 proved in 174 s), 25 unsolved tours worse; -f 27 -> 28
+   proved, time 11,642 -> 11,044 s, 11 tours worse.
+
 Version 4.11
 =============
 

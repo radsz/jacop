@@ -157,10 +157,13 @@ import org.jacop.search.SmallestMin;
 import org.jacop.search.SplitSelect;
 import org.jacop.search.WeightedDegree;
 import org.jacop.search.free.DomWdeg;
+import org.jacop.search.free.FrbaDom;
 import org.jacop.search.free.FreeSearch;
 import org.jacop.search.free.IndomainBoundImpact;
 import org.jacop.search.free.IndomainLastSolution;
 import org.jacop.search.free.LastConflict;
+import org.jacop.search.free.PickDom;
+import org.jacop.search.free.RoundRobinSelect;
 import org.jacop.search.free.SearchMonitor;
 import org.jacop.search.lns.AdaptiveLns;
 import org.jacop.search.ls.BinCompletion;
@@ -3655,10 +3658,103 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // learning, which runs in this frame, would keep the solver and its clauses
       slowCheck = null;
     }
+    if (lcgSliceDue && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch(lcg)) {
+      return alternateWithoutLearning();
+    }
     if (lcgSlow && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch(lcg)) {
       return free ? continueWithoutLcg(costVar) : continueFixedWithoutLcg(costVar);
     }
     return numberSolutions > 0;
+  }
+
+  // set when the satisfaction probe stopped LCG for a slice of search without learning
+  private volatile boolean lcgSliceDue;
+  // the slices of search without learning that a satisfaction search alternated with LCG
+  private int lcgSatSlices;
+  // the time of a slice of search without learning as a share of LCG's time before it
+  private double lcgSliceShare = 1;
+
+  /**
+   * Alternates search without learning with LCG on a satisfaction model, after the probe found that
+   * learning cuts little ({@link #learningCutsLittle}) or that LCG makes few conflicts a second.
+   * Free search without learning gets three times the time LCG had before the probe stopped it
+   * after weak learning (lcg-sat-cp-share), as much after slow learning (lcg-sat-slow-share), then
+   * LCG goes on with its learnt clauses for twice its first share, and both shares double until one
+   * of them decides the model or the time is up. Each slice goes on with the same free search, its
+   * restarts, weights and saved phases. Before, the probe handed the model over for good: XCSP 2022
+   * BlockedQueens-48-1721237620 and BlockedQueens-50-1642399343, which LCG proves unsatisfiable in
+   * 312 and 93 s, stayed open at 600 s without learning. Each slice of search without learning runs
+   * in a store level of its own, with the constraints and clauses that only the LCG solver held
+   * posted there ({@link LcgSolver#lend}); removing the level gives the store back to LCG as it
+   * left it.
+   *
+   * @return whether a solution was found
+   */
+  private boolean alternateWithoutLearning() {
+    lcgSliceDue = false;
+    CdclSolver sat = lcg.sat();
+    long end = sat.deadline();
+    long lcgShare = Math.max(1, sat.now() - lcgStart);
+    long cpMillis = Math.max(1, (long) (lcgSliceShare * lcgShare / 1_000_000L));
+    // the search is built at the root, below the levels of the slices: the time stamps of its
+    // branchings (input order of the annotation) live at the level they were made at
+    freeSearchBuildOnly = true;
+    try {
+      executeFreeSearch(null);
+    } finally {
+      freeSearchBuildOnly = false;
+    }
+    FreeSearch sliceSearch = freeSearch;
+    while (true) {
+      lcgSatSlices++;
+      if (options.debug()) {
+        IO.println(
+            "%% LCG stopped after "
+                + sat.conflicts
+                + " conflicts; "
+                + cpMillis
+                + " ms of free search without learning");
+      }
+      int root = store.level;
+      store.setLevel(root + 1);
+      Runnable giveBack = lcg.lend();
+      try {
+        for (IntVar[][] clause : this.sat.collectedClauses()) {
+          store.impose(new BoolClause(clause[0], clause[1]));
+        }
+        // every slice goes on with the same search: its restarts, dom/wdeg weights and saved phases
+        freeSearchStatus =
+            sliceSearch.resume(
+                System.currentTimeMillis() + Math.min(cpMillis, options.getRemainingTimeOut()),
+                FreeSearch.VIRTUAL_CLOCK ? cpMillis : 0);
+      } finally {
+        store.removeLevel(root + 1);
+        store.setLevel(root);
+        giveBack.run();
+      }
+      if (freeSearchStatus == FreeSearch.Status.UNSATISFIABLE) {
+        lcgStatus = CdclSolver.UNSAT;
+        return false;
+      }
+      if (numberSolutions > 0) {
+        lcgStatus = CdclSolver.SAT;
+        return true;
+      }
+      if (options.getTimeOut() > 0 && options.getRemainingTimeOut() <= 0) {
+        return false;
+      }
+      lcgShare *= 2;
+      cpMillis *= 2;
+      sat.setDeadline(end - sat.now() > lcgShare ? sat.now() + lcgShare : end);
+      try {
+        lcgStatus = lcg.solve();
+      } finally {
+        sat.setDeadline(end);
+      }
+      if (lcgStatus != CdclSolver.UNKNOWN || sat.now() >= end) {
+        return numberSolutions > 0;
+      }
+    }
   }
 
   /**
@@ -4075,10 +4171,31 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               sat.propagations,
               weak));
     }
-    if (act && weak && !tooLateForFreeSearch(solver)) {
-      lcgSlow = true;
-      lcgSlowUnsolved = true;
-      solver.stop();
+    boolean slices = !"once".equals(options.freeConfig("lcg-sat-handover", "slices"));
+    // a search with learning that makes few conflicts a second gets slices without learning too:
+    // XCSP 2026 Antichain1-126-09 and 252-10 make 7 to 90 conflicts/s, jump back 2 to 14 levels
+    // (learning looks useful) and stay open in 600 s, while search without learning solves them
+    // in 20 and 88 s. Below 100 conflicts/s on the satisfaction data of the probe (topic and
+    // hold-out sets, 240 s), search without learning also won nmseq 202 and 395 and magic-sequence
+    // n500; LCG won Dominoes-table-45-204 (55 s), which alternation leaves at least half the time
+    double slowRate = Double.parseDouble(options.freeConfig("lcg-sat-slow", "100"));
+    boolean slow = slices && seconds > 0 && conflicts < slowRate * seconds;
+    if (act && (weak || slow) && !tooLateForFreeSearch(solver)) {
+      if (!slices) {
+        // the hand-over of jacop #755: search without learning to the end
+        lcgSlow = true;
+        lcgSlowUnsolved = true;
+        solver.stop();
+      } else {
+        // learning that looks like chronological backtracking gives search without learning twice
+        // LCG's time, a slow LCG search as much as LCG's
+        lcgSliceShare =
+            Double.parseDouble(
+                options.freeConfig(
+                    weak ? "lcg-sat-cp-share" : "lcg-sat-slow-share", weak ? "3" : "1"));
+        lcgSliceDue = true;
+        solver.sat().interrupt();
+      }
       return false;
     }
     return !tooLateForFreeSearch(solver);
@@ -5206,6 +5323,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         }
       } else if (options.searchStatistics()) {
         printLcgExplanationStatistics();
+        if (lcgSatSlices > 0) {
+          // slices of search without learning between runs of LCG on a satisfaction model
+          IO.println("%%%mzn-stat: lcgSatSlices=" + lcgSatSlices);
+        }
         if (lcgSlowDeferred > 0) {
           // LCG made too few conflicts but kept finding better solutions or bounds
           IO.println("%%%mzn-stat: lcgSlowDeferred=" + lcgSlowDeferred);
@@ -6633,12 +6754,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * Runs free search with the FreeSearch engine. It branches on the set variables first, then on
    * the integer and Boolean variables, then on the objective and on the float variables. The
    * settings of --free-config select the heuristics; by default dom/wdeg with last conflict and
-   * solution-based phase saving, and nogoods learned at each restart. Satisfaction restarts
-   * geometrically from 100 failures, growing by 1.5; optimisation from 10 failures, growing by
-   * 1.05, starts that sequence again after each solution, forgets the dom/wdeg weights every 32
-   * restarts and spends one failure in twenty on probes of the objective near its lower bound.
+   * solution-based phase saving, its weights by conflict history search (CHS, Habet and Terrioux,
+   * J. Heuristics 2021) for a satisfaction problem and by failure counts for optimisation, and
+   * nogoods learned at each restart. Satisfaction restarts geometrically from 100 failures, growing
+   * by 1.5; optimisation from 10 failures, growing by 1.05, starts that sequence again after each
+   * solution, forgets the weights every 32 restarts and spends one failure in twenty on probes of
+   * the objective near its lower bound.
    */
   private boolean executeFreeSearch(Var costVar) {
+    freeSatisfaction = costVar == null;
     DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
     searchVars.defaultVars();
     boolean objectiveLast = "1".equals(options.freeConfig("objective-last", "1"));
@@ -6880,6 +7004,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (options.debug()) {
       IO.println("% FreeSearch(" + restarts + ") " + selects);
     }
+    if (freeSearchBuildOnly) {
+      return false;
+    }
     freeSearchStatus = freeSearch.solve();
     if (recorded != null && freeSearch.getSolution() != null) {
       freeFirstVars = recorded;
@@ -6896,6 +7023,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // with a balancing objective, the time free search without learning runs before LCG, in
   // milliseconds (0 = none), and the best solution it found, which LCG starts from
   private long freeFirstMillis;
+  // set while alternateWithoutLearning builds the free search that its slices run
+  private boolean freeSearchBuildOnly;
   private IntVar[] freeFirstVars;
   private int[] freeFirstValues;
   private int freeFirstCost;
@@ -7009,6 +7138,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     };
   }
 
+  // whether the plain CP free search solves a satisfaction problem; selects the default heuristic
+  private boolean freeSatisfaction = true;
+
   /**
    * Adds the free search branching on the given variables: the set variables first, then the
    * integer and Boolean variables, then the objective and the float variables. The settings of
@@ -7022,7 +7154,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       BooleanVar[] bools,
       FloatVar[] floats,
       IntVar objective) {
-    String heuristic = options.freeConfig("heuristic", "domwdeg");
+    // CHS decides more satisfaction problems; on optimisation it found worse solutions
+    String heuristic = options.freeConfig("heuristic", freeSatisfaction ? "chs" : "domwdeg");
     int lastConflict = Integer.parseInt(options.freeConfig("lc", "1"));
     boolean phase = "1".equals(options.freeConfig("phase", "1"));
     if (sets.length > 0) {
@@ -7076,17 +7209,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         selects.add(new SimpleSelect<>(bools, new AfcMax<>(store), values));
       }
     } else if (vars.length > 0) {
-      DomWdeg.Weighting weighting =
-          switch (heuristic) {
-            case "cacd" -> DomWdeg.Weighting.CACD;
-            case "chs" -> DomWdeg.Weighting.CHS;
-            default -> DomWdeg.Weighting.WDEG;
-          };
-      DomWdeg domWdeg = new DomWdeg(vars, values, weighting).flushEvery(flushEvery);
-      monitors.add(domWdeg);
-      SelectChoicePoint<IntVar> select = domWdeg;
+      SelectChoicePoint<IntVar> select;
+      if ("rr".equals(heuristic)) {
+        // ACE-rr: the heuristics take turns over the runs and all learn from every run
+        List<SelectChoicePoint<IntVar>> rotation = new ArrayList<>();
+        for (String name : options.freeConfig("rr-set", "cacd;pick;frba").split(";")) {
+          rotation.add(conflictHeuristic(name, vars, values));
+        }
+        select =
+            new RoundRobinSelect(rotation, Integer.parseInt(options.freeConfig("rr-runs", "1")));
+      } else {
+        select = conflictHeuristic(heuristic, vars, values);
+      }
+      monitors.add((SearchMonitor) select);
       if (lastConflict > 0) {
-        LastConflict lc = new LastConflict(domWdeg, values, lastConflict);
+        LastConflict lc = new LastConflict(select, values, lastConflict);
         monitors.add(lc);
         select = lc;
       }
@@ -7098,6 +7235,24 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (floats.length > 0) {
       selects.add(new SplitSelectFloat<>(store, floats, new LargestDomainFloat<>()));
     }
+  }
+
+  /**
+   * The conflict-driven variable heuristic of free search named by --free-config heuristic (or an
+   * entry of rr-set): domwdeg, cacd, chs, pick (pick/dom) or frba (frba/dom).
+   */
+  private SelectChoicePoint<IntVar> conflictHeuristic(
+      String name, IntVar[] vars, Indomain<IntVar> values) {
+    return switch (name) {
+      case "pick" ->
+          new PickDom(vars, values, Integer.parseInt(options.freeConfig("pick-mode", "3")));
+      case "frba" -> new FrbaDom(vars, values);
+      case "cacd" -> new DomWdeg(vars, values, DomWdeg.Weighting.CACD).flushEvery(flushEvery);
+      case "chs" -> new DomWdeg(vars, values, DomWdeg.Weighting.CHS).flushEvery(flushEvery);
+      case "domwdeg", "wdeg" ->
+          new DomWdeg(vars, values, DomWdeg.Weighting.WDEG).flushEvery(flushEvery);
+      default -> throw new IllegalArgumentException("heuristic=" + name);
+    };
   }
 
   /**
