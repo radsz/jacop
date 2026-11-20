@@ -12159,4 +12159,33 @@ class SingleConstraintTest extends TestHelper {
     // the point (x0, y0) lies left of every placement of the second rectangle
     assertThat(countSolutions(store, new IntVar[] {x1, h1}, new Random(1))).isEqualTo(4);
   }
+
+  /** Removes every level above the root and returns to it, as a search does at its end. */
+  private static void backToRoot(Store store) {
+    for (int l = store.level; l > 0; l--) {
+      store.removeLevel(l);
+      store.setLevel(l - 1);
+    }
+  }
+
+  /**
+   * Alldistinct imposed again after the level of its first imposition was removed (as
+   * LcgSolver.lend and release do) kept the failure that the first imposition found on the narrower
+   * domains, and failed although x1 can take 0, 1 or 2.
+   */
+  @Test
+  void alldistinctImposedAgainForgetsTheFailureOfTheFirstImposition() {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 3, 3);
+    IntVar x1 = new IntVar(store, "x1", 0, 3);
+    Alldistinct c = new Alldistinct(new IntVar[] {x0, x1});
+    store.setLevel(1);
+    x1.domain.in(1, x1, 3, 3);
+    store.impose(c);
+    assertThat(store.consistency()).isFalse();
+    backToRoot(store);
+    store.impose(c);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x1.dom().toString()).isEqualTo("{0..2}");
+  }
 }
