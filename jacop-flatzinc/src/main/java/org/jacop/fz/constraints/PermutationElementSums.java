@@ -36,6 +36,8 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
+import org.jacop.constraints.CountValues;
 import org.jacop.constraints.LinearInt;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -97,6 +99,11 @@ public final class PermutationElementSums {
 
   private int sums;
 
+  private int counts;
+
+  // the most distinct values of an array whose counts are posted
+  private static final int MAX_COUNTED = 64;
+
   PermutationElementSums(Support support) {
     this.support = support;
   }
@@ -125,6 +132,56 @@ public final class PermutationElementSums {
     byIndex.computeIfAbsent(x, k -> new ArrayList<>(1)).add(new Element(x, c.clone(), y, first));
   }
 
+  /**
+   * It records the binary table {@code (v[0], v[1])} as an element constraint over one of its
+   * columns when the other column is a function of it, defined on every value from the smallest to
+   * the largest value of that column: the visitor group of a visitor, the class of a slot.
+   *
+   * @param v the two variables of the table.
+   * @param tbl the tuples, flattened row by row, before the domains filtered them.
+   */
+  void addTable(IntVar[] v, int[] tbl) {
+    if (!enabled() || v.length != 2 || v[0] == v[1] || tbl.length < 4) {
+      return;
+    }
+    for (int from = 0; from < 2; from++) {
+      int[] c = function(tbl, from);
+      if (c.length > 0) {
+        add(v[from], Arrays.copyOfRange(c, 1, c.length), v[1 - from], c[0]);
+      }
+    }
+  }
+
+  // the column 1 - from of the pairs tbl as a function of column from, {first, c...} with c[a -
+  // first] the image of a, or an empty array when a value has two images or a value between the
+  // smallest and
+  // the largest has none
+  private static int[] function(int[] tbl, int from) {
+    int min = Integer.MAX_VALUE;
+    int max = Integer.MIN_VALUE;
+    for (int i = from; i < tbl.length; i += 2) {
+      min = Math.min(min, tbl[i]);
+      max = Math.max(max, tbl[i]);
+    }
+    long size = (long) max - min + 1;
+    if (size > MAX_ARRAY || size != tbl.length / 2) {
+      // a hole or a value with two images
+      return new int[0];
+    }
+    int[] c = new int[(int) size + 1];
+    boolean[] set = new boolean[(int) size];
+    c[0] = min;
+    for (int i = 0; i < tbl.length; i += 2) {
+      int a = tbl[i + from] - min;
+      if (set[a]) {
+        return new int[0];
+      }
+      set[a] = true;
+      c[a + 1] = tbl[i + 1 - from];
+    }
+    return c;
+  }
+
   /** It posts the sums of the elements over the indices of each all_different constraint. */
   public void detect() {
     if (!enabled() || support.options.proof() != null || byIndex.isEmpty()) {
@@ -138,8 +195,13 @@ public final class PermutationElementSums {
         post(s.x().toArray(new IntVar[0]));
       }
     }
-    if ((support.options.debug() || support.options.searchStatistics()) && sums > 0) {
-      FzConsole.println("%%%mzn-stat: permutationElementSums=" + sums + "\n%%%mzn-stat-end");
+    if ((support.options.debug() || support.options.searchStatistics()) && sums + counts > 0) {
+      FzConsole.println(
+          "%%%mzn-stat: permutationElementSums="
+              + sums
+              + "\n%%%mzn-stat: permutationElementCounts="
+              + counts
+              + "\n%%%mzn-stat-end");
     }
     byIndex.clear();
   }
@@ -156,13 +218,28 @@ public final class PermutationElementSums {
     if (union.getSize() < x.length || union.getSize() > MAX_ARRAY) {
       return;
     }
-    // the elements of each array, the first one of each index
+    Map<ArrayKey, List<Element>> groups = groups(x);
+    for (Map.Entry<ArrayKey, List<Element>> g : groups.entrySet()) {
+      List<Element> es = g.getValue();
+      if (es.size() >= 2) {
+        boolean permutation = es.size() == x.length && union.getSize() == x.length;
+        if (permutation && countsEnabled()) {
+          postCounts(es, union);
+        }
+        post(es, union, permutation);
+      }
+    }
+  }
+
+  // the elements of each array over the indices x, the first one of each index, or none when a
+  // variable occurs twice in x
+  private Map<ArrayKey, List<Element>> groups(IntVar[] x) {
     Map<ArrayKey, List<Element>> groups = new HashMap<>();
     Map<IntVar, Boolean> seen = new IdentityHashMap<>();
     for (IntVar v : x) {
       if (seen.put(v, Boolean.TRUE) != null) {
         // a variable twice, which the all_different constraint fails on
-        return;
+        return Map.of();
       }
       List<Element> es = byIndex.get(v);
       if (es == null) {
@@ -176,12 +253,66 @@ public final class PermutationElementSums {
         }
       }
     }
-    for (Map.Entry<ArrayKey, List<Element>> g : groups.entrySet()) {
-      List<Element> es = g.getValue();
-      if (es.size() >= 2) {
-        post(es, union, es.size() == x.length && union.getSize() == x.length);
+    return groups;
+  }
+
+  /**
+   * It tells if the counts of the values of the elements over a permutation are posted, {@code
+   * org.jacop.fz.permutationElementCounts} (default true).
+   *
+   * @return false if the system property is false.
+   */
+  public static boolean countsEnabled() {
+    return Boolean.parseBoolean(
+        System.getProperty("org.jacop.fz.permutationElementCounts", "true"));
+  }
+
+  /**
+   * It posts the counts of the values of the elements es, whose indices are a permutation of union:
+   * value c of the array is taken by as many elements as there are indices u of union with c[u] =
+   * c. This is the cardinality form of the sums ({@link #post(List, IntDomain, boolean)}): the sum
+   * fixes the mean of the values, the counts fix each value. With the all_different constraints
+   * over the values themselves the counts give a pigeonhole argument that neither propagation nor
+   * lazy clause generation sees. In the mystery shopper of CSPLib (prob004, XCSP 2024), the visitor
+   * group of the visitor of a visitee in week w is a table of the visitor, the visitors of a week
+   * are a permutation, and the groups that visit one visitee over the W weeks are all different, so
+   * a visitee sees each of the W groups once; with these counts a group of s visitors makes s
+   * visits a week and W s in all, which the linear relaxation of the counts and the all_different
+   * constraints finds is not the number of visitees when the groups differ in size (5-08-1: 39
+   * visitees, a group of 8 makes 40 visits), while search finds nothing in 30 minutes. The counts
+   * are those of the aggregated assignment formulation of element and all_different (Refalo, CP
+   * 2000).
+   */
+  private void postCounts(List<Element> es, IntDomain union) {
+    Element e0 = es.get(0);
+    Map<Integer, Integer> count = new TreeMap<>();
+    for (ValueEnumeration it = union.valueEnumeration(); it.hasMoreElements(); ) {
+      long i = (long) it.nextElement() - e0.first;
+      if (i < 0 || i >= e0.c.length) {
+        // an index the element constraints remove
+        return;
       }
+      count.merge(e0.c[(int) i], 1, Integer::sum);
     }
+    if (count.size() > MAX_COUNTED || 2 * count.size() > union.getSize()) {
+      // too many values, or most values once (processing times of a flow shop): the counts then
+      // add little to the sum and slowed the search (Taillard ta011, ta016)
+      return;
+    }
+    int[] values = new int[count.size()];
+    IntVar[] counters = new IntVar[count.size()];
+    int i = 0;
+    for (Map.Entry<Integer, Integer> c : count.entrySet()) {
+      values[i] = c.getKey();
+      counters[i] = new IntVar(support.store, c.getValue(), c.getValue());
+      i++;
+    }
+    IntVar[] y = new IntVar[es.size()];
+    for (int k = 0; k < y.length; k++) {
+      y[k] = es.get(k).y;
+    }
+    support.delayedConstraints.add(new CountValues(y, counters, values));
+    counts++;
   }
 
   // the sum of the values of the elements es, whose indices take distinct values of union

@@ -8508,7 +8508,47 @@ Version 5.0 (unreleased)
    instances with element or circuit at 240 s 6,369 -> 6,387 s, with only
    3 of them running route neighbourhoods (the rest run unchanged code).
 
-458. The linear relaxation expands a row whose sums lcg-split or linear
+476. The linear relaxation separates cuts of the clique partitioning
+   polytope at the root when the objective sums pair indicators
+   b <-> x[i] = x[j] (community detection: modularity objectives): the
+   triangle inequalities of Groetschel and Wakabayashi (Mathematical
+   Programming 45, 1989), the clique inequalities of a partition into at
+   most k classes of Chopra and Rao (Mathematical Programming 59, 1993) and
+   the 2-partition inequalities with one node on one side. A value Boolean
+   b <-> x = v counts as the pair of x with an anchor node of value v, so
+   a node fixed by value precedence keeps its pairs. Only partitions whose
+   pairs the objective sums within three rows get cuts, and the cuts are
+   kept only if they raise the root bound by 2 % or more. Community
+   detection Zakhary.s12.k3 of the Challenge 2024 is proved at the root
+   (-f 96 s -> 3 s), Zakhary.s12.k4 157 s -> 4 s, mexican.s26.k4 215 s ->
+   2 s. On the 34 Challenge instances where a partition is found, at
+   600 s: -f proved 21 -> 22, total time 0.814; default search proved
+   9 -> 10, total time 0.930.
+   -Dorg.jacop.lp.partitionCuts=false turns them off.
+
+477. The permutation element sums of the FlatZinc front end (entry 404)
+   also take binary tables whose one column is a total function of the
+   other, and, when the indices are a permutation of their values, post
+   the count of each value next to the sum: y[k] = c[x[k]] with the x[k]
+   a permutation of U takes each value v exactly |{u in U : c[u] = v}|
+   times (CountValues with fixed counters, for at most 64 distinct
+   values and at most half as many as indices). This is the cardinality
+   form of the aggregated assignment formulation of element and
+   all_different (P. Refalo, Linear formulation of constraint
+   programming models and hybrid solvers, CP 2000). In the mystery
+   shopper problem (CSPLib prob004, XCSP 2024 MisteryShopper) the
+   visitor group of each visit is a table of the visitor, the visitors
+   of a week are a permutation, and the groups that visit a visitee over
+   the W weeks are all different, so each group must make as many visits
+   as there are visitees, W times its size; the counts and the
+   all_different constraints make the linear relaxation infeasible when
+   the groups differ in size. All 10 UNSAT instances (including
+   6-12-1, which no 2024 solver decided) are proved in 1.6-2.9 s at
+   600 s; before, JaCoP proved 6 (up to 180 s) and timed out on 5-08-1,
+   5-10-1, 6-12-1 and 6-12-2.
+   -Dorg.jacop.fz.permutationElementCounts=false turns the counts off.
+
+478. The linear relaxation expands a row whose sums lcg-split or linear
    overlap factoring defined up to 65,536 terms (was 4,096; property
    org.jacop.lp.maxExpandedTerms). Merging repeated variables at every
    level (jacop #815) keeps a row at most as long as the distinct
@@ -8522,7 +8562,22 @@ Version 5.0 (unreleased)
    3,749 -> 3,720 s; default search 10 = 10 proved, 3,751 -> 3,662 s
    (BusScheduling c1a 89 -> 30 s, r5a 69 -> 32 s).
 
-476. New constraint TspKOpt(x, offset, d, length): k-opt dominance for a
+476. FlatZinc objective presolve contracts disjunctions: when the
+   literals of r <-> or(b) exclude each other, now also because they
+   share an at-most-one sum(b) <= 1 or an exactly-one set, and all have
+   the same cost in the objective, their terms become one term on r
+   (sum(c * b) = c * r). CP-SAT's presolve makes the same step through
+   its exactly-one sets (Perron, Didier and Gay, The CP-SAT-LP Solver,
+   CP 2023). In MiniZinc Challenge 2026 kitchen the cost of each placed
+   fixture becomes a cost per used segment, 272 objective terms -> 156,
+   and learnt clauses and cores no longer name single fixtures. With -f
+   at 600 s larger.instance (optimum 470) is proved in 3 of 5 runs
+   (355 to 405 s), never before in 5 runs; kitchen_b1 35 -> 16 s; the
+   other three instances are unchanged. On the 240 wide instances it
+   fires only on kitchen. -Dorg.jacop.presolve.objectiveContraction=false
+   turns it off.
+
+479. New constraint TspKOpt(x, offset, d, length): k-opt dominance for a
    symmetric travelling salesman tour x with arc lengths d (Isoart and
    Regin, A k-Opt Based Constraint for the TSP, CP 2021; Jonker and
    Volgenant, Nonoptimal edges for the symmetric traveling salesman

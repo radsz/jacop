@@ -2042,6 +2042,9 @@ class GlobalConstraints implements ParserTreeConstants {
    */
   void poseTableRows(IntVar[] v, int[] tbl) {
     int size = v.length;
+    if (size == 2) {
+      support.permutationElementSums.addTable(v, tbl);
+    }
     int[][] t = filterFeasibleTuples(tbl, v, size);
     if (t.length == 0) {
       // no tuple is allowed by the domains
