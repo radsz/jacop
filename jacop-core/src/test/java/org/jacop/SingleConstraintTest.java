@@ -12111,4 +12111,25 @@ class SingleConstraintTest extends TestHelper {
     // b = 1 and x + c > z, which holds for both values of z
     assertThat(countSolutions(implied, new IntVar[] {b, x2, z2}, new Random(1))).isEqualTo(2);
   }
+
+  @Test
+  void elementIntegerSkipsConstantsBeyondTheDomainRange() {
+    // constants beyond MIN_INT..MAX_INT were added to the domain of the values, which cannot
+    // hold them: an ArrayIndexOutOfBoundsException, or a lost solution
+    Store store = new Store();
+    IntVar i = new IntVar(store, "i", 1, 3);
+    IntVar v = new IntVar(store, "v", -3, -1);
+    store.impose(new ElementInteger(i, new int[] {536870909, -3, Integer.MIN_VALUE}, v, 0));
+    assertThat(countSolutions(store, new IntVar[] {i, v}, new Random(1))).isEqualTo(1);
+
+    Store other = new Store();
+    IntVar j = new IntVar(other, "j", -2, -1);
+    j.addDom(46341, 46341);
+    IntVar w = new IntVar(other, "w", -4, -4);
+    w.addDom(-2, -2);
+    other.impose(new ElementInteger(j, new int[] {Integer.MAX_VALUE, -4, 3}, w, -3));
+    assertThat(other.consistency()).isTrue();
+    assertThat(j.value()).isEqualTo(-1);
+    assertThat(w.value()).isEqualTo(-4);
+  }
 }
