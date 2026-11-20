@@ -32,6 +32,7 @@
 package org.jacop.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -794,5 +795,25 @@ class DomainOperationsBruteForceTest {
       assertThat(bound.getSize()).as(what).isZero();
     }
     assertThat(new BoundDomain().intervalEnumeration().hasMoreElements()).isFalse();
+  }
+
+  @Test
+  void setDomainOfAVariableWidensItsRepresentation() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 10);
+    x.setDomain(0, 100);
+    assertThat(x.dom()).hasToString("{0..100}");
+    assertThat(x.getSize()).isEqualTo(101);
+    IntVar y = new IntVar(store, "y", 0, 10);
+    y.setDomain(new IntervalDomain(-20, 100));
+    assertThat(y.dom()).hasToString("{-20..100}");
+    store.setLevel(1);
+    y.domain.inComplement(1, y, 50);
+    assertThat(y.dom()).hasToString("{-20..49, 51..100}");
+    store.removeLevel(1);
+    store.setLevel(0);
+    assertThat(y.dom()).hasToString("{-20..100}");
+    SmallDenseDomain dense = new SmallDenseDomain(0, 5);
+    assertThatThrownBy(() -> dense.setDomain(0, 64)).isInstanceOf(IllegalArgumentException.class);
   }
 }

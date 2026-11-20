@@ -1743,6 +1743,11 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public void setDomain(int min, int max) {
 
+    if ((long) max - min > 63) {
+      throw new IllegalArgumentException(
+          "The resulting domain can not be handled properly by " + this.getClass());
+    }
+
     this.minBound = min;
 
     this.bits = -1;
