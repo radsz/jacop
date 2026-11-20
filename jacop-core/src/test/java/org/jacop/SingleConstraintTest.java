@@ -198,6 +198,7 @@ import org.jacop.constraints.geost.Geost;
 import org.jacop.constraints.geost.GeostObject;
 import org.jacop.constraints.geost.NonOverlapping;
 import org.jacop.constraints.geost.Shape;
+import org.jacop.constraints.graph.ArborescenceBound;
 import org.jacop.constraints.graph.ColouredSpanningTreeBound;
 import org.jacop.constraints.graph.Forest;
 import org.jacop.constraints.graph.Reachable;
@@ -11964,6 +11965,82 @@ class SingleConstraintTest extends TestHelper {
       store.removeLevel(1);
       store.setLevel(0);
       assertThat(x[1].getSize()).as("kind %d", kind).isEqualTo(3);
+    }
+  }
+
+  @Test
+  void arborescenceBoundFailsWithoutASpanningRoot() {
+    // 0 -> 1 is the only edge: no root of {0, 2} reaches all three nodes
+    Store store = new Store();
+    IntVar root = new IntVar(store, "root", 0, 0);
+    root.addDom(2, 2);
+    IntVar e0 = new IntVar(store, "e0", 0, 1);
+    IntVar cost = new IntVar(store, "cost", 0, 1);
+    store.impose(
+        new ArborescenceBound(
+            3, new int[] {0}, new int[] {1}, new int[] {0}, root, new IntVar[] {e0}, cost, 0));
+    assertThat(countSolutions(store, new IntVar[] {root, e0, cost}, new Random(1))).isZero();
+    // random graphs over four nodes against brute force
+    Random random = new Random(7);
+    for (int trial = 0; trial < 60; trial++) {
+      int n = 4;
+      List<int[]> arcs = new ArrayList<>();
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+          if (i != j && random.nextInt(4) == 0) {
+            arcs.add(new int[] {i, j, random.nextInt(5) - 1});
+          }
+        }
+      }
+      int m = arcs.size();
+      int maxCost = random.nextInt(8);
+      long expected = 0;
+      for (int r = 0; r < n; r++) {
+        for (int set = 0; set < 1 << m; set++) {
+          int[] parent = new int[n];
+          Arrays.fill(parent, -1);
+          boolean ok = true;
+          int sum = 0;
+          for (int e = 0; ok && e < m; e++) {
+            if ((set >> e & 1) == 1) {
+              int[] a = arcs.get(e);
+              ok = parent[a[1]] < 0 && a[1] != r;
+              parent[a[1]] = a[0];
+              sum += a[2];
+            }
+          }
+          for (int v = 0; ok && v < n; v++) {
+            int u = v;
+            for (int steps = 0; ok && u != r; steps++) {
+              ok = parent[u] >= 0 && steps < n;
+              u = ok ? parent[u] : u;
+            }
+          }
+          if (ok) {
+            expected += Math.max(0, maxCost - Math.max(sum, -1) + 1);
+          }
+        }
+      }
+      Store st = new Store();
+      IntVar rt = new IntVar(st, "root", 0, n - 1);
+      IntVar[] es = new IntVar[m];
+      int[] from = new int[m];
+      int[] to = new int[m];
+      int[] weights = new int[m];
+      for (int e = 0; e < m; e++) {
+        es[e] = new IntVar(st, "e" + e, 0, 1);
+        from[e] = arcs.get(e)[0];
+        to[e] = arcs.get(e)[1];
+        weights[e] = arcs.get(e)[2];
+      }
+      IntVar c = new IntVar(st, "cost", -1, maxCost);
+      st.impose(new ArborescenceBound(n, from, to, weights, rt, es, c, 0));
+      IntVar[] all = Arrays.copyOf(es, m + 2);
+      all[m] = rt;
+      all[m + 1] = c;
+      assertThat((long) countSolutions(st, all, new Random(trial)))
+          .as("trial " + trial)
+          .isEqualTo(expected);
     }
   }
 }
