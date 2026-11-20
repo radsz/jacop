@@ -903,6 +903,14 @@ public class Knapsack extends Constraint
     store.registerRemoveLevelLateListener(this);
     imposedAt = store.level;
 
+    // an object imposed again (LcgSolver.lend, release) starts afresh
+    impositionFailure = false;
+    positionOfCriticalItem = null;
+    pendingLevel = Integer.MAX_VALUE;
+    positionOfAlreadyUpdated = 0;
+    inConsistency = false;
+    setFlagsForCapacityOrProfit();
+
     hashForUpdate = new HashMap<>();
 
     if (useDynamicProgramming) {

@@ -12219,4 +12219,36 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     assertThat(noOfAllSolutions(store, x)).isEqualTo(1);
   }
+
+  /**
+   * Knapsack imposed again kept the failure found by an earlier imposition on narrower domains,
+   * which also made queueVariable ignore every change, so the constraint imposed again on the root
+   * domains pruned nothing and accepted q = 1 with capacity 0 and profit 0.
+   */
+  @Test
+  void knapsackImposedAgainForgetsTheFailureOfTheFirstImposition() {
+    Store store = new Store();
+    IntVar q = new IntVar(store, "q", 0, 2);
+    IntVar capacity = new IntVar(store, "capacity", 0, 10);
+    IntVar profit = new IntVar(store, "profit", 0, 10);
+    Knapsack c = new Knapsack(new int[] {1}, new int[] {2}, new IntVar[] {q}, capacity, profit);
+    store.setLevel(1);
+    store.impose(c);
+    assertThat(store.consistency()).isTrue();
+    backToRoot(store);
+    store.setLevel(1);
+    q.domain.in(1, q, 0, 0);
+    profit.domain.in(1, profit, 1, 2);
+    store.impose(c);
+    assertThat(store.consistency()).isFalse();
+    backToRoot(store);
+    store.impose(c);
+    assertThat(store.consistency()).isTrue();
+    assertThat(capacity.dom().toString()).isEqualTo("{0..4}");
+    store.setLevel(1);
+    q.domain.in(1, q, 1, 1);
+    capacity.domain.in(1, capacity, 0, 0);
+    profit.domain.in(1, profit, 0, 0);
+    assertThat(store.consistency()).isFalse();
+  }
 }
