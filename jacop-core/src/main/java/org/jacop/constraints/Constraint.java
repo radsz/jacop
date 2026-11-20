@@ -46,6 +46,7 @@ import lombok.NoArgsConstructor;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -153,6 +154,13 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    */
   public static final boolean REWRITE =
       Boolean.parseBoolean(System.getProperty("org.jacop.rewrite", "true"));
+
+  /**
+   * The largest number of constraints of a variable whose list a rewriting copies into the domain
+   * of the current level (org.jacop.rewrite.maxConstraints).
+   */
+  static final int REWRITE_MAX_CONSTRAINTS =
+      Integer.getInteger("org.jacop.rewrite.maxConstraints", 64);
 
   /** The constraint has not had a consistency call since it was imposed. */
   public static final int NOT_RUN = -1;
@@ -647,12 +655,33 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    * Tells whether this constraint may replace itself by a simpler one now ({@link #rewriteTo}).
    *
    * @param store the store.
-   * @return true during search when the store is running this constraint.
+   * @return true during search when the store is running this constraint and imposing the target
+   *     copies no long list of constraints.
    */
   protected final boolean canRewrite(Store store) {
     // only during search, and only a constraint the store runs itself: one nested in another
     // constraint is called again by it, whatever the store does with it
-    return REWRITE && store.level > 0 && store.currentConstraint == this;
+    return REWRITE
+        && store.level > 0
+        && store.currentConstraint == this
+        && copiesNoLongList(store.level);
+  }
+
+  // the target of a rewriting is imposed on variables of this constraint: a variable whose domain
+  // is not of the current level yet gets a copy of its lists of constraints (and their hash tables)
+  // at this level, which the trail keeps. On variables in thousands of constraints these copies
+  // took more than 5 GB in the first 40 s of the LCG search of XCSP 2025
+  // LotteryDesign-32-6-6-2-3000
+  private boolean copiesNoLongList(int level) {
+    for (Var v : scopeArray()) {
+      Domain d = v.dom();
+      if (d.stamp() < level
+          && !v.singleton()
+          && d.modelConstraintsAttached() > REWRITE_MAX_CONSTRAINTS) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
