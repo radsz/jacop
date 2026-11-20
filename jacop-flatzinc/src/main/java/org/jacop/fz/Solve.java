@@ -2883,8 +2883,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   private String lcgUnsupported(Var costVar) {
-    if (options.getAll() && costVar == null) {
-      return "all solutions are not supported";
+    if (enumerating(costVar)) {
+      if (!options.lcgEnumerates()) {
+        return "all solutions are not supported";
+      }
+      String unprinted = unblockedOutput();
+      if (unprinted != null) {
+        return unprinted;
+      }
     }
     if (costVar != null && !(costVar instanceof IntVar)) {
       return "the objective is not an integer variable";
@@ -2895,6 +2901,66 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     return null;
+  }
+
+  private static final boolean NO_ENUMERATED_COMPLETION =
+      !"on".equals(System.getProperty("jacop.lcg.enumCompletion", "off"));
+
+  /**
+   * Whether the search prints many solutions of a satisfaction model (-a, or -n N with N &gt; 1),
+   * which LCG enumerates with blocking clauses over the printed variables.
+   */
+  private boolean enumerating(Var costVar) {
+    return costVar == null && (options.getAll() || options.getNumberSolutions() > 1);
+  }
+
+  // the printed variables: the output variables and the arrays of the output
+  private List<Var> printedVariables() {
+    List<Var> printed = new ArrayList<>(output.outputVariables);
+    for (OutputArrayAnnotation a : output.outputArray) {
+      printed.addAll(Arrays.asList(a.getArray()));
+    }
+    return printed;
+  }
+
+  /**
+   * Why LCG cannot tell the solutions apart by blocking clauses over the printed variables, or null
+   * when it can: every unfixed printed variable must be an integer or set variable of the store
+   * that some constraint uses, so that its value in a solution is the solver's.
+   */
+  private String unblockedOutput() {
+    if (presolve != null || options.portfolioWorker() != null || options.proof() != null) {
+      return "all solutions are not supported with presolve, -p or --proof";
+    }
+    Set<Var> unused = new HashSet<>(dictionary.unusedVariables);
+    for (Var v : printedVariables()) {
+      if (v.singleton()) {
+        continue;
+      }
+      int at = v.index();
+      boolean inStore = at >= 0 && at < store.size() && store.vars[at] == v;
+      if (!(v instanceof IntVar || v instanceof SetVar) || !inStore || unused.contains(v)) {
+        return "all solutions are not supported: output " + v.id() + " is not a solver variable";
+      }
+    }
+    return null;
+  }
+
+  // the integer variables whose values tell two solutions apart: the printed integer variables and
+  // the members of the printed sets, by their mirrors
+  private List<IntVar> enumeratedVariables() {
+    List<IntVar> vars = new ArrayList<>();
+    for (Var v : printedVariables()) {
+      if (v.singleton()) {
+        continue;
+      }
+      if (v instanceof IntVar x) {
+        vars.add(x);
+      } else if (v instanceof SetVar set && set.lcgMirror() != null) {
+        vars.addAll(Arrays.asList(set.lcgMirror().mirrorVariables()));
+      }
+    }
+    return vars;
   }
 
   // -Djacop.lcg.probe=share: root probing of the 0/1 variables and small domains before LCG
@@ -3150,7 +3216,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // the hint and bound of a free search probe that did not finish (see freeLpProbe)
     IntVar[] probeVars = null;
     int[] probeValues = null;
-    if (lpProbing && options.freeSearch()) {
+    if (lpProbing && options.freeSearch() && !enumerating(costVar)) {
       int probed = freeLpProbe(costVar);
       if (probed != CdclSolver.UNKNOWN) {
         lcgStatus = probed;
@@ -3169,7 +3235,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // local search runs on the store before the solver takes it over
     LocalSearch ls = null;
     // -a on an optimisation problem prints every better solution, local search included
-    if (options.freeSearch() && !(options.getAll() && costVar == null)) {
+    boolean enumerate = enumerating(costVar);
+    if (options.freeSearch() && !enumerate) {
       DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
       searchVars.defaultVars();
       ls = runLocalSearch(costVar, searchVars, worker, true);
@@ -3223,6 +3290,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     lcg.setRestartPresolve(options.presolveRestart());
+    if (enumerate && !lcg.setEnumeration(enumeratedVariables())) {
+      throw new IllegalStateException("the output variables cannot be enumerated by LCG");
+    }
     // the hints of constraints first; a solution of local search replaces them
     Hint constraintHint = constraintHints();
     if (constraintHint != null) {
@@ -3454,7 +3524,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       annotated = annotated == null ? first : new SequenceSelect(List.of(first, annotated));
     }
     lcg.setAnnotation(annotated, free);
-    if (presolve == null) {
+    if (presolve == null && !(enumerating(costVar) && NO_ENUMERATED_COMPLETION)) {
       // the annotation's runs take the assignment as a solution once the variables left are free;
       // the printed variables must be fixed (presolve rebuilds its removed variables from the
       // store's values, so not with it)
@@ -3636,8 +3706,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     // fixed search gives way only without a solution, to the annotation's search without learning
+    // the search without learning that LCG gives way to would print the solutions found again
     Thread slowCheck =
-        worker == null && (free || fixedLabel != null) ? slowLcgCheck(costVar, !free) : null;
+        worker == null && (free || fixedLabel != null) && !enumerate
+            ? slowLcgCheck(costVar, !free)
+            : null;
     if (lpProbing) {
       linearRelaxation.rememberSearchStart();
       lcg.atRootAfter(lpProbeMs * 1_000_000L, this::resumeRelaxation);
@@ -5323,6 +5396,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         }
       } else if (options.searchStatistics()) {
         printLcgExplanationStatistics();
+        if (lcg != null && lcg.blockedSolutions > 0) {
+          // the solutions of -a or -n that LCG excluded, by the negation of their decisions or by
+          // one literal per printed variable
+          IO.println("%%%mzn-stat: lcgBlockedSolutions=" + lcg.blockedSolutions);
+          IO.println("%%%mzn-stat: lcgDecisionBlocked=" + lcg.decisionBlocked);
+        }
         if (lcgSatSlices > 0) {
           // slices of search without learning between runs of LCG on a satisfaction model
           IO.println("%%%mzn-stat: lcgSatSlices=" + lcgSatSlices);

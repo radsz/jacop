@@ -6890,4 +6890,77 @@ class LcgSolverTest {
         search.labeling(store, new SimpleSelect<>(literals, null, new IndomainMin<>()), cost);
     return found ? cost.value() : Long.MAX_VALUE;
   }
+
+  @Test
+  void enumerationFindsEverySolutionOfTheEnumeratedVariablesOnce() {
+    // the solutions on the enumerated variables (a projection) against brute force, over domains
+    // with holes, so that the blocking clauses use [x >= v] at the ends and [x = v] inside
+    Random rnd = new Random(83);
+    int solutions = 0;
+    for (int instance = 0; instance < 300; instance++) {
+      Store store = new Store();
+      int n = 3 + rnd.nextInt(3);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        IntervalDomain d = new IntervalDomain(0, 3 + rnd.nextInt(3));
+        if (rnd.nextBoolean()) {
+          d.subtractAdapt(1 + rnd.nextInt(d.max() - 1));
+        }
+        x[i] = new IntVar(store, "x" + i, d);
+      }
+      int[] w = new int[n];
+      for (int i = 0; i < n; i++) {
+        w[i] = 1 + rnd.nextInt(3);
+      }
+      int rhs = rnd.nextInt(4 * n);
+      store.impose(new LinearInt(x, w, "<=", rhs));
+      store.impose(new XneqY(x[0], x[1]));
+      // the last variable is left out of the enumeration unless all are enumerated
+      int shown = rnd.nextBoolean() ? n : n - 1;
+      Set<List<Integer>> expected = new HashSet<>();
+      int[] values = new int[n];
+      bruteForce(x, w, rhs, 0, values, shown, expected);
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      List<IntVar> enumerated = Arrays.asList(Arrays.copyOf(x, shown));
+      assertThat(solver.setEnumeration(enumerated)).isTrue();
+      List<List<Integer>> found = new ArrayList<>();
+      solver.onSolution(
+          () -> {
+            List<Integer> t = new ArrayList<>();
+            for (int i = 0; i < shown; i++) {
+              t.add(x[i].value());
+            }
+            found.add(t);
+          });
+      int status = solver.solve();
+      assertThat(status).as("instance " + instance).isEqualTo(CdclSolver.UNSAT);
+      assertThat(found).as("instance " + instance).doesNotHaveDuplicates();
+      assertThat(new HashSet<>(found)).as("instance " + instance).isEqualTo(expected);
+      solutions += found.size();
+    }
+    assertThat(solutions).isGreaterThan(300);
+  }
+
+  private static void bruteForce(
+      IntVar[] x, int[] w, int rhs, int i, int[] values, int shown, Set<List<Integer>> out) {
+    if (i == x.length) {
+      int sum = 0;
+      for (int k = 0; k < x.length; k++) {
+        sum += w[k] * values[k];
+      }
+      if (sum <= rhs && values[0] != values[1]) {
+        List<Integer> t = new ArrayList<>();
+        for (int k = 0; k < shown; k++) {
+          t.add(values[k]);
+        }
+        out.add(t);
+      }
+      return;
+    }
+    for (var e = x[i].dom().valueEnumeration(); e.hasMoreElements(); ) {
+      values[i] = e.nextElement();
+      bruteForce(x, w, rhs, i + 1, values, shown, out);
+    }
+  }
 }
