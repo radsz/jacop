@@ -6110,4 +6110,16 @@ class FlatzincFrontEndTest {
     }
     assertEquals(expected, solveAllInOrder(model).size());
   }
+
+  /** No set has an empty union, so it partitions only the empty universe. */
+  @Test
+  void aPartitionOfNoSetHoldsOnlyForAnEmptyUniverse() throws IOException {
+    String model =
+        "var 0..1: y :: output_var;\nconstraint jacop_partition_set([], %s);\nsolve satisfy;\n";
+    for (String[] options : new String[][] {{"-a"}, {"-a", "--lcg", "off"}}) {
+      String rejected = run(model.formatted("{1}"), options)[0];
+      assertTrue(rejected.contains("=====UNSATISFIABLE====="), rejected);
+      assertEquals(Set.of("y = 0;", "y = 1;"), solveAll(model.formatted("{}")));
+    }
+  }
 }

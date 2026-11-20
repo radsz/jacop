@@ -325,6 +325,14 @@ class SetConstraints implements ParserTreeConstants {
     SetVar[] s = support.getSetVarArray((SimpleNode) node.jjtGetChild(0));
     IntDomain u = support.getSetLiteral(node, 1);
 
+    // no set: their union is empty, so only an empty universe is partitioned
+    if (s.length == 0) {
+      if (!u.isEmpty()) {
+        throw Store.failException;
+      }
+      return;
+    }
+
     support.pose(new PartitionSet(s, u));
   }
 
