@@ -348,24 +348,60 @@ public final class AlldifferentCuts {
     }
     Integer[] order = present.toArray(new Integer[0]);
     Arrays.sort(order, Comparator.comparingDouble(i -> value[i]));
-    List<Cut> cuts = new ArrayList<>();
+    List<Prefix> found = new ArrayList<>();
     try {
-      prefixes(order, value, true, cuts);
+      prefixes(order, value, true, found);
       Integer[] reversed = new Integer[order.length];
       for (int i = 0; i < order.length; i++) {
         reversed[i] = order[order.length - 1 - i];
       }
-      prefixes(reversed, value, false, cuts);
+      prefixes(reversed, value, false, found);
     } catch (ArithmeticException overflow) {
       // the cuts found so far hold
     }
-    cuts.sort(Comparator.comparingDouble(Cut::efficacy).reversed());
-    return cuts.size() > limit ? new ArrayList<>(cuts.subList(0, limit)) : cuts;
+    // the variables of a cut are listed only for the cuts returned: a long constraint has a
+    // violated prefix of almost every length, and listing them all takes quadratic memory
+    found.sort(Comparator.comparingDouble(Prefix::efficacy).reversed());
+    List<Cut> cuts = new ArrayList<>();
+    for (int c = 0; c < found.size() && c < limit; c++) {
+      cuts.add(found.get(c).cut());
+    }
+    return cuts;
+  }
+
+  // a violated cut over the first k + 1 variables of an order
+  private static final class Prefix {
+    private final Integer[] order;
+    private final int k;
+    private final boolean lower;
+    private final long bound;
+    private final double efficacy;
+
+    Prefix(Integer[] order, int k, boolean lower, long bound, double efficacy) {
+      this.order = order;
+      this.k = k;
+      this.lower = lower;
+      this.bound = bound;
+      this.efficacy = efficacy;
+    }
+
+    double efficacy() {
+      return efficacy;
+    }
+
+    Cut cut() {
+      int[] vars = new int[k + 1];
+      for (int t = 0; t <= k; t++) {
+        vars[t] = order[t];
+      }
+      Arrays.sort(vars);
+      return new Cut(vars, lower, bound, efficacy);
+    }
   }
 
   // the violated cuts over the prefixes of the order: sum of a prefix >= the sum of the smallest
   // values of the union of its domains (lower), or <= the sum of the largest ones
-  private void prefixes(Integer[] order, double[] value, boolean lower, List<Cut> cuts) {
+  private void prefixes(Integer[] order, double[] value, boolean lower, List<Prefix> cuts) {
     IntDomain union = new IntervalDomain();
     int[] inside = new int[special.length];
     double sum = 0;
@@ -389,17 +425,12 @@ public final class AlldifferentCuts {
 
   // the cut over the first k + 1 variables of the order when its sum violates the bound enough
   private static void addIfViolated(
-      Integer[] order, int k, boolean lower, long bound, double sum, List<Cut> cuts) {
+      Integer[] order, int k, boolean lower, long bound, double sum, List<Prefix> cuts) {
     double violation = lower ? bound - sum : sum - bound;
     if (violation <= MIN_VIOLATION + RELATIVE_VIOLATION * Math.abs((double) bound)) {
       return;
     }
-    int[] vars = new int[k + 1];
-    for (int t = 0; t <= k; t++) {
-      vars[t] = order[t];
-    }
-    Arrays.sort(vars);
-    cuts.add(new Cut(vars, lower, bound, violation / Math.sqrt(k + 1.0)));
+    cuts.add(new Prefix(order, k, lower, bound, violation / Math.sqrt(k + 1.0)));
   }
 
   // the bound of a prefix of k variables, or null when the least counts do not fit in it; not a

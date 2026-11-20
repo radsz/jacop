@@ -1685,6 +1685,9 @@ public final class LcgSolver implements ExternalPropagator {
     long cap = dom[n].max();
     int[] d = lines.durations();
     int[] r = lines.uses();
+    if (proofSharedStarts(lines, slot, variables, unique, cap)) {
+      return;
+    }
     int[] lo = new int[n];
     int[] hi = new int[n];
     TreeMap<Long, Long> profile = new TreeMap<>();
@@ -1792,6 +1795,69 @@ public final class LcgSolver implements ExternalPropagator {
     if (operands >= 2) {
       proof.pol(pol);
     }
+  }
+
+  /**
+   * Writes the steps for tasks of one start variable whose uses together exceed the limit: they all
+   * cover their start, so no value of it is possible. The time table encoding needs a case split on
+   * the start for that, which unit propagation does not do, so each value v of the start under the
+   * hypotheses gets the rup step {@code [s >= v] -> [s >= v + 1]} (with the limit above its bound
+   * as a third literal), by the load line at v; the hypotheses' bounds of the start then meet by
+   * unit propagation.
+   *
+   * @return whether such tasks were found and the steps written
+   */
+  private boolean proofSharedStarts(
+      OpbEncoder.TimetableLines lines, int[] slot, int[] variables, IntDomain[] dom, long cap) {
+    int[] starts = lines.starts();
+    int[] d = lines.durations();
+    int[] r = lines.uses();
+    long[] use = new long[variables.length];
+    int overloaded = -1;
+    for (int i = 0; i < starts.length; i++) {
+      if (d[i] > 0 && r[i] > 0) {
+        use[slot[i]] += r[i];
+        if (use[slot[i]] > cap) {
+          overloaded = slot[i];
+        }
+      }
+    }
+    if (overloaded < 0) {
+      return false;
+    }
+    int s = variables[overloaded];
+    String limitAbove = proofAtLeast(lines.limit(), cap + 1);
+    if ("1".equals(limitAbove)) {
+      return false;
+    }
+    for (ValueEnumeration e = dom[overloaded].valueEnumeration(); e.hasMoreElements(); ) {
+      int v = e.nextElement();
+      StringBuilder step = new StringBuilder("rup");
+      String from = proofAtLeast(s, v);
+      String after = proofAtLeast(s, (long) v + 1);
+      if (!"1".equals(from)) {
+        step.append(" 1 ~").append(from);
+      }
+      if (!"0".equals(after)) {
+        step.append(" 1 ").append(after);
+      }
+      if (!"0".equals(limitAbove)) {
+        step.append(" 1 ").append(limitAbove);
+      }
+      proof.lemma(step.append(CLAUSE_END));
+    }
+    return true;
+  }
+
+  // the proof model's literal [x >= v] of variable i, or "1" or "0" when its root domain decides it
+  private String proofAtLeast(int i, long v) {
+    IntDomain d = proofModelDomains[i];
+    if (d == null || v <= d.min()) {
+      return "1";
+    } else if (v > d.max()) {
+      return "0";
+    }
+    return OpbEncoder.ge(i, (int) v);
   }
 
   /**
@@ -5623,6 +5689,9 @@ public final class LcgSolver implements ExternalPropagator {
         if (c instanceof Alldistinct) {
           permutationsAsClauses++;
         }
+      } else if (gccCandidate(c) && encodeAsClauses(c)) {
+        constraintsAsClauses++;
+        gccsAsClauses++;
       } else if (!LAZY_COUNTERS && defaultCounter(c) && encodeAsCounter(c)) {
         defaultCounters++;
         constraintsAsClauses++;
@@ -5933,6 +6002,53 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** Statistics: counting constraints that became unary counters by default. */
   public long defaultCounters;
+
+  /**
+   * Whether a closed global cardinality with fixed counts ({@code CountValuesBounds}, the counts
+   * add up to the number of variables) over variables of at most {@link #GCC_DOM} values becomes
+   * clauses before search, with the larger limit of {@code jacop.lcg.clauses.counter}, by the
+   * system property {@code jacop.lcg.gccClauses} (default true). It is a sequential counter per
+   * counted value, so a learnt clause can state partial counts (Abio and Stuckey, CP 2012; Abio,
+   * Nieuwenhuis, Oliveras, Rodriguez-Carbonell and Stuckey, CP 2013). A default counter is limited
+   * to {@link #COUNTERS_LIMIT} clauses for the whole constraint and is encoded lazily; a rostering
+   * GCC counts each of its few values over many days and needs more (XCSP 2025
+   * RotatingRostering-052-2-3: 7 GCCs over 52 variables of 4 values, about 9,900 clauses each,
+   * unknown at 600 s as propagators, unsatisfiable in about 10 s as clauses).
+   */
+  static final boolean GCC_CLAUSES = !FALSE.equals(System.getProperty("jacop.lcg.gccClauses"));
+
+  /** The most values of a variable of such a GCC, {@code jacop.lcg.gccClauses.dom}. */
+  static final int GCC_DOM = Integer.getInteger("jacop.lcg.gccClauses.dom", 4);
+
+  /** Statistics: global cardinalities given to the solver as clauses by {@link #GCC_CLAUSES}. */
+  public long gccsAsClauses;
+
+  private boolean gccCandidate(Constraint c) {
+    if (!GCC_CLAUSES
+        || !COUNTERS
+        || c.getClass() != org.jacop.constraints.CountValuesBounds.class
+        || CLAUSE_SET.contains(c.getClass().getSimpleName())
+        || !argumentsFit(c)) {
+      return false;
+    }
+    // a closed GCC: every variable takes one of the counted values, each a fixed number of times
+    // (the days of a rotating roster); an open one, such as the shifts of a rotating workforce
+    // with free days off, searches slower as clauses (RotatingWorkforce2-100-00 16 s to unknown)
+    org.jacop.constraints.CountValuesBounds gcc = (org.jacop.constraints.CountValuesBounds) c;
+    long total = 0;
+    for (int[] b : gcc.countBounds()) {
+      total += b[1];
+    }
+    if (!gcc.fixedCounts() || total != gcc.listLength()) {
+      return false;
+    }
+    for (org.jacop.core.Var v : c.arguments()) {
+      if (v.getSize() > GCC_DOM) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   private boolean defaultCounter(Constraint c) {
     return COUNTERS
@@ -7717,6 +7833,40 @@ public final class LcgSolver implements ExternalPropagator {
       c.impose(store);
     }
     encodedConstraints.clear();
+  }
+
+  /**
+   * Lends the store to search without learning for a while, keeping the solver, its learnt clauses
+   * and its trail: the trail stops recording, and the constraints that went to the solver as
+   * clauses propagate again. The caller must open a store level above the root first, run its
+   * search above it, remove it, and then call the returned action, which takes the constraints back
+   * and records again; {@link #solve} then goes on where it stopped.
+   *
+   * @return the action that gives the store back to the solver
+   */
+  public Runnable lend() {
+    trail.suspend();
+    List<Constraint> lent = new ArrayList<>(encodedGraphs.size() + encodedConstraints.size());
+    lent.addAll(encodedGraphs);
+    lent.addAll(encodedConstraints);
+    int[] entailedAt = new int[lent.size()];
+    for (int k = 0; k < entailedAt.length; k++) {
+      entailedAt[k] = lent.get(k).entailedAt();
+    }
+    for (LayeredGraphConstraint g : encodedGraphs) {
+      g.restoreConstraint(store);
+    }
+    for (Constraint c : encodedConstraints) {
+      // imposed above the root: removing that level detaches the constraint again
+      store.clearEntailed(c);
+      c.impose(store);
+    }
+    return () -> {
+      for (int k = 0; k < entailedAt.length; k++) {
+        lent.get(k).setEntailedAt(entailedAt[k]);
+      }
+      trail.resume();
+    };
   }
 
   /**

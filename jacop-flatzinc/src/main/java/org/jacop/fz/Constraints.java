@@ -58,6 +58,7 @@ import org.jacop.fz.constraints.BalanceDetector;
 import org.jacop.fz.constraints.CardinalityDetector;
 import org.jacop.fz.constraints.CircuitCostDetector;
 import org.jacop.fz.constraints.ClampedBounds;
+import org.jacop.fz.constraints.ClausalCompiler;
 import org.jacop.fz.constraints.ColouredTreeDetector;
 import org.jacop.fz.constraints.CommonSubexpressions;
 import org.jacop.fz.constraints.ConjunctionSumDetector;
@@ -75,6 +76,7 @@ import org.jacop.fz.constraints.ExactCoverDetector;
 import org.jacop.fz.constraints.GiantTourDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
 import org.jacop.fz.constraints.IndexDisjunctionDetector;
+import org.jacop.fz.constraints.IndexFunctionDetector;
 import org.jacop.fz.constraints.IntensionTableDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
 import org.jacop.fz.constraints.LinearOverlapDetector;
@@ -91,6 +93,7 @@ import org.jacop.fz.constraints.PartialCopyDetector;
 import org.jacop.fz.constraints.PermutedTasksDetector;
 import org.jacop.fz.constraints.PrecedenceCostDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
+import org.jacop.fz.constraints.ProductOfSumsDetector;
 import org.jacop.fz.constraints.ProgressionTilingDetector;
 import org.jacop.fz.constraints.RegularFlowDetector;
 import org.jacop.fz.constraints.RoutesDetector;
@@ -228,6 +231,16 @@ public class Constraints implements ParserTreeConstants {
       // Boolean constraints become clauses of the LCG solver, or of the SAT solver of -sat once
       // presolve has preprocessed them; Solve posts them
       sat.collectClauses();
+    }
+    // a satisfaction model over small domains under free search is also compiled into one CNF,
+    // which Solve gives to JaSAT; the store is built as usual, to check the solution
+    if (ClausalCompiler.enabled()
+        && options.lcg()
+        && options.proof() == null
+        && !manySolutions
+        && satisfaction(astTree)
+        && freeSearchModel(astTree, options)) {
+      dictionary.clausalModel = ClausalCompiler.compile(support, astTree);
     }
     if (options.proof() != null && options.lcg()) {
       // the constraints propagate as they are imposed; the proof derives their changes from the
@@ -445,6 +458,15 @@ public class Constraints implements ParserTreeConstants {
         }
       }
 
+      // a product of two functions of one index variable as a sum over the index's value literals
+      if (IndexFunctionDetector.enabled() && options.proof() == null) {
+        Set<SimpleNode> products = new IndexFunctionDetector(support).detect(astTree);
+        if (!products.isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(products);
+        }
+      }
+
       IncreasingDetector increasing = null;
       if (IncreasingDetector.sumEnabled() || IncreasingDetector.nvalueEnabled()) {
         increasing = new IncreasingDetector(support);
@@ -489,6 +511,20 @@ public class Constraints implements ParserTreeConstants {
           if (!zeroSums.outputSums().isEmpty()) {
             dictionary.zeroSums = zeroSums.outputSums();
           }
+        }
+      }
+
+      // a sum of conjunctions over all pairs of two sets of Booleans as the product of their
+      // counts;
+      // --proof encodes the rows as given
+      if (ProductOfSumsDetector.enabled() && options.proof() == null) {
+        ProductOfSumsDetector productOfSums = new ProductOfSumsDetector(support, replaced);
+        Set<SimpleNode> conjunctions = productOfSums.detect(astTree);
+        if (!conjunctions.isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(conjunctions);
+          dictionary.removeFromDefaultSearch(productOfSums.removed());
+          dictionary.unusedVariables.addAll(productOfSums.removed());
         }
       }
 
@@ -1083,6 +1119,26 @@ public class Constraints implements ParserTreeConstants {
   private boolean hasFloatVariables() {
     for (int i = 0; i < store.size(); i++) {
       if (store.vars[i] instanceof FloatVar) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // whether the model is solved by free search: -f, or no search annotation (as Solve decides)
+  private static boolean freeSearchModel(Node node, Options options) {
+    if (options.freeSearch()) {
+      return true;
+    }
+    if (!options.freeSearchWithoutAnnotation() || options.complementarySearch()) {
+      return false;
+    }
+    for (int i = node.jjtGetNumChildren() - 1; i >= 0; i--) {
+      Node child = node.jjtGetChild(i);
+      if (child instanceof ASTSolveItem item) {
+        return item.jjtGetNumChildren() == 1;
+      }
+      if (child instanceof ASTModelEnd && freeSearchModel(child, options)) {
         return true;
       }
     }

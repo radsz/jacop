@@ -1557,6 +1557,46 @@ class FlatzincFrontEndTest {
             solve maximize m;
             """);
     assertTrue(out[0].endsWith("m = 25;\n----------\n==========\n"), out[0]);
+    // a table bounds each variable by its column: -a ends with ==========
+    out =
+        run(
+            """
+            var 1..3: k :: output_var;
+            var int: c :: output_var;
+            constraint jacop_table_int([k, c], [1, 12000, 2, 8000, 3, 10000]);
+            solve satisfy;
+            """,
+            "-a");
+    assertEquals(3, out[0].split("----------", -1).length - 1, out[0]);
+    assertTrue(out[0].endsWith("----------\n==========\n"), out[0]);
+  }
+
+  /**
+   * An unbounded variable that an if-then-else makes equal to one of several values (MZNC 2025
+   * work-task-variation: jacop_if_then_else_bool over int_eq_reif) lies in their hull, so the
+   * optimality claim stands.
+   */
+  @Test
+  void unboundedVariableChosenByAnIfThenElseIsBoundedByItsValues() throws IOException {
+    String model =
+        """
+        var int: m;
+        var int: cost :: output_var;
+        var 0..7: y;
+        var bool: c;
+        var bool: b1;
+        var bool: b2;
+        constraint int_eq_reif(m, 0, b1);
+        constraint int_eq_reif(m, y, b2);
+        constraint jacop_if_then_else_bool([c, %s], [b1, b2], true);
+        constraint int_lin_eq([1, -1], [cost, m], 0);
+        solve maximize cost;
+        """;
+    String[] out = run(model.formatted("true"));
+    assertTrue(out[0].endsWith("cost = 7;\n----------\n==========\n"), out[0]);
+    // no condition is fixed true: when none holds, m is free, and nothing is claimed
+    out = run(model.formatted("c"));
+    assertTrue(out[0].contains("----------\n") && !out[0].contains("=========="), out[0]);
   }
 
   @Test
@@ -1611,15 +1651,18 @@ class FlatzincFrontEndTest {
     // LCG's deadline was the whole -t counted from the start of LCG search, so a run whose model
     // took long to read and set up overran -t by that long (nside, rcpsp-wet-diverse, the
     // ma-path-finding instances, by 1 to 3 s at 60 s); with -p every LCG thread did, and the
-    // portfolio answered at -t + 2 s. Random 3-SAT at the threshold keeps LCG busy for more than 30
-    // s (400 variables were solved in 2 s once activity bumped every analysed variable).
+    // portfolio answered at -t + 2 s. Random 3-SAT just above the threshold (ratio 4.6,
+    // unsatisfiable
+    // with high probability) keeps LCG busy for more than 60 s. At ratio 4.3 the formula is
+    // satisfiable: found after 25 s on one machine, but in under 2 s on the CI runners (and 400
+    // variables were solved in 2 s once activity bumped every analysed variable).
     Random r = new Random(1);
     int n = 600;
     StringBuilder model = new StringBuilder();
     for (int i = 0; i < n; i++) {
       model.append("var bool: x").append(i).append(";\n");
     }
-    for (int c = 0; c < 2580; c++) {
+    for (int c = 0; c < 2760; c++) {
       StringJoiner pos = new StringJoiner(",");
       StringJoiner neg = new StringJoiner(",");
       Set<Integer> vars = new TreeSet<>();
@@ -1763,13 +1806,13 @@ class FlatzincFrontEndTest {
     link(items, kept, 0);
     link(items, other, 1);
 
-    Solve.releaseAllBut(solve);
+    Solve.releaseAllBut(root, solve);
 
     assertNull(root.jjtGetChild(0));
     assertSame(end, root.jjtGetChild(1));
     assertSame(solve, end.jjtGetChild(0));
-    // kept still reaches its item list, but the list no longer holds the other items
-    assertSame(items, kept.jjtGetParent());
+    // the list no longer holds the items, and a kept item does not reach its list
+    assertThrows(UnsupportedOperationException.class, kept::jjtGetParent);
     for (int i = 0; i < items.jjtGetNumChildren(); i++) {
       assertNull(items.jjtGetChild(i));
     }
@@ -3724,11 +3767,12 @@ class FlatzincFrontEndTest {
   @Test
   void lcgFreeSearchReturnsToClausesAfterEachPruningOnSatisfactionModels() throws IOException {
     // the full fixpoint of the store (#317) paid on optimisation models but not on satisfaction
-    // models: nonogram non_fast_3 took 39 to 57 s instead of 4 to 6 s
+    // models: nonogram non_fast_3 took 39 to 57 s instead of 4 to 6 s; four values, so the model
+    // is not compiled to clauses (org.jacop.fz.clausal.maxDomain)
     String model =
         """
-        var 1..3: x :: output_var;
-        var 1..3: y :: output_var;
+        var 1..4: x :: output_var;
+        var 1..4: y :: output_var;
         constraint int_lin_le([1,1], [x,y], 4);
         constraint int_ne(x, y);
         %s;
@@ -4802,14 +4846,31 @@ class FlatzincFrontEndTest {
     FlatzincLoader loader = new FlatzincLoader(new String[] {file.toString()});
     loader.load();
     org.jacop.fz.constraints.Support support = loader.parser.cc.support;
-    java.lang.reflect.Field substituted =
-        org.jacop.fz.constraints.Support.class.getDeclaredField("substitutedControls");
-    substituted.setAccessible(true);
-    assertFalse(((Map<?, ?>) substituted.get(support)).isEmpty(), "a control was eliminated");
     java.lang.reflect.Field nodes =
         org.jacop.fz.constraints.Support.class.getDeclaredField("controlSubstitutions");
     nodes.setAccessible(true);
     assertTrue(((Map<?, ?>) nodes.get(support)).isEmpty());
+    // the substitutions by eliminated control went too: only detectors read them while posting
+    // (4.5 MB of rcpsp_max psp_ubo500_33 during the search)
+    java.lang.reflect.Field substituted =
+        org.jacop.fz.constraints.Support.class.getDeclaredField("substitutedControls");
+    substituted.setAccessible(true);
+    assertTrue(((Map<?, ?>) substituted.get(support)).isEmpty());
+    // a control was eliminated: without enforcement inlining the store holds more constraints
+    String old = System.setProperty("org.jacop.fz.enforcementInlining", "false");
+    try {
+      FlatzincLoader plain = new FlatzincLoader(new String[] {file.toString()});
+      plain.load();
+      assertTrue(
+          plain.getStore().numberConstraints() > loader.getStore().numberConstraints(),
+          plain.getStore().numberConstraints() + " vs " + loader.getStore().numberConstraints());
+    } finally {
+      if (old == null) {
+        System.clearProperty("org.jacop.fz.enforcementInlining");
+      } else {
+        System.setProperty("org.jacop.fz.enforcementInlining", old);
+      }
+    }
   }
 
   @Test
@@ -4902,9 +4963,51 @@ class FlatzincFrontEndTest {
   }
 
   /**
-   * A node of the parse tree keeps its id, its parent and its children only: the parser and a value
-   * of the node, never read, cost 8 bytes of each of the 20 million nodes of XCSP 2022
-   * RoomMate-sr0700 (163 MB while the model is read).
+   * A variable of enforcement inlining keeps its only clause without a list: a list for each
+   * variable was 48 bytes of each of the 1.46 million variables of XCSP 2022 RoomMate-sr0700 while
+   * the model is read. The clauses count, list and drop their dead ones as before.
+   */
+  @Test
+  void variablesOfEnforcementInliningKeepOneClauseWithoutAList() throws Exception {
+    Class<?> info = Class.forName("org.jacop.fz.constraints.EnforcementInliner$Info");
+    Class<?> clause = Class.forName("org.jacop.fz.constraints.EnforcementInliner$Clause");
+    Constructor<?> makeInfo = info.getDeclaredConstructor();
+    makeInfo.setAccessible(true);
+    Constructor<?> makeClause = clause.getDeclaredConstructors()[0];
+    makeClause.setAccessible(true);
+    Method add = info.getDeclaredMethod("add", clause);
+    Method live = info.getDeclaredMethod("live");
+    Method clauses = info.getDeclaredMethod("clauses");
+    for (Method m : new Method[] {add, live, clauses}) {
+      m.setAccessible(true);
+    }
+    Field held = info.getDeclaredField("clauses");
+    held.setAccessible(true);
+    Field dead = clause.getDeclaredField("dead");
+    dead.setAccessible(true);
+
+    Object v = makeInfo.newInstance();
+    Object first = makeClause.newInstance(null, new ArrayList<>(), new ArrayList<>());
+    Object second = makeClause.newInstance(null, new ArrayList<>(), new ArrayList<>());
+    add.invoke(v, first);
+    assertSame(first, held.get(v));
+    assertEquals(List.of(first), clauses.invoke(v));
+    add.invoke(v, second);
+    assertEquals(List.of(first, second), clauses.invoke(v));
+    assertEquals(2, live.invoke(v));
+    dead.setBoolean(first, true);
+    assertEquals(1, live.invoke(v));
+    assertSame(second, held.get(v));
+    dead.setBoolean(second, true);
+    assertEquals(0, live.invoke(v));
+    assertEquals(List.of(), clauses.invoke(v));
+  }
+
+  /**
+   * A node of the parse tree keeps its id and its children only: the parser and a value of the
+   * node, never read, cost 8 bytes of each of the 20 million nodes of XCSP 2022 RoomMate-sr0700
+   * (163 MB while the model is read), and the parent took the 7.8 million scalar expressions from
+   * 32 to 40 bytes each; the readers of a parent now get it from the root.
    */
   @Test
   void parseTreeNodesKeepNoParserOrValue() {
@@ -4914,7 +5017,7 @@ class FlatzincFrontEndTest {
             .map(Field::getName)
             .sorted()
             .toList();
-    assertEquals(List.of("children", "id", "parent"), fields);
+    assertEquals(List.of("children", "id"), fields);
   }
 
   /**
@@ -4923,6 +5026,53 @@ class FlatzincFrontEndTest {
    * each of about 5 million nodes of XCSP 2022 RoomMate-sr0700. The children read, copy and release
    * as before.
    */
+  /**
+   * A detector that reads the annotations of a constraint (the sequence detector skips the window
+   * rows that define a variable) gets the constraint item with its element, since a node does not
+   * keep its parent.
+   */
+  @Test
+  void constraintElementsComeWithTheirItems(@TempDir Path dir) throws Exception {
+    Path fzn = dir.resolve("items.fzn");
+    Files.writeString(
+        fzn,
+        """
+        var 0..1: a;
+        var 0..1: b;
+        var 0..2: s :: is_defined_var;
+        constraint int_lin_eq([1,1,-1],[a,b,s],0) :: defines_var(s);
+        constraint int_lin_le([1,1],[a,b],1);
+        solve satisfy;
+        """,
+        StandardCharsets.UTF_8);
+    SimpleNode tree;
+    Parser parser;
+    try (java.io.FileInputStream in = new java.io.FileInputStream(fzn.toFile())) {
+      parser = new Parser(in);
+      parser.setOptions(new Options(new String[] {fzn.toString()}));
+      tree = parser.parseModel();
+    }
+    Method each =
+        org.jacop.fz.constraints.Support.class.getDeclaredMethod(
+            "forEachConstraintItem", SimpleNode.class, java.util.function.BiConsumer.class);
+    each.setAccessible(true);
+    List<SimpleNode> items = new ArrayList<>();
+    List<ASTConstElem> elements = new ArrayList<>();
+    java.util.function.BiConsumer<SimpleNode, ASTConstElem> collect =
+        (item, element) -> {
+          items.add(item);
+          elements.add(element);
+        };
+    each.invoke(parser.cc.support, tree, collect);
+    assertEquals(2, items.size());
+    for (int i = 0; i < 2; i++) {
+      assertSame(elements.get(i), items.get(i).jjtGetChild(0));
+    }
+    assertEquals(2, items.get(0).jjtGetNumChildren());
+    assertEquals("defines_var", ((ASTAnnotation) items.get(0).jjtGetChild(1)).getAnnId());
+    assertEquals(1, items.get(1).jjtGetNumChildren());
+  }
+
   @Test
   void nodesWithOneChildKeepNoArray() {
     SimpleNode one = new SimpleNode(ParserTreeConstants.JJTANNOTATION);
@@ -4936,7 +5086,6 @@ class FlatzincFrontEndTest {
     SimpleNode copy = one.copy();
     assertEquals(1, copy.jjtGetNumChildren());
     assertNotSame(child, copy.jjtGetChild(0));
-    assertSame(copy, copy.jjtGetChild(0).jjtGetParent());
 
     // the parser adds the children of a node from the last one
     SimpleNode three = new SimpleNode(ParserTreeConstants.JJTCONSTELEM);
@@ -5062,6 +5211,112 @@ class FlatzincFrontEndTest {
     for (HybridTable h : binary) {
       assertEquals(0, h.keyColumn());
     }
+  }
+
+  @Test
+  void tablesOfSevenColumnsOverOneRelationShareTheirCells(@TempDir Path dir) throws Exception {
+    // only tables of at most TableCliques.MAX_ARITY (6) columns shared their tuples:
+    // pigeonsPlus-08-08 (XCSP 2017) posts one table of 5.8 million rows on eight lists of eight
+    // variables, and with its own tuples and cells for each table it ran out of 4 GB. The rows here
+    // (sum divisible by 3) have no exact reformulation.
+    StringJoiner cells = new StringJoiner(",");
+    int count = 0;
+    for (int code = 0; code < 2187; code++) {
+      int sum = 0;
+      StringJoiner row = new StringJoiner(",");
+      for (int i = 0, rest = code; i < 7; i++, rest /= 3) {
+        sum += rest % 3;
+        row.add(Integer.toString(rest % 3));
+      }
+      if (sum % 3 == 0) {
+        cells.add(row.toString());
+        count++;
+      }
+    }
+    StringBuilder m = new StringBuilder();
+    m.append("array [1..").append(7 * count).append("] of int: t = [").append(cells).append("];\n");
+    for (int i = 0; i < 21; i++) {
+      m.append("var 0..2: x").append(i).append(":: output_var;\n");
+    }
+    m.append("constraint jacop_table_int([x0,x1,x2,x3,x4,x5,x6],t);\n");
+    m.append("constraint jacop_table_int([x7,x8,x9,x10,x11,x12,x13],t);\n");
+    // the same rows written in the constraint, read from the packed array literal
+    m.append("constraint jacop_table_int([x14,x15,x16,x17,x18,x19,x20],[")
+        .append(cells)
+        .append("]);\n");
+    m.append("solve satisfy;\n");
+    Path file = dir.resolve("tables.fzn");
+    Files.writeString(file, m.toString());
+    PrintStream out = System.out;
+    Store store;
+    try (PrintStream quiet = new PrintStream(OutputStream.nullOutputStream())) {
+      System.setOut(quiet);
+      FlatzincLoader loader = new FlatzincLoader(new String[] {file.toString()});
+      loader.load();
+      store = loader.getStore();
+    } finally {
+      System.setOut(out);
+    }
+    java.lang.reflect.Field shared = HybridTable.class.getDeclaredField("shared");
+    shared.setAccessible(true);
+    List<HybridTable> tables = new ArrayList<>();
+    Set<Object> indexes = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (org.jacop.constraints.Constraint c : store.getConstraints()) {
+      if (c instanceof HybridTable h && h.columnCount() == 7) {
+        tables.add(h);
+        indexes.add(shared.get(h));
+      }
+    }
+    assertEquals(3, tables.size());
+    assertEquals(1, indexes.size());
+  }
+
+  @Test
+  void arrayLiteralsOfIntLiteralsArePackedAndReadAsNodes() {
+    // the parser keeps an array literal of int literals as one int[] (a table of pigeonsPlus-11-07
+    // has 70 million entries, 3.4 GB as nodes); its children are read as int literal nodes
+    SimpleNode array = new SimpleNode(ParserTreeConstants.JJTARRAYLITERAL);
+    array.setPackedInts(new int[] {3, -1, 7});
+    assertEquals(3, array.jjtGetNumChildren());
+    ASTScalarFlatExpr second = (ASTScalarFlatExpr) array.jjtGetChild(1);
+    assertEquals(0, second.getType());
+    assertEquals(-1, second.getInt());
+    SimpleNode copy = array.copy();
+    assertSame(array.packedInts(), copy.packedInts());
+    // a change of a child turns the packed children into nodes
+    ASTScalarFlatExpr replaced = SimpleNode.intLiteral(5);
+    array.jjtAddChild(replaced, 2);
+    assertNull(array.packedInts());
+    assertEquals(3, ((ASTScalarFlatExpr) array.jjtGetChild(0)).getInt());
+    assertSame(replaced, array.jjtGetChild(2));
+    assertEquals(7, ((ASTScalarFlatExpr) copy.jjtGetChild(2)).getInt());
+  }
+
+  @Test
+  void arrayLiteralsMixingIntLiteralsWithOtherElementsKeepTheirOrder() throws IOException {
+    // ints then a variable then ints, negative ints, sets that start with an int literal
+    String fzn =
+        """
+        array [1..4] of int: c = [2,-1,3,1];
+        array [1..2] of set of int: s = [1..2,3..4];
+        var 0..4: x:: output_var;
+        var 0..4: y:: output_var;
+        array [1..4] of var int: v = [1,x,-2,y];
+        constraint int_lin_eq(c,v,-7);
+        constraint set_in(x,s[2]);
+        constraint int_lin_le([1,1],[x,y],5);
+        solve satisfy;
+        """;
+    // 2 - x - 6 + y = -7: y = x - 3
+    Set<String> expected = new TreeSet<>();
+    for (int x = 3; x <= 4; x++) {
+      for (int y = 0; y <= 4; y++) {
+        if (2 - x - 6 + y == -7 && x + y <= 5) {
+          expected.add("x = " + x + "; y = " + y + ";");
+        }
+      }
+    }
+    assertEquals(expected, solveAll(fzn));
   }
 
   @Test

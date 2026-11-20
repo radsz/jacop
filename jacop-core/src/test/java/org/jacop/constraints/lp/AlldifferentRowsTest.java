@@ -31,7 +31,9 @@
 package org.jacop.constraints.lp;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -80,6 +82,27 @@ class AlldifferentRowsTest {
               x, new int[] {1, 2}, new int[] {2, 2}, new int[] {2, 2}, closed);
       assertThat(cuts.separate(new double[] {1.5, 1.5, 1.5}, 100)).isNotNull();
     }
+  }
+
+  /**
+   * A long all-different has a violated prefix of almost every length; separation listed the
+   * variables of each before keeping the best few, quadratic memory that ran a fz model with an
+   * 80,000-variable all-different out of a 4 GB heap.
+   */
+  @Test
+  void longConstraintsSeparateInLinearMemory() {
+    Store store = new Store();
+    int n = 50_000;
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, n - 1);
+    }
+    double[] value = new double[n];
+    List<AlldifferentCuts.Cut> cuts =
+        assertTimeoutPreemptively(
+            Duration.ofSeconds(20), () -> new AlldifferentCuts(x).separate(value, 10));
+    assertThat(cuts).hasSize(10);
+    assertThat(cuts.get(0).vars()).hasSize(n);
   }
 
   // the bound of the alldifferent rows at the root, when there is one, is at most the optimum; an

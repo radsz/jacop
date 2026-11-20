@@ -44,6 +44,7 @@ import org.jacop.constraints.Constraint;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Routes;
 import org.jacop.constraints.TspEdgeElimination;
+import org.jacop.constraints.TspKOpt;
 import org.jacop.core.IntVar;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.fz.ASTConstElem;
@@ -109,7 +110,11 @@ import org.jacop.fz.SimpleNode;
  * removal is sound with all solutions requested for an optimisation; side constraints on the tour,
  * fixed successors or asymmetric costs turn it off. System property
  * org.jacop.fz.tspElimination=false turns it off; org.jacop.fz.tspEliminationMs (default 2000)
- * limits its time.
+ * limits its time. For the same pure TSP it can post {@link org.jacop.constraints.TspKOpt}, which
+ * removes during search the partial tours that a 2-opt or 3-opt move shortens (Isoart and Régin, A
+ * k-Opt Based Constraint for the TSP, CP 2021) after a first tour, when system property
+ * org.jacop.fz.tspKOpt=true is set. It is off by default: it proves optima faster, but it makes
+ * better tours harder to find, so the tours of large instances that are not proved end worse.
  *
  * <p>All the constraints of the model stay. System property org.jacop.fz.giantTour=false turns the
  * detection off; org.jacop.fz.routes=false turns it off with the other routes.
@@ -894,6 +899,16 @@ public class GiantTourDetector implements ParserTreeConstants {
         } else {
           edges++;
         }
+      }
+    }
+    if (Boolean.getBoolean("org.jacop.fz.tspKOpt")) {
+      long[][] lengths = new long[n][];
+      for (int v = 0; v < n; v++) {
+        lengths[v] = d[v].clone();
+      }
+      support.delayedConstraints.add(new TspKOpt(x, offset, lengths, obj));
+      if (support.options.debug()) {
+        FzConsole.println("% TSP k-opt dominance (TspKOpt) on " + n + " nodes");
       }
     }
     boolean[][] keep = new boolean[n][];

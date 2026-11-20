@@ -30,8 +30,12 @@
 
 package org.jacop.jalp;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
+import java.util.TreeMap;
 
 /**
  * A presolve of the problem of a {@link RevisedDualSimplex} for its first solve, with a postsolve
@@ -65,6 +69,8 @@ final class Presolve {
 
   // a row or column bound closer than this, relative, is the same bound
   private static final double SAME = 1e-9;
+  // rows shorter than this are read in full by every implied-free test
+  private static final int ACTIVITY_LENGTH = 64;
 
   // a row violated by more than this by its activity bounds: the presolve gives up
   private static final double INFEASIBLE = 1e-6;
@@ -193,6 +199,17 @@ final class Presolve {
   private int rowsLeft;
   private int colsLeft;
   private long ops;
+  // the bounds, columns and entries change only with epoch incremented, so that a row activity of
+  // the same epoch still holds
+  private long epoch;
+  private long[] activityEpoch;
+  // the activity of each row: least and greatest sums of its finite bound terms, the numbers of
+  // infinite ones, and the sum of the magnitudes of the finite terms
+  private double[] activityMin;
+  private double[] activityMax;
+  private int[] activityMinInf;
+  private int[] activityMaxInf;
+  private double[] activityMagnitude;
   // a row bound was dropped as implied by the column bounds
   private boolean relaxed;
   // the bounds proved the problem infeasible
@@ -636,6 +653,7 @@ final class Presolve {
     double l = a > 0 ? rowLo[i] / a : rowHi[i] / a;
     double h = a > 0 ? rowHi[i] / a : rowLo[i] / a;
     byte tight = 0;
+    epoch++;
     if (raises(l, lo[j])) {
       lo[j] = l;
       tight |= 1;
@@ -764,7 +782,7 @@ final class Presolve {
     } else {
       return 0;
     }
-    if (!impliedFree(i, k, a, b)) {
+    if (!impliedFreeFiltered(i, k, a, b)) {
       return TIGHT_RULE ? tightRow(i, k, a, b) : 0;
     }
     int t = record(FREE_COLUMN, i, k);
@@ -783,6 +801,7 @@ final class Presolve {
     }
     colAlive[k] = false;
     colsLeft--;
+    epoch++;
     removeRow(i);
     return 1;
   }
@@ -827,11 +846,108 @@ final class Presolve {
     } else {
       hi[k] = Double.POSITIVE_INFINITY;
     }
+    epoch++;
     rowLo[i] = b;
     rowHi[i] = b;
     relaxed = true;
     tightRows++;
     return 1;
+  }
+
+  // impliedFree, first tested on the activity of row i without its term a x_k, which is kept from
+  // one call to the next while nothing changes: the column singletons of a row of n columns take n
+  // steps instead of n^2. Only a test that fails by more than the rounding error of the activity
+  // is taken; any other is decided by impliedFree, so the answers are those of impliedFree.
+  private boolean impliedFreeFiltered(int i, int k, double a, double b) {
+    if (rLen[i] < ACTIVITY_LENGTH) {
+      return impliedFree(i, k, a, b);
+    }
+    if (activityEpoch == null) {
+      activityEpoch = new long[m];
+      Arrays.fill(activityEpoch, -1);
+      activityMin = new double[m];
+      activityMax = new double[m];
+      activityMinInf = new int[m];
+      activityMaxInf = new int[m];
+      activityMagnitude = new double[m];
+    }
+    if (activityEpoch[i] != epoch) {
+      activity(i);
+    }
+    double min = activityMin[i];
+    double max = activityMax[i];
+    int minInf = activityMinInf[i];
+    int maxInf = activityMaxInf[i];
+    double l = a > 0 ? lo[k] : hi[k];
+    double h = a > 0 ? hi[k] : lo[k];
+    if (Double.isInfinite(l)) {
+      minInf--;
+    } else {
+      min -= a * l;
+    }
+    if (Double.isInfinite(h)) {
+      maxInf--;
+    } else {
+      max -= a * h;
+    }
+    // the rounding error of the sums, with room for n terms and the subtraction
+    double error = 1e-9 * (activityMagnitude[i] + Math.abs(b) + 1) / Math.abs(a);
+    double kLo;
+    double kHi;
+    if (a > 0) {
+      kLo = maxInf > 0 ? Double.NEGATIVE_INFINITY : (b - max) / a;
+      kHi = minInf > 0 ? Double.POSITIVE_INFINITY : (b - min) / a;
+    } else {
+      kLo = minInf > 0 ? Double.NEGATIVE_INFINITY : (b - min) / a;
+      kHi = maxInf > 0 ? Double.POSITIVE_INFINITY : (b - max) / a;
+    }
+    boolean lowFails =
+        lo[k] != Double.NEGATIVE_INFINITY && kLo < lo[k] - SAME * (1 + Math.abs(lo[k])) - error;
+    boolean highFails =
+        hi[k] != Double.POSITIVE_INFINITY && kHi > hi[k] + SAME * (1 + Math.abs(hi[k])) + error;
+    if (lowFails || highFails) {
+      return false;
+    }
+    return impliedFree(i, k, a, b);
+  }
+
+  // the activity of row i over its live entries, for impliedFreeFiltered
+  private void activity(int i) {
+    double min = 0;
+    double max = 0;
+    double magnitude = 0;
+    int minInf = 0;
+    int maxInf = 0;
+    int[] idx = rIdx[i];
+    double[] val = rVal[i];
+    ops += rLen[i];
+    for (int f = 0; f < rLen[i]; f++) {
+      int j = idx[f];
+      double v = val[f];
+      if (!colAlive[j] || v == 0) {
+        continue;
+      }
+      double l = v > 0 ? lo[j] : hi[j];
+      double h = v > 0 ? hi[j] : lo[j];
+      if (Double.isInfinite(l)) {
+        minInf++;
+      } else {
+        min += v * l;
+        magnitude += Math.abs(v * l);
+      }
+      if (Double.isInfinite(h)) {
+        maxInf++;
+      } else {
+        max += v * h;
+        magnitude += Math.abs(v * h);
+      }
+    }
+    activityMin[i] = min;
+    activityMax[i] = max;
+    activityMinInf[i] = minInf;
+    activityMaxInf[i] = maxInf;
+    activityMagnitude[i] = magnitude;
+    activityEpoch[i] = epoch;
   }
 
   // whether x_k = (b - rest) / a stays within the bounds of x_k for every value of the rest of row
@@ -965,6 +1081,7 @@ final class Presolve {
     recLenB[t] = logLen[j];
     lo[j] = newLo;
     hi[j] = newHi;
+    epoch++;
     // the cost of x_k onto x_j
     wcost[j] -= wcost[k] * aj / ak;
     wtrue[j] -= wtrue[k] * aj / ak;
@@ -1075,8 +1192,12 @@ final class Presolve {
     double[] dense = new double[m];
     int[][] keptRows = new int[n][];
     double[][] keptVals = new double[n][];
-    int[] next = new int[n];
-    HashMap<Long, Integer> first = new HashMap<>();
+    // the kept columns of each hash by their cost over their first entry: a merge needs the costs
+    // in the ratio of the entries, so only the columns of about the same such cost are tried, the
+    // latest first as along a chain of the hash (a long row of columns that differ in cost alone
+    // made one chain of all of them)
+    HashMap<Long, TreeMap<Double, List<Integer>>> first = new HashMap<>();
+    List<Integer> tried = new ArrayList<>();
     int found = 0;
     for (int k = 0; k < n; k++) {
       if (!colAlive[k] || colCount[k] < 1) {
@@ -1084,23 +1205,35 @@ final class Presolve {
       }
       int len = gather(cIdx[k], cVal[k], cLen[k], rowAlive, rows, vals, dense);
       long h = hash(rows, vals, len);
-      Integer head = first.get(h);
-      int j = head == null ? -1 : head;
+      TreeMap<Double, List<Integer>> byCost = first.get(h);
+      double ratio = wtrue[k] / vals[0] + 0.0;
       boolean free = lo[k] == Double.NEGATIVE_INFINITY && hi[k] == Double.POSITIVE_INFINITY;
-      while (j >= 0 && !free) {
-        double lambda = multiple(keptRows[j], keptVals[j], rows, vals, len);
-        if (lambda != 0 && sameMultiple(wtrue[k], lambda * wtrue[j])) {
-          mergeColumns(j, k, lambda);
-          found++;
-          break;
+      boolean merged = false;
+      if (byCost != null && !free) {
+        double width = 1e-9 * Math.abs(ratio);
+        tried.clear();
+        for (List<Integer> same :
+            byCost.subMap(ratio - width, true, ratio + width, true).values()) {
+          tried.addAll(same);
         }
-        j = next[j];
+        tried.sort(Comparator.reverseOrder());
+        for (int j : tried) {
+          double lambda = multiple(keptRows[j], keptVals[j], rows, vals, len);
+          if (lambda != 0 && sameMultiple(wtrue[k], lambda * wtrue[j])) {
+            mergeColumns(j, k, lambda);
+            found++;
+            merged = true;
+            break;
+          }
+        }
       }
-      if (free || j < 0) {
+      if (!merged) {
         keptRows[k] = Arrays.copyOf(rows, len);
         keptVals[k] = Arrays.copyOf(vals, len);
-        next[k] = head == null ? -1 : head;
-        first.put(h, k);
+        first
+            .computeIfAbsent(h, key -> new TreeMap<>())
+            .computeIfAbsent(ratio, key -> new ArrayList<>())
+            .add(k);
       }
     }
     return found;
@@ -1124,6 +1257,7 @@ final class Presolve {
     lo[j] = newLo;
     hi[j] = newHi;
     colAlive[k] = false;
+    epoch++;
     colsLeft--;
     int[] ci = cIdx[k];
     double[] cv = cVal[k];
@@ -1187,6 +1321,7 @@ final class Presolve {
 
   // adds f to the entry of column j in row i, with fill-in and cancellation
   private void addEntry(int i, int j, double f) {
+    epoch++;
     int[] idx = rIdx[i];
     double[] val = rVal[i];
     ops += rLen[i];
@@ -1262,6 +1397,7 @@ final class Presolve {
     record(FIX_COLUMN, -1, j);
     fixedAt[j] = v;
     colAlive[j] = false;
+    epoch++;
     colsLeft--;
     int[] ci = cIdx[j];
     double[] cv = cVal[j];

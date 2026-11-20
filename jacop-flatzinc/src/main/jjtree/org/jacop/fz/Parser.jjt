@@ -1044,10 +1044,22 @@ void set_literal() #SetLiteral:
 //     '[' non_array_flat_exprs ']'
 //   | '[' ']'
 
+// The int literals of an array literal are kept in one int[] while no other element comes
+// (PackedInts): a table of pigeonsPlus-11-07 (XCSP 2017) has 70 million entries, 3.4 GB as one
+// node each.
 void array_literal() #ArrayLiteral:
-{}
+{ PackedInts ints = new PackedInts(); }
 {
-    <LBOX> [ non_array_flat_exprs() ] <RBOX>
+    <LBOX> [ array_element(ints) ( <COMMA> array_element(ints) )* ] <RBOX>
+    { ints.close(jjtThis); }
+}
+
+void array_element(PackedInts ints) :
+{ Token t; }
+{
+    LOOKAHEAD(<INT_LITERAL> (<COMMA> | <RBOX>))
+    t=<INT_LITERAL> { ints.add(intLiteral(t), jjtree); }
+    | { ints.unpack(jjtree); } non_array_flat_expr()
 }
 
 void set_element() #SetElement:

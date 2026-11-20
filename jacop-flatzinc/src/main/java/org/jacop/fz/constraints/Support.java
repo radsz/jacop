@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.ToIntFunction;
 import org.jacop.api.Copyable;
@@ -66,6 +67,7 @@ import org.jacop.constraints.XplusClteqZImplied;
 import org.jacop.constraints.XplusClteqZImpliedNot;
 import org.jacop.constraints.cumulative.MultiCumulative;
 import org.jacop.constraints.diffn.DiffnK;
+import org.jacop.constraints.lp.PartitionCuts;
 import org.jacop.constraints.regular.MultiCostRegular;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -314,6 +316,11 @@ public class Support implements ParserTreeConstants {
   }
 
   private int[] getIntArrayFromLiteral(SimpleNode node) {
+    int[] packed = node.packedInts();
+    if (packed != null) {
+      intPresent = true;
+      return packed.clone();
+    }
     int count = node.jjtGetNumChildren();
     int[] aa = new int[count];
     for (int i = 0; i < count; i++) {
@@ -814,14 +821,26 @@ public class Support implements ParserTreeConstants {
    * @param action what is done with each constraint.
    */
   void forEachConstraint(SimpleNode astTree, Consumer<ASTConstElem> action) {
+    forEachConstraintItem(astTree, (item, element) -> action.accept(element));
+  }
+
+  /**
+   * Calls an action on each constraint element of the model with its constraint item, whose other
+   * children are the annotations of the constraint (a node does not keep its parent).
+   *
+   * @param astTree the root of the parsed model
+   * @param action the action, on the constraint item and its element
+   */
+  void forEachConstraintItem(SimpleNode astTree, BiConsumer<SimpleNode, ASTConstElem> action) {
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {
         for (int j = 0; j < node.jjtGetNumChildren(); j++) {
           checkTimeOut();
-          SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
+          SimpleNode constraint = (SimpleNode) node.jjtGetChild(j);
+          SimpleNode item = (SimpleNode) constraint.jjtGetChild(0);
           if (item.getId() == JJTCONSTELEM) {
-            action.accept((ASTConstElem) item);
+            action.accept(constraint, (ASTConstElem) item);
           }
         }
       }
@@ -1478,7 +1497,7 @@ public class Support implements ParserTreeConstants {
   Map<SimpleNode, ControlSubstitution> controlSubstitutions = new IdentityHashMap<>();
 
   /** The substitutions by eliminated control, for detectors that read controls as literals. */
-  final Map<IntVar, ControlSubstitution> substitutedControls = new IdentityHashMap<>();
+  Map<IntVar, ControlSubstitution> substitutedControls = new IdentityHashMap<>();
 
   private ControlSubstitution activeControl;
 
@@ -1508,11 +1527,14 @@ public class Support implements ParserTreeConstants {
 
   /**
    * Forgets the constraint nodes posted with a substituted control once all constraints are posted,
-   * since through their parents they hold the parse tree of every such constraint.
+   * since through their parents they hold the parse tree of every such constraint, and the
+   * substitutions by eliminated control, which only detectors read (4.5 MB of rcpsp_max
+   * psp_ubo500_33 during the search).
    */
   public void releaseControlSubstitutions() {
-    // a new map, since a cleared one keeps its table
+    // new maps, since a cleared one keeps its table
     controlSubstitutions = new IdentityHashMap<>();
+    substitutedControls = new IdentityHashMap<>();
   }
 
   /**
@@ -2063,13 +2085,29 @@ public class Support implements ParserTreeConstants {
           Explainable,
           PbEncodable,
           ConflictRows,
-          Linearizations.Relaxable {
+          Linearizations.Relaxable,
+          PartitionCuts.Equality {
 
     final IntVar x;
     final IntVar y;
     final IntVar b;
     final boolean isReified;
     final int fzNumberId;
+
+    @Override
+    public IntVar left() {
+      return x;
+    }
+
+    @Override
+    public IntVar right() {
+      return y;
+    }
+
+    @Override
+    public IntVar indicator() {
+      return isReified ? b : null;
+    }
 
     FzXeqY(IntVar x, IntVar y, IntVar b, boolean isReified) {
       super(new IntVar[] {x, y, b});

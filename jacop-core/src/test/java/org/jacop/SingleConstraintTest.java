@@ -504,6 +504,47 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  /**
+   * A rewriting during search imposes its target at the current level, which copies the lists of
+   * constraints of each variable whose domain is not of that level yet. On variables in thousands
+   * of constraints these copies, one per level, took more than 5 GB in 40 s of XCSP 2025
+   * LotteryDesign-32-6-6-2-3000. An implication over such a variable is not rewritten: the domain
+   * stays the one of the root, and the implication still propagates.
+   */
+  @Test
+  void testNoRewritingCopiesALongListOfConstraints() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    for (int k = 0; k < 100; k++) {
+      store.impose(new XneqY(x, new IntVar(store, "z" + k, 0, 9)));
+    }
+    store.impose(new Implies(b, new XneqY(x, y)));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    b.domain.in(store.level, b, 1, 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().stamp()).isLessThan(store.level);
+    y.domain.in(store.level, y, 3, 3);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().contains(3)).isFalse();
+    store.removeLevel(store.level);
+    store.setLevel(store.level - 1);
+
+    // a variable in a few constraints is still rewritten onto
+    Store small = new Store();
+    IntVar u = new IntVar(small, "u", 0, 9);
+    IntVar w = new IntVar(small, "w", 0, 9);
+    IntVar c = new IntVar(small, "c", 0, 1);
+    small.impose(new Implies(c, new XneqY(u, w)));
+    assertThat(small.consistency()).isTrue();
+    small.setLevel(small.level + 1);
+    c.domain.in(small.level, c, 1, 1);
+    assertThat(small.consistency()).isTrue();
+    assertThat(u.dom().stamp()).isEqualTo(small.level);
+  }
+
   @Test
   void testInvalidSimpleTable() {
 
@@ -11580,5 +11621,70 @@ class SingleConstraintTest extends TestHelper {
     IntVar q = new IntVar(large, "q", -1000, 1000);
     large.impose(new XmulYeqC(p, q, 999_983 * 2));
     assertThat(large.consistency()).isFalse();
+  }
+
+  // ConsistencyChecker repeated mode: an arc variable that is also an arrival time was pruned by
+  // the time bounds of the same pass, which left every variable fixed to a set of predecessors that
+  // is no circuit; SequenceMdd now repeats its pass while a variable with two roles changes
+  @Test
+  public void testSequenceMddWithAnArcThatIsAlsoATimeAcceptsOnlyCircuits() {
+    int none = org.jacop.constraints.SequenceMdd.NONE;
+    int[][] travel = {{1, 2, 2}, {2, 0, 0}, {0, 1, 1}};
+    int[] delta = {1, 0, 0};
+    long expected = 0;
+    int[] outValues = {0, 1, 2, 3, 5};
+    for (int a0 = 1; a0 <= 2; a0++) {
+      for (int a1 : new int[] {0, 2}) {
+        for (int a2 = 0; a2 <= 2; a2++) {
+          for (int o0 : outValues) {
+            for (int o1 : outValues) {
+              int[] arc = {a0, a1, a2};
+              int[] in = {a0, a2, a2};
+              int[] out = {o0, o1, o0};
+              if (Arrays.stream(arc).distinct().count() != 3) {
+                continue;
+              }
+              int[] succ = new int[3];
+              for (int i = 0; i < 3; i++) {
+                succ[arc[i]] = i;
+              }
+              boolean ok = succ[succ[succ[0]]] == 0 && succ[0] != 0 && succ[succ[0]] != 0;
+              for (int at = 0, k = 0; ok && k < 3; k++, at = succ[at]) {
+                int next = succ[at];
+                ok = travel[at][next] == none || in[next] >= out[at] + travel[at][next];
+              }
+              for (int j = 1; ok && j < 3; j++) {
+                ok = delta[j] == none || out[j] >= in[j] + delta[j];
+              }
+              if (ok) {
+                expected++;
+              }
+            }
+          }
+        }
+      }
+    }
+    Store store = new Store();
+    IntVar a0 = new IntVar(store, "a0", 1, 2);
+    IntVar a1 = new IntVar(store, "a1", 0, 0);
+    a1.addDom(2, 2);
+    IntVar a2 = new IntVar(store, "a2", 0, 2);
+    IntVar o0 = new IntVar(store, "o0", 0, 3);
+    o0.addDom(5, 5);
+    IntVar o1 = new IntVar(store, "o1", 0, 3);
+    o1.addDom(5, 5);
+    store.impose(
+        new org.jacop.constraints.SequenceMdd(
+            new IntVar[] {a0, a1, a2},
+            true,
+            0,
+            new IntVar[] {a0, a2, a2},
+            new IntVar[] {o0, o1, o0},
+            travel,
+            delta,
+            0,
+            2));
+    assertThat((long) countSolutions(store, new IntVar[] {a0, a1, a2, o0, o1}, new Random(1)))
+        .isEqualTo(expected);
   }
 }

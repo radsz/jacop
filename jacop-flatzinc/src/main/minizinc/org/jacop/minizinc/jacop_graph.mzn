@@ -9,6 +9,8 @@ predicate jacop_connected(array[int] of int: from, array[int] of int: to,
                           array[int] of var bool: ns, array[int] of var bool: es, int: base);
 predicate jacop_dconnected(array[int] of int: from, array[int] of int: to,
                            array[int] of var bool: ns, array[int] of var bool: es, int: base);
+predicate jacop_dag(array[int] of int: from, array[int] of int: to,
+                    array[int] of var bool: ns, array[int] of var bool: es, int: base);
 predicate jacop_tree(array[int] of int: from, array[int] of int: to, var int: r,
                      array[int] of var bool: ns, array[int] of var bool: es, int: base);
 predicate jacop_dtree(array[int] of int: from, array[int] of int: to, var int: r,

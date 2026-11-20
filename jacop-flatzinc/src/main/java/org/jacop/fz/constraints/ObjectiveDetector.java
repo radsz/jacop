@@ -122,6 +122,14 @@ public class ObjectiveDetector implements ParserTreeConstants {
           presolve.addEquation(vars, coefs, 0, definedVar(item));
         }
       }
+      case "int_lin_le", "bool_lin_le" -> {
+        int[] a = support.getIntArray(child(node, 0));
+        IntVar[] x = support.getVarArray(child(node, 1));
+        IntVar rhs = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+        if (a != null && a.length == x.length && rhs.singleton() && rhs.value() == 1 && unit(a)) {
+          presolve.addAtMostOne(x);
+        }
+      }
       case "jacop_count" -> {
         IntVar[] x = support.getVarArray(child(node, 0));
         int value = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
@@ -167,6 +175,15 @@ public class ObjectiveDetector implements ParserTreeConstants {
         // not used by objective presolve
       }
     }
+  }
+
+  private static boolean unit(int[] a) {
+    for (int c : a) {
+      if (c != 1) {
+        return false;
+      }
+    }
+    return a.length > 1;
   }
 
   private void element(ObjectivePresolve presolve, ASTConstElem node, int[] array, int firstIndex) {

@@ -64,13 +64,19 @@ import org.jacop.fz.SimpleNode;
  * lower bounds of lazy clause generation grow more slowly than over the minimum, so caterpillar13,
  * 16 and 19, proved in 21 to 336 s without it, are not proved in 600 s.
  *
- * <p>It is off by default; setting the system property {@code org.jacop.fz.cyclicDistance} to true
- * turns it on.
+ * <p>It therefore rewrites the distances only of a model that has at least 400 of them (system
+ * property {@code org.jacop.fz.cyclicDistance.minDistances}), where proofs are out of reach and the
+ * upper bound counts: at 600 s with free search caterpillar29 goes from 71 to 24, caterpillar35
+ * from 103 to 29 and mesh2D25x26 from 106 to 25, while the 9 smaller instances (67 to 299
+ * distances) keep their search. Setting the system property {@code org.jacop.fz.cyclicDistance} to
+ * true rewrites every model, to false none.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
  */
 public class CyclicDistanceDetector implements ParserTreeConstants {
+
+  private static final String PROPERTY = "org.jacop.fz.cyclicDistance";
 
   private final Support support;
 
@@ -82,42 +88,10 @@ public class CyclicDistanceDetector implements ParserTreeConstants {
   // the complement of a on the cycle of c positions, keyed by the complement
   private record Complement(IntVar a, int c, SimpleNode node) {}
 
-  // the linear equation that defines e: sign * e + sum weights * others = rhs, keyed by e
-  private static final class Definition {
-    private final IntVar[] others;
-    private final int[] weights;
-    private final int sign;
-    private final int rhs;
-    private final SimpleNode node;
-
-    Definition(IntVar[] others, int[] weights, int sign, int rhs, SimpleNode node) {
-      this.others = others;
-      this.weights = weights;
-      this.sign = sign;
-      this.rhs = rhs;
-      this.node = node;
-    }
-
-    IntVar[] others() {
-      return others;
-    }
-
-    int[] weights() {
-      return weights;
-    }
-
-    int sign() {
-      return sign;
-    }
-
-    int rhs() {
-      return rhs;
-    }
-
-    SimpleNode node() {
-      return node;
-    }
-  }
+  // the linear equation that defines e: sign * e + sum weights * others = rhs, keyed by e; e is
+  // term j of the equation, whose other terms are read from it only when e is substituted, since
+  // copying them for every term costs quadratic time and memory in the length of the equation
+  private record Definition(int j, int sign, int rhs, SimpleNode node) {}
 
   private final Map<IntVar, Definition> definitions = new IdentityHashMap<>();
 
@@ -145,12 +119,35 @@ public class CyclicDistanceDetector implements ParserTreeConstants {
   }
 
   /**
-   * It tells if the detection is on.
+   * It tells if the detection may run: unless the system property org.jacop.fz.cyclicDistance is
+   * false.
+   *
+   * @return false if the system property org.jacop.fz.cyclicDistance is false.
+   */
+  public static boolean enabled() {
+    return !"false".equalsIgnoreCase(System.getProperty(PROPERTY));
+  }
+
+  /**
+   * It tells if the detection rewrites every distance it finds, whatever their number: the system
+   * property org.jacop.fz.cyclicDistance is true. Otherwise the distances are rewritten only when
+   * the model has at least {@link #minDistances()} of them.
    *
    * @return true if the system property org.jacop.fz.cyclicDistance is true.
    */
-  public static boolean enabled() {
-    return Boolean.getBoolean("org.jacop.fz.cyclicDistance");
+  public static boolean forced() {
+    return Boolean.getBoolean(PROPERTY);
+  }
+
+  /**
+   * It returns the number of cyclic distances a model needs before they are rewritten when the
+   * detection is not forced: the system property org.jacop.fz.cyclicDistance.minDistances, 400 by
+   * default.
+   *
+   * @return the smallest number of distances that are rewritten.
+   */
+  public static int minDistances() {
+    return Integer.getInteger(PROPERTY + ".minDistances", 400);
   }
 
   /**
@@ -178,6 +175,22 @@ public class CyclicDistanceDetector implements ParserTreeConstants {
     if (absolutes.isEmpty() || complements.isEmpty()) {
       return replaced;
     }
+    if (!forced()) {
+      int found = 0;
+      for (ASTConstElem node : minimums) {
+        IntVar p = variable(node, 0);
+        IntVar q = variable(node, 1);
+        IntVar m = variable(node, 2);
+        found += complement(p, q, m) != null || complement(q, p, m) != null ? 1 : 0;
+      }
+      if (found < minDistances()) {
+        if (support.options.debug()) {
+          FzConsole.println(
+              "% cyclic distances: 0 of " + found + " found, fewer than " + minDistances());
+        }
+        return replaced;
+      }
+    }
     for (ASTConstElem node : minimums) {
       IntVar p = variable(node, 0);
       IntVar q = variable(node, 1);
@@ -203,62 +216,88 @@ public class CyclicDistanceDetector implements ParserTreeConstants {
 
   // m = min(a, b) with a = |e| and b = c - a
   private boolean post(IntVar a, IntVar b, IntVar m, SimpleNode min) {
+    Complement cm = complement(a, b, m);
+    if (cm == null) {
+      return false;
+    }
+    Absolute abs = absolutes.get(a);
+    IntVar e = abs.e();
+    int c = cm.c();
+    int h = c / 2;
+    IntVar k = new IntVar(support.store, -1, 1);
+    IntVar f = new IntVar(support.store, -h, h);
+    boolean replace =
+        occurrences.getOrDefault(a, 0) == 3
+            && occurrences.getOrDefault(b, 0) == 2
+            && abs.node() != null
+            && cm.node() != null
+            && free(a)
+            && free(b);
+    Definition d =
+        replace && occurrences.getOrDefault(e, 0) == 2 && free(e) ? definitions.get(e) : null;
+    IntVar[] others = null;
+    int[] weights = null;
+    if (d != null && d.node() != null && !replaced.contains(d.node())) {
+      int[] dw = support.getIntArray(child(d.node(), 0));
+      IntVar[] dv = support.getVarArray(child(d.node(), 1));
+      others = new IntVar[dv.length - 1];
+      weights = new int[dv.length - 1];
+      for (int i = 0, n = 0; i < dv.length; i++) {
+        if (i != d.j()) {
+          others[n] = dv[i];
+          weights[n++] = dw[i];
+        }
+      }
+    }
+    // a domain of e narrower than its definition is a constraint the substitution would drop
+    if (others != null && holdsDefinition(e, others, weights, d.sign(), d.rhs())) {
+      // e = w_e (r - sum w_i v_i) substituted: sum (-w_e w_i) v_i + c k - f = -w_e r
+      IntVar[] v = Arrays.copyOf(others, others.length + 2);
+      int[] w = new int[v.length];
+      for (int i = 0; i < others.length; i++) {
+        w[i] = -d.sign() * weights[i];
+      }
+      v[v.length - 2] = k;
+      w[v.length - 2] = c;
+      v[v.length - 1] = f;
+      w[v.length - 1] = -1;
+      support.pose(new LinearInt(v, w, "==", -d.sign() * d.rhs()));
+      replaced.add(d.node());
+      removed.add(e);
+    } else {
+      support.pose(new LinearInt(new IntVar[] {e, k, f}, new int[] {1, c, -1}, "==", 0));
+    }
+    support.pose(new AbsXeqY(f, m));
+    // free search labels k and f, as it labels the variables of a model that states them
+    support.dictionary.addSearchVar(k);
+    support.dictionary.addSearchVar(f);
+    added++;
+    if (replace) {
+      replaced.add(min);
+      replaced.add(abs.node());
+      replaced.add(cm.node());
+      removed.add(a);
+      removed.add(b);
+      replacedDistances++;
+    }
+    return true;
+  }
+
+  // the complement b = c - a of a distance m = min(a, b) with a = |e| and -c < e < c, or null
+  private Complement complement(IntVar a, IntVar b, IntVar m) {
     Absolute abs = absolutes.get(a);
     List<Complement> cs = complements.get(b);
     if (abs == null || cs == null || abs.e() == m || a == m || b == m) {
-      return false;
+      return null;
     }
     IntVar e = abs.e();
     for (Complement cm : cs) {
       int c = cm.c();
-      if (cm.a() != a || c < 2 || e.min() <= -c || e.max() >= c) {
-        continue;
+      if (cm.a() == a && c >= 2 && e.min() > -c && e.max() < c) {
+        return cm;
       }
-      int h = c / 2;
-      IntVar k = new IntVar(support.store, -1, 1);
-      IntVar f = new IntVar(support.store, -h, h);
-      boolean replace =
-          occurrences.getOrDefault(a, 0) == 3
-              && occurrences.getOrDefault(b, 0) == 2
-              && abs.node() != null
-              && cm.node() != null
-              && free(a)
-              && free(b);
-      Definition d =
-          replace && occurrences.getOrDefault(e, 0) == 2 && free(e) ? definitions.get(e) : null;
-      if (d != null && d.node() != null && !replaced.contains(d.node())) {
-        // e = w_e (r - sum w_i v_i) substituted: sum (-w_e w_i) v_i + c k - f = -w_e r
-        IntVar[] v = Arrays.copyOf(d.others(), d.others().length + 2);
-        int[] w = new int[v.length];
-        for (int i = 0; i < d.others().length; i++) {
-          w[i] = -d.sign() * d.weights()[i];
-        }
-        v[v.length - 2] = k;
-        w[v.length - 2] = c;
-        v[v.length - 1] = f;
-        w[v.length - 1] = -1;
-        support.pose(new LinearInt(v, w, "==", -d.sign() * d.rhs()));
-        replaced.add(d.node());
-        removed.add(e);
-      } else {
-        support.pose(new LinearInt(new IntVar[] {e, k, f}, new int[] {1, c, -1}, "==", 0));
-      }
-      support.pose(new AbsXeqY(f, m));
-      // free search labels k and f, as it labels the variables of a model that states them
-      support.dictionary.addSearchVar(k);
-      support.dictionary.addSearchVar(f);
-      added++;
-      if (replace) {
-        replaced.add(min);
-        replaced.add(abs.node());
-        replaced.add(cm.node());
-        removed.add(a);
-        removed.add(b);
-        replacedDistances++;
-      }
-      return true;
     }
-    return false;
+    return null;
   }
 
   // in no alias, no declared equality and not output
@@ -309,29 +348,16 @@ public class CyclicDistanceDetector implements ParserTreeConstants {
     int[] w = support.getIntArray(child(node, 0));
     IntVar[] v = support.getVarArray(child(node, 1));
     int rhs = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    Map<IntVar, Integer> count = new IdentityHashMap<>();
+    for (IntVar x : v) {
+      count.merge(x, 1, Integer::sum);
+    }
     for (int j = 0; j < v.length; j++) {
-      if (Math.abs(w[j]) != 1) {
-        continue;
-      }
-      IntVar[] others = new IntVar[v.length - 1];
-      int[] ow = new int[v.length - 1];
-      boolean once = true;
-      int n = 0;
-      for (int i = 0; i < v.length; i++) {
-        if (i != j) {
-          once &= v[i] != v[j];
-          others[n] = v[i];
-          ow[n] = w[i];
-          n++;
-        }
-      }
-      if (once) {
-        // a domain of e narrower than its definition is a constraint the substitution would drop
-        SimpleNode where = holdsDefinition(v[j], others, ow, w[j], rhs) ? node : null;
-        Definition old = definitions.put(v[j], new Definition(others, ow, w[j], rhs, where));
+      if (Math.abs(w[j]) == 1 && count.get(v[j]) == 1) {
+        Definition old = definitions.put(v[j], new Definition(j, w[j], rhs, node));
         if (old != null) {
           // two definitions: neither is substituted
-          definitions.put(v[j], new Definition(others, ow, w[j], rhs, null));
+          definitions.put(v[j], new Definition(j, w[j], rhs, null));
         }
       }
     }

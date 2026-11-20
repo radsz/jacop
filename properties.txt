@@ -455,6 +455,9 @@ unless stated otherwise):
   the Lagrangian relaxation.
 - org.jacop.fz.objectivePresolve: reading the facts objective
   presolve needs.
+- org.jacop.presolve.objectiveContraction: objective presolve puts
+  the common cost of the exclusive literals of a disjunction on the
+  disjunction; default true.
 - org.jacop.fz.orBoolWatchMin: the shortest list of a reified
   all-zero sum posted as OrBoolWatched (watched literals); default 8.
 - org.jacop.fz.partialCopies: merges the copies MiniZinc makes of the
@@ -1394,6 +1397,14 @@ Simplex choice and bases:
 - org.jacop.lp.restartBounds: with org.jacop.lp.restartSolves, the cut
   rounds of a restart solve use the root bounds at that restart instead
   of those of the first solve; default false.
+- org.jacop.lp.rootRecut: solve again with new cut rounds at the root
+  level whenever its bounds changed and when an incumbent closed a tenth
+  of the gap, also at the root of free search; turns on
+  org.jacop.lp.restartSolves and org.jacop.lp.restartBounds and keeps the
+  extra rows (org.jacop.lp.extraLimits 1000000); default false.
+- org.jacop.lp.restartShare: with org.jacop.lp.rootRecut, the restart
+  solves take at most this share of the time since the relaxation was
+  made; default 0.05.
 - org.jacop.lp.anytimeBound: the duals of a solve stopped at its pivot
   limit bound the objective too; default true.
 - org.jacop.lp.extraLimits: the rows of the other constraints are
