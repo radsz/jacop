@@ -8149,6 +8149,23 @@ Version 5.0 (unreleased)
    WeightedSpanningTree, BoundedPath, UnaryTransition, MultiCumulative,
    VectorBinpacking, XplusYgtC and XplusClteqZ.
 
+451. Free search (-f) branches with conflict history search, CHS (Habet
+   and Terrioux, "Conflict history based heuristic for constraint
+   satisfaction problem solving", J. Heuristics 27, 2021), where it used
+   dom/wdeg, in the plain CP search of --lcg off and of the hand-over from
+   lazy clause generation. On 94 hard XCSP 2022-2025 CSP instances at 240 s
+   it decides 63 instead of 59 under -f (total time -8 %) and 49 instead of
+   41 under -f --lcg off (-13 %); wide-quick is unchanged. --free-config
+   heuristic=domwdeg restores dom/wdeg. Three more heuristics are available
+   for experiments: heuristic=pick, pick/dom (Audemard, Lecoutre and
+   Prud'homme, "Guiding Backtrack Search by Tracking Variables During
+   Constraint Propagation", CP 2023), heuristic=frba, frba/dom (Li, Yin and
+   Li, "Failure Based Variable Ordering Heuristics for Solving CSPs", CP
+   2021), and heuristic=rr, a round robin of heuristics over the runs
+   between restarts in which all of them learn from every run, as in ACE's
+   portfolio of the XCSP 2025 competition (rr-set=cacd;pick;frba,
+   rr-runs=1).
+
 Version 4.11
 =============
 

@@ -6413,11 +6413,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   /**
    * Runs free search with the FreeSearch engine. It branches on the set variables first, then on
    * the integer and Boolean variables, then on the objective and on the float variables. The
-   * settings of --free-config select the heuristics; by default dom/wdeg with last conflict and
+   * settings of --free-config select the heuristics; by default dom/wdeg weighted by conflict
+   * history search (CHS, Habet and Terrioux, J. Heuristics 2021) with last conflict and
    * solution-based phase saving, and nogoods learned at each restart. Satisfaction restarts
    * geometrically from 100 failures, growing by 1.5; optimisation from 10 failures, growing by
-   * 1.05, starts that sequence again after each solution, forgets the dom/wdeg weights every 32
-   * restarts and spends one failure in twenty on probes of the objective near its lower bound.
+   * 1.05, starts that sequence again after each solution, forgets the weights every 32 restarts and
+   * spends one failure in twenty on probes of the objective near its lower bound.
    */
   private boolean executeFreeSearch(Var costVar) {
     DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
@@ -6786,7 +6787,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       BooleanVar[] bools,
       FloatVar[] floats,
       IntVar objective) {
-    String heuristic = options.freeConfig("heuristic", "domwdeg");
+    String heuristic = options.freeConfig("heuristic", "chs");
     int lastConflict = Integer.parseInt(options.freeConfig("lc", "1"));
     boolean phase = "1".equals(options.freeConfig("phase", "1"));
     if (sets.length > 0) {

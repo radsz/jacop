@@ -188,7 +188,7 @@ public class Options {
             --default-search <value> search for a model without search annotation; one of
                 "free" (default; as with -f), "input" (input order, splitting the domains)
             --free-config <key=value,...> settings of the new free search engine, for experiments:
-                heuristic=domwdeg|cacd|chs|pick|frba|rr|afc (rr: round robin over runs of
+                heuristic=chs|domwdeg|cacd|pick|frba|rr|afc (chs default; rr: round robin over runs of
                 rr-set=cacd;pick;frba, rr-runs=<runs each> (1); pick-mode=3|0), lc=<k>, phase=0|1,
                 restarts=geometric|luby|none,
                 set-heuristic=input|afc (set variables: input order (default) or largest
