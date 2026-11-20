@@ -36,6 +36,7 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.IntStream;
 import org.jacop.constraints.AndBoolSimple;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.LinearBool;
@@ -437,10 +438,18 @@ class LinearConstraints implements ParserTreeConstants {
       // very special case: positive weighted sum of 0/1 variables <= 0 =>  (all p2's zero <=>
       // p4)
       if (isReified) {
-        if (support.options.useSat()) {
-          sat.generateAllZeroReif(support.unique(p2), p4);
+        // a variable of weight 0 does not take part in the sum
+        IntVar[] weighted =
+            IntStream.range(0, p2.length)
+                .filter(i -> p1[i] != 0)
+                .mapToObj(i -> p2[i])
+                .toArray(IntVar[]::new);
+        if (weighted.length == 0) {
+          p4.domain.inValue(store.level, p4, 1);
+        } else if (support.options.useSat()) {
+          sat.generateAllZeroReif(support.unique(weighted), p4);
         } else {
-          poseAllZeroReif(support.unique(p2), p4);
+          poseAllZeroReif(support.unique(weighted), p4);
         }
       } else {
         // This case doesn't exist in _imp version

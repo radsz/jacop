@@ -5849,4 +5849,23 @@ class FlatzincFrontEndTest {
             + "solve maximize x;\n";
     assertEquals("x = 100000006; ==========", normalised(run(opt)[0], true));
   }
+
+  @Test
+  void reifiedLinearLeSkipsZeroWeights() throws IOException {
+    // (b1 + 0 * b2 <= 0) <-> r was posted as r <-> b1 = b2 = 0, which constrains b2
+    String model =
+        "var bool: b1:: output_var;\nvar bool: b2:: output_var;\nvar bool: r:: output_var;\n"
+            + "constraint int_lin_le_reif([1,0],[b1,b2],0,r);\nsolve satisfy;\n";
+    String zeros = model.replace("[1,0]", "[0,0]");
+    for (String[] options : new String[][] {{"-a"}, {"-a", "--lcg"}}) {
+      assertEquals(
+          "[b1 = false; b2 = false; r = true;, b1 = false; b2 = true; r = true;,"
+              + " b1 = true; b2 = false; r = false;, b1 = true; b2 = true; r = false;] ==========",
+          normalised(run(model, options)[0], false));
+      assertEquals(
+          "[b1 = false; b2 = false; r = true;, b1 = false; b2 = true; r = true;,"
+              + " b1 = true; b2 = false; r = true;, b1 = true; b2 = true; r = true;] ==========",
+          normalised(run(zeros, options)[0], false));
+    }
+  }
 }
