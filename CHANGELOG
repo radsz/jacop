@@ -8508,6 +8508,20 @@ Version 5.0 (unreleased)
    instances with element or circuit at 240 s 6,369 -> 6,387 s, with only
    3 of them running route neighbourhoods (the rest run unchanged code).
 
+458. The linear relaxation expands a row whose sums lcg-split or linear
+   overlap factoring defined up to 65,536 terms (was 4,096; property
+   org.jacop.lp.maxExpandedTerms). Merging repeated variables at every
+   level (jacop #815) keeps a row at most as long as the distinct
+   variables it reaches, so the old cap only kept rows that are long in
+   the model as sums of their blocks: the objective of XCSP 2025
+   BusScheduling-c2, a sum of 14,771 Booleans. -f proved it in none of 5
+   runs of 120 s; with this change and lcg-split-tree=0 in 3 of 3 (17-31
+   s), and with the tree-split fix of jacop #863 in 2 of 2 (39, 45 s). On
+   the 24 XCSP 2024/2025 and wide instances with
+   a row of 4,097 to 65,536 terms, at 240 s: -f 10 = 10 proved, total
+   3,749 -> 3,720 s; default search 10 = 10 proved, 3,751 -> 3,662 s
+   (BusScheduling c1a 89 -> 30 s, r5a 69 -> 32 s).
+
 476. Free search (-f) branches with conflict history search, CHS (Habet
    and Terrioux, "Conflict history based heuristic for constraint
    satisfaction problem solving", J. Heuristics 27, 2021), where it used
