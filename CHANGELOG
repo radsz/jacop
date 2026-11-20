@@ -8701,6 +8701,23 @@ Version 5.0 (unreleased)
    4,593 -> 4,587 s; wide set at 60 s, -f 0.995 and default 1.001; the same
    instances solved.
 
+485. Float optimisation. Free search (-f) splits the float variables of the
+   model before the ones MiniZinc introduced for intermediate results
+   (var_is_introduced, is_defined_var), largest domain first in each group
+   (-Dorg.jacop.fz.floatDecisionFirst=false splits by largest domain over
+   all): on hart6 it split the exponentials, declared var float, and found
+   no solution in 300 s. A model whose float constraints are all linear
+   rows of the float relaxation (LinearFloatRelaxation.isLinearModel)
+   bisects the objective from the point of the relaxation from the start,
+   also under its annotated search: transp1 (61 equations, 100
+   inequalities) proved in 77 nodes, before stuck at 199,697.9 against the
+   optimum 199,693.06. The statistics of the float relaxation and of the
+   float dives (floatLp*, floatDive*) are JaCoP's own statistics, printed
+   with -s -v or --search-statistics, no longer with -s alone. Float set
+   (osolpro benchmarks/float-set) at 240 s: float-quick -f 28 -> 31 solved,
+   total time 0.88; the 22 linear float optimisation models 16 -> 18
+   proved, total time 0.66 default, 0.61 -f.
+
 Version 4.11
 =============
 
