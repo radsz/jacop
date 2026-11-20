@@ -8527,6 +8527,13 @@ Version 5.0 (unreleased)
    before the search; it now finds objective 694,296 within 600 s with a
    live heap of 1.5 GB.
 
+477. The Hall cuts of an all-different in the linear relaxation
+   (AlldifferentCuts.separate) list the variables only of the cuts they
+   return. A long constraint has a violated prefix of almost every
+   length, and listing them all took quadratic memory: a FlatZinc model
+   with an 80,000-variable all-different ran out of a 4 GB heap at the
+   root, and now reaches its answer in 9 s. The cuts are the same.
+
 Version 4.11
 =============
 
