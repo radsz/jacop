@@ -687,4 +687,26 @@ class LazyBitSetDomainTest {
     }
     return -1;
   }
+
+  @Test
+  void firstIntervalHoleIsSeenByTheIntervals() {
+    // the intervals asked for before the first hole inside the bounds must not be reused after it
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", new LazyBitSetDomain(0, 99999, true));
+    assertThat(x.domain.noIntervals()).isEqualTo(1);
+    for (IntervalEnumeration e = x.domain.intervalEnumeration(); e.hasMoreElements(); ) {
+      e.nextElement();
+    }
+    store.setLevel(1);
+    x.domain.inComplement(1, x, 500);
+    assertThat(x.domain.noIntervals()).isEqualTo(2);
+    assertThat(x.domain.rightElement(0)).isEqualTo(499);
+    assertThat(x.domain.leftElement(1)).isEqualTo(501);
+    assertThat(x.domain.getInterval(1).toString()).isEqualTo("501..99999");
+    StringBuilder intervals = new StringBuilder();
+    for (IntervalEnumeration e = x.domain.intervalEnumeration(); e.hasMoreElements(); ) {
+      intervals.append(e.nextElement()).append(' ');
+    }
+    assertThat(intervals.toString()).isEqualTo("0..499 501..99999 ");
+  }
 }

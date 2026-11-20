@@ -5974,4 +5974,24 @@ class FlatzincFrontEndTest {
       }
     }
   }
+
+  @Test
+  void medianSearchSeesTheFirstHoleOfALargeDomain() throws IOException {
+    // x has 100000 values, so its holes are kept as intervals; the first hole, x != -1, was not
+    // seen
+    // by the intervals cached before it, and the median search failed on a satisfiable model
+    String model =
+        "var -50000..49999: x :: output_var;\n"
+            + "var 0..50000: y :: output_var;\n"
+            + "var -1..0: d :: output_var;\n"
+            + "constraint int_abs(x, y) :: domain;\n"
+            + "constraint int_ne(x, d);\n"
+            + "solve :: seq_search([int_search([d], input_order, indomain_min, complete),"
+            + " int_search([x, y], input_order, indomain_median, complete)]) satisfy;\n";
+    for (String[] options : new String[][] {{"-a"}, {"--lcg", "off"}}) {
+      String out = run(model, options)[0];
+      assertTrue(out.contains("x = 0;") && out.contains("d = -1;"), Arrays.toString(options) + out);
+      assertFalse(out.contains("UNSATISFIABLE"), Arrays.toString(options) + out);
+    }
+  }
 }
