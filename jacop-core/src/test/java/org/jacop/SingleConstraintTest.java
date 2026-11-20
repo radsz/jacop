@@ -11813,4 +11813,25 @@ class SingleConstraintTest extends TestHelper {
     store.impose(new Alldistinct(new IntVar[] {u, w}));
     assertThat(store.consistency()).isFalse();
   }
+
+  /**
+   * DiffnK skipped the boxes fixed before the current level as already checked, also after its
+   * first pruning. Segments fixed after a consistency at level 0 reached the next pruning only at
+   * level 1, as a constraint imposed in between (Alldistinct) raised the store level, and the
+   * overlapping segments [1, 3) and [2, 4) were accepted.
+   */
+  @Test
+  void diffnKChecksBoxesFixedBeforeARaisedLevelAfterAPruning() {
+    Store store = new Store();
+    IntVar[][] origin = {{new IntVar(store, "o0", 0, 4)}, {new IntVar(store, "o1", 0, 4)}};
+    IntVar[][] length = {{new IntVar(store, "l0", 2, 2)}, {new IntVar(store, "l1", 2, 2)}};
+    IntVar u = new IntVar(store, "u", 0, 1);
+    IntVar w = new IntVar(store, "w", 0, 1);
+    store.impose(new DiffnK(origin, length, true));
+    assertThat(store.consistency()).isTrue();
+    origin[0][0].domain.in(store.level, origin[0][0], 1, 1);
+    origin[1][0].domain.in(store.level, origin[1][0], 2, 2);
+    store.impose(new Alldistinct(new IntVar[] {u, w}));
+    assertThat(store.consistency()).isFalse();
+  }
 }
