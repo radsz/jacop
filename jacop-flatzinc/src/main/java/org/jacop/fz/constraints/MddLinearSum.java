@@ -174,7 +174,8 @@ public final class MddLinearSum {
     if (byLevel == null) {
       return NOT_A_SUM;
     }
-    for (int[] edges : byLevel) {
+    for (int l = 0; l < n; l++) {
+      int[] edges = byLevel[l];
       // per source node, the values already used (determinism)
       Map<Integer, IntDomain> used = new HashMap<>();
       for (int e : edges) {
@@ -196,7 +197,10 @@ public final class MddLinearSum {
         used.put(f, u == null ? d : u.union(d));
         long p = potential[f] + d.min();
         int t = to[e];
-        if (t == 0) {
+        if (t == 0 && l != n - 1) {
+          // a path shorter than the variables: not a tuple of the sum
+          return NOT_A_SUM;
+        } else if (t == 0) {
           if (terminal != null && terminal != p) {
             return NOT_A_SUM;
           }
@@ -252,7 +256,9 @@ public final class MddLinearSum {
           continue;
         }
         int t = to[e];
-        if (t == 0) {
+        if (t == 0 && l != byLevel.length - 1) {
+          return null;
+        } else if (t == 0) {
           terminal = terminal.add(c);
         } else if (level[t - 1] != l + 2) {
           return null;
