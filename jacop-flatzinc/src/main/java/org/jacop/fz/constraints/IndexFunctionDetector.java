@@ -320,7 +320,19 @@ public class IndexFunctionDetector implements ParserTreeConstants {
     List<IntVar[]> posted = new ArrayList<>();
     List<IntVar[]> negated = new ArrayList<>();
     int[] values = new int[index.size()];
-    if (!combine(index, 0, values, literals, posted, negated)) {
+    // a dry run first: when no comparison holds or fails for any combination, every clause keeps
+    // all its comparisons, now one per combination over the same variables, and the clause only
+    // multiplies (EchoSched 14-10-0-2_1: s1 + d[m1] <= s2 \/ s2 + d[m2] <= s1 with the durations
+    // looked up by the modes, 711 disjunctions became 2,844 clauses over 2,844 reified comparisons,
+    // where the enforcement inlining gives each disjunction one ordering literal; 582 conflicts in
+    // 60 s against 21,889)
+    dryRun = true;
+    decided = 0;
+    boolean unfolds = combine(index, 0, values, literals, posted, negated);
+    dryRun = false;
+    posted.clear();
+    negated.clear();
+    if (!unfolds || decided == 0 || !combine(index, 0, values, literals, posted, negated)) {
       return;
     }
     for (int i = 0; i < posted.size(); i++) {
@@ -355,14 +367,21 @@ public class IndexFunctionDetector implements ParserTreeConstants {
         }
         if (l == OUT_OF_RANGE) {
           // an element of this assignment is out of its array: the element excludes it
+          decided++;
           return true;
         }
         if (l == TRUE) {
+          decided++;
           return true;
         }
-        if (l != FALSE) {
+        if (l == FALSE) {
+          decided++;
+        } else if (l != OPEN) {
           or.add(l);
         }
+      }
+      if (dryRun) {
+        return true;
       }
       IntVar[] neg = new IntVar[index.size()];
       for (int i = 0; i < neg.length; i++) {
@@ -386,6 +405,15 @@ public class IndexFunctionDetector implements ParserTreeConstants {
   private static final IntVar FALSE = new IntVar();
 
   private static final IntVar OUT_OF_RANGE = new IntVar();
+
+  // a comparison left open in a dry run, which makes no literal for it
+  private static final IntVar OPEN = new IntVar();
+
+  // whether combine only counts the comparisons decided, without making literals
+  private boolean dryRun;
+
+  // the comparisons that hold or fail, and the combinations excluded, in the last combine
+  private int decided;
 
   // the comparison of c under the assignment: TRUE, FALSE, OUT_OF_RANGE or a literal for it
   private IntVar condition(Implied c, Map<IntVar, Integer> assignment) {
@@ -449,6 +477,9 @@ public class IndexFunctionDetector implements ParserTreeConstants {
       key.append(':').append(System.identityHashCode(t.getKey())).append('*').append(t.getValue());
     }
     IntVar l = conditions.get(key.toString());
+    if (l == null && dryRun) {
+      return OPEN;
+    }
     if (l == null) {
       l = new IntVar(support.store, 0, 1);
       String rel =

@@ -8554,6 +8554,18 @@ Version 5.0 (unreleased)
    gave no answer at a 20 s limit; the solver answers in 2 s. Low
    autocorrelation sequences still take the tabu search.
 
+480. The unfolding of clauses over functions of small indexes (entry 464)
+   is left out when no comparison of the clause holds or fails for any
+   combination of index values: each unfolded clause would then keep all
+   its comparisons, one reified comparison per combination over the same
+   variables, in place of the one ordering literal that enforcement
+   inlining gives a disjunction. On MiniZinc Challenge 2025 EchoSched
+   14-10-0-2_1 (s1 + d[m1] <= s2 \/ s2 + d[m2] <= s1, durations looked up
+   by the modes) 711 disjunctions had become 2,844 clauses, and -f at
+   60 s made 582 conflicts and found 11936; now 22,789 conflicts and
+   11626, as before the unfolding. The stable-goods instances unfold the
+   same clauses as before.
+
 Version 4.11
 =============
 
