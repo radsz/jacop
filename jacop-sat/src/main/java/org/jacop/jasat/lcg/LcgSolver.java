@@ -6895,6 +6895,11 @@ public final class LcgSolver implements ExternalPropagator {
    *     more than limit
    */
   static Optional<List<long[]>> forbiddenPrimeCubes(boolean[] allowed, int n, int limit) {
+    // the merging below costs seconds on a random table of 12 columns, most often to find more
+    // than limit prime cubes (bt_12: 60 such tables); counting them first over an array is fast
+    if (n <= PRIME_COUNT_ARITY && forbiddenPrimeCount(allowed, n, limit) > limit) {
+      return Optional.empty();
+    }
     int full = (1 << n) - 1;
     Set<Long> level = new HashSet<>();
     for (int p = 0; p < allowed.length; p++) {
@@ -6932,6 +6937,58 @@ public final class LcgSolver implements ExternalPropagator {
       level = next;
     }
     return Optional.of(primes);
+  }
+
+  /** The most columns whose prime cubes {@link #forbiddenPrimeCount} counts (3^13 cubes). */
+  private static final int PRIME_COUNT_ARITY = 13;
+
+  /**
+   * The number of prime cubes of the points of {0,1}^n that are not allowed, or a number above
+   * limit once there are more. A cube is a base-3 number whose digit b is 0 or 1 for a coordinate
+   * fixed to that value and 2 for a free one; it is an implicant when its point is not allowed, or
+   * when both cubes with its lowest free coordinate fixed are, and prime when no fixed coordinate
+   * can be freed.
+   */
+  static int forbiddenPrimeCount(boolean[] allowed, int n, int limit) {
+    int[] pow = new int[n + 1];
+    pow[0] = 1;
+    for (int b = 0; b < n; b++) {
+      pow[b + 1] = pow[b] * 3;
+    }
+    boolean[] implicant = new boolean[pow[n]];
+    for (int c = 0; c < pow[n]; c++) {
+      int x = c;
+      int free = -1;
+      int point = 0;
+      for (int b = 0; b < n; b++, x /= 3) {
+        int d = x % 3;
+        if (d == 2) {
+          if (free < 0) {
+            free = b;
+          }
+        } else if (d == 1) {
+          point |= 1 << b;
+        }
+      }
+      implicant[c] =
+          free < 0 ? !allowed[point] : implicant[c - 2 * pow[free]] && implicant[c - pow[free]];
+    }
+    int count = 0;
+    for (int c = 0; c < pow[n]; c++) {
+      if (!implicant[c]) {
+        continue;
+      }
+      boolean prime = true;
+      int x = c;
+      for (int b = 0; b < n && prime; b++, x /= 3) {
+        int d = x % 3;
+        prime = d == 2 || !implicant[c + (2 - d) * pow[b]];
+      }
+      if (prime && ++count > limit) {
+        return count;
+      }
+    }
+    return count;
   }
 
   /** Whether every variable of the model has at most two values, so that it is a 0/1 CNF. */
