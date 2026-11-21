@@ -7453,4 +7453,22 @@ class FlatzincFrontEndTest {
             + "solve :: float_search([f, p], 0.1, input_order, indomain_split, complete) satisfy;\n";
     assertTrue(run(floats)[0].endsWith("----------\n"), run(floats)[0]);
   }
+
+  @Test
+  void boolSearchWithIndomainMiddleOrMedianLabelsTheBooleans() throws IOException {
+    // indomain_middle and indomain_median refused the bounds domain of a Boolean variable under
+    // jacop.asserts.enabled, although they label it like any other domain (as they did without it)
+    for (String value : List.of("indomain_middle", "indomain_median")) {
+      String model =
+          """
+          var bool: a :: output_var;
+          var bool: b :: output_var;
+          var bool: c :: output_var;
+          constraint bool_clause([a,b],[c]);
+          solve :: bool_search([a,b,c], input_order, %s, complete) satisfy;
+          """
+              .formatted(value);
+      assertEquals(7, solveAll(model).size(), value);
+    }
+  }
 }
