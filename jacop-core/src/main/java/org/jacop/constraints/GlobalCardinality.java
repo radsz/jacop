@@ -190,6 +190,10 @@ public class GlobalCardinality extends Constraint
   private final long[] adjBits;
   private final long[] componentBits;
   private final long[] unionBits;
+
+  /** Scratch for the value nodes removed from one variable, at most m + 1. */
+  private final int[] removedArcs;
+
   private final int[] cursor;
   private final int[] callStack;
   private final int[] sccStack;
@@ -351,6 +355,7 @@ public class GlobalCardinality extends Constraint
     dfsNumber = new int[nodes];
     lowLink = new int[nodes];
     component = new int[nodes];
+    removedArcs = new int[m + 1];
     int w = (m + 1 + 63) >>> 6;
     words = w <= MAX_BIT_WORDS ? w : 0;
     adjBits = words > 0 ? new long[n * words] : null;
@@ -1021,45 +1026,58 @@ public class GlobalCardinality extends Constraint
         continue;
       }
       pruned = true;
-      IntVar x = list[i];
       if (!inComponent) {
-        if (matched == m) {
-          x.domain.in(store.level, x, x.dom().subtract(valuesDomain));
-        } else {
-          x.domain.in(store.level, x, values[matched], values[matched]);
-        }
+        keepOnly(store, list[i], matched);
         continue;
       }
-      int removed = -1;
-      IntervalDomain removedValues = null;
-      boolean removeUncounted = false;
+      int count = 0;
       for (int k = adjStart[i]; k < adjEnd[i]; k++) {
         int a = adj[k];
-        if (a == matched || component[a] == ci) {
-          continue;
-        }
-        if (a == m) {
-          removeUncounted = true;
-        } else if (removed < 0) {
-          removed = values[a];
-        } else {
-          if (removedValues == null) {
-            removedValues = new IntervalDomain();
-            removedValues.unionAdapt(removed, removed);
-          }
-          removedValues.unionAdapt(values[a], values[a]);
+        if (a != matched && component[a] != ci) {
+          removedArcs[count++] = a;
         }
       }
-      if (removeUncounted) {
-        x.domain.in(store.level, x, valuesDomain);
-      }
-      if (removedValues != null) {
-        x.domain.in(store.level, x, x.dom().subtract(removedValues));
-      } else if (removed >= 0) {
-        x.domain.inComplement(store.level, x, removed);
-      }
+      removeArcs(store, list[i], count);
     }
     return pruned;
+  }
+
+  /** Reduces x to its matched value, or to the uncounted values when it is matched to them. */
+  private void keepOnly(Store store, IntVar x, int matched) {
+    if (matched == m) {
+      x.domain.in(store.level, x, x.dom().subtract(valuesDomain));
+    } else {
+      x.domain.in(store.level, x, values[matched], values[matched]);
+    }
+  }
+
+  /** Removes from x the values of the first count arcs of removedArcs. */
+  private void removeArcs(Store store, IntVar x, int count) {
+    int removed = -1;
+    IntervalDomain removedValues = null;
+    boolean removeUncounted = false;
+    for (int k = 0; k < count; k++) {
+      int a = removedArcs[k];
+      if (a == m) {
+        removeUncounted = true;
+      } else if (removed < 0) {
+        removed = values[a];
+      } else {
+        if (removedValues == null) {
+          removedValues = new IntervalDomain();
+          removedValues.unionAdapt(removed, removed);
+        }
+        removedValues.unionAdapt(values[a], values[a]);
+      }
+    }
+    if (removeUncounted) {
+      x.domain.in(store.level, x, valuesDomain);
+    }
+    if (removedValues != null) {
+      x.domain.in(store.level, x, x.dom().subtract(removedValues));
+    } else if (removed >= 0) {
+      x.domain.inComplement(store.level, x, removed);
+    }
   }
 
   /** {@link #prune(Store)} with the bit sets of the lists and of the components. */
@@ -1099,44 +1117,19 @@ public class GlobalCardinality extends Constraint
           break;
         }
       }
-      IntVar x = list[i];
       if (!inComponent) {
-        if (matched == m) {
-          x.domain.in(store.level, x, x.dom().subtract(valuesDomain));
-        } else {
-          x.domain.in(store.level, x, values[matched], values[matched]);
-        }
+        keepOnly(store, list[i], matched);
         continue;
       }
-      int removed = -1;
-      IntervalDomain removedValues = null;
-      boolean removeUncounted = false;
+      int count = 0;
       for (int w = 0; w < words; w++) {
         long bits = adjBits[base + w] & ~comp[cbase + w];
         while (bits != 0) {
-          int a = (w << 6) + Long.numberOfTrailingZeros(bits);
+          removedArcs[count++] = (w << 6) + Long.numberOfTrailingZeros(bits);
           bits &= bits - 1;
-          if (a == m) {
-            removeUncounted = true;
-          } else if (removed < 0) {
-            removed = values[a];
-          } else {
-            if (removedValues == null) {
-              removedValues = new IntervalDomain();
-              removedValues.unionAdapt(removed, removed);
-            }
-            removedValues.unionAdapt(values[a], values[a]);
-          }
         }
       }
-      if (removeUncounted) {
-        x.domain.in(store.level, x, valuesDomain);
-      }
-      if (removedValues != null) {
-        x.domain.in(store.level, x, x.dom().subtract(removedValues));
-      } else if (removed >= 0) {
-        x.domain.inComplement(store.level, x, removed);
-      }
+      removeArcs(store, list[i], count);
     }
     return pruned;
   }
