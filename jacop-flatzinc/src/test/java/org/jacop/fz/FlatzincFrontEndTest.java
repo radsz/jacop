@@ -6558,4 +6558,36 @@ class FlatzincFrontEndTest {
       System.setOut(originalOut);
     }
   }
+
+  @Test
+  void propagationUnderLazyClauseGenerationStopsAtTheTimeOut() throws IOException {
+    // b = true makes x < y < z < x, which fails only after the bounds have crept one unit per step
+    // across the wide domains, in one propagation of the store under lazy clause generation: it
+    // ran 14 s past -t 1000 in process and ran out of memory, since the trail records every step
+    // (a crawl of the propagation while the model is built stops at the time-out since 8004e83cc)
+    String model =
+        "var -500000000..500000000: x :: output_var;\n"
+            + "var -500000000..500000000: y :: output_var;\n"
+            + "var -500000000..500000000: z :: output_var;\n"
+            + "var 1..3: a :: output_var;\n"
+            + "var 1..3: c :: output_var;\n"
+            + "var bool: b :: output_var;\n"
+            + "constraint int_lin_le_reif([1,-1,1],[x,y,a],0,b);\n"
+            + "constraint int_lin_le([1,-1,1],[y,z,c],0);\n"
+            + "constraint int_lin_le([1,-1],[z,x],-1);\n"
+            + "solve :: bool_search([b],input_order,indomain_max,complete) satisfy;\n";
+    long start = System.nanoTime();
+    // a shorter time-out can pass while the model is built, before the search
+    String out = run(model, "-t", "3000", "--lcg", "on")[0];
+    long millis = (System.nanoTime() - start) / 1_000_000;
+    // the propagation stopped at the deadline is no failure: b = false has solutions
+    assertTrue(out.contains("=====UNKNOWN====="), out);
+    assertFalse(out.contains("=====UNSATISFIABLE====="), out);
+    // about 3 s; 40 s and an out of memory error before
+    assertTrue(millis < 15_000, millis + " ms");
+    // narrower domains: the propagation fails within the time-out, and b = false is the answer
+    String narrow = model.replace("-500000000..500000000", "-2000..2000");
+    out = run(narrow, "-t", "60000", "--lcg", "on")[0];
+    assertTrue(out.contains("b = false;\n----------\n"), out);
+  }
 }

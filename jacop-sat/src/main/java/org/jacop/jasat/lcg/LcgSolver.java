@@ -8354,6 +8354,7 @@ public final class LcgSolver implements ExternalPropagator {
 
   @Override
   public int propagate() {
+    propagationCut = false;
     if (failed) {
       return 0;
     }
@@ -8423,7 +8424,13 @@ public final class LcgSolver implements ExternalPropagator {
         }
       }
       numPending = 0;
-      if (!store.consistency()) {
+      int consistent = storeConsistency();
+      if (consistent < 0) {
+        // the propagation stopped at the deadline: no failure, and the solver stops with no answer
+        propagationCut = true;
+        return 0;
+      }
+      if (consistent == 0) {
         constraintConflicts++;
         EntryList atoms = failureAtoms;
         atoms.clear();
@@ -8458,6 +8465,57 @@ public final class LcgSolver implements ExternalPropagator {
           continue;
         }
         return conflict(atoms, 0);
+      }
+    }
+  }
+
+  // the consistency deadline of the store (System.currentTimeMillis()) for the deadline of the
+  // solver it was computed from
+  private long storeDeadline;
+  private long storeDeadlineOf = Long.MAX_VALUE;
+
+  // whether the last propagate() returned 0 at the deadline, inside the propagation of the store
+  private boolean propagationCut;
+
+  @Override
+  public boolean propagationCut() {
+    return propagationCut;
+  }
+
+  /**
+   * Propagates the store, which stops at the deadline of the solver: bounds that creep one unit per
+   * step between constraints (x &lt; y &lt; z &lt; x over wide domains) take one call minutes, and
+   * the trail records every step. A propagation stopped there is no failure.
+   *
+   * @return 1 at the fixpoint, 0 on a failure, -1 when the deadline stopped the propagation
+   */
+  private int storeConsistency() {
+    long deadline = sat.deadline();
+    boolean own =
+        deadline != Long.MAX_VALUE
+            && !CdclSolver.VIRTUAL_CLOCK
+            && store.getConsistencyDeadline() == 0;
+    if (own) {
+      if (deadline != storeDeadlineOf) {
+        storeDeadlineOf = deadline;
+        long left = Math.max(0, deadline - System.nanoTime());
+        storeDeadline = System.currentTimeMillis() + (left + 999_999) / 1_000_000;
+      }
+      store.setConsistencyDeadline(storeDeadline);
+    }
+    try {
+      if (store.consistency()) {
+        return 1;
+      }
+      if (store.isConsistencyDeadlinePassed()) {
+        // the queue of the store is kept: the next propagation goes on from there
+        store.isLastConsistencyFailure = false;
+        return -1;
+      }
+      return 0;
+    } finally {
+      if (own) {
+        store.setConsistencyDeadline(0);
       }
     }
   }
