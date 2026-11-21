@@ -453,6 +453,7 @@ public class VariablesParameters implements ParserTreeConstants {
         pose(store, new AeqS(aVar, setValue));
       } else {
         SetVar initSetVar = getSetFlatExpr_var(store, node, initChild);
+        table.noteDeclaredEquality(aVar, initSetVar);
         pose(store, new AeqB(aVar, initSetVar));
       }
     }

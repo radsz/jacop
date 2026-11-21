@@ -6234,4 +6234,34 @@ class FlatzincFrontEndTest {
     String[] out = run(model);
     assertTrue(out[0].contains("z = 2;") && out[0].contains("w = 1;"), out[0] + out[1]);
   }
+
+  @Test
+  void setUnionKeepsAnInnerUnionDeclaredEqualToAnOutput() throws IOException {
+    // w is declared equal to the inner union u3 of {e0} + ... + {e7}; the union chain was replaced
+    // by membership clauses on its root, u3 was left free and w was printed as 1..9
+    StringBuilder model = new StringBuilder();
+    for (int i = 0; i < 8; i++) {
+      model.append("var 1..9: e").append(i).append(" :: output_var;\n");
+      model.append("var set of 1..9: s").append(i).append(";\n");
+    }
+    for (int i = 1; i < 8; i++) {
+      model.append("var set of 1..9: u").append(i).append(";\n");
+    }
+    model.append("var set of 1..9: w :: output_var = u3;\n");
+    for (int i = 0; i < 8; i++) {
+      model.append("constraint set_card(s").append(i).append(", 1);\n");
+      model.append("constraint set_in(e").append(i).append(", s").append(i).append(");\n");
+    }
+    model.append("constraint set_union(s0, s1, u1);\n");
+    for (int i = 2; i < 8; i++) {
+      model.append("constraint set_union(u").append(i - 1).append(", s").append(i);
+      model.append(", u").append(i).append(");\n");
+    }
+    model.append("constraint int_lt(e0, e1);\n");
+    model.append("solve :: int_search([e0,e1,e2,e3,e4,e5,e6,e7], input_order, indomain_min,");
+    model.append(" complete) satisfy;\n");
+    String[] out = run(model.toString());
+    // e0 = 1, e1 = 2 and the others 1
+    assertTrue(out[0].contains("w = 1..2;"), out[0] + out[1]);
+  }
 }
