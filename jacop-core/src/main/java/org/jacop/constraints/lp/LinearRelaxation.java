@@ -30,7 +30,6 @@
 
 package org.jacop.constraints.lp;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -2358,37 +2357,71 @@ public class LinearRelaxation extends Constraint
   }
 
   // the distances of the candidates from the objective (byDistance)
+  // breadth first from the objective over the rows and their columns, with the columns numbered
+  // and the rows of each column in one array: the lists and boxed depths of each column took 5 s
+  // on the 4 million clause rows of MaxSAT 2021 haplotyping-pedigrees
   private static int[] distances(
       List<LinearForm> forms, List<LinearForm> candidates, IntVar objective) {
     List<LinearForm> all = new ArrayList<>(forms.size() + candidates.size());
     all.addAll(forms);
     all.addAll(candidates);
-    Map<IntVar, List<Integer>> rowsOf = new IdentityHashMap<>();
+    Map<IntVar, Integer> number = new IdentityHashMap<>();
+    number.put(objective, 0);
+    int[][] columns = new int[all.size()][];
+    int entries = 0;
     for (int i = 0; i < all.size(); i++) {
-      for (IntVar v : all.get(i).vars()) {
-        rowsOf.computeIfAbsent(v, k -> new ArrayList<>()).add(i);
+      IntVar[] vars = all.get(i).vars();
+      int[] c = new int[vars.length];
+      for (int k = 0; k < vars.length; k++) {
+        Integer n = number.get(vars[k]);
+        if (n == null) {
+          n = number.size();
+          number.put(vars[k], n);
+        }
+        c[k] = n;
+      }
+      columns[i] = c;
+      entries += c.length;
+    }
+    int n = number.size();
+    int[] start = new int[n + 1];
+    for (int[] c : columns) {
+      for (int v : c) {
+        start[v + 1]++;
+      }
+    }
+    for (int v = 0; v < n; v++) {
+      start[v + 1] += start[v];
+    }
+    int[] rowsOf = new int[entries];
+    int[] fill = Arrays.copyOf(start, n);
+    for (int i = 0; i < columns.length; i++) {
+      for (int v : columns[i]) {
+        rowsOf[fill[v]++] = i;
       }
     }
     int[] distance = new int[all.size()];
     Arrays.fill(distance, Integer.MAX_VALUE);
-    Set<IntVar> seen = Collections.newSetFromMap(new IdentityHashMap<>());
-    ArrayDeque<IntVar> queue = new ArrayDeque<>();
-    Map<IntVar, Integer> depth = new IdentityHashMap<>();
-    seen.add(objective);
-    depth.put(objective, 0);
-    queue.add(objective);
-    while (!queue.isEmpty()) {
-      IntVar v = queue.poll();
-      int d = depth.get(v);
-      for (int i : rowsOf.getOrDefault(v, List.of())) {
+    int[] depth = new int[n];
+    Arrays.fill(depth, -1);
+    int[] queue = new int[n];
+    int head = 0;
+    int tail = 0;
+    depth[0] = 0;
+    queue[tail++] = 0;
+    while (head < tail) {
+      int v = queue[head++];
+      int d = depth[v];
+      for (int r = start[v]; r < start[v + 1]; r++) {
+        int i = rowsOf[r];
         if (distance[i] != Integer.MAX_VALUE) {
           continue;
         }
         distance[i] = d;
-        for (IntVar u : all.get(i).vars()) {
-          if (seen.add(u)) {
-            depth.put(u, d + 1);
-            queue.add(u);
+        for (int u : columns[i]) {
+          if (depth[u] < 0) {
+            depth[u] = d + 1;
+            queue[tail++] = u;
           }
         }
       }
@@ -2843,6 +2876,24 @@ public class LinearRelaxation extends Constraint
     if (millis > 0) {
       largeRootNanos = (long) (millis * 1e6 * LARGE_ROOT_SHARE);
     }
+  }
+
+  // the time-out of the run, as System.nanoTime(): no root solve goes on past it
+  private long runDeadline = Long.MAX_VALUE;
+
+  /**
+   * Sets when the run ends: a root solve stops there with its status LIMIT, as at its own budget.
+   *
+   * @param nanoTime the time-out as given by {@link System#nanoTime()}
+   */
+  public void setDeadline(long nanoTime) {
+    runDeadline = nanoTime;
+  }
+
+  // whether the time-out of the run has passed: no root solve starts after it (a dense one is done
+  // in one call)
+  private boolean runDeadlinePassed() {
+    return runDeadline != Long.MAX_VALUE && System.nanoTime() - runDeadline > 0;
   }
 
   /**
@@ -3389,14 +3440,61 @@ public class LinearRelaxation extends Constraint
       rootBoundsAt = Arrays.copyOf(rootBoundsAt, 2 * rootBoundsSize);
       rootBoundsLevel = Arrays.copyOf(rootBoundsLevel, 2 * rootBoundsSize);
     }
+    // a skipped bound is not recorded, so a later call propagates the bound of its time
+    if (rootReducedSkips > 0) {
+      rootReducedSkips--;
+      rootReducedSkipped++;
+      return;
+    }
     rootBoundsAt[rootBoundsSize] = bound;
     rootBoundsLevel[rootBoundsSize++] = store.level;
+    rootReducedPasses++;
     long pruned = prunings;
-    for (int k = 0; k < rootForms.length; k++) {
-      propagate(store, rootForms[k], rootFacts[k], rootCertificates[k]);
+    boolean useful = true;
+    try {
+      long scanned = 0;
+      for (int k = 0; k < rootForms.length; k++) {
+        propagate(store, rootForms[k], rootFacts[k], rootCertificates[k]);
+        scanned += rootForms[k].vars().length;
+      }
+      // a pruning a pass scans more than ROOT_REDUCED_SCAN columns for counts as none: on a row
+      // of n columns whose bound moves at every decision, one pruning a pass is quadratic. A pass
+      // over fewer than ROOT_REDUCED_MIN_COLUMNS columns is cheap and always counts as useful
+      useful =
+          scanned < ROOT_REDUCED_MIN_COLUMNS || (prunings - pruned) * ROOT_REDUCED_SCAN >= scanned;
+    } finally {
+      // a pass that pruned (almost) nothing doubles the passes skipped before the next one, one
+      // that pruned or failed starts again at every change of the bound
+      rootReducedPeriod = useful ? 1 : Math.min(2 * rootReducedPeriod, ROOT_REDUCED_MAX_PERIOD);
+      rootReducedSkips = rootReducedPeriod - 1;
     }
     rootPrunings += prunings - pruned;
   }
+
+  // the bound of the objective changes not only with the solutions: under assumptions or
+  // decisions on its terms its upper bound falls at every one of them. In the core-guided phase on
+  // Security-CPS test61 (MaxSAT Evaluation 2021: 16,010 soft clauses, 20,347 columns), each call
+  // assumes the softs one by one and every assumption scanned the root forms again, without a
+  // pruning: 0.9 s a core instead of 0.23 s. Passes that prune nothing back off exponentially
+  private static final int ROOT_REDUCED_MAX_PERIOD = 128;
+
+  // the columns a pass may scan for each pruning it makes and still count as useful: units learnt
+  // at the root moved the bound of jacop_lex_less_int over 2 x 20,000 columns maximizing a sum
+  // 60,000 times, 46 s of passes over 40,000 columns
+  private static final int ROOT_REDUCED_SCAN = 64;
+
+  // the columns below which a pass never backs off: accap instance5 (MiniZinc Challenge 2019, 116
+  // columns) made 2 million passes, about a tenth of its time, and their 69 rare prunings found
+  // 114 in 600 s; backed off to 16,000 passes, one pruning and 134
+  private static final int ROOT_REDUCED_MIN_COLUMNS = 1000;
+  private int rootReducedPeriod = 1;
+  private int rootReducedSkips;
+
+  /** The passes of the root reduced costs skipped by their back-off. */
+  public long rootReducedSkipped;
+
+  /** The passes of the root reduced costs made. */
+  public long rootReducedPasses;
 
   // whether the bounds of a column other than the objective are tighter than at the last solve at
   // the root level: with only the bound of the objective changed, a solve again finds the same
@@ -4203,6 +4301,9 @@ public class LinearRelaxation extends Constraint
   }
 
   private int rootSolve(LpSolver s, int pivots, long work, long nanos) {
+    if (runDeadlinePassed()) {
+      return LpSolver.LIMIT;
+    }
     if (s instanceof DualSimplex) {
       return s.solve(pivots);
     }
@@ -4219,6 +4320,9 @@ public class LinearRelaxation extends Constraint
       pivots = Integer.MAX_VALUE;
       work = Long.MAX_VALUE;
       nanos = Math.max(0, largeDeadline - now);
+    }
+    if (runDeadline != Long.MAX_VALUE) {
+      nanos = Math.min(nanos, Math.max(0, runDeadline - System.nanoTime()));
     }
     return solveWithin(s, pivots, work, nanos);
   }
@@ -6733,6 +6837,9 @@ public class LinearRelaxation extends Constraint
   // a root solve within at most the given pivots and nanoseconds, also on a large relaxation (whose
   // root solves otherwise share the time of its root)
   private int rootSolveCapped(LpSolver s, int pivots, long nanos) {
+    if (runDeadlinePassed()) {
+      return LpSolver.LIMIT;
+    }
     if (s instanceof DualSimplex) {
       return s.solve(pivots);
     }
@@ -6743,6 +6850,9 @@ public class LinearRelaxation extends Constraint
         largeDeadline = now + largeRootNanos;
       }
       cap = Math.min(cap, Math.max(0, largeDeadline - now));
+    }
+    if (runDeadline != Long.MAX_VALUE) {
+      cap = Math.min(cap, Math.max(0, runDeadline - System.nanoTime()));
     }
     return solveWithin(s, pivots, rootWork(), cap);
   }

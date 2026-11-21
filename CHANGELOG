@@ -8717,7 +8717,71 @@ Version 5.0 (unreleased)
    fome12 111 -> 60 s, sgpf5y6 62 -> 30 s.
    -Dorg.jacop.jalp.presolveAggregate=false turns it off.
 
-488. Under LCG, the runs of a model's search annotation take the assignment
+488. The FlatZinc front end skips a model rewriting pass when the model has
+   none of the constraints it rewrites (cyclic distance, min of sums,
+   product of sums, weighted completion, giant tour, table variable
+   elimination, index function, index disjunction, numbered path, partial
+   copy, set union): one scan of the constraint names instead of a pass
+   over the model each. The pair cliques and the distance of the linear
+   relaxation use primitive hash sets and arrays instead of boxed maps,
+   and affine folding builds its occurrence map only when it has a
+   definition. On 29 MaxSAT Evaluation 2021 models with the slowest
+   set-up, the set-up at 600 s takes 1,083 s instead of 2,239 s in all
+   (protein p1 315 -> 44 s, ar-2 108 -> 65 s), and two rna-alignment
+   models now find a solution. Wide-quick set at 240 s: the same 46
+   instances solved, total time 4,007 -> 3,987 s.
+   -Dorg.jacop.fz.detectorGates=false runs every pass as before.
+
+489. Float optimisation. Free search (-f) splits the float variables of the
+   model before the ones MiniZinc introduced for intermediate results
+   (var_is_introduced, is_defined_var), largest domain first in each group
+   (-Dorg.jacop.fz.floatDecisionFirst=false splits by largest domain over
+   all): on hart6 it split the exponentials, declared var float, and found
+   no solution in 300 s. A model whose float constraints are all linear
+   rows of the float relaxation (LinearFloatRelaxation.isLinearModel)
+   bisects the objective from the point of the relaxation from the start,
+   also under its annotated search: transp1 (61 equations, 100
+   inequalities) proved in 77 nodes, before stuck at 199,697.9 against the
+   optimum 199,693.06. The statistics of the float relaxation and of the
+   float dives (floatLp*, floatDive*) are JaCoP's own statistics, printed
+   with -s -v or --search-statistics, no longer with -s alone. Float set
+   (osolpro benchmarks/float-set) at 240 s: float-quick -f 28 -> 31 solved,
+   total time 0.88; the 22 linear float optimisation models 16 -> 18
+   proved, total time 0.66 default, 0.61 -f.
+
+490. A reified MiniZinc count with a variable value (count_eq_reif, and
+   b -> count(x, y) = c, which MiniZinc posts through it) is decomposed in
+   JaCoP's MiniZinc library into the literals x[i] = y and a reified sum,
+   instead of Reified(CountVar). MiniZinc shares the literal of two
+   variables between the counts that compare them, such as the neighbour
+   colours of a grid, and lazy clause generation learns on these literals.
+   Amaze (MiniZinc Challenge 2012, 2014 and 2019) and harmony (2024), the
+   only Challenge models that reach this constraint, 22 instances at 240 s:
+   default (model search) total 695 -> 490 s (2012 amaze 2012-06-29
+   183 -> 10 s, 2014 amaze mod2012-06-22 35 -> 8 s), -f 344 -> 286 s
+   (2012 amaze 2012-03-08 now proved in 181 s), --lcg off 1,405 -> 1,261 s;
+   at 600 s default 1,050 -> 906 s and -f 261 -> 220 s.
+
+491. Free search (-f) on optimisation problems can alternate LCG and free
+   search without learning in slices instead of handing over for good
+   (--free-config lcg-cop-slices=1, off by default), as jacop #888 does for
+   satisfaction problems. When LCG gives way as slow with a solution, free
+   search without learning runs in a store level the LCG solver lends
+   (LcgSolver.lend) for as long as LCG ran; while a slice improves the best
+   solution another slice follows, and after a slice without a better one
+   LCG goes on under the best cost with its learnt clauses, for twice its
+   earlier time. A turn of LCG that neither raises the bound nor improves
+   the best solution hands the rest of the time to free search. The
+   neighbourhoods of free search start from LCG's best solution and from
+   each better one an LCG turn finds (lcg-cop-hint, on). 26 instances of
+   the wide set and XCSP 2025 where LCG gives way with a solution, 600 s
+   -f: total time 4,609 -> 4,450 s, proved 9 -> 10 (XCSP 2025 Coprime-20,
+   122 s); better cargo challenge16 (129,647 -> 124,041), opd, saeling,
+   stable-goods s-d19; worse ihtc-2024 i09 (4,115 -> 4,355) and i01
+   (4,333 -> 4,637), unit-commitment L12, warehouse olil4. Wide-quick set
+   at 240 s: the slices start on 2 of 62 instances.
+
+492. Under LCG, the runs of a model's search annotation take the assignment
    as a solution in more cases once the annotation has fixed its
    variables: the linear relaxation no longer counts as an open
    constraint (its rows are combinations of the model's constraints), and

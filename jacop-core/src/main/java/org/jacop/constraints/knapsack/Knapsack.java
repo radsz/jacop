@@ -125,6 +125,13 @@ public class Knapsack extends Constraint
   private TimeStampInt positionOfCriticalItem;
 
   /**
+   * The store level at which the constraint was imposed. Removing that level removes the constraint
+   * and empties the timestamps made by impose, so the levels removed from then on are ignored until
+   * the constraint is imposed again.
+   */
+  private int imposedAt;
+
+  /**
    * It stores all the leaves of the knapsack tree in one array. The leaves are sorted from the most
    * efficient to the least efficient.
    */
@@ -288,8 +295,17 @@ public class Knapsack extends Constraint
     for (int i = 0; i < quantity.length; i++) {
       if (itemPar.get(quantity[i]) != null) {
         KnapsackItem ki = itemPar.get(quantity[i]);
-        int nw = ki.getWeight() + weights[i];
-        int np = ki.getProfit() + profits[i];
+        int nw;
+        int np;
+        try {
+          nw = Math.addExact(ki.getWeight(), weights[i]);
+          np = Math.addExact(ki.getProfit(), profits[i]);
+        } catch (ArithmeticException _) {
+          throw new IllegalArgumentException(
+              "Knapsack: the weights or profits of "
+                  + quantity[i]
+                  + ", listed twice, exceed an int");
+        }
         itemPar.put(quantity[i], new KnapsackItem(quantity[i], nw, np));
       } else {
         itemPar.put(quantity[i], new KnapsackItem(quantity[i], weights[i], profits[i]));
@@ -330,6 +346,12 @@ public class Knapsack extends Constraint
 
     if (positionOfCriticalItem == null) {
       // impose found the constraint inconsistent, so the tree is never updated
+      return;
+    }
+
+    if (level <= imposedAt) {
+      // the constraint went with the level of its imposition
+      imposedAt = Integer.MAX_VALUE;
       return;
     }
 
@@ -879,6 +901,15 @@ public class Knapsack extends Constraint
   public void impose(Store store) {
 
     store.registerRemoveLevelLateListener(this);
+    imposedAt = store.level;
+
+    // an object imposed again (LcgSolver.lend, release) starts afresh
+    impositionFailure = false;
+    positionOfCriticalItem = null;
+    pendingLevel = Integer.MAX_VALUE;
+    positionOfAlreadyUpdated = 0;
+    inConsistency = false;
+    setFlagsForCapacityOrProfit();
 
     hashForUpdate = new HashMap<>();
 

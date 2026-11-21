@@ -63,8 +63,20 @@ class StatisticsOptionFlatzincTest {
       solve maximize obj;
       """;
 
+  // minimise 2x + 3y with x + y >= 4: a float objective with a linear relaxation
+  private static final String FLOAT_MODEL =
+      """
+      var 0.0..10.0: x :: output_var;
+      var 0.0..10.0: y :: output_var;
+      var -100.0..100.0: c :: output_var;
+      constraint float_lin_le([-1.0,-1.0],[x,y],-4.0);
+      constraint float_lin_eq([2.0,3.0,-1.0],[x,y,c],0.0);
+      solve minimize c;
+      """;
+
   private static final Pattern EXTRA =
-      Pattern.compile("%%%mzn-stat: (lcg|presolve|lp|lns|ls|symmetry|probe|portfolio)[A-Z]");
+      Pattern.compile(
+          "%%%mzn-stat: (lcg|presolve|lp|lns|ls|symmetry|probe|portfolio|floatLp|floatDive)[A-Z]");
 
   @TempDir Path tmp;
 
@@ -90,9 +102,28 @@ class StatisticsOptionFlatzincTest {
     assertTrue(out.contains("%%%mzn-stat: lcgRestarts="), out);
   }
 
+  /**
+   * The statistics of the float relaxation (floatLpRows, ...) are JaCoP's own: -s alone printed
+   * them, as Krzysztof Kuchcinski found on a float model run from the MiniZinc IDE.
+   */
+  @Test
+  void floatRelaxationStatisticsNeedVerbose() throws IOException {
+    String out = solveModel(FLOAT_MODEL, "-s");
+    assertTrue(out.contains("%%%mzn-stat: peakDepth="), out);
+    assertFalse(EXTRA.matcher(out).find(), out);
+    out = solveModel(FLOAT_MODEL, "-s", "-v");
+    assertTrue(out.contains("%%%mzn-stat: floatLpRows="), out);
+    out = solveModel(FLOAT_MODEL);
+    assertFalse(out.contains("%%%mzn-stat"), out);
+  }
+
   private String solve(String... options) throws IOException {
+    return solveModel(MODEL, options);
+  }
+
+  private String solveModel(String model, String... options) throws IOException {
     Path fzn = tmp.resolve("model.fzn");
-    Files.writeString(fzn, MODEL, StandardCharsets.UTF_8);
+    Files.writeString(fzn, model, StandardCharsets.UTF_8);
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     PrintStream originalOut = System.out;
     String[] args = Arrays.copyOf(options, options.length + 1);

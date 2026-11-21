@@ -404,7 +404,7 @@ public class EnforcementInliner implements ParserTreeConstants {
         }
         return;
       }
-      add(support.dictionary.getVariable(e.getIdent()), out);
+      add(support.dictionary.getVariable(e), out);
     } else if (e.getType() == 3
         && support.dictionary.getDeclaredVariableArray(e.getIdent()) != null) {
       add(support.getVariable(e), out);
