@@ -295,7 +295,12 @@ public final class CoreSearch {
     if (!terms.equals(blocks)) {
       // grouped now, as before #313's rework: the probes then have the time of the whole run, not
       // the share of the phase (spot5 28: 58 groups and a proof in 7 s, against 6 groups)
-      search.addTermSofts();
+      // the soft literals of a large objective take seconds (traveling-tppv circ20inonbal: 1.3 s
+      // past -t 10 s): past the solver's deadline there is no core-guided phase, unless a proof
+      // has the lines of the soft literals already
+      if (!search.addTermSofts(search.proof == null ? search.sat.deadline() : Long.MAX_VALUE)) {
+        return null;
+      }
       search.group();
     }
     return search;
@@ -556,7 +561,7 @@ public final class CoreSearch {
     }
     if (threshold < 0) {
       if (!grouped) {
-        addTermSofts();
+        addTermSofts(Long.MAX_VALUE);
       }
       if (!grouped && !group()) {
         return lcg.bestObjective() == Long.MAX_VALUE ? CdclSolver.UNSAT : CdclSolver.SAT;
@@ -708,10 +713,14 @@ public final class CoreSearch {
    * example observations that cannot share an instrument. Both covers are computed, and the one
    * with the larger bound is kept. Returns false when the solver is unsatisfiable at the root.
    */
-  private void addTermSofts() {
+  private boolean addTermSofts(long deadline) {
     for (int t = 0; t < termVar.length; t++) {
+      if ((t & 255) == 255 && sat.now() > deadline) {
+        return false; // some terms have no soft literal: the search is not to be used
+      }
       addTermSoft(t, 1, termWeight[t]);
     }
+    return true;
   }
 
   private boolean relaxAtMostOnes() {

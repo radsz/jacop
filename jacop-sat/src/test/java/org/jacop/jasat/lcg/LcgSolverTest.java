@@ -6924,4 +6924,42 @@ class LcgSolverTest {
       }
     }
   }
+
+  /**
+   * The soft literals of the terms of a large objective took 1.3 s past -t 10 s in CoreSearch.of
+   * (traveling-tppv circ20inonbal); past the solver's deadline the core-guided phase is not taken.
+   */
+  @Test
+  void coreSearchIsNotTakenPastTheDeadline() {
+    for (boolean late : new boolean[] {false, true}) {
+      Store store = new Store();
+      int n = 300;
+      IntVar[] sums = new IntVar[2];
+      for (int s = 0; s < 2; s++) {
+        IntVar[] terms = new IntVar[n + 1];
+        int[] weights = new int[n + 1];
+        for (int i = 0; i < n; i++) {
+          terms[i] = new IntVar(store, "b" + s + "_" + i, 0, 1);
+          weights[i] = 1;
+        }
+        sums[s] = new IntVar(store, "s" + s, 0, n);
+        terms[n] = sums[s];
+        weights[n] = -1;
+        store.impose(new LinearInt(terms, weights, "==", 0));
+      }
+      IntVar obj = new IntVar(store, "obj", 0, 2 * n);
+      store.impose(
+          new LinearInt(new IntVar[] {sums[0], sums[1], obj}, new int[] {1, 1, -1}, "==", 0));
+      LcgSolver solver = new LcgSolver(store);
+      if (late) {
+        solver.sat().setDeadline(solver.sat().now() - 1);
+      }
+      CoreSearch cores = CoreSearch.of(solver, obj);
+      if (late) {
+        assertThat(cores).isNull();
+      } else {
+        assertThat(cores).isNotNull();
+      }
+    }
+  }
 }
