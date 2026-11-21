@@ -294,6 +294,11 @@ class LcgSlowFallbackFlatzincTest {
 
   @Test
   void satisfactionSolvedAfterGivingWay() throws IOException {
+    // lazy clause generation is under test: the model is not compiled to clauses
+    ClausalOff.run(this::satisfactionSolvedAfterGivingWayBody);
+  }
+
+  private void satisfactionSolvedAfterGivingWayBody() throws IOException {
     // 40 queens (8 are solved before LCG starts); lcg-sat-at=0 gives way after LCG's root
     // propagation, and search without learning
     // must print a solution of the model
@@ -386,6 +391,11 @@ class LcgSlowFallbackFlatzincTest {
 
   @Test
   void satisfactionProvedUnsatisfiableAcrossSlices() throws IOException {
+    // lazy clause generation is under test: the model is not compiled to clauses
+    ClausalOff.run(this::satisfactionProvedUnsatisfiableAcrossSlicesBody);
+  }
+
+  private void satisfactionProvedUnsatisfiableAcrossSlicesBody() throws IOException {
     // 9 pigeons in 8 holes, each difference a variable without 0, which presolve does not read as
     // an all-different: the proof needs search. Slices of 1 ms of search without learning
     // alternate with LCG from the first probe, and the answer must be unsatisfiable whichever of

@@ -3765,9 +3765,14 @@ class FlatzincFrontEndTest {
 
   @Test
   void lcgFreeSearchReturnsToClausesAfterEachPruningOnSatisfactionModels() throws IOException {
+    // lazy clause generation is under test: the model is not compiled to clauses
+    ClausalOff.run(this::lcgFreeSearchReturnsToClausesAfterEachPruningOnSatisfactionModelsBody);
+  }
+
+  private void lcgFreeSearchReturnsToClausesAfterEachPruningOnSatisfactionModelsBody()
+      throws IOException {
     // the full fixpoint of the store (#317) paid on optimisation models but not on satisfaction
-    // models: nonogram non_fast_3 took 39 to 57 s instead of 4 to 6 s; four values, so the model
-    // is not compiled to clauses (org.jacop.fz.clausal.maxDomain)
+    // models: nonogram non_fast_3 took 39 to 57 s instead of 4 to 6 s
     String model =
         """
         var 1..4: x :: output_var;
