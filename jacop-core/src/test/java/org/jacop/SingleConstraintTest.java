@@ -12396,6 +12396,34 @@ class SingleConstraintTest extends TestHelper {
   }
 
   /**
+   * AllDifferentLists imposed again after its removal at the root (LcgSolver.lend) kept the rows
+   * fixed by the first imposition, and found row 1 = (0, 0) a duplicate of itself.
+   */
+  @Test
+  void allDifferentListsImposedAgainStartsFromNoRow() {
+    Store store = new Store();
+    IntVar[][] x = {
+      {new IntVar(store, "a0", 0, 0), new IntVar(store, "a1", 0, 2)},
+      {new IntVar(store, "b0", 0, 2), new IntVar(store, "b1", 0, 2)},
+      {new IntVar(store, "c0", 1, 2), new IntVar(store, "c1", 1, 2)},
+      {new IntVar(store, "d0", 2, 2), new IntVar(store, "d1", 0, 2)}
+    };
+    x[0][1].domain.in(0, x[0][1], 2, 2);
+    x[1][0].domain.in(0, x[1][0], 0, 0);
+    AllDifferentLists c = new AllDifferentLists(x);
+    store.impose(c);
+    assertThat(store.consistency()).isTrue();
+    c.removeConstraint();
+    x[1][1].domain.in(0, x[1][1], 0, 0);
+    x[3][1].domain.in(0, x[3][1], 0, 0);
+    store.setLevel(1);
+    store.clearEntailed(c);
+    store.impose(c);
+    assertThat(store.consistency()).isTrue();
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(4);
+  }
+
+  /**
    * LexOrder imposed again after its removal at the root (LcgSolver.release, with the constraint as
    * clauses) did not run the work of its first consistency call again, which sets the positions it
    * compares, and never compared its vectors: 192 solutions for 84.
