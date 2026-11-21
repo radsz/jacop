@@ -73,6 +73,7 @@ import org.jacop.set.constraints.SetMirror;
 import org.jacop.set.constraints.SumWeightedSet;
 import org.jacop.set.constraints.XinA;
 import org.jacop.set.core.BoundSetDomain;
+import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 import org.junit.jupiter.api.Test;
 
@@ -1288,5 +1289,39 @@ class SingleConstraintTest {
       }
     }
     return vars;
+  }
+
+  /** A change of both bounds of a set (event BOUND) wakes a constraint watching the glb or lub. */
+  @Test
+  void boundEventOfASetWakesGlbAndLubSubscribers() {
+    for (int event : new int[] {SetDomain.GLB_EVENT, SetDomain.LUB_EVENT}) {
+      Store store = new Store();
+      SetVar a = new SetVar(store, "a", new BoundSetDomain(dom(), dom(1, 2, 3, 4, 5)));
+      int[] calls = {0};
+      Constraint watcher =
+          new Constraint() {
+            {
+              setScope(a);
+            }
+
+            @Override
+            public void consistency(Store s) {
+              calls[0]++;
+            }
+
+            @Override
+            public int getDefaultConsistencyPruningEvent() {
+              return event;
+            }
+          };
+      store.impose(watcher);
+      assertThat(store.consistency()).isTrue();
+      int before = calls[0];
+      store.setLevel(1);
+      // the glb gains 1 and the lub loses 5 at once
+      a.domain.in(1, a, dom(1), dom(1, 2, 3, 4));
+      assertThat(store.consistency()).isTrue();
+      assertThat(calls[0]).as("event " + event).isGreaterThan(before);
+    }
   }
 }

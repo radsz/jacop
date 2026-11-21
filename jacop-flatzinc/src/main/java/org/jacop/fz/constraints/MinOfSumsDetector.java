@@ -58,6 +58,7 @@ import org.jacop.fz.SimpleNode;
  * @version 5.0
  */
 public class MinOfSumsDetector implements ParserTreeConstants {
+  private static final Set<String> KINDS = Set.of("int_min", "jacop_minimum");
 
   private final Support support;
 
@@ -99,6 +100,10 @@ public class MinOfSumsDetector implements ParserTreeConstants {
    * @return the minimum and sum constraint nodes it replaces, which must not be posted.
    */
   public Set<SimpleNode> detect(SimpleNode astTree) {
+    // the sums are merged only below a minimum
+    if (!support.hasConstraint(astTree, KINDS)) {
+      return new HashSet<>();
+    }
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {
@@ -145,8 +150,7 @@ public class MinOfSumsDetector implements ParserTreeConstants {
             && !support.dictionary.isOutput(z)
             && s.x() != m
             && s.y() != m
-            && (long) z.min() <= (long) s.x().min() + s.y().min()
-            && (long) z.max() >= (long) s.x().max() + s.y().max()) {
+            && holdsEverySum(z, s)) {
           x[i] = s.x();
           y[i] = s.y();
           parts.add(s.node());
@@ -225,6 +229,14 @@ public class MinOfSumsDetector implements ParserTreeConstants {
       return;
     }
     sums.put(z, new Sum(p, q, node));
+  }
+
+  // whether the domain of z holds every value of x + y, so that the sum can go without z: a hole
+  // in the domain of z is a constraint on x and y
+  private static boolean holdsEverySum(IntVar z, Sum s) {
+    long lo = (long) s.x().min() + s.y().min();
+    long hi = (long) s.x().max() + s.y().max();
+    return z.min() <= lo && z.max() >= hi && z.dom().contains((int) lo, (int) hi);
   }
 
   private IntVar variable(SimpleNode node, int i) {

@@ -232,7 +232,7 @@ public class HybridTable extends Constraint
   private int queueSize;
   private boolean[] queued;
   private boolean pruning;
-  private final InitOnce init = new InitOnce();
+  private InitOnce init = new InitOnce();
 
   /** The explanations for lazy clause generation, made on first use. */
   private TableExplanation explanation;
@@ -569,6 +569,8 @@ public class HybridTable extends Constraint
     // an imposition again (LcgSolver.release hands a held table back to the store) starts with an
     // empty queue: the columns queued by the first one were never taken off it
     queueSize = 0;
+    // and with a new set of valid tuples, so the first full filtering is due again
+    init = new InitOnce();
     buildIndex();
 
     state = valid.state;

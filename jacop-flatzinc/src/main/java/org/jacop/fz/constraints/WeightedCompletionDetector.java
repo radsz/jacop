@@ -83,6 +83,7 @@ import org.jacop.fz.SimpleNode;
  * @version 5.0
  */
 public class WeightedCompletionDetector implements ParserTreeConstants {
+  private static final Set<String> KINDS = Set.of("jacop_cumulative");
 
   // longest path relaxations per term, a guard against large difference graphs and positive cycles
   private static final int PATH_BUDGET = 200_000;
@@ -204,6 +205,10 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
+    // the completion times are of tasks on a resource
+    if (support.unaryResources.isEmpty() && !support.hasConstraint(astTree, KINDS)) {
+      return;
+    }
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {

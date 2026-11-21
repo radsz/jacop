@@ -245,8 +245,9 @@ public class LinearFloatRelaxation extends Constraint {
     List<double[]> weights = new ArrayList<>();
     List<double[]> sides = new ArrayList<>();
     List<FloatVar[]> products = new ArrayList<>();
+    boolean allRows = true;
     for (Constraint c : constraintsOf(store)) {
-      addRow(c, vars, weights, sides);
+      allRows &= addRow(c, vars, weights, sides);
       if (PRODUCT_ENVELOPES && c instanceof PmulQeqR p) {
         // SqrtPeqR(x, r) is PmulQeqR(r, r, x)
         products.add(new FloatVar[] {p.p, p.q, p.r});
@@ -272,13 +273,27 @@ public class LinearFloatRelaxation extends Constraint {
       lo[i] = sides.get(i)[0];
       hi[i] = sides.get(i)[1];
     }
-    return new LinearFloatRelaxation(
-        vars.toArray(new FloatVar[0][]),
-        weights.toArray(new double[0][]),
-        lo,
-        hi,
-        products.toArray(new FloatVar[0][]),
-        cost);
+    LinearFloatRelaxation relaxation =
+        new LinearFloatRelaxation(
+            vars.toArray(new FloatVar[0][]),
+            weights.toArray(new double[0][]),
+            lo,
+            hi,
+            products.toArray(new FloatVar[0][]),
+            cost);
+    relaxation.linearModel = allRows && products.isEmpty();
+    return relaxation;
+  }
+
+  /**
+   * Tells whether the relaxation is the whole model over the float variables: every constraint on
+   * them is one of its rows and none is a product. Its optimum is then the optimum of the model,
+   * within the tolerance of the simplex, and its point is a solution whenever it is in the domains.
+   *
+   * @return true if every constraint of the float variables is a linear row of the relaxation
+   */
+  public boolean isLinearModel() {
+    return linearModel;
   }
 
   private static Set<Constraint> constraintsOf(Store store) {
@@ -296,7 +311,8 @@ public class LinearFloatRelaxation extends Constraint {
     return constraints;
   }
 
-  private static void addRow(
+  // adds the row of a constraint, and tells whether it had one
+  private static boolean addRow(
       Constraint c, List<FloatVar[]> vars, List<double[]> weights, List<double[]> sides) {
     double inf = Double.POSITIVE_INFINITY;
     switch (c) {
@@ -317,7 +333,7 @@ public class LinearFloatRelaxation extends Constraint {
             hi = inf;
           }
           default -> {
-            return;
+            return false;
           }
         }
         vars.add(l.list.clone());
@@ -341,8 +357,10 @@ public class LinearFloatRelaxation extends Constraint {
       }
       default -> {
         // not linear, or not a row of float variables
+        return false;
       }
     }
+    return true;
   }
 
   @Override
@@ -355,6 +373,9 @@ public class LinearFloatRelaxation extends Constraint {
   private static final int USELESS = 200;
 
   private boolean off;
+
+  // every constraint of the float variables is a linear row (isLinearModel)
+  private boolean linearModel;
 
   @Override
   public void consistency(Store store) {

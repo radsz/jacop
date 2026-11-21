@@ -122,8 +122,8 @@ public class XplusClteqZ extends AbstractConstraintXandCandZ
       return;
     }
 
-    x.domain.inMax(store.level, x, z.max() - c);
-    z.domain.inMin(store.level, z, x.min() + c);
+    x.domain.inMax(store.level, x, long2int((long) z.max() - c));
+    z.domain.inMin(store.level, z, long2int((long) x.min() + c));
     // entailed: further bound changes cannot prune, so the constraint is not woken again
     if ((long) x.max() + c <= z.min()) {
       removeConstraint();
@@ -139,8 +139,8 @@ public class XplusClteqZ extends AbstractConstraintXandCandZ
       return;
     }
 
-    x.domain.inMin(store.level, x, z.min() - c + 1);
-    z.domain.inMax(store.level, z, x.max() + c - 1);
+    x.domain.inMin(store.level, x, long2int((long) z.min() - c + 1));
+    z.domain.inMax(store.level, z, long2int((long) x.max() + c - 1));
   }
 
   @Override
@@ -148,7 +148,7 @@ public class XplusClteqZ extends AbstractConstraintXandCandZ
     if (x == z) {
       return c > 0;
     }
-    return x.min() + c > z.max();
+    return (long) x.min() + c > z.max();
   }
 
   @Override
@@ -156,7 +156,7 @@ public class XplusClteqZ extends AbstractConstraintXandCandZ
     if (x == z) {
       return c <= 0;
     }
-    return x.max() + c <= z.min();
+    return (long) x.max() + c <= z.min();
   }
 
   @Override

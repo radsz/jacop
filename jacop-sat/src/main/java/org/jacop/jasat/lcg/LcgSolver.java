@@ -69,6 +69,7 @@ import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.binpacking.Binpacking;
+import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.constraints.regular.LayeredGraphConstraint;
@@ -1003,6 +1004,14 @@ public final class LcgSolver implements ExternalPropagator {
     model.variables();
     for (Constraint c : constraints) {
       model.constraint(c);
+      if (c instanceof Cumulative cumulative) {
+        // some reasons of time-table edge finding and time-table disjunctive reasoning need a case
+        // split over starts that neither unit propagation on the load lines nor the sum of one
+        // overloaded window (proofEnergy) gives, and VeriPB rejected proofs of rectangle-packing
+        // and pillars-and-planks at them; the time-table, overload and edge-finding rules stay
+        cumulative.doTimeTableEdgeFind(false);
+        cumulative.doTimeTableDisjunctive(false);
+      }
     }
     for (IntVar[][] clause : proofClauses) {
       model.solverClause(clause[0], clause[1]);
@@ -7029,6 +7038,11 @@ public final class LcgSolver implements ExternalPropagator {
    *     more than limit
    */
   static Optional<List<long[]>> forbiddenPrimeCubes(boolean[] allowed, int n, int limit) {
+    // the merging below costs seconds on a random table of 12 columns, most often to find more
+    // than limit prime cubes (bt_12: 60 such tables); counting them first over an array is fast
+    if (n <= PRIME_COUNT_ARITY && forbiddenPrimeCount(allowed, n, limit) > limit) {
+      return Optional.empty();
+    }
     int full = (1 << n) - 1;
     Set<Long> level = new HashSet<>();
     for (int p = 0; p < allowed.length; p++) {
@@ -7066,6 +7080,58 @@ public final class LcgSolver implements ExternalPropagator {
       level = next;
     }
     return Optional.of(primes);
+  }
+
+  /** The most columns whose prime cubes {@link #forbiddenPrimeCount} counts (3^13 cubes). */
+  private static final int PRIME_COUNT_ARITY = 13;
+
+  /**
+   * The number of prime cubes of the points of {0,1}^n that are not allowed, or a number above
+   * limit once there are more. A cube is a base-3 number whose digit b is 0 or 1 for a coordinate
+   * fixed to that value and 2 for a free one; it is an implicant when its point is not allowed, or
+   * when both cubes with its lowest free coordinate fixed are, and prime when no fixed coordinate
+   * can be freed.
+   */
+  static int forbiddenPrimeCount(boolean[] allowed, int n, int limit) {
+    int[] pow = new int[n + 1];
+    pow[0] = 1;
+    for (int b = 0; b < n; b++) {
+      pow[b + 1] = pow[b] * 3;
+    }
+    boolean[] implicant = new boolean[pow[n]];
+    for (int c = 0; c < pow[n]; c++) {
+      int x = c;
+      int free = -1;
+      int point = 0;
+      for (int b = 0; b < n; b++, x /= 3) {
+        int d = x % 3;
+        if (d == 2) {
+          if (free < 0) {
+            free = b;
+          }
+        } else if (d == 1) {
+          point |= 1 << b;
+        }
+      }
+      implicant[c] =
+          free < 0 ? !allowed[point] : implicant[c - 2 * pow[free]] && implicant[c - pow[free]];
+    }
+    int count = 0;
+    for (int c = 0; c < pow[n]; c++) {
+      if (!implicant[c]) {
+        continue;
+      }
+      boolean prime = true;
+      int x = c;
+      for (int b = 0; b < n && prime; b++, x /= 3) {
+        int d = x % 3;
+        prime = d == 2 || !implicant[c + (2 - d) * pow[b]];
+      }
+      if (prime && ++count > limit) {
+        return count;
+      }
+    }
+    return count;
   }
 
   /** Whether every variable of the model has at most two values, so that it is a 0/1 CNF. */
@@ -8391,6 +8457,15 @@ public final class LcgSolver implements ExternalPropagator {
     sat.cancel();
   }
 
+  /**
+   * Takes back {@link #stop()}, for a solver that searches again after a slice of another search: a
+   * later {@link #solve} or {@link #minimize} runs with the learnt clauses kept.
+   */
+  public void unstop() {
+    stopRequested = false;
+    sat.uncancel();
+  }
+
   @Override
   public int[] externalClause() {
     if (structural.isEmpty()
@@ -8488,6 +8563,7 @@ public final class LcgSolver implements ExternalPropagator {
 
   @Override
   public int propagate() {
+    propagationCut = false;
     if (failed) {
       return 0;
     }
@@ -8557,7 +8633,13 @@ public final class LcgSolver implements ExternalPropagator {
         }
       }
       numPending = 0;
-      if (!store.consistency()) {
+      int consistent = storeConsistency();
+      if (consistent < 0) {
+        // the propagation stopped at the deadline: no failure, and the solver stops with no answer
+        propagationCut = true;
+        return 0;
+      }
+      if (consistent == 0) {
         constraintConflicts++;
         EntryList atoms = failureAtoms;
         atoms.clear();
@@ -8592,6 +8674,57 @@ public final class LcgSolver implements ExternalPropagator {
           continue;
         }
         return conflict(atoms, 0);
+      }
+    }
+  }
+
+  // the consistency deadline of the store (System.currentTimeMillis()) for the deadline of the
+  // solver it was computed from
+  private long storeDeadline;
+  private long storeDeadlineOf = Long.MAX_VALUE;
+
+  // whether the last propagate() returned 0 at the deadline, inside the propagation of the store
+  private boolean propagationCut;
+
+  @Override
+  public boolean propagationCut() {
+    return propagationCut;
+  }
+
+  /**
+   * Propagates the store, which stops at the deadline of the solver: bounds that creep one unit per
+   * step between constraints (x &lt; y &lt; z &lt; x over wide domains) take one call minutes, and
+   * the trail records every step. A propagation stopped there is no failure.
+   *
+   * @return 1 at the fixpoint, 0 on a failure, -1 when the deadline stopped the propagation
+   */
+  private int storeConsistency() {
+    long deadline = sat.deadline();
+    boolean own =
+        deadline != Long.MAX_VALUE
+            && !CdclSolver.VIRTUAL_CLOCK
+            && store.getConsistencyDeadline() == 0;
+    if (own) {
+      if (deadline != storeDeadlineOf) {
+        storeDeadlineOf = deadline;
+        long left = Math.max(0, deadline - System.nanoTime());
+        storeDeadline = System.currentTimeMillis() + (left + 999_999) / 1_000_000;
+      }
+      store.setConsistencyDeadline(storeDeadline);
+    }
+    try {
+      if (store.consistency()) {
+        return 1;
+      }
+      if (store.isConsistencyDeadlinePassed()) {
+        // the queue of the store is kept: the next propagation goes on from there
+        store.isLastConsistencyFailure = false;
+        return -1;
+      }
+      return 0;
+    } finally {
+      if (own) {
+        store.setConsistencyDeadline(0);
       }
     }
   }

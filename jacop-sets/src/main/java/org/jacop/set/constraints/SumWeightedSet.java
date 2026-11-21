@@ -117,7 +117,8 @@ public class SumWeightedSet extends Constraint
                 + weights[i]
                 + ".");
       }
-      elementWeights.merge(elements[i], weights[i], Integer::sum);
+      // an element listed twice weighs the sum of its weights, which has to fit an int
+      elementWeights.merge(elements[i], weights[i], Math::addExact);
     }
 
     allowedElements = new IntervalDomain();
@@ -176,16 +177,16 @@ public class SumWeightedSet extends Constraint
       IntDomain lubA = a.domain.lub();
       IntDomain potentialEl = lubA.subtract(glbA);
 
-      int glbSum = computeGlbSum(glbA, potentialEl);
+      long glbSum = computeGlbSum(glbA, potentialEl);
       int weightOfLastRequiredEl = computeWeightOfLastRequiredEl(potentialEl);
 
       if (pruneLubByWeight(store, potentialEl, glbSum)) {
         continue;
       }
 
-      int[] lubResult = computeLubSum(potentialEl);
-      int lubSum = lubResult[0];
-      int weightOfLastSkippedItem = lubResult[1];
+      long[] lubResult = computeLubSum(potentialEl);
+      long lubSum = lubResult[0];
+      int weightOfLastSkippedItem = (int) lubResult[1];
 
       if (pruneGlbByWeight(store, potentialEl, lubSum, weightOfLastSkippedItem)) {
         continue;
@@ -194,15 +195,15 @@ public class SumWeightedSet extends Constraint
       totalWeight.domain.in(
           store.level,
           totalWeight,
-          glbSum + weightOfLastRequiredEl,
-          lubSum + weightOfLastRequiredEl);
+          long2int(glbSum + weightOfLastRequiredEl),
+          long2int(lubSum + weightOfLastRequiredEl));
 
       fixpointReached = true;
     }
   }
 
-  private int computeGlbSum(IntDomain glbA, IntDomain potentialEl) {
-    int glbSum = 0;
+  private long computeGlbSum(IntDomain glbA, IntDomain potentialEl) {
+    long glbSum = 0;
     ValueEnumeration enumer = glbA.valueEnumeration();
     while (enumer.hasMoreElements()) {
       glbSum += elementWeights.get(enumer.nextElement());
@@ -235,7 +236,7 @@ public class SumWeightedSet extends Constraint
   }
 
   /** Returns true if LUB was pruned (caller should continue the fixpoint loop). */
-  private boolean pruneLubByWeight(Store store, IntDomain potentialEl, int glbSum) {
+  private boolean pruneLubByWeight(Store store, IntDomain potentialEl, long glbSum) {
     boolean change = false;
     ValueEnumeration enumer = potentialEl.valueEnumeration();
     while (enumer.hasMoreElements()) {
@@ -250,13 +251,13 @@ public class SumWeightedSet extends Constraint
   }
 
   /** Returns {lubSum, weightOfLastSkippedItem}. */
-  private int[] computeLubSum(IntDomain potentialEl) {
-    int glbSum = 0;
+  private long[] computeLubSum(IntDomain potentialEl) {
+    long glbSum = 0;
     ValueEnumeration enumer = a.domain.glb().valueEnumeration();
     while (enumer.hasMoreElements()) {
       glbSum += elementWeights.get(enumer.nextElement());
     }
-    int lubSum = glbSum;
+    long lubSum = glbSum;
     int noOfSkippedEl = a.domain.lub().getSize() - a.domain.card().max();
     int weightOfLastSkippedItem = 0;
 
@@ -277,12 +278,12 @@ public class SumWeightedSet extends Constraint
         lubSum += weight;
       }
     }
-    return new int[] {lubSum, weightOfLastSkippedItem};
+    return new long[] {lubSum, weightOfLastSkippedItem};
   }
 
   /** Returns true if GLB was extended (caller should continue the fixpoint loop). */
   private boolean pruneGlbByWeight(
-      Store store, IntDomain potentialEl, int lubSum, int weightOfLastSkippedItem) {
+      Store store, IntDomain potentialEl, long lubSum, int weightOfLastSkippedItem) {
     boolean change = false;
     ValueEnumeration enumer = potentialEl.valueEnumeration();
     while (enumer.hasMoreElements()) {
@@ -326,7 +327,7 @@ public class SumWeightedSet extends Constraint
     }
 
     ValueEnumeration enumer = a.domain.glb().valueEnumeration();
-    int sum = 0;
+    long sum = 0;
     while (enumer.hasMoreElements()) {
       Integer weight = elementWeights.get(enumer.nextElement());
       if (weight == null) {

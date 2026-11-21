@@ -101,7 +101,7 @@ public abstract class LayeredGraphConstraint extends Constraint
   private int indexOffset;
 
   /** Removes the values that label no edge, and in the first pass checks every level. */
-  private final InitOnce init = new InitOnce();
+  private InitOnce init = new InitOnce();
 
   /** The graph as described, kept for explanations. */
   private LayeredGraphDescription description;
@@ -2370,6 +2370,8 @@ public abstract class LayeredGraphConstraint extends Constraint
   @Override
   public void impose(Store store) {
 
+    // a second imposition prunes its new graph to the domains at its first consistency call
+    init = new InitOnce();
     buildLayeredGraph(store);
 
     mapping = Var.positionMapping(list, true, this.getClass());
