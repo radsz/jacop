@@ -250,6 +250,7 @@ import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SplitSelect;
+import org.jacop.search.ls.LocalSearch;
 import org.jacop.util.DominatorTree;
 import org.jacop.util.QueueForward;
 import org.jacop.util.fsm.Fsm;
@@ -13029,5 +13030,32 @@ class SingleConstraintTest extends TestHelper {
             store.variablesHashMap.values().stream().filter(BooleanVar.class::isInstance).count())
         .isEqualTo(2 * booleans);
     assertThat(noOfAllSolutions(store, x)).isEqualTo(16);
+  }
+
+  // Two Boolean variables of the API with one name: the second one took the name in the store's map
+  // of variables, which is also the only list of its Boolean variables, so Store.getConstraints(),
+  // local search, presolve and LCG did not see the first one. Local search then reported p = 0,
+  // q = 1, r = 0 as a solution, although p != r. With jacop.asserts.enabled the second variable
+  // was refused instead.
+  @Test
+  void booleanVariablesWithOneNameAreBothInTheStore() {
+    Store store = new Store();
+    BooleanVar p = new BooleanVar(store, "b");
+    BooleanVar q = new BooleanVar(store, "b");
+    BooleanVar r = new BooleanVar(store, "r");
+    IntVar[] x = {p, q, r};
+    XneqY pr = new XneqY(p, r);
+    store.impose(pr);
+    store.impose(new LinearInt(x, new int[] {1, 1, 1}, ">=", 2));
+    store.impose(new XneqY(q, r));
+    assertThat(store.consistency()).isTrue();
+    assertThat(store.variablesHashMap.values()).contains(p, q, r);
+    assertThat(store.getConstraints()).contains(pr);
+    assertThat(store.findVariable("b")).isSameAs(q);
+
+    LocalSearch ls =
+        LocalSearch.builder(store).order(x).timeLimit(Duration.ofSeconds(2)).seed(7).build();
+    assertThat(ls.solve()).isEqualTo(LocalSearch.Status.SATISFIED);
+    assertThat(ls.getSolution(x)).containsExactly(1, 1, 0);
   }
 }
