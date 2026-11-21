@@ -69,6 +69,7 @@ import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.binpacking.Binpacking;
+import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.constraints.regular.LayeredGraphConstraint;
@@ -1017,6 +1018,14 @@ public final class LcgSolver implements ExternalPropagator {
     model.variables();
     for (Constraint c : constraints) {
       model.constraint(c);
+      if (c instanceof Cumulative cumulative) {
+        // some reasons of time-table edge finding and time-table disjunctive reasoning need a case
+        // split over starts that neither unit propagation on the load lines nor the sum of one
+        // overloaded window (proofEnergy) gives, and VeriPB rejected proofs of rectangle-packing
+        // and pillars-and-planks at them; the time-table, overload and edge-finding rules stay
+        cumulative.doTimeTableEdgeFind(false);
+        cumulative.doTimeTableDisjunctive(false);
+      }
     }
     for (IntVar[][] clause : proofClauses) {
       model.solverClause(clause[0], clause[1]);
