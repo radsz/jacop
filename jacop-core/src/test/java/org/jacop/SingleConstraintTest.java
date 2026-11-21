@@ -11946,6 +11946,58 @@ class SingleConstraintTest extends TestHelper {
     assertThat(solutions).isEqualTo(decomposition);
   }
 
+  @Test
+  void binpackingOnUnboundedItemsEnumeratesOnlyChangedBins() {
+    // Binpacking enumerated every value an item lost, or its whole previous domain, before skipping
+    // the values that are no bin: an unbounded item narrowed above level 0 before the first
+    // consistency (a constraint imposed during search) cost about 10^9 values.
+    int[] weights = {2, 1, 1, 3, 1, 1, 1, 1};
+    long decomposition = binpackingSolutions(weights, 3, false);
+    assertThat(decomposition).isPositive();
+    long solutions =
+        assertTimeoutPreemptively(
+            Duration.ofSeconds(2), () -> binpackingSolutions(weights, 3, true));
+    assertThat(solutions).isEqualTo(decomposition);
+  }
+
+  private static long binpackingSolutions(int[] weights, int bins, boolean global) {
+    Store store = new Store();
+    int n = weights.length;
+    IntVar[] item = new IntVar[n];
+    IntVar[] load = new IntVar[bins];
+    for (int i = 0; i < n; i++) {
+      item[i] =
+          global
+              ? new IntVar(store, "b" + i, IntDomain.MIN_INT, IntDomain.MAX_INT)
+              : new IntVar(store, "b" + i, 0, bins - 1);
+    }
+    for (int j = 0; j < bins; j++) {
+      load[j] = new IntVar(store, "l" + j, 0, 4);
+    }
+    if (global) {
+      store.impose(new Binpacking(item, load, weights, 0));
+      store.setLevel(store.level + 1);
+      for (IntVar b : item) {
+        b.domain.in(store.level, b, 0, bins - 1);
+      }
+    } else {
+      for (int j = 0; j < bins; j++) {
+        IntVar[] in = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          in[i] = new BooleanVar(store);
+          store.impose(new Reified(new XeqC(item[i], j), in[i]));
+        }
+        store.impose(new LinearInt(in, weights, "==", load[j]));
+      }
+    }
+    Search<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    search.labeling(store, new SimpleSelect<>(item, null, new IndomainMin<>()));
+    return search.getSolutionListener().solutionsNo();
+  }
+
   private static long assignmentSolutions(int n, int[][] excluded, boolean global) {
     Store store = new Store();
     IntVar[] x = new IntVar[n];
