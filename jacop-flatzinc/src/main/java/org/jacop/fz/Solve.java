@@ -4730,16 +4730,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   /**
    * Runs the annotation's depth-first search without learning before LCG fixed search on an
    * optimisation model, for the share fixed-first of the time (default 0.005; 0 = off). LCG then
-   * looks only for solutions better than the best one it printed, and gets as much time to find one
-   * as it took ({@link #fixedFirstCheck}); when it finds none, it gives way to the annotation's
-   * search without learning, which goes on from the root under the best cost. Both searches take
-   * the decisions of the annotation, so on a model where learning cuts little they find the same
-   * solutions one after the other, and the one that finds them faster gets further in the same
-   * time. On city-position (MiniZinc Challenge 2017, first_fail on 10 coordinates, an objective of
-   * 16 absolute differences) LCG and the search without learning found the same 589 solutions, LCG
-   * in 232 s and the search without learning in 14 s: LCG makes about 7,000 conflicts a second,
-   * each with about 1,900 propagations of the order literals of domains of a million values, and
-   * backjumps one level a conflict. JaCoP 4.10 proved city-5-05 in 52 s, and 5.0 not in 240 s.
+   * looks only for solutions better than the best one it printed, and gets fixed-first-lcg (3)
+   * times as much time to find one, at least a second ({@link #fixedFirstCheck}); when it finds
+   * none, it gives way to the annotation's search without learning, which goes on from the root
+   * under the best cost. Both searches take the decisions of the annotation, so on a model where
+   * learning cuts little they find the same solutions one after the other, and the one that finds
+   * them faster gets further in the same time. On city-position (MiniZinc Challenge 2017,
+   * first_fail on 10 coordinates, an objective of 16 absolute differences) LCG and the search
+   * without learning found the same 589 solutions, LCG in 232 s and the search without learning in
+   * 14 s: LCG makes about 7,000 conflicts a second, each with about 1,900 propagations of the order
+   * literals of domains of a million values, and backjumps one level a conflict. JaCoP 4.10 proved
+   * city-5-05 in 52 s, and 5.0 not in 240 s.
    *
    * @param label the annotation's search
    * @param select its choice points
@@ -4845,14 +4846,23 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
-   * Starts the check of {@link #fixedSearchFirst}: once LCG has searched as long as the search
-   * without learning ran first, LCG gives way to that search when it found no better solution.
+   * Starts the check of {@link #fixedSearchFirst}: once LCG has searched fixed-first-lcg times as
+   * long as the search without learning ran first, at least a second, LCG gives way to that search
+   * when it found no better solution.
    *
    * @param solver the LCG solver
    * @return the thread of the check
    */
   private Thread fixedFirstCheck(LcgSolver solver) {
-    long wait = fixedFirstMillis;
+    // LCG gets more time than the search without learning had, and at least a second: in its first
+    // tenths of a second the JIT compiles its code (cargo challenge02 at 30 s, a first search of
+    // 0.15 s: LCG found no better solution in as much time in one run of two, and then the
+    // search without learning, which stays at its first solution, took over)
+    long wait =
+        Math.max(
+            (long)
+                (Double.parseDouble(options.freeConfig("fixed-first-lcg", "3")) * fixedFirstMillis),
+            1000L);
     int firstCost = fixedFirstCost;
     fixedFirstOutcome = 2;
     return Thread.ofVirtual()
