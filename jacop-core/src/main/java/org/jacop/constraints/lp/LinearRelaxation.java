@@ -30,7 +30,6 @@
 
 package org.jacop.constraints.lp;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -2358,37 +2357,71 @@ public class LinearRelaxation extends Constraint
   }
 
   // the distances of the candidates from the objective (byDistance)
+  // breadth first from the objective over the rows and their columns, with the columns numbered
+  // and the rows of each column in one array: the lists and boxed depths of each column took 5 s
+  // on the 4 million clause rows of MaxSAT 2021 haplotyping-pedigrees
   private static int[] distances(
       List<LinearForm> forms, List<LinearForm> candidates, IntVar objective) {
     List<LinearForm> all = new ArrayList<>(forms.size() + candidates.size());
     all.addAll(forms);
     all.addAll(candidates);
-    Map<IntVar, List<Integer>> rowsOf = new IdentityHashMap<>();
+    Map<IntVar, Integer> number = new IdentityHashMap<>();
+    number.put(objective, 0);
+    int[][] columns = new int[all.size()][];
+    int entries = 0;
     for (int i = 0; i < all.size(); i++) {
-      for (IntVar v : all.get(i).vars()) {
-        rowsOf.computeIfAbsent(v, k -> new ArrayList<>()).add(i);
+      IntVar[] vars = all.get(i).vars();
+      int[] c = new int[vars.length];
+      for (int k = 0; k < vars.length; k++) {
+        Integer n = number.get(vars[k]);
+        if (n == null) {
+          n = number.size();
+          number.put(vars[k], n);
+        }
+        c[k] = n;
+      }
+      columns[i] = c;
+      entries += c.length;
+    }
+    int n = number.size();
+    int[] start = new int[n + 1];
+    for (int[] c : columns) {
+      for (int v : c) {
+        start[v + 1]++;
+      }
+    }
+    for (int v = 0; v < n; v++) {
+      start[v + 1] += start[v];
+    }
+    int[] rowsOf = new int[entries];
+    int[] fill = Arrays.copyOf(start, n);
+    for (int i = 0; i < columns.length; i++) {
+      for (int v : columns[i]) {
+        rowsOf[fill[v]++] = i;
       }
     }
     int[] distance = new int[all.size()];
     Arrays.fill(distance, Integer.MAX_VALUE);
-    Set<IntVar> seen = Collections.newSetFromMap(new IdentityHashMap<>());
-    ArrayDeque<IntVar> queue = new ArrayDeque<>();
-    Map<IntVar, Integer> depth = new IdentityHashMap<>();
-    seen.add(objective);
-    depth.put(objective, 0);
-    queue.add(objective);
-    while (!queue.isEmpty()) {
-      IntVar v = queue.poll();
-      int d = depth.get(v);
-      for (int i : rowsOf.getOrDefault(v, List.of())) {
+    int[] depth = new int[n];
+    Arrays.fill(depth, -1);
+    int[] queue = new int[n];
+    int head = 0;
+    int tail = 0;
+    depth[0] = 0;
+    queue[tail++] = 0;
+    while (head < tail) {
+      int v = queue[head++];
+      int d = depth[v];
+      for (int r = start[v]; r < start[v + 1]; r++) {
+        int i = rowsOf[r];
         if (distance[i] != Integer.MAX_VALUE) {
           continue;
         }
         distance[i] = d;
-        for (IntVar u : all.get(i).vars()) {
-          if (seen.add(u)) {
-            depth.put(u, d + 1);
-            queue.add(u);
+        for (int u : columns[i]) {
+          if (depth[u] < 0) {
+            depth[u] = d + 1;
+            queue[tail++] = u;
           }
         }
       }
