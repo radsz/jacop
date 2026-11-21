@@ -1450,9 +1450,20 @@ public final class XcspReader {
   }
 
   private Lin sumOf(List<Expr> xs, List<Expr> coeffs) {
+    return sumOf(xs, coeffs, 0);
+  }
+
+  /**
+   * The linear form of a sum; with up 1 (the sum is only bounded below) or -1 (only above), a
+   * comparison whose term may only help the bound is half reified, as MiniZinc does.
+   */
+  private Lin sumOf(List<Expr> xs, List<Expr> coeffs, int up) {
     Lin s = new Lin();
     for (int i = 0; i < xs.size(); i++) {
-      if (coeffs == null) {
+      long k = coeffs == null ? 1 : coeffs.get(i).kind == Expr.Kind.INT ? coeffs.get(i).value : 0;
+      if (k != 0 && up != 0 && Long.signum(k) == up) {
+        s.add(ec.halfLin(xs.get(i)), k);
+      } else if (coeffs == null) {
         s.add(ec.lin(xs.get(i)), 1);
       } else if (coeffs.get(i).kind == Expr.Kind.INT) {
         s.add(ec.lin(xs.get(i)), coeffs.get(i).value);
@@ -1478,7 +1489,17 @@ public final class XcspReader {
             "sum with " + xs.size() + " terms and " + coeffs.size() + " coefficients");
       }
     }
-    post(sumOf(xs, coeffs), condition(c, args, rest));
+    Condition cond = condition(c, args, rest);
+    int up = 0;
+    if (cond != null) {
+      up =
+          switch (cond.op) {
+            case "ge", "gt" -> 1;
+            case "le", "lt" -> -1;
+            default -> 0;
+          };
+    }
+    post(sumOf(xs, coeffs, up), cond);
   }
 
   private void count(Elem c, List<Expr> args, int rest) {

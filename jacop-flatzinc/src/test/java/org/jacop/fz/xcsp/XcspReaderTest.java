@@ -551,6 +551,26 @@ class XcspReaderTest {
   }
 
   @Test
+  void halfReifiedSums() throws IOException {
+    // WordDesign of XCSP 2023: comparisons in a sum bounded on one side
+    check(
+        vars(4, 0, 2),
+        "<sum><list> ne(x[0],x[1]) ne(x[1],x[2]) eq(x[2],x[3]) lt(x[0],x[3]) </list><coeffs> 1 2 -1 1 </coeffs>"
+            + "<condition> (ge,2) </condition></sum>"
+            + "<sum><list> eq(x[0],x[2]) gt(x[1],x[3]) </list><condition> (le,1) </condition></sum>",
+        4,
+        0,
+        2,
+        t ->
+            (t[0] != t[1] ? 1 : 0)
+                        + 2 * (t[1] != t[2] ? 1 : 0)
+                        - (t[2] == t[3] ? 1 : 0)
+                        + (t[0] < t[3] ? 1 : 0)
+                    >= 2
+                && (t[0] == t[2] ? 1 : 0) + (t[1] > t[3] ? 1 : 0) <= 1);
+  }
+
+  @Test
   void matrixElement() throws IOException {
     // a constant matrix (SEDF of XCSP 2025) and one of variables
     check(

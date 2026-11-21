@@ -386,6 +386,28 @@ final class ExprCompiler {
   // ------------------------------------------------------------------ Booleans
 
   /** The literal of a Boolean expression (an integer one is true when not 0). */
+  /**
+   * The 0/1 form of e where only e being true matters (a term of a sum bounded below with a
+   * positive coefficient): an integer comparison is half reified. Other expressions as {@link
+   * #lin(Expr)}.
+   */
+  Lin halfLin(Expr e) {
+    if (e.kind == Expr.Kind.OP
+        && e.args.length == 2
+        && !isBoolean(e.args[0])
+        && !isBoolean(e.args[1])) {
+      switch (e.op) {
+        case "eq", "ne", "lt", "le", "gt", "ge" -> {
+          return m.lin(clauseLit(e));
+        }
+        default -> {
+          // other operators as lin
+        }
+      }
+    }
+    return lin(e);
+  }
+
   // the literals of a clause posted at the top level
   private List<Lit> clauseLits(Expr[] a) {
     List<Lit> r = new ArrayList<>(a.length);
