@@ -75,6 +75,7 @@ import org.jacop.fz.SimpleNode;
  * @version 5.0
  */
 public class CyclicDistanceDetector implements ParserTreeConstants {
+  private static final Set<String> KINDS = Set.of("int_abs");
 
   private static final String PROPERTY = "org.jacop.fz.cyclicDistance";
 
@@ -157,6 +158,10 @@ public class CyclicDistanceDetector implements ParserTreeConstants {
    * @return the constraint nodes it replaces, which must not be posted.
    */
   public Set<SimpleNode> detect(SimpleNode astTree) {
+    // a distance is the absolute value of a difference
+    if (!support.hasConstraint(astTree, KINDS)) {
+      return replaced;
+    }
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {
