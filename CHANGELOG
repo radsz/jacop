@@ -8781,7 +8781,7 @@ Version 5.0 (unreleased)
    (4,333 -> 4,637), unit-commitment L12, warehouse olil4. Wide-quick set
    at 240 s: the slices start on 2 of 62 instances.
 
-489. The FlatZinc front end rewrites an absolute difference that only
+492. The FlatZinc front end rewrites an absolute difference that only
    excludes values: t = x - y and a = |t|, with t and a used nowhere
    else, become bounds on x - y and x - y != d for the at most 8 values d
    (-Dorg.jacop.fz.absoluteDifference.maxHoles) that the domains of t and
@@ -8801,7 +8801,7 @@ Version 5.0 (unreleased)
    proved in 44 s; no instance of the wide set fires. Off with
    -Dorg.jacop.fz.absoluteDifference=false and under --proof.
 
-490. The FlatZinc front end posts a network flow with fixed weights
+493. The FlatZinc front end posts a network flow with fixed weights
    (network_flow, network_flow_cost) as its flow conservation rows and
    cost row under free search (-f), and as those rows next to NetworkFlow
    otherwise. NetworkFlow's reduced-cost arc analysis, a shortest path
