@@ -6306,6 +6306,7 @@ public final class CdclSolver {
     if (assigned != trailSize) {
       throw new IllegalStateException(assigned + " variables assigned, trail " + trailSize);
     }
+    markWatched();
     for (int pass = 0; pass < 2; pass++) {
       int[] list = pass == 0 ? originals : learnts;
       int n = pass == 0 ? numOriginals : numLearnts;
@@ -6318,6 +6319,11 @@ public final class CdclSolver {
         checkClause(mem, ref + HEADER, mem[ref + SIZE], pass == 0 ? "original" : "learnt");
       }
     }
+    for (int l = 0; l < 2 * numVars; l++) {
+      for (int i = 1; i < watches[l][0]; i++) {
+        watchedMarks[watchRef(watches[l][i])] = 0;
+      }
+    }
     int[] pair = new int[2];
     for (int l = 0; l < 2 * numVars; l++) {
       for (int b = 1; b < binWatches[l][0]; b++) {
@@ -6328,19 +6334,37 @@ public final class CdclSolver {
     }
   }
 
+  // per clause reference, bit k set when the clause is in the watch list of its k-th literal
+  private byte[] watchedMarks = new byte[0];
+
+  /**
+   * Marks every clause found in the watch list of its first or second literal, in one pass over the
+   * watch lists, so that checking all clauses stays linear when a watch list is long.
+   */
+  private void markWatched() {
+    if (watchedMarks.length < mem.length) {
+      watchedMarks = new byte[mem.length];
+    }
+    for (int l = 0; l < 2 * numVars; l++) {
+      for (int i = 1; i < watches[l][0]; i++) {
+        int ref = watchRef(watches[l][i]);
+        for (int k = 0; k < 2 && ref + HEADER + k < mem.length; k++) {
+          if (mem[ref + HEADER + k] == l) {
+            watchedMarks[ref] |= (byte) (1 << k);
+          }
+        }
+      }
+    }
+  }
+
   private void checkWatched(int ref) {
     for (int k = 0; k < 2; k++) {
-      int w = mem[ref + HEADER + k];
-      boolean found = false;
-      for (int i = 1; i < watches[w][0] && !found; i++) {
-        found = watchRef(watches[w][i]) == ref;
-      }
-      if (!found) {
+      if ((watchedMarks[ref] & 1 << k) == 0) {
         throw new IllegalStateException(
             "clause "
                 + clauseText(mem, ref + HEADER, mem[ref + SIZE])
                 + " not watched by "
-                + toDimacs(w));
+                + toDimacs(mem[ref + HEADER + k]));
       }
     }
   }
