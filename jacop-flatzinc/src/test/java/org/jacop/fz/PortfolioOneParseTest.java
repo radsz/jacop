@@ -282,4 +282,31 @@ class PortfolioOneParseTest {
     err.set(errors.toString(StandardCharsets.UTF_8));
     return out.toString(StandardCharsets.UTF_8);
   }
+
+  @Test
+  void aNumberOfSolutionsLimitsThePortfolioAsOneThread() throws IOException {
+    // each thread stopped after k solutions of its own, and the portfolio printed every improving
+    // solution of all of them: 8 solutions with -n 2 -p 4
+    StringBuilder model = new StringBuilder();
+    model.append("array [1..8] of var 0..9: x :: output_array([1..8]);\n");
+    model.append("var 0..1000: cost :: output_var;\n");
+    model.append("constraint int_lin_eq([1, 2, 3, 4, 5, 6, 7, 8, -1], [x[1], x[2], x[3], x[4], ");
+    model.append("x[5], x[6], x[7], x[8], cost], 0);\n");
+    model.append("constraint int_lin_le([-1, -1, -1, -1, -1, -1, -1, -1], [x[1], x[2], x[3], ");
+    model.append("x[4], x[5], x[6], x[7], x[8]], -30);\n");
+    model.append("solve :: int_search(x, input_order, indomain_max, complete) minimize cost;\n");
+    Path fzn = tmp.resolve("limit.fzn");
+    Files.writeString(fzn, model.toString(), StandardCharsets.UTF_8);
+    assertEquals(2, count(run("-n", "2", fzn.toString()), "----------"));
+    for (String p : new String[] {"2", "4"}) {
+      String out = run("-n", "2", "-p", p, fzn.toString());
+      // fewer when a thread proves a solution optimal before
+      int printed = count(out, "----------");
+      assertTrue(printed >= 1 && printed <= 2, out);
+    }
+  }
+
+  private static int count(String out, String line) {
+    return (int) out.lines().filter(line::equals).count();
+  }
 }

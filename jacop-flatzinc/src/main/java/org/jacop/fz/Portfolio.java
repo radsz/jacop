@@ -766,6 +766,11 @@ final class Portfolio {
       if (options.getAll()) {
         stdout.print(text);
         stdout.flush();
+        // -n k: the run ends after k solutions, as in one thread; each thread counted only its own
+        if (solutions >= options.getNumberSolutions()) {
+          finished = true;
+          lock.notifyAll();
+        }
       }
     }
   }
