@@ -163,6 +163,12 @@ public final class CoreSearch {
    */
   public boolean termsBySpanRatio;
 
+  /**
+   * Statistics: whether the terms of the sums replace the sums, although they span more levels, as
+   * narrow terms of at most {@link #NARROW_SPAN} levels each that are not all 0-1.
+   */
+  public boolean narrowTerms;
+
   /** Statistics: groups of soft literals relaxed at once as at most one of them false. */
   public long amoGroups;
 
@@ -279,16 +285,23 @@ public final class CoreSearch {
     // fewer levels, up to SPAN_RATIO times fewer: the root propagation of a long run tightens the
     // sums beyond their terms' bounds. On MaxSAT Evaluation 2024's xai-mindset2 iris, 564 0-1 terms
     // in 4 sums of 525 levels at -t 60 s (1,061 levels each at -t 3 s), the cores had 3 assumptions
-    // on the sums and a bound of 49 of 87 after 240 s; on the terms the optimum is proved in 4 s
+    // on the sums and a bound of 49 of 87 after 240 s; on the terms the optimum is proved in 4 s.
+    // Narrow terms, of at most NARROW_SPAN levels each, are taken the same way: on neighbours
+    // (MiniZinc Challenge 2018, 28 cells of 1..5 in 5 blocks) the blocks spanned 86 levels and the
+    // cells 90, so the cores went to the blocks, where each raised the bound by one on a single
+    // block: neighbours7 took 436 s; on the cells the cores mix the cells, 263 s, and
+    // neightbours-new-20 (2021) is proved in 102 s instead of not in 600 s
     long termSpan = span(lcg, terms);
     long blockSpan = span(lcg, blocks);
     boolean zeroOne = zeroOne(lcg, terms);
-    if (termSpan > (zeroOne ? SPAN_RATIO : 1) * blockSpan) {
+    boolean narrow = !zeroOne && narrow(lcg, terms);
+    if (termSpan > (zeroOne || narrow ? SPAN_RATIO : 1) * blockSpan) {
       CoreSearch search = new CoreSearch(lcg, objective, blocks, blocksConstant);
       return search.startProof(blockDefinitions) ? search : null;
     }
     CoreSearch search = new CoreSearch(lcg, objective, terms, constant[0]);
     search.termsBySpanRatio = termSpan > blockSpan;
+    search.narrowTerms = narrow && termSpan > blockSpan;
     if (!search.startProof(definitions)) {
       return null;
     }
@@ -330,6 +343,21 @@ public final class CoreSearch {
     }
     hardenedAtGroup = hardened;
     return relaxAtMostOnes();
+  }
+
+  // -Djacop.lcg.coreNarrowSpan=N: terms of at most N levels each replace the sums of a split
+  // objective as 0-1 terms do, up to SPAN_RATIO times more levels; 1 restores 0-1 terms only
+  static final int NARROW_SPAN = Integer.getInteger("jacop.lcg.coreNarrowSpan", 8);
+
+  /** Whether each term's variable spans at most {@link #NARROW_SPAN} levels. */
+  private static boolean narrow(LcgSolver lcg, Map<Integer, Long> terms) {
+    for (int t : terms.keySet()) {
+      IntVar x = lcg.variable(t);
+      if ((long) x.max() - x.min() > NARROW_SPAN) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /** Whether each term's variable spans at most one level. */

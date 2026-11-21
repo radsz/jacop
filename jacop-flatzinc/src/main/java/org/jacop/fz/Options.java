@@ -1065,6 +1065,28 @@ public class Options {
   }
 
   /**
+   * Tells whether a search stopped by a limit of its own (a node budget) before the time-out may go
+   * on: no time-out is set, or more than a millisecond of it is left. A run without a time-out has
+   * no remaining time ({@link #getRemainingTimeOut()} is 0), so a node budget must not be read as
+   * the time-out there.
+   *
+   * @return true if the search may go on
+   */
+  public boolean timeLeft() {
+    return timeOut <= 0 || getRemainingTimeOut() > 1;
+  }
+
+  /**
+   * Returns how many time-out checks of the model set-up share one reading of the clock: the
+   * detectors check the time-out for each constraint they read. A power of two.
+   *
+   * @return the number of checks per reading of the clock.
+   */
+  public int timeOutCheckStride() {
+    return 64;
+  }
+
+  /**
    * It checks whether the time-out has passed.
    *
    * @return true if a time-out was set and it has passed.
@@ -1155,6 +1177,22 @@ public class Options {
   public boolean lcg() {
     return lcg;
   }
+
+  /**
+   * Whether the satisfaction models of -a and -n N (N &gt; 1) are solved with LCG, which enumerates
+   * their solutions with blocking clauses: when --lcg is given, and by default when LCG is on by
+   * default and neither -p, --proof nor --presolve is given. The property org.jacop.fz.lcgAll=off
+   * turns the default off, so LCG on by default gives way to search without learning, as before.
+   *
+   * @return true when LCG solves a model with many solutions to print
+   */
+  public boolean lcgEnumerates() {
+    return lcg
+        && (lcgGiven || LCG_ALL && threads == 1 && proof == null && presolve == Presolve.OFF);
+  }
+
+  // org.jacop.fz.lcgAll=off: LCG on by default leaves the solutions of -a and -n N to search
+  private static final boolean LCG_ALL = !"off".equals(System.getProperty("org.jacop.fz.lcgAll"));
 
   /**
    * Turns off LCG that is on by default, for a model it does not support (float variables, more

@@ -126,6 +126,17 @@ public class XorSystemDetector implements ParserTreeConstants {
   // the rows that are parities read from clauses, whose clauses the model keeps
   private final java.util.BitSet fromClauses = new java.util.BitSet();
 
+  // the rows of bool_not and bool_eq, which propagate their row completely
+  private final java.util.BitSet equivalences = new java.util.BitSet();
+
+  private void equivalenceRow(IntVar a, IntVar b, int parity) {
+    int before = rows.size();
+    row(new IntVar[] {a, b}, parity);
+    if (rows.size() > before) {
+      equivalences.set(before);
+    }
+  }
+
   // the parities encoded as clauses enter the system (see clause(IntVar[], IntVar[]))
   static final boolean CLAUSES =
       !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.xorClauses"));
@@ -189,9 +200,14 @@ public class XorSystemDetector implements ParserTreeConstants {
           || members.stream().allMatch(r -> rows.get(r).length < 3)) {
         continue;
       }
-      if (members.stream().allMatch(fromClauses::get) && acyclic(members, n)) {
+      if (members.stream().allMatch(r -> fromClauses.get(r) || equivalences.get(r))
+          && acyclic(members, n)) {
         // unit propagation on the clauses of a Berge-acyclic system already reaches the
-        // fixpoint of Gauss-Jordan elimination; the system would only slow the search
+        // fixpoint of Gauss-Jordan elimination; the system would only slow the search. Also with
+        // equivalences and negations, which propagate their row completely: on security-witness
+        // FlexScan-DA (MaxSAT Evaluation 2021) each of the 63,636 soft literals is the negation of
+        // an output of a three-variable XOR in clauses, and the 63,636 systems of two rows posted
+        // for them made every backtrack of LCG visit each of them
         acyclicSystems++;
         continue;
       }
@@ -267,8 +283,8 @@ public class XorSystemDetector implements ParserTreeConstants {
               support.getVarArray((SimpleNode) node.jjtGetChild(1)));
         }
       }
-      case "bool_not" -> row(new IntVar[] {aVar(node, 0), aVar(node, 1)}, 1);
-      case "bool_eq" -> row(new IntVar[] {aVar(node, 0), aVar(node, 1)}, 0);
+      case "bool_not" -> equivalenceRow(aVar(node, 0), aVar(node, 1), 1);
+      case "bool_eq" -> equivalenceRow(aVar(node, 0), aVar(node, 1), 0);
       // r = (a == b): a xor b xor r = 1
       case "bool_eq_reif" -> row(new IntVar[] {aVar(node, 0), aVar(node, 1), aVar(node, 2)}, 1);
       // r = (a != b): a xor b xor r = 0

@@ -69,6 +69,7 @@ import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.binpacking.Binpacking;
+import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.constraints.regular.LayeredGraphConstraint;
@@ -247,6 +248,9 @@ public final class LcgSolver implements ExternalPropagator {
   private int[] propagated = new int[16]; // per DIMACS variable pushed as an atom: its entry
   private int[] solution;
   private Runnable onSolution;
+  // the variables whose values each solution of a satisfaction search excludes, so that the search
+  // goes on to the next solution (see setEnumeration); null: the search stops at the first one
+  private int[] enumerated;
   // takes the objective's bound at the root each time minimize leaves the root with a better one
   private LongConsumer onBound;
   private long lastBound = Long.MIN_VALUE;
@@ -1003,6 +1007,14 @@ public final class LcgSolver implements ExternalPropagator {
     model.variables();
     for (Constraint c : constraints) {
       model.constraint(c);
+      if (c instanceof Cumulative cumulative) {
+        // some reasons of time-table edge finding and time-table disjunctive reasoning need a case
+        // split over starts that neither unit propagation on the load lines nor the sum of one
+        // overloaded window (proofEnergy) gives, and VeriPB rejected proofs of rectangle-packing
+        // and pillars-and-planks at them; the time-table, overload and edge-finding rules stay
+        cumulative.doTimeTableEdgeFind(false);
+        cumulative.doTimeTableDisjunctive(false);
+      }
     }
     for (IntVar[][] clause : proofClauses) {
       model.solverClause(clause[0], clause[1]);
@@ -5573,6 +5585,9 @@ public final class LcgSolver implements ExternalPropagator {
 
   private boolean graphClauses = GRAPH_CLAUSES;
 
+  // the bytes the clauses of layered graphs may take, or -1 for their share of the heap
+  private long graphClauseBudget = -1;
+
   /**
    * The share of the heap that the clauses of layered graphs may take, {@code
    * jacop.lcg.graphClauses.heapShare}; graphs past it are propagated and explained by cuts.
@@ -5581,10 +5596,24 @@ public final class LcgSolver implements ExternalPropagator {
       Double.parseDouble(System.getProperty("jacop.lcg.graphClauses.heapShare", "0.125"));
 
   // The bytes that a described edge or node of a layered graph takes in the solver once it is
-  // clauses: a literal with its solver arrays and watches, and up to four clauses.
+  // clauses, at most: a literal with its solver arrays and watches, and up to four clauses.
   // MagicSquare-mdd-10
   // (XCSP 2023), 22 diagrams of 201,000 edges and nodes, took about 2 GB.
   private static final long GRAPH_CLAUSE_BYTES = 400;
+
+  // The bytes of the clauses of a graph once they are counted (graphClauseBytes): per new
+  // literal, per clause and per literal of a clause. Most graphs take far less than
+  // GRAPH_CLAUSE_BYTES per edge: the edges between two nodes are one arc, and an arc that is the
+  // only one into its target or out of its source has no literal. The 17 regular constraints of
+  // pentominoes 04 (MiniZinc Challenge 2020) describe 3.6 million edges and nodes and became
+  // 296,000 literals and 1.08 million clauses of 8.5 million literals, 169 MB, not the 1.46 GB
+  // that bound gives, so at 10 GB of heap two of them were left to cut explanations, which took
+  // 95 % of the time: 348 s instead of 5 s.
+  private static final long GRAPH_LITERAL_BYTES = 192;
+
+  private static final long GRAPH_CLAUSE_HEADER_BYTES = 48;
+
+  private static final long GRAPH_CLAUSE_LITERAL_BYTES = 8;
 
   /** Statistics: layered-graph constraints left as propagators because their clauses do not fit. */
   public long graphConstraintsTooLarge;
@@ -5605,11 +5634,120 @@ public final class LcgSolver implements ExternalPropagator {
     graphClauses = on;
   }
 
+  /**
+   * Sets the bytes that the clauses of layered graphs may take in all, in place of {@code
+   * jacop.lcg.graphClauses.heapShare} of the heap, before the solver starts.
+   *
+   * @param bytes the bytes
+   */
+  void setGraphClauseBudget(long bytes) {
+    graphClauseBudget = bytes;
+  }
+
   /** Statistics: layered-graph constraints given to the solver as clauses. */
   public long graphConstraintsEncoded;
 
   /** Statistics: clauses implied by constraints ({@link ImpliedClauses}) given to the solver. */
   public long impliedClauses;
+
+  /**
+   * Whether the clauses of a layered graph fit in the bytes left for them: at once when its
+   * described size times {@link #GRAPH_CLAUSE_BYTES} fits, otherwise by counting its clauses,
+   * unless a graph not larger than this one was counted and did not fit.
+   *
+   * @param g the graph
+   * @param left the bytes left for the clauses of graphs
+   * @param misfit the described size of the smallest graph counted that did not fit
+   * @return true when its clauses fit
+   */
+  private static boolean graphFits(LayeredGraphConstraint g, long left, long misfit) {
+    long size = g.describedSize();
+    if (size <= left / GRAPH_CLAUSE_BYTES) {
+      return true;
+    }
+    if (size >= misfit) {
+      return false;
+    }
+    CountingClauses counted = new CountingClauses(null);
+    counted.limit = left;
+    try {
+      return !g.encodeClauses(counted) || counted.bytes() <= left;
+    } catch (OverBudget _) {
+      return false;
+    }
+  }
+
+  /** Ends the counting of the clauses of a graph once they no longer fit. */
+  private static final class OverBudget extends RuntimeException {
+    private static final long serialVersionUID = 1L;
+
+    OverBudget() {
+      super(null, null, false, false);
+    }
+  }
+
+  /**
+   * Counts the literals and clauses a constraint gives, and passes them on to a model, or with no
+   * model only counts them (its literals then stand for nothing).
+   */
+  private static final class CountingClauses implements ClauseModel {
+    private final ClauseModel model;
+    private long literals;
+    private long clauses;
+    private long clauseLiterals;
+    private int next;
+    // counting only, the bytes past which counting stops
+    private long limit = Long.MAX_VALUE;
+
+    CountingClauses(ClauseModel model) {
+      this.model = model;
+    }
+
+    CountingClauses reset() {
+      literals = 0;
+      clauses = 0;
+      clauseLiterals = 0;
+      return this;
+    }
+
+    // the bytes the counted literals and clauses take in the solver
+    long bytes() {
+      return literals * GRAPH_LITERAL_BYTES
+          + clauses * GRAPH_CLAUSE_HEADER_BYTES
+          + clauseLiterals * GRAPH_CLAUSE_LITERAL_BYTES;
+    }
+
+    @Override
+    public int newLiteral() {
+      literals++;
+      return model != null ? model.newLiteral() : fresh();
+    }
+
+    @Override
+    public int valueLiteral(IntVar x, int v) {
+      // a value's literal exists without the clauses; counting, each use stands for a new one
+      return model != null ? model.valueLiteral(x, v) : fresh();
+    }
+
+    // a literal different from every one given before, away from the constants of the encodings
+    private int fresh() {
+      if (next == Integer.MAX_VALUE / 2) {
+        next = 0;
+      }
+      return ++next;
+    }
+
+    @Override
+    public void clause(int[] literals, int size) {
+      clauses++;
+      clauseLiterals += size;
+      if (model != null) {
+        model.clause(literals, size);
+      } else if (bytes() > limit) {
+        throw new OverBudget();
+      }
+    }
+  }
 
   /**
    * Gives the solver every layered-graph constraint of the store as clauses ({@link
@@ -5654,10 +5792,15 @@ public final class LcgSolver implements ExternalPropagator {
           }
         };
     boolean propagatorLeft = false;
-    // the described edges and nodes the clauses of the graphs may take in all
+    // the bytes the clauses of the graphs may take in all, those they take, and the described
+    // size of the smallest graph whose counted clauses did not fit
     long graphBudget =
-        (long) (GRAPH_CLAUSES_HEAP_SHARE * Runtime.getRuntime().maxMemory()) / GRAPH_CLAUSE_BYTES;
-    long graphUnits = 0;
+        graphClauseBudget >= 0
+            ? graphClauseBudget
+            : (long) (GRAPH_CLAUSES_HEAP_SHARE * Runtime.getRuntime().maxMemory());
+    long graphBytes = 0;
+    long graphMisfit = Long.MAX_VALUE;
+    CountingClauses counted = new CountingClauses(model);
     objectiveTerms = objectiveTerms();
     permutationOnly = permutationOnlyVariables();
     if (pastDeadline()) {
@@ -5667,13 +5810,16 @@ public final class LcgSolver implements ExternalPropagator {
     for (Constraint c : store.getConstraints()) {
       if (graphClauses
           && c instanceof LayeredGraphConstraint g
-          && graphUnits + g.describedSize() > graphBudget) {
+          && !graphFits(g, graphBudget - graphBytes, graphMisfit)) {
         // too large to be clauses: WordDesign2-words-mdd-025 (XCSP 2023) has 300 diagrams of 2.4
         // million edges and nodes
+        graphMisfit = Math.min(graphMisfit, g.describedSize());
         graphConstraintsTooLarge++;
         propagatorLeft = true;
-      } else if (graphClauses && c instanceof LayeredGraphConstraint g && g.encodeClauses(model)) {
-        graphUnits += g.describedSize();
+      } else if (graphClauses
+          && c instanceof LayeredGraphConstraint g
+          && g.encodeClauses(counted.reset())) {
+        graphBytes += counted.bytes();
         g.removeConstraint();
         encodedGraphs.add(g);
         graphConstraintsEncoded++;
@@ -7059,6 +7205,103 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Makes {@link #solve} enumerate the solutions that differ on the given variables, as the search
+   * for all solutions of a satisfaction model does: after each solution, given to the action of
+   * {@link #onSolution}, the solver adds the clause that one of the variables takes another value
+   * and goes on, with its learnt clauses, until it finds no more ({@link CdclSolver#UNSAT}: every
+   * solution was found) or is stopped. Two solutions that differ only on other variables count as
+   * one, so the variables are those whose values the solution callback prints (the output
+   * variables). This is the solution blocking of Chuffed's all-solution search (Chu, Stuckey; "Lazy
+   * clause generation reengineered", CP 2009). Call it before {@link #solve}, at the root.
+   *
+   * @param vars the variables that tell two solutions apart; variables fixed at the root are left
+   *     out
+   * @return false when one of the variables is not fixed and not a variable of the solver (it
+   *     cannot be told apart), true when the enumeration is set
+   */
+  public boolean setEnumeration(Collection<? extends IntVar> vars) {
+    if (objective >= 0 || proof != null) {
+      throw new IllegalStateException("enumeration is for a satisfaction search without a proof");
+    }
+    int[] ids = new int[vars.size()];
+    int n = 0;
+    Set<Integer> seen = new HashSet<>();
+    for (IntVar x : vars) {
+      if (x.singleton()) {
+        continue;
+      }
+      int i = idOf(x);
+      if (i < 0 || unused[i]) {
+        return false;
+      }
+      if (seen.add(i)) {
+        ids[n++] = i;
+      }
+    }
+    enumerated = Arrays.copyOf(ids, n);
+    return true;
+  }
+
+  /** Statistics: the solutions that the enumeration excluded by a clause (see setEnumeration). */
+  public long blockedSolutions;
+
+  // the solutions excluded by the negation of their decisions, all on enumerated variables
+  public long decisionBlocked;
+
+  // whether an index is one of the enumerated variables
+  private boolean[] isEnumerated;
+
+  /**
+   * The clause that excludes the last solution on the enumerated variables. When every decision of
+   * the solver is an atom of an enumerated variable, the decisions imply the whole solution, and
+   * every solution with the same values of the enumerated variables satisfies them: the negation of
+   * the decisions is then the clause, as in Chuffed. It is shorter than one literal per enumerated
+   * variable and watched on the latest decisions, where the clauses over all the enumerated
+   * variables pile up on the watches of the same few literals: balanced brackets (52 printed
+   * variables, 742,900 solutions) printed 4 times fewer solutions a second with them alone.
+   */
+  private int[] blockingClause() {
+    if (isEnumerated == null) {
+      isEnumerated = new boolean[vars.length];
+      for (int i : enumerated) {
+        isEnumerated[i] = true;
+      }
+    }
+    int[] decisions = sat.decisionLiterals();
+    boolean onEnumerated = true;
+    for (int k = 0; k < decisions.length && onEnumerated; k++) {
+      Atom a = atom(decisions[k]);
+      onEnumerated = a != null && a.var < isEnumerated.length && isEnumerated[a.var];
+    }
+    if (onEnumerated) {
+      decisionBlocked++;
+      int[] clause = new int[decisions.length];
+      for (int k = 0; k < decisions.length; k++) {
+        clause[k] = -decisions[k];
+      }
+      return clause;
+    }
+    int[] clause = new int[enumerated.length];
+    int n = 0;
+    for (int i : enumerated) {
+      IntDomain d = root[i];
+      int v = solution[i];
+      if (d.singleton()) {
+        continue;
+      }
+      // x != v as a bound literal at the ends of the root domain, which [x = v] need not exist for
+      if (v == d.min()) {
+        clause[n++] = geLit(i, v + 1);
+      } else if (v == d.max()) {
+        clause[n++] = -geLit(i, v);
+      } else {
+        clause[n++] = -eqVar(i, v);
+      }
+    }
+    return Arrays.copyOf(clause, n);
+  }
+
+  /**
    * Sets the action that takes the bound of the objective that {@link #minimize} has proved: no
    * solution better than the best one has a smaller value of the objective. It is called whenever
    * the search leaves the root with a better bound than before, after the root's propagation, so a
@@ -7258,6 +7501,7 @@ public final class LcgSolver implements ExternalPropagator {
     completed = false;
     if (completionTested > level) {
       completionTested = -1;
+      completionBlocker = -1;
     }
     pushed = Math.min(pushed, trail.size());
     numImplied = 0;
@@ -8329,6 +8573,15 @@ public final class LcgSolver implements ExternalPropagator {
     sat.cancel();
   }
 
+  /**
+   * Takes back {@link #stop()}, for a solver that searches again after a slice of another search: a
+   * later {@link #solve} or {@link #minimize} runs with the learnt clauses kept.
+   */
+  public void unstop() {
+    stopRequested = false;
+    sat.uncancel();
+  }
+
   @Override
   public int[] externalClause() {
     if (structural.isEmpty()
@@ -8918,6 +9171,16 @@ public final class LcgSolver implements ExternalPropagator {
       if (completedByAnnotation()) {
         return 0; // modelComplete: the solver offers the assignment as it is
       }
+      if (completionBlocker >= 0 && !vars[completionBlocker].singleton()) {
+        completionDecisions++;
+        // the value of the best solution, as the solver's saved phases would take, else the least
+        IntVar x = vars[completionBlocker];
+        int v =
+            phase != null && x.domain.contains(phase[completionBlocker])
+                ? phase[completionBlocker]
+                : x.min();
+        return assignLit(completionBlocker, v);
+      }
     }
     if (activityBranching) {
       if (activityGuide != null && !freeSearch && annotation != null) {
@@ -8936,6 +9199,18 @@ public final class LcgSolver implements ExternalPropagator {
   private int completionTested = -1;
   // completedByAnnotation found a model: the unfixed variables take their minimum in checkModel
   private boolean completed;
+  // the variable that stopped the last test of completedByAnnotation (a variable of the solver with
+  // a constraint that is not entailed), which the next decision fixes, or -1; the test then goes
+  // on from completionResume, the store index of that variable, at the next decision level
+  private int completionBlocker = -1;
+  private int completionResume;
+  // the blockers decided on the current branch since its first test; past COMPLETION_BLOCKERS the
+  // test stops for the branch, which the solver's own branching then completes
+  private int completionBlocks;
+  private static final int COMPLETION_BLOCKERS = 32;
+
+  /** The decisions that fixed a variable that stopped completedByAnnotation. */
+  public long completionDecisions;
 
   /** The models that completedByAnnotation offered without deciding the variables left. */
   public long completedModels;
@@ -8967,8 +9242,23 @@ public final class LcgSolver implements ExternalPropagator {
    * the solver). Without the test the activity branching decided those variables one decision level
    * at a time: on a_card_trick_1 (first_fail, satisfaction), 1,014 decisions on 0/1 variables whose
    * constraints all became clauses, after 29 decisions of the annotation, where the search without
-   * learning stops after its annotation (37 nodes). Tested once on each branch after the annotation
-   * ends; not with a proof, whose solution must give every variable.
+   * learning stops after its annotation (37 nodes). Not with a proof, whose solution must give
+   * every variable.
+   *
+   * <p>The linear relaxation does not count: its rows are combinations of constraints of the model,
+   * which hold once those are entailed. A variable of the solver with a constraint that is not
+   * entailed stops the test, and the next decision fixes it at its minimum, the value it would take
+   * in the model; the test then goes on from that variable at the next decision level, since a
+   * variable that passed stays fixed or free of constraints that are not entailed as the domains
+   * narrow. On ship-schedule 6Ships (fixed search) the LP and a product {@code x * 1 = z} of two
+   * variables left after the annotation kept every one of 588 solutions from being taken, so the
+   * search decided 444 other free variables one decision level at a time for each (267,279 of the
+   * 272,286 decisions). After 32 such decisions on a branch the test stops for the branch, and the
+   * solver's own branching (saved phases) decides the rest, as it does when a variable that the
+   * solver does not hold or a printed variable is unfixed: on roster chicroster_dataset_large_20
+   * the blockers never ran out and fixing each at its minimum, 2.4 million decisions, replaced the
+   * saved phases of the best solution (98 -> 99 at 240 s). So the blockers are decided only while
+   * they pay: after 256 of them, at most 64 for each model they completed (5.6 on 6Ships).
    */
   private static boolean allFixed(Collection<? extends Var> variables) {
     for (Var v : variables) {
@@ -8985,16 +9275,22 @@ public final class LcgSolver implements ExternalPropagator {
         || proof != null
         || lns != null
         || objective >= 0 && !vars[objective].singleton()
-        || completionTested >= 0 && completionTested <= level) {
+        || completionTested >= 0 && completionTested <= level && completionBlocker < 0) {
+      completionBlocker = -1;
       return false;
     }
+    int from = completionBlocker >= 0 ? completionResume : 0;
+    completionBlocker = -1;
+    if (from == 0) {
+      completionBlocks = 0;
+    }
     completionTested = level;
-    if (!allFixed(mustBeFixed)) {
+    if (from == 0 && !allFixed(mustBeFixed)) {
       // a printed variable need not be one of the store's variables (the Boolean b of
       // bool2int(b, i) is printed while the store holds only i), so it is tested here
       return false;
     }
-    for (int k = 0; k < store.size(); k++) {
+    for (int k = from; k < store.size(); k++) {
       Var v = store.vars[k];
       if (v == null || v.singleton()) {
         continue;
@@ -9003,7 +9299,12 @@ public final class LcgSolver implements ExternalPropagator {
         return false;
       }
       for (Constraint c : v.dom().constraints()) {
-        if (!c.isEntailed()) {
+        if (!c.isEntailed() && !(c instanceof LinearRelaxation)) {
+          if (++completionBlocks <= COMPLETION_BLOCKERS
+              && (completionDecisions < 256 || completionDecisions <= 64 * completedModels)) {
+            completionBlocker = idOf(x);
+            completionResume = k;
+          }
           return false;
         }
       }
@@ -9357,6 +9658,12 @@ public final class LcgSolver implements ExternalPropagator {
     if (restartsAfterSolution) {
       restartsAfterSolution = false;
       sat.setRestarts(true);
+    }
+    if (objective < 0 && enumerated != null) {
+      // the literals first, so that the linking clauses of a new [x = v] come before the clause
+      blockedSolutions++;
+      structural.add(blockingClause());
+      return false;
     }
     if (objective < 0) {
       return true;

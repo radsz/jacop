@@ -32,6 +32,7 @@ package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -3685,9 +3686,12 @@ class GlobalConstraints implements ParserTreeConstants {
     // files compiled with older versions of the library number them from the lowest node in arc.
     int minNode = Math.min(1, Arrays.stream(arc).min().getAsInt());
 
-    if (support.options.proof() != null && Arrays.stream(weight).allMatch(IntVar::singleton)) {
+    String mode = networkFlowMode();
+    if (Arrays.stream(weight).allMatch(IntVar::singleton) && !"global".equals(mode)) {
       networkFlowRows(arc, minNode, flow, weight, balance, cost);
-      return;
+      if ("rows".equals(mode)) {
+        return;
+      }
     }
 
     NetworkBuilder net = new NetworkBuilder();
@@ -3705,6 +3709,32 @@ class GlobalConstraints implements ParserTreeConstants {
     net.setCostVariable(cost);
 
     support.pose(new NetworkFlow(net));
+  }
+
+  /**
+   * How a network flow with fixed weights is posted, by the system property {@code
+   * org.jacop.fz.networkFlow}: {@code global} (only {@link NetworkFlow}), {@code rows} (only the
+   * flow conservation rows and the cost row, as MiniZinc's standard decomposition), {@code both},
+   * or {@code auto} (the default: rows under free search, both otherwise). Under --proof the rows
+   * alone. The arc analysis of NetworkFlow (reduced-cost pruning with a shortest path per arc)
+   * costs more than it prunes on the small networks of the MiniZinc Challenge mapping problem
+   * (sixteen networks of 11 nodes and 36 arcs, about 80 % of the time), and the rows explain better
+   * under lazy clause generation. Mapping and nfc 2015-2022, 30 instances at 120 s, two seeds: free
+   * search 841 s with the global, 712 s with both, 598 s with the rows (2018 ring_mp3 28-111 s to 7
+   * s); default search 945 s, 793 s with the rows, 687 s with both (2016 mesh3x3_mp3 proved in
+   * 12-18 s instead of not in 120 s; the rows alone lose 2021 mesh4x4_2, 6-9 s to 51-53 s).
+   *
+   * @return global, rows or both
+   */
+  private String networkFlowMode() {
+    if (support.options.proof() != null) {
+      return "rows";
+    }
+    String mode = System.getProperty("org.jacop.fz.networkFlow", "auto");
+    if ("auto".equals(mode)) {
+      return support.options.freeSearch() ? "rows" : "both";
+    }
+    return mode;
   }
 
   // --proof: the network flow as its rows, which the OPB model states and a proof derives from:
@@ -3954,6 +3984,29 @@ class GlobalConstraints implements ParserTreeConstants {
     support.delayedConstraints.add(support.binPackingCardinality.binPacking(bin, cc, w, minBin));
     support.binPackingCliques.add(bin, cc, w, minBin);
     support.binPackingPermutations.add(bin, cc, w, minBin);
+    if (BIN_LOADS_DEFINED && !support.dictionary.isSearchAnnotated()) {
+      markLoadsDefined(bin, cc);
+    }
+  }
+
+  // the loads of a bin packing follow from the bins of its items: free search branches on them
+  // last, and LNS relaxes the bins only. The balanced academic curriculum of XCSP 2026 (BACPj,
+  // 500 courses in 100 periods of at least 2 courses) translated without defines_var annotations
+  // branched on the credit loads, the variables of its sum-of-squares objective, and found no
+  // solution in 240 s; on the bins the first solution comes in a second. Only in a model without
+  // a search annotation: the MiniZinc Challenge models carry one, and on gbac at 600 s with -f
+  // the loads defined made 6 of 19 objectives worse and 1 better
+  static final boolean BIN_LOADS_DEFINED =
+      !FALSE.equals(System.getProperty("org.jacop.fz.binPackingLoadsDefined"));
+
+  private void markLoadsDefined(IntVar[] bin, IntVar[] load) {
+    Set<IntVar> bins = Collections.newSetFromMap(new IdentityHashMap<>());
+    bins.addAll(Arrays.asList(bin));
+    for (IntVar l : load) {
+      if (!l.singleton() && !bins.contains(l)) {
+        support.dictionary.addDefinedVar(l);
+      }
+    }
   }
 
   void gen_jacop_bin_packing_capacity(SimpleNode node) {
