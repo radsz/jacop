@@ -1348,6 +1348,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.rootReducedPasses
             + "\n%%%mzn-stat: lpCutBound="
             + r.cutBound
+            + "\n%%%mzn-stat: lpVbCuts="
+            + r.vbCuts
             + "\n%%%mzn-stat: lpSparseCuts="
             + r.sparseCuts
             + "\n%%%mzn-stat: lpCapacityCuts="
@@ -3705,10 +3707,171 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         && !tooLateForFreeSearch(lcg)) {
       return alternateOptimisationWithoutLearning(cost);
     }
+    if (lcgSlow
+        && lcgSlowUnsolved
+        && !lcgHopeless
+        && free
+        && costVar != null
+        && lcgStatus == CdclSolver.UNKNOWN
+        && !tooLateForFreeSearch(lcg)
+        && Double.parseDouble(options.freeConfig("lcg-unsolved-cp-share", "1")) > 0) {
+      return alternateUnsolved(costVar);
+    }
     if (lcgSlow && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch(lcg)) {
       return free ? continueWithoutLcg(costVar) : continueFixedWithoutLcg(costVar);
     }
     return numberSolutions > 0;
+  }
+
+  // whether free search runs after slow LCG gave way without a solution, for good or in slices
+  private boolean afterSlowLcg() {
+    return slowLcg != null || unsolvedSlicing;
+  }
+
+  // the slices of search without learning that LCG free search without a solution alternated with
+  private int lcgUnsolvedSlices;
+  // set while the slices of alternateUnsolved run: free search is built as after slow LCG gave way
+  private boolean unsolvedSlicing;
+
+  /**
+   * Alternates free search without learning with LCG on an optimisation model after slow LCG free
+   * search gave way without a solution ({@link #slowLcgCheck}), until one of them finds a first
+   * solution; that one keeps the rest of the time. Search without learning gets
+   * lcg-unsolved-cp-share (1) times the time LCG had, then LCG goes on with its learnt clauses for
+   * twice its time before, and both shares double. Before, LCG gave way for good: on code-generator
+   * (MiniZinc Challenge 2020) LCG makes 5 to 20 conflicts a second and finds its first solution
+   * after 60 to 180 s, while search without learning, free or under the annotation, finds none in
+   * 240 s, so at 1200 s mips_pgp.crypto.encryptfile and mips_gcc.real.eiremain ended without a
+   * solution. On ihtc-2024-marte i14, for which the hand-over was made, search without learning
+   * finds its first solution in under 30 s, inside its first slice. Each slice of search without
+   * learning runs in a store level of its own, with the constraints and clauses that only the LCG
+   * solver held posted there ({@link LcgSolver#lend}), as in {@link #alternateWithoutLearning}.
+   *
+   * @param costVar the cost variable
+   * @return whether a solution was found
+   */
+  private boolean alternateUnsolved(Var costVar) {
+    CdclSolver cdcl = lcg.sat();
+    long end = cdcl.deadline();
+    long lcgShare = Math.max(1, cdcl.now() - lcgStart);
+    double cpShare = Double.parseDouble(options.freeConfig("lcg-unsolved-cp-share", "1"));
+    long cpMillis = Math.max(1, (long) (cpShare * lcgShare / 1_000_000L));
+    FreeSearch sliceSearch = buildUnsolvedSliceSearch(costVar);
+    while (true) {
+      lcgUnsolvedSlices++;
+      reportUnsolvedSlice(cdcl.conflicts, cpMillis);
+      runUnsolvedCpSlice(sliceSearch, cpMillis, Math.max(1, (end - cdcl.now()) / 1_000_000L));
+      if (unsolvedCpSliceDecided()) {
+        return numberSolutions > 0;
+      }
+      if (options.getTimeOut() > 0 && options.getRemainingTimeOut() <= 0 || cdcl.now() >= end) {
+        return false;
+      }
+      lcgShare *= 2;
+      cpMillis *= 2;
+      if (runUnsolvedLcgSlice((IntVar) costVar, lcgShare, end)) {
+        return numberSolutions > 0;
+      }
+    }
+  }
+
+  // the free search the slices of alternateUnsolved resume, built as after slow LCG gave way
+  private FreeSearch buildUnsolvedSliceSearch(Var costVar) {
+    unsolvedSlicing = true;
+    freeSearchBuildOnly = true;
+    try {
+      executeFreeSearch(costVar);
+    } finally {
+      freeSearchBuildOnly = false;
+      unsolvedSlicing = false;
+    }
+    return freeSearch;
+  }
+
+  private void reportUnsolvedSlice(long conflicts, long cpMillis) {
+    if (options.searchStatistics()) {
+      IO.println(
+          "%%%mzn-stat: lcgUnsolvedSlice=" + lcgUnsolvedSlices + "," + conflicts + "," + cpMillis);
+    }
+    if (options.debug()) {
+      IO.println(
+          "%% LCG without a solution after "
+              + conflicts
+              + " conflicts: free search without learning for "
+              + cpMillis
+              + " ms");
+    }
+  }
+
+  /**
+   * Runs one slice of free search without learning for alternateUnsolved, in a store level of its
+   * own lent by the LCG solver; when it finds the first solution it keeps the rest of the time.
+   *
+   * @param sliceSearch the free search of the slices
+   * @param cpMillis the time of the slice
+   * @param virtualLeft the time LCG has left, for the virtual clock
+   */
+  private void runUnsolvedCpSlice(FreeSearch sliceSearch, long cpMillis, long virtualLeft) {
+    int root = store.level;
+    store.setLevel(root + 1);
+    Runnable giveBack = lcg.lend();
+    try {
+      for (IntVar[][] clause : this.sat.collectedClauses()) {
+        store.impose(new BoolClause(clause[0], clause[1]));
+      }
+      freeSearchStatus =
+          sliceSearch.resume(
+              System.currentTimeMillis() + Math.min(cpMillis, options.getRemainingTimeOut()),
+              FreeSearch.VIRTUAL_CLOCK ? cpMillis : 0);
+      long left = options.getRemainingTimeOut();
+      if (numberSolutions > 0 && freeSearchStatus == FreeSearch.Status.SATISFIED && left > 0) {
+        // search without learning found the first solution: it keeps the rest of the time, as
+        // when LCG gave way for good
+        freeSearchStatus =
+            sliceSearch.resume(
+                System.currentTimeMillis() + left, FreeSearch.VIRTUAL_CLOCK ? virtualLeft : 0);
+      }
+    } finally {
+      store.removeLevel(root + 1);
+      store.setLevel(root);
+      giveBack.run();
+    }
+  }
+
+  // whether the slice of free search without learning ended the search: it found a solution, or
+  // explored the whole tree
+  private boolean unsolvedCpSliceDecided() {
+    boolean exhausted =
+        freeSearchStatus == FreeSearch.Status.UNSATISFIABLE
+            || freeSearchStatus == FreeSearch.Status.OPTIMAL;
+    if (exhausted) {
+      lcgStatus = numberSolutions > 0 ? CdclSolver.SAT : CdclSolver.UNSAT;
+    }
+    return exhausted || numberSolutions > 0;
+  }
+
+  /**
+   * Lets LCG go on with its learnt clauses for its share of the time; at the end of it, LCG gives
+   * way again unless it found a solution, and then it keeps the rest of the time.
+   *
+   * @param cost the cost variable
+   * @param lcgShare the share of LCG, in nanoseconds of its clock
+   * @param end the deadline of LCG
+   * @return true if the search is over: decided, solved or out of time
+   */
+  private boolean runUnsolvedLcgSlice(IntVar cost, long lcgShare, long end) {
+    CdclSolver cdcl = lcg.sat();
+    lcg.unstop();
+    cdcl.setAlarm(
+        cdcl.now() + lcgShare,
+        () -> {
+          if (!solutionFound) {
+            lcg.stop();
+          }
+        });
+    lcgStatus = lcg.minimize(cost);
+    cdcl.setAlarm(Long.MAX_VALUE, null);
+    return lcgStatus != CdclSolver.UNKNOWN || numberSolutions > 0 || cdcl.now() >= end;
   }
 
   // set when the satisfaction probe stopped LCG for a slice of search without learning
@@ -5581,6 +5744,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return ordered.toArray(new IntVar[0]);
   }
 
+  // the slices of search without learning while LCG optimisation had no solution
+  private void printUnsolvedSliceStatistics() {
+    if (lcgUnsolvedSlices > 0) {
+      IO.println("%%%mzn-stat: lcgUnsolvedSlices=" + lcgUnsolvedSlices);
+      IO.println("%%%mzn-stat: lcgSlowUnsolved=" + lcgSlowUnsolved);
+    }
+  }
+
   private void printLcgStatistics(boolean interrupted) {
     boolean complete = lcgStatus != CdclSolver.UNKNOWN;
     printResultStatus(interrupted, numberSolutions > 0, !complete, complete && !interrupted);
@@ -5611,6 +5782,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           // slices of search without learning between runs of LCG on a satisfaction model
           IO.println("%%%mzn-stat: lcgSatSlices=" + lcgSatSlices);
         }
+        printUnsolvedSliceStatistics();
         if (lcgSlowDeferred > 0) {
           // LCG made too few conflicts but kept finding better solutions or bounds
           IO.println("%%%mzn-stat: lcgSlowDeferred=" + lcgSlowDeferred);
@@ -7215,7 +7387,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (annotated == null
         && optimisation
         && !allSolutions
-        && slowLcg != null
+        && afterSlowLcg()
         && numberSolutions == 0
         && Integer.parseInt(options.freeConfig("first-input", "2")) > 0) {
       annotated = inputOrderSelect(searchVars, objective);

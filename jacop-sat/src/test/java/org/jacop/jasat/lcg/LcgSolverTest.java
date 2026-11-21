@@ -6924,4 +6924,26 @@ class LcgSolverTest {
       }
     }
   }
+
+  // Solve.alternateUnsolved stops LCG at the end of its slice and later lets it go on: after
+  // unstop() minimize runs again and finds the optimum, with the learnt clauses kept
+  @Test
+  void unstopTakesBackStop() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 5);
+    }
+    store.impose(new Alldifferent(x));
+    IntVar cost = new IntVar(store, "cost", 0, 20);
+    store.impose(new LinearInt(x, new int[] {1, 2, 3, 4}, "==", cost));
+    assertThat(store.consistency()).isTrue();
+    LcgSolver solver = new LcgSolver(store);
+    solver.stop();
+    assertThat(solver.minimize(cost)).isEqualTo(CdclSolver.UNKNOWN);
+    solver.unstop();
+    assertThat(solver.minimize(cost)).isEqualTo(CdclSolver.SAT);
+    // 3*1 + 2*2 + 1*3 + 0*4
+    assertThat(solver.value(cost)).isEqualTo(10);
+  }
 }
