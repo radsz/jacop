@@ -96,15 +96,20 @@ public class XplusYgtC extends AbstractConstraintXandY
   @Override
   public void consistency(final Store store) {
 
-    x.domain.inMin(store.level, x, c - y.max() + 1);
-    y.domain.inMin(store.level, y, c - x.max() + 1);
+    x.domain.inMin(store.level, x, clamp((long) c - y.max() + 1));
+    y.domain.inMin(store.level, y, clamp((long) c - x.max() + 1));
   }
 
   @Override
   public void notConsistency(final Store store) {
 
-    x.domain.inMax(store.level, x, c - y.min());
-    y.domain.inMax(store.level, y, c - x.min());
+    x.domain.inMax(store.level, x, clamp((long) c - y.min()));
+    y.domain.inMax(store.level, y, clamp((long) c - x.min()));
+  }
+
+  /** A bound computed in long, brought back into the int range, where it prunes the same. */
+  private static int clamp(long bound) {
+    return (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, bound));
   }
 
   @Override

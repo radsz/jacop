@@ -818,9 +818,12 @@ public class Constraints implements ParserTreeConstants {
       // to be sure that all constraints queues are empty and the
       // model is consistent; it can happen that search will not
       // find out inconsistency if all variables are ground
-      if (!store.consistency()) {
-        throw Store.failException;
-      }
+      support.propagateUntilTimeOut(
+          () -> {
+            if (!store.consistency()) {
+              throw Store.failException;
+            }
+          });
     } catch (FailException e) {
       // a constraint failed as it propagated (a domain the translation emptied has no reason)
       if (dictionary.rootTrail != null && store.recentlyFailedConstraint != null) {

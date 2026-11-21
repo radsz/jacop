@@ -227,6 +227,7 @@ public class IntVar extends Var {
    * @param max the right bound of the interval used to set this variable domain to.
    */
   public void setDomain(int min, int max) {
+    widenDomainFor(min, max);
     domain.setDomain(min, max);
     refreshBounds();
   }
@@ -238,6 +239,9 @@ public class IntVar extends Var {
    * @param dom domain to which the current variable domain is set to.
    */
   public void setDomain(IntDomain dom) {
+    if (!dom.isEmpty()) {
+      widenDomainFor(dom.min(), dom.max());
+    }
     domain.setDomain(dom);
     refreshBounds();
   }

@@ -310,4 +310,49 @@ class ZeroSumFlatzincTest {
     assertTrue(out.contains("==========") || out.contains("UNSATISFIABLE"), out);
     return last;
   }
+
+  /**
+   * A sum whose variable has a narrower domain than the sum: dropping the sum dropped the bound x1
+   * + x2 <= 2 that the domain of s states (17 solutions for 7).
+   */
+  @Test
+  void sumWithANarrowerDomainIsKept() throws IOException {
+    String model =
+        """
+        var 0..3: x1 :: output_var;
+        var 0..3: x2 :: output_var;
+        var 0..2: s;
+        var bool: b :: output_var;
+        constraint int_lin_eq([1,1,-1],[x1,x2,s],0);
+        constraint int_eq_imp(s, 0, b);
+        solve satisfy;
+        """;
+    Set<String> expected = solutions(run(model, false, "-a"));
+    assertEquals(7, expected.size());
+    assertEquals(expected, solutions(run(model, true, "-a")));
+    assertEquals(expected, solutions(run(model, true, "-a", "--presolve", "off")));
+  }
+
+  /**
+   * An output variable declared equal to the sum: the sum was dropped and t, printed from its own
+   * value, was left free (t = 1 with x1 = x2 = 0).
+   */
+  @Test
+  void sumDeclaredEqualToAnOutputVariableKeepsItsValue() throws IOException {
+    String model =
+        """
+        var 0..3: x1 :: output_var;
+        var 0..3: x2 :: output_var;
+        var 0..6: s;
+        var 0..6: t :: output_var = s;
+        var bool: b :: output_var;
+        constraint int_lin_eq([1,1,-1],[x1,x2,s],0);
+        constraint int_eq_imp(s, 0, b);
+        solve satisfy;
+        """;
+    Set<String> expected = solutions(run(model, false, "-a"));
+    assertEquals(17, expected.size());
+    assertEquals(expected, solutions(run(model, true, "-a")));
+    assertEquals(expected, solutions(run(model, true, "-a", "--presolve", "off")));
+  }
 }

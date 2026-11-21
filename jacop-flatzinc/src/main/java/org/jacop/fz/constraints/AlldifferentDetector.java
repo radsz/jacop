@@ -569,6 +569,8 @@ public class AlldifferentDetector implements ParserTreeConstants {
         if (work >= WORK_LIMIT) {
           break;
         }
+        // the clique search takes seconds on large models (hidato_table: 4.5 s)
+        support.checkTimeOut();
         if (covered.contains(Edge.of(seed, first[0], first[1]))) {
           continue;
         }

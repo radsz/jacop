@@ -274,6 +274,13 @@ class ComparisonConstraints implements ParserTreeConstants {
     boolean p1Const = p1.getType() == 0 || p1.getType() == 1;
     boolean p2Const = p2.getType() == 0 || p2.getType() == 1;
 
+    Boolean decided = decidedBeyondRange(operation, p1, p2);
+    if (decided != null) {
+      if (!decided) {
+        throw Store.failException;
+      }
+      return;
+    }
     if (p1Const && p2Const) {
       int i1 = support.getInt(p1);
       checkIntConstantInBounds(i1);
@@ -296,6 +303,51 @@ class ComparisonConstraints implements ParserTreeConstants {
       return;
     }
     intComparisonVarVar(operation, support.getVariable(p1), support.getVariable(p2));
+  }
+
+  /**
+   * Decides a comparison with a constant beyond JaCoP's integer range, which no variable reaches,
+   * or between two constants.
+   *
+   * @return its truth, or null when it compares a variable with a constant within the range
+   */
+  private Boolean decidedBeyondRange(int operation, ASTScalarFlatExpr p1, ASTScalarFlatExpr p2) {
+    boolean p1Const = p1.getType() == 0 || p1.getType() == 1;
+    boolean p2Const = p2.getType() == 0 || p2.getType() == 1;
+    if (p1Const && p2Const) {
+      int i1 = support.getInt(p1);
+      int i2 = support.getInt(p2);
+      if (inRange(i1) && inRange(i2)) {
+        return null;
+      }
+      return compare(operation, i1, i2);
+    }
+    if (p2Const) {
+      int i2 = support.getInt(p2);
+      // every value of the variable lies on the side of the range nearer to 0
+      return inRange(i2) ? null : compare(operation, 0, i2);
+    }
+    if (p1Const) {
+      int i1 = support.getInt(p1);
+      return inRange(i1) ? null : compare(operation, i1, 0);
+    }
+    return null;
+  }
+
+  private static boolean inRange(int value) {
+    return value >= IntDomain.MIN_INT && value <= IntDomain.MAX_INT;
+  }
+
+  private static boolean compare(int operation, int i1, int i2) {
+    return switch (operation) {
+      case Support.EQ -> i1 == i2;
+      case Support.NE -> i1 != i2;
+      case Support.LT -> i1 < i2;
+      case Support.GT -> i1 > i2;
+      case Support.LE -> i1 <= i2;
+      case Support.GE -> i1 >= i2;
+      default -> throw new RuntimeException("Internal error in ComparisonConstraints");
+    };
   }
 
   private static void checkIntConstantInBounds(int value) {
@@ -851,6 +903,14 @@ class ComparisonConstraints implements ParserTreeConstants {
     ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
     IntVar v3 = support.getVariable(p3);
 
+    Boolean decided = decidedBeyondRange(operation, p1, p2);
+    if (decided != null) {
+      // b <-> false or b -> false fixes b to 0; b <-> true fixes it to 1; b -> true holds
+      if (isReified || !decided) {
+        v3.domain.inValue(store.level, v3, decided ? 1 : 0);
+      }
+      return;
+    }
     PrimitiveConstraint c;
     if (p2.getType() == 0 || p2.getType() == 1) {
       c = intComparisonVarConst(operation, p1, p2, v3, isReified);
