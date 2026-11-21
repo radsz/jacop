@@ -542,6 +542,17 @@ public class LinearRelaxation extends Constraint
       Integer.getInteger("org.jacop.lp.satisfactionProbation", 64);
   private boolean probation;
 
+  // the extra rows of an optimisation model kept for the root bound they raise, though the bound
+  // without them already cuts the objective, are on probation in search too: after this many
+  // solves they are dropped unless at least FAIL_RATE of the solves since then failed the node. A
+  // bound a few units higher at the root seldom fails a node, and every solve pays for the rows
+  // (2012 amaze 2012-03-19 under LCG: 650 extra rows raise the root bound 97 -> 104, the LP fails
+  // 6 % of its solves and saves 8 of 8,179 nodes, and its solves take 4.5 s of a 4.1 s search
+  // that takes 0.6 s without them); 0 keeps them
+  private static final int OPTIMISATION_PROBATION =
+      Integer.getInteger("org.jacop.lp.optimisationProbation", 256);
+  private boolean searchProbation;
+
   // the solves at the pivot limit, with no node failed, after which rows on probation are dropped
   private static final int PROBATION_LIMITS =
       Integer.getInteger("org.jacop.lp.probationLimits", 16);
@@ -3601,6 +3612,19 @@ public class LinearRelaxation extends Constraint
         dropExtraRows();
       }
     }
+    if (searchProbation && calls - extraCall >= OPTIMISATION_PROBATION) {
+      searchProbation = false;
+      System.err.println(
+          "DBG probation calls "
+              + (calls - extraCall)
+              + " failures "
+              + (failures - extraFailures)
+              + " before "
+              + (beforeExtra != null));
+      if (beforeExtra != null && !failingWithExtra()) {
+        dropExtraRows();
+      }
+    }
     calls++;
     boolean jump = calls > 1 && lastSolveLevel - store.level >= BASIS_JUMP;
     long pivotsBefore = lp.pivots();
@@ -6445,6 +6469,21 @@ public class LinearRelaxation extends Constraint
       lp = full;
       allRowsInSimplex(m + k);
       extraCarry = carriesBound(status, before, m, keptStatus);
+      searchProbation =
+          OPTIMISATION_PROBATION > 0
+              && objective != null
+              && !probation
+              && !keepEncodings
+              && trees.isEmpty();
+      System.err.println(
+          "DBG extra kept probation "
+              + probation
+              + " carry "
+              + extraCarry
+              + " enc "
+              + keepEncodings
+              + " sp "
+              + searchProbation);
       extraSparse = trialSparse;
       trialSparse = false;
       if (keptStatus == LpSolver.OPTIMAL) {
@@ -7205,6 +7244,7 @@ public class LinearRelaxation extends Constraint
     c.keepExtra = !keptExtraForms.isEmpty();
     c.keepEncodings = keepEncodings;
     c.extraCarry = extraCarry;
+    c.searchProbation = searchProbation;
     c.refutation = refutation;
     for (CapacityCuts cc : capacity) {
       c.capacity.add(cc.copy(map));
