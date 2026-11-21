@@ -33,8 +33,10 @@ package org.jacop;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import java.io.StringReader;
+import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11927,6 +11929,59 @@ class SingleConstraintTest extends TestHelper {
     }
     store.impose(new Alldistinct(new IntVar[] {u, w}));
     assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void assignmentOnUnboundedVariablesEnumeratesOnlyPrunedIndexes() {
+    // Assignment enumerated every value pruned from a variable before skipping those outside the
+    // index range, about 10^9 values per variable narrowed from MIN_INT..MAX_INT to the indexes
+    // (tens of seconds for inverse in FlatZinc, where var int is unbounded).
+    int n = 5;
+    int[][] excluded = {{0, 1}, {2, 3}, {4, 0}};
+    long decomposition = assignmentSolutions(n, excluded, false);
+    assertThat(decomposition).isEqualTo(64);
+    long solutions =
+        assertTimeoutPreemptively(
+            Duration.ofSeconds(2), () -> assignmentSolutions(n, excluded, true));
+    assertThat(solutions).isEqualTo(decomposition);
+  }
+
+  private static long assignmentSolutions(int n, int[][] excluded, boolean global) {
+    Store store = new Store();
+    IntVar[] x = new IntVar[n];
+    IntVar[] d = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      x[i] =
+          global
+              ? new IntVar(store, "x" + i, IntDomain.MIN_INT, IntDomain.MAX_INT)
+              : new IntVar(store, "x" + i, 0, n - 1);
+      d[i] =
+          global
+              ? new IntVar(store, "d" + i, IntDomain.MIN_INT, IntDomain.MAX_INT)
+              : new IntVar(store, "d" + i, 0, n - 1);
+    }
+    if (global) {
+      store.impose(new Assignment(x, d));
+    } else {
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+          BooleanVar b = new BooleanVar(store);
+          store.impose(new Reified(new XeqC(x[i], j), b));
+          store.impose(new Reified(new XeqC(d[j], i), b));
+        }
+      }
+    }
+    for (int[] pair : excluded) {
+      store.impose(new XneqC(x[pair[0]], pair[1]));
+    }
+    IntVar[] all = Stream.concat(Arrays.stream(x), Arrays.stream(d)).toArray(IntVar[]::new);
+    Search<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    SelectChoicePoint<IntVar> select = new SimpleSelect<>(all, null, new IndomainMin<>());
+    search.labeling(store, select);
+    return search.getSolutionListener().solutionsNo();
   }
 
   /**
