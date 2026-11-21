@@ -552,6 +552,18 @@ public class LinearRelaxation extends Constraint
   private static final int OPTIMISATION_PROBATION =
       Integer.getInteger("org.jacop.lp.optimisationProbation", 256);
   private boolean searchProbation;
+  // the share of the time of the search that the solves of the probation must take for their rows
+  // to be dropped: rows that cost little stay (multiple-constant-multiplication XU07_28: 7 % of the
+  // solves fail, the LP takes a quarter of the time, and without the rows the search takes 160 s
+  // instead of 2.5 s; sdn-chain d28n600-6: 8 % fail, 46 % of the time, 7 s with the rows and 200 s
+  // without; 2012 amaze 2012-03-19: 8 % fail, 70-80 % of the time, 4.2 s with them and 1.2 s
+  // without); the share is measured from the PROBATION_START-th solve after the root
+  private static final double PROBATION_SHARE =
+      Double.parseDouble(System.getProperty("org.jacop.lp.probationShare", "0.6"));
+  private static final int PROBATION_START = 16;
+  private static final boolean TRACE_PROBATION = Boolean.getBoolean("org.jacop.lp.probationTrace");
+  private long probationSolveNanos;
+  private long probationStart;
 
   // the solves at the pivot limit, with no node failed, after which rows on probation are dropped
   private static final int PROBATION_LIMITS =
@@ -3612,16 +3624,24 @@ public class LinearRelaxation extends Constraint
         dropExtraRows();
       }
     }
-    if (searchProbation && calls - extraCall >= OPTIMISATION_PROBATION) {
+    if (searchProbation && calls - extraCall == PROBATION_START) {
+      probationSolveNanos = solveNanos;
+      probationStart = System.nanoTime();
+    } else if (searchProbation && calls - extraCall >= OPTIMISATION_PROBATION) {
       searchProbation = false;
-      System.err.println(
-          "DBG probation calls "
-              + (calls - extraCall)
-              + " failures "
-              + (failures - extraFailures)
-              + " before "
-              + (beforeExtra != null));
-      if (beforeExtra != null && !failingWithExtra()) {
+      double share =
+          (double) (solveNanos - probationSolveNanos)
+              / Math.max(1, System.nanoTime() - probationStart);
+      if (TRACE_PROBATION) {
+        System.err.println(
+            "% probation share "
+                + share
+                + " failures "
+                + (failures - extraFailures)
+                + " of "
+                + (calls - extraCall));
+      }
+      if (beforeExtra != null && share >= PROBATION_SHARE && !failingWithExtra()) {
         dropExtraRows();
       }
     }
@@ -6475,15 +6495,6 @@ public class LinearRelaxation extends Constraint
               && !probation
               && !keepEncodings
               && trees.isEmpty();
-      System.err.println(
-          "DBG extra kept probation "
-              + probation
-              + " carry "
-              + extraCarry
-              + " enc "
-              + keepEncodings
-              + " sp "
-              + searchProbation);
       extraSparse = trialSparse;
       trialSparse = false;
       if (keptStatus == LpSolver.OPTIMAL) {
