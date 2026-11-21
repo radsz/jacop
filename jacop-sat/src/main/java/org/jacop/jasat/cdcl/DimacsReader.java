@@ -110,7 +110,11 @@ public final class DimacsReader {
           }
           String[] f = header.toString().trim().split("\\s+");
           if (f.length >= 3) {
-            solver.ensureVars(Integer.parseInt(f[2]));
+            try {
+              solver.ensureVars(Integer.parseInt(f[2]));
+            } catch (NumberFormatException e) {
+              throw new IOException("bad variable count in DIMACS header: " + header, e);
+            }
           }
         }
         while (c != -1 && c != '\n') {
@@ -133,6 +137,9 @@ public final class DimacsReader {
       }
       int x = 0;
       while (c >= '0' && c <= '9') {
+        if (x > (Integer.MAX_VALUE - (c - '0')) / 10) {
+          throw new IOException("literal beyond the int range in DIMACS input");
+        }
         x = 10 * x + (c - '0');
         c = next();
       }
