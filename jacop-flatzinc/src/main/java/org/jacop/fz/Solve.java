@@ -3692,6 +3692,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private volatile boolean lcgTasteDue;
   // the nanoseconds of CdclSolver.now that the taste of search without learning took
   private long lcgTasteNanos;
+  // the taste's time as a share of LCG's time before it (lcg-sat-taste-share)
+  private double lcgTasteShare = 1;
   // the probe's thread, kept running across the taste
   private Thread lcgProbeThread;
 
@@ -3718,7 +3720,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     CdclSolver sat = lcg.sat();
     long end = sat.deadline();
     long lcgShare = Math.max(1, sat.now() - lcgStart);
-    long cpMillis = Math.max(1, (long) ((taste ? 1 : lcgSliceShare) * lcgShare / 1_000_000L));
+    long cpMillis =
+        Math.max(1, (long) ((taste ? lcgTasteShare : lcgSliceShare) * lcgShare / 1_000_000L));
     // the search is built at the root, below the levels of the slices: the time stamps of its
     // branchings (input order of the annotation) live at the level they were made at
     freeSearchBuildOnly = true;
@@ -4148,6 +4151,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return null;
     }
     double tasteShare = Double.parseDouble(options.freeConfig("lcg-sat-taste", "0.01"));
+    lcgTasteShare = Double.parseDouble(options.freeConfig("lcg-sat-taste-share", "1"));
     long taste =
         act && tasteShare > 0 && tasteShare < at && !"once".equals(lcgSatHandover())
             ? (long) (tasteShare * limit)
