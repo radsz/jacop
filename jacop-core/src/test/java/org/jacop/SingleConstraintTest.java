@@ -87,6 +87,7 @@ import org.jacop.constraints.Circuit;
 import org.jacop.constraints.CircuitCost;
 import org.jacop.constraints.Conditional;
 import org.jacop.constraints.ConditionalSelect;
+import org.jacop.constraints.ConjunctionSum;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
@@ -12477,6 +12478,33 @@ class SingleConstraintTest extends TestHelper {
     store.impose(c);
     assertThat(store.consistency()).isTrue();
     assertThat(noOfAllSolutions(store, list)).isEqualTo(3);
+  }
+
+  /**
+   * ConjunctionSum imposed again after its removal at the root (LcgSolver.release) kept the terms
+   * activated by the first imposition on its stack and ran past the end of it.
+   */
+  @Test
+  void conjunctionSumImposedAgainStartsFromNoActiveTerm() {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 2);
+    IntVar x2 = new IntVar(store, "x2", 0, 0);
+    IntVar sum = new IntVar(store, "sum", 0, 8);
+    ConjunctionSum c =
+        new ConjunctionSum(
+            new IntVar[][] {{x2, x0}},
+            new int[][] {{0, 1}},
+            new boolean[][] {{true, false}},
+            new int[] {2},
+            sum);
+    store.impose(c);
+    assertThat(store.consistency()).isTrue();
+    c.removeConstraint();
+    x0.domain.in(0, x0, 2, 2);
+    store.clearEntailed(c);
+    store.impose(c);
+    assertThat(store.consistency()).isTrue();
+    assertThat(sum.min()).isEqualTo(2);
   }
 
   /**
