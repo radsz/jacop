@@ -119,7 +119,10 @@ class LinearConstraints implements ParserTreeConstants {
 
     if (allWeightsOne(p1)) {
       poseSumBool(p2, "==", par3);
-    } else if (p2.length >= 3 && boolSum(p2) && !Arrays.asList(p2).contains(par3)) {
+    } else if (p2.length >= 3
+        && boolSum(p2)
+        && !Arrays.asList(p2).contains(par3)
+        && !sumsExceedInt(p1)) {
       support.pose(
           par3.singleton()
               ? new LinearBool(p2, p1, "==", par3.value())
@@ -999,6 +1002,10 @@ class LinearConstraints implements ParserTreeConstants {
       if (other != -1) {
         return false;
       }
+    }
+    if (sumsExceedInt(p1) && (other != -1 || !"<=".equals(rel))) {
+      // LinearBool holds its sums in int; LinearInt holds them in long
+      return false;
     }
     if (other == -1) {
       if ("<=".equals(rel) && sumsExceedInt(p1)) {

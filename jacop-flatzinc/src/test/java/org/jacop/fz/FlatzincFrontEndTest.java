@@ -6300,4 +6300,25 @@ class FlatzincFrontEndTest {
       assertTrue(millis < 8_000, millis + " ms");
     }
   }
+
+  @Test
+  void equalityOverBooleansWithWeightsBeyondIntIsPosted() throws IOException {
+    // the weights add up to more than an int holds: LinearBool threw "overflow" for the valid
+    // model; b2 = b1 = 1, b0 = 0 is the only assignment, for each of the 3 values of x
+    String head =
+        "var bool: b0 :: output_var;\n"
+            + "var bool: b1 :: output_var;\n"
+            + "var bool: b2 :: output_var;\n"
+            + "var 0..2: x :: output_var;\n";
+    for (String row :
+        new String[] {
+          "bool_lin_eq([2147483646,1073741824,3],[b0,b2,b1],1073741827)",
+          "int_lin_eq([2147483646,1073741824,3],[b0,b2,b1],1073741827)"
+        }) {
+      String model = head + "constraint " + row + ";\nsolve satisfy;\n";
+      Set<String> solutions = solveAll(model);
+      assertEquals(3, solutions.size(), model + solutions);
+      assertTrue(solutions.contains("b0 = false; b1 = true; b2 = true; x = 1;"), model + solutions);
+    }
+  }
 }
