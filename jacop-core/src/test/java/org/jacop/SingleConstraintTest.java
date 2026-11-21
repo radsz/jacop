@@ -43,6 +43,7 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -213,6 +214,7 @@ import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.knapsack.KnapsackDP;
 import org.jacop.constraints.lp.TreeCuts;
 import org.jacop.constraints.netflow.NetworkBuilder;
+import org.jacop.constraints.netflow.NetworkFlow;
 import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.regular.CostRegular;
 import org.jacop.constraints.regular.MultiCostRegular;
@@ -12686,5 +12688,60 @@ class SingleConstraintTest extends TestHelper {
     backToRoot(store);
     store.impose(c);
     assertThat(store.consistency()).isFalse();
+  }
+
+  /**
+   * Each copy of a NetworkFlow (made by the LCG explanation checker, replay and minimality) gave
+   * its domain structures the domains array of the network's definition, which a structure reorders
+   * as it grounds arcs: a later copy paired the domains with other arcs and accepted y1 = y2 = 1 at
+   * the cost 0 of a soft all different.
+   */
+  @Test
+  void networkFlowCopiesKeepTheirDomainStructures() {
+    Store store = new Store();
+    IntVar[] y = new IntVar[3];
+    for (int i = 0; i < y.length; i++) {
+      y[i] = new IntVar(store, "y" + i, 1, 3);
+    }
+    IntVar d = new IntVar(store, "d", 0, 3);
+    NetworkFlow flow = null;
+    for (Constraint k :
+        new SoftAlldifferent(y, d, ViolationMeasure.DECOMPOSITION_BASED).decompose(store)) {
+      if (k instanceof NetworkFlow f) {
+        flow = f;
+      }
+    }
+    assertThat(flow).isNotNull();
+    // the maxima of y0, y1 and y2, the range of d, and the solutions of each copy
+    int[][] cases = {
+      {2, 2, 1, 0, 0, 0}, {2, 2, 1, 0, 1, 3}, {3, 3, 3, 0, 0, 6}, {3, 3, 3, 0, 3, 27}
+    };
+    for (int round = 0; round < 3; round++) {
+      for (int[] k : cases) {
+        Store scratch = new Store();
+        Map<Var, Var> copies = new IdentityHashMap<>();
+        for (int i = 0; i < y.length; i++) {
+          copies.put(y[i], new IntVar(scratch, y[i].id(), 1, k[i]));
+        }
+        copies.put(d, new IntVar(scratch, "d", k[3], k[4]));
+        scratch.impose(
+            flow.copy(
+                new VarMap() {
+                  @Override
+                  public Store target() {
+                    return scratch;
+                  }
+
+                  @Override
+                  @SuppressWarnings("unchecked")
+                  public <V extends Var> V get(V v) {
+                    return (V) copies.get(v);
+                  }
+                }));
+        assertThat(noOfAllSolutions(scratch, copies.values().toArray(new IntVar[0])))
+            .as("round " + round + " case " + Arrays.toString(k))
+            .isEqualTo(k[5]);
+      }
+    }
   }
 }

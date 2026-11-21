@@ -243,8 +243,10 @@ public class NetworkFlow extends Constraint
           for (int k = 0; k < structureArcs.length; k++) {
             structureArcs[k] = built[st.arcs[k]];
           }
+          // a domain structure reorders its domains as it grounds arcs: each copy gets its own
           builder.handlerList.add(
-              new DomainStructure(map.get(st.variable), st.domains, structureArcs, st.behavior));
+              new DomainStructure(
+                  map.get(st.variable), st.domains.clone(), structureArcs, st.behavior));
         } else {
           builder.handlerList.add(built[(Integer) handler].companion);
         }
