@@ -6335,4 +6335,18 @@ class FlatzincFrontEndTest {
     assertFalse(out[0].contains("=====UNSATISFIABLE====="), out[0]);
     assertTrue(out[0].contains("=====UNKNOWN====="), out[0]);
   }
+
+  @Test
+  void setOverTheWholeIntegerRangeIsSolvedWithoutMirroringItsElements() throws IOException {
+    // LCG mirrors each open element of a set by a 0/1 variable: a billion of them ran out of memory
+    String model =
+        "var set of -536870910..536870909: s :: output_var;\n"
+            + "var 0..10: c :: output_var;\n"
+            + "constraint set_card(s, c);\n"
+            + "constraint set_in(-536870910, s);\n"
+            + "constraint set_in(536870909, s);\n"
+            + "solve minimize c;\n";
+    String[] out = run(model, "--lcg", "on");
+    assertTrue(out[0].contains("c = 2;") && out[0].contains("=========="), out[0] + out[1]);
+  }
 }

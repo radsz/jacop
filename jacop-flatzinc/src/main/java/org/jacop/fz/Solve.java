@@ -2894,8 +2894,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         return "the model has float variables";
       }
     }
+    for (int i = 0; i < store.size(); i++) {
+      // LCG mirrors every element a set may still take by a 0/1 variable
+      if (store.vars[i] instanceof SetVar s
+          && (long) s.domain.lub().getSize() - s.domain.glb().getSize() > MAX_MIRRORED_ELEMENTS) {
+        return "a set variable has more than " + MAX_MIRRORED_ELEMENTS + " open elements";
+      }
+    }
     return null;
   }
+
+  // the most elements of a set variable that LCG mirrors by 0/1 variables
+  private static final int MAX_MIRRORED_ELEMENTS = 1 << 20;
 
   // -Djacop.lcg.probe=share: root probing of the 0/1 variables and small domains before LCG
   // search, for at most this share of the time left; 0 is off, the default of model search
