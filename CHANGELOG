@@ -8781,7 +8781,29 @@ Version 5.0 (unreleased)
    (4,333 -> 4,637), unit-commitment L12, warehouse olil4. Wide-quick set
    at 240 s: the slices start on 2 of 62 instances.
 
-492. The core-guided phase of free LCG search takes the terms of a split
+492. New XCSP3 front end org.jacop.fz.xcsp.Xcsp2jacop and launcher
+   xcsp-jacop: it reads an XCSP3-core instance (.xml, .xml.lzma or
+   .xml.xz) with the JDK's streaming XML parser, posts it as FlatZinc over
+   JaCoP's built-ins, solves it with the FlatZinc front end and all its
+   options (-t, -f, -p, LCG) and prints the XCSP3 competition output
+   (s, o, v and c lines). Tables are filtered by the domains of their
+   variables and stored once per content, so Inglenook of XCSP 2026 (a
+   26-million-pair table on one line) is read in 4 s instead of 270 s and
+   6 GB through pycsp3 and MiniZinc. Comparisons that occur only in
+   clauses, or in sums bounded on one side, are half reified, and a
+   constant matrix element is a table, as MiniZinc posts them. A domain
+   beyond JaCoP's integer range is cut, and the answer then claims neither
+   unsatisfiability nor an optimum. XCSP 2022-2025, quick set (147
+   instances, one per family and track) and the 38 instances the pycsp3
+   translation cannot handle, 600 s, against pycsp3 + MiniZinc 2.9.4 on
+   the same jar: 140 against 127 proved (130 against 127 on the quick
+   set), total time 16,562 s against 17,924 s on the quick set with 600 s
+   for an unproved instance; better objective on 9 open instances,
+   worse on 3. All 2,250 instances of 2022-2026 at 10 s: every solution
+   passes the XCSP3 SolutionChecker and no answer contradicts the
+   competition results.
+
+493. The core-guided phase of free LCG search takes the terms of a split
    objective sum also when they are narrow (at most 8 levels each, not
    only 0-1) and span up to twice the levels of the block sums. Before,
    such terms lost to the blocks as soon as these spanned fewer levels,
@@ -8794,7 +8816,7 @@ Version 5.0 (unreleased)
    15 -> 7 s, league model30-4-6 2.3 -> 3.6 s).
    -Djacop.lcg.coreNarrowSpan=1 restores the 0-1 rule only.
 
-493. JaLP's aggregator also substitutes a column whose bounds are implied
+494. JaLP's aggregator also substitutes a column whose bounds are implied
    by any of its rows, not only by the equation it is substituted from
    (implied free columns as in HiGHS). On the 687 LPs of the osolpro LP
    bench the presolved LPs are 1,112,853 -> 244,977 rows and columns larger
@@ -8803,7 +8825,7 @@ Version 5.0 (unreleased)
    pds-40 to pds-100 35-50 % faster. -Dorg.jacop.jalp.aggregateAnyRow=false
    turns it off.
 
-494. Rows that the linear relaxation of an optimisation model keeps for the
+495. Rows that the linear relaxation of an optimisation model keeps for the
    root bound they raise are on probation in search: after 256 solves
    they are dropped when fewer than 10 % of the solves failed the node and
    the solves took at least 60 % of the time of the search since the
@@ -8813,7 +8835,7 @@ Version 5.0 (unreleased)
    -Dorg.jacop.lp.optimisationProbation=0 keeps the rows,
    -Dorg.jacop.lp.probationShare sets the share of time.
 
-495. In a model without a search annotation, the FlatZinc front end counts
+496. In a model without a search annotation, the FlatZinc front end counts
    the loads of a bin packing (jacop_bin_packing) as defined by it, as if
    a defines_var annotation named them: free search branches on the bins
    of the items first (item 369) and LNS relaxes bins only (lns-defined).
@@ -8828,7 +8850,7 @@ Version 5.0 (unreleased)
    gbac under -f got worse at 600 s (6 of 19 objectives worse, 1 better).
    -Dorg.jacop.fz.binPackingLoadsDefined=false turns it off.
 
-496. Two opt-in strengthenings of the root linear relaxation.
+497. Two opt-in strengthenings of the root linear relaxation.
    -Dorg.jacop.lp.clauseRows=true: the clause rows of lazy clause
    generation over columns the relaxation already has no longer drop out
    when the share of further rows is full. They come after every other
@@ -8853,7 +8875,7 @@ Version 5.0 (unreleased)
    plus L10 and L15), 600 s: the same 26 solved in each mode, total time
    default 0.994 and -f 1.007.
 
-497. The FlatZinc front end rewrites an absolute difference that only
+498. The FlatZinc front end rewrites an absolute difference that only
    excludes values: t = x - y and a = |t|, with t and a used nowhere
    else, become bounds on x - y and x - y != d for the at most 8 values d
    (-Dorg.jacop.fz.absoluteDifference.maxHoles) that the domains of t and
@@ -8873,7 +8895,7 @@ Version 5.0 (unreleased)
    proved in 44 s; no instance of the wide set fires. Off with
    -Dorg.jacop.fz.absoluteDifference=false and under --proof.
 
-498. The FlatZinc front end posts a network flow with fixed weights
+499. The FlatZinc front end posts a network flow with fixed weights
    (network_flow, network_flow_cost) as its flow conservation rows and
    cost row under free search (-f), and as those rows next to NetworkFlow
    otherwise. NetworkFlow's reduced-cost arc analysis, a shortest path
