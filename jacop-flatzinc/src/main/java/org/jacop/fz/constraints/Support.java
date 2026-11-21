@@ -1601,6 +1601,34 @@ public class Support implements ParserTreeConstants {
     return c;
   }
 
+  /**
+   * Runs a propagation of the model being built, which stops with {@link ModelTimeOut} once the
+   * time-out has passed: bounds that converge one unit per step (x &lt; y &lt; z &lt; x over wide
+   * domains) take minutes to fail. A failure at the time-out proves nothing, so it is no failure.
+   *
+   * @param propagation the propagation, which throws FailException when the model fails
+   * @throws FailException when the model fails before the time-out
+   */
+  public void propagateUntilTimeOut(Runnable propagation) throws FailException {
+    boolean deadline =
+        options != null && options.getTimeOut() > 0 && store.getConsistencyDeadline() == 0;
+    if (deadline) {
+      store.setConsistencyDeadline(System.currentTimeMillis() + options.getRemainingTimeOut());
+    }
+    try {
+      propagation.run();
+    } catch (FailException e) {
+      if (deadline && store.isConsistencyDeadlinePassed()) {
+        throw new ModelTimeOut();
+      }
+      throw e;
+    } finally {
+      if (deadline) {
+        store.setConsistencyDeadline(0);
+      }
+    }
+  }
+
   void pose(Constraint c) throws FailException {
 
     if (activeControl != null && activeControl.negated()) {
@@ -1622,11 +1650,15 @@ public class Support implements ParserTreeConstants {
       }
     }
 
-    if (constraintPriority >= 0 && constraintPriority <= 4) {
-      store.imposeWithConsistency(c, constraintPriority);
-    } else {
-      store.imposeWithConsistency(c);
-    }
+    Constraint posted = c;
+    propagateUntilTimeOut(
+        () -> {
+          if (constraintPriority >= 0 && constraintPriority <= 4) {
+            store.imposeWithConsistency(posted, constraintPriority);
+          } else {
+            store.imposeWithConsistency(posted);
+          }
+        });
 
     if (options.debug()) {
       String s = "% " + c;

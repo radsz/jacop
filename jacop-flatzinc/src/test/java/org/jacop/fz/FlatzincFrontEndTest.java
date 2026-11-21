@@ -6264,4 +6264,40 @@ class FlatzincFrontEndTest {
     // e0 = 1, e1 = 2 and the others 1
     assertTrue(out[0].contains("w = 1..2;"), out[0] + out[1]);
   }
+
+  @Test
+  void propagationWhileTheModelIsBuiltStopsAtTheTimeOut() throws IOException {
+    // x < y < z < x over wide domains fails only after the bounds have crept one unit per step
+    // across them, in the propagation of the constraints posted (or of the root, for rows posted
+    // late): minutes past -t when run in process, where no watchdog ends the run
+    String vars =
+        "var -500000000..500000000: x :: output_var;\n"
+            + "var -500000000..500000000: y :: output_var;\n"
+            + "var -500000000..500000000: z :: output_var;\n";
+    String[] models = {
+      vars
+          + "var 1..3: a :: output_var;\n"
+          + "var 1..3: b :: output_var;\n"
+          + "constraint int_lin_le([1,-1,1],[x,y,a],0);\n"
+          + "constraint int_lin_le([1,-1,1],[y,z,b],0);\n"
+          + "constraint int_lin_le([1,-1],[z,x],-1);\n"
+          + "solve satisfy;\n",
+      vars
+          + "var -500000000..500000000: w :: output_var;\n"
+          + "constraint int_lin_le([2,-3],[x,y],-1);\n"
+          + "constraint int_lin_le([3,-2],[y,z],-1);\n"
+          + "constraint int_lin_le([1,-1,1],[z,x,w],-1);\n"
+          + "constraint int_lin_le([-1],[w],0);\n"
+          + "solve satisfy;\n"
+    };
+    for (String model : models) {
+      long start = System.nanoTime();
+      String out = run(model, "-t", "300")[0];
+      long millis = (System.nanoTime() - start) / 1_000_000;
+      assertTrue(out.contains("=====UNKNOWN====="), out);
+      assertTrue(!out.contains("=====UNSATISFIABLE====="), out);
+      // about 0.3 s; it took 20 s and more before
+      assertTrue(millis < 8_000, millis + " ms");
+    }
+  }
 }
