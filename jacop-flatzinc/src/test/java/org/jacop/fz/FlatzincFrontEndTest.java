@@ -6213,4 +6213,25 @@ class FlatzincFrontEndTest {
     String[] out = run(model);
     assertTrue(out[0].contains("=====UNSATISFIABLE====="), out[0] + out[1]);
   }
+
+  @Test
+  void indexDisjunctionKeepsAnIndexDeclaredEqualToAnOutput() throws IOException {
+    // the only solution has k0 = 2 and r0 = x1 = 1; with k0 and r0 left out of the model, z and w,
+    // declared equal to them, were printed as 1 and 0
+    String model =
+        "var 0..2: x0 :: output_var;\n"
+            + "var 1..2: x1 :: output_var;\n"
+            + "var 1..2: k0;\n"
+            + "var 0..2: r0;\n"
+            + "var 0..2: r1;\n"
+            + "var 1..2: z :: output_var = k0;\n"
+            + "var 0..2: w :: output_var = r0;\n"
+            + "constraint array_var_int_element(k0,[x0,x1],r0);\n"
+            + "constraint array_var_int_element(k0,[x1,x0],r1);\n"
+            + "constraint int_lt(r0,r1);\n"
+            + "constraint int_lt(x1, x0);\n"
+            + "solve satisfy;\n";
+    String[] out = run(model);
+    assertTrue(out[0].contains("z = 2;") && out[0].contains("w = 1;"), out[0] + out[1]);
+  }
 }

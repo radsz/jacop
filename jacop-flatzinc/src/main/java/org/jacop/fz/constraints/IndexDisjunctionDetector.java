@@ -384,7 +384,11 @@ public class IndexDisjunctionDetector implements ParserTreeConstants {
 
   // the disjunction of index k, or -1 if k is left as it is; the number of literals posted
   private int rewrite(IntVar k, List<Element> es) {
-    if (solveItem.contains(k) || uses.getOrDefault(k, 0) != es.size()) {
+    // a variable declared equal to another one keeps the equality posted for the declaration,
+    // which is no constraint item: the other variable would be printed from a k or r left free
+    if (solveItem.contains(k)
+        || support.dictionary.isDeclaredEqual(k)
+        || uses.getOrDefault(k, 0) != es.size()) {
       return -1;
     }
     Relation rel = null;
@@ -393,6 +397,7 @@ public class IndexDisjunctionDetector implements ParserTreeConstants {
       if (r == null
           || (rel != null && r != rel)
           || solveItem.contains(el.r())
+          || support.dictionary.isDeclaredEqual(el.r())
           || uses.getOrDefault(el.r(), 0) != 2) {
         return -1;
       }
