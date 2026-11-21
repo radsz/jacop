@@ -6349,4 +6349,34 @@ class FlatzincFrontEndTest {
     String[] out = run(model, "--lcg", "on");
     assertTrue(out[0].contains("c = 2;") && out[0].contains("=========="), out[0] + out[1]);
   }
+
+  @Test
+  void comparisonWithAConstantBeyondTheRangeIsDecided() throws IOException {
+    // no variable reaches a constant beyond JaCoP's integer range; the comparisons threw
+    // "Constant ... outside variable bounds" for these valid models
+    String[][] cases = {
+      {"int_le(x, 999000001)", "x = 0; x = 1;"},
+      {"int_ne(999000001, x)", "x = 0; x = 1;"},
+      {"int_lt(x, -999000001)", ""},
+      {"int_le_reif(x, 999000001, b)", "b = true; x = 0; b = true; x = 1;"},
+      {"int_eq_reif(-999000001, x, b)", "b = false; x = 0; b = false; x = 1;"},
+      {"int_le_imp(x, -999000001, b)", "b = false; x = 0; b = false; x = 1;"}
+    };
+    for (String[] c : cases) {
+      String model =
+          "var 0..1: x :: output_var;\nvar bool: b;\n"
+              + "constraint "
+              + c[0]
+              + ";\nsolve satisfy;\n";
+      if (c[0].contains(", b)")) {
+        model = model.replace("var bool: b;", "var bool: b :: output_var;");
+      }
+      Set<String> expected =
+          c[1].isEmpty()
+              ? Set.of("=====UNSATISFIABLE=====")
+              : new TreeSet<>(
+                  Arrays.asList(c[1].split(" (?=" + (c[0].contains(", b)") ? "b" : "x") + ")")));
+      assertEquals(expected, solveAll(model), model);
+    }
+  }
 }
