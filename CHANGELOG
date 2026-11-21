@@ -8736,6 +8736,27 @@ Version 5.0 (unreleased)
    (4,333 -> 4,637), unit-commitment L12, warehouse olil4. Wide-quick set
    at 240 s: the slices start on 2 of 62 instances.
 
+489. The FlatZinc front end bounds the cost of a bin packing whose bin loads
+   feed a cost function y = g(load) in a linear row of the objective (the
+   balanced academic curriculum: the squared distance of each period load
+   of a curriculum to its ideal band). The least sum of g over all
+   packings of the items comes from a branch and bound over the items,
+   with bin symmetry classes, and goes into the model as
+   sum(y) = z, z >= minimum, with z in place of the y terms of the row,
+   so that the objective's root bound adds the minima up (the deviation
+   constraint of Schaus, Deville, Dupont and Regin, CPAIOR 2007, and the
+   dispersion constraints of Pesant, INFORMS Journal on Computing 27(4),
+   2015, bound the same sum of a balance cost). The square x * x of a
+   factor of 65 to 4,096 values now gets the squares as its domain; before,
+   the count of factor pairs went over its limit and left an interval.
+   MiniZinc Challenge gbac, the 9 reduced instances on which it fires,
+   600 s: -f proved 4 -> 7, total 3,482 -> 1,939 s (2020 UD5 600 -> 80 s,
+   2016 UD10 263 -> 3 s); default search proved 0 -> 4, total 5,401 ->
+   3,705 s, every objective equal or better. The full-size gbac instances
+   are too big for the enumeration (2,000,000 nodes per bin packing) and
+   it does not fire there. -Dorg.jacop.fz.binPackingCost=false turns it
+   off.
+
 Version 4.11
 =============
 

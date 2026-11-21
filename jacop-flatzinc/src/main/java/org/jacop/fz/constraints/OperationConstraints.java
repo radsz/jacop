@@ -247,10 +247,12 @@ class OperationConstraints implements ParserTreeConstants {
    * factor by factor.
    */
   private void restrictToProducts(IntVar x, IntVar y, IntVar z) {
-    if (x == z || y == z || (long) x.getSize() * y.getSize() > PRODUCT_PAIRS) {
+    // a square has one product per value of its factor
+    long pairs = x == y ? x.getSize() : (long) x.getSize() * y.getSize();
+    if (x == z || y == z || pairs > PRODUCT_PAIRS) {
       return;
     }
-    long[] products = new long[x.getSize() * y.getSize()];
+    long[] products = new long[(int) pairs];
     int count = 0;
     for (ValueEnumeration a = x.dom().valueEnumeration(); a.hasMoreElements(); ) {
       int u = a.nextElement();
