@@ -2297,6 +2297,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       run_single_search(solveKind, kind, onRestartRestarts ? si : null);
       return;
     }
+    if (PRIORITY_SEARCH.equals(searchType) && si.vars().length == 0) {
+      // a priority search over no variable has nothing to search
+      run_single_search(solveKind, kind, null);
+      return;
+    }
     if (INT_SEARCH.equals(searchType)
         || SET_SEARCH.equals(searchType)
         || BOOL_SEARCH.equals(searchType)
@@ -2658,6 +2663,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         // free search runs the built-ins at the root of its own runs, which the annotation's
         // restarts limit
         boolean freeRuns = restartCalculator != null && useFreeSearchEngine(costVar);
+        if (restartCalculator != null && options.lcg()) {
+          // the runs search without learning: the clauses kept for the LCG solver go to the store
+          if (dictionary.rootTrail != null) {
+            dictionary.rootTrail.detach();
+            dictionary.rootTrail = null;
+          }
+          postCollectedClauses();
+          // a clause false at the root fails here: a restart search would forget the failure of
+          // its first run and search again
+          if (!store.consistency()) {
+            return false;
+          }
+        }
         if (!startOnRestart(freeRuns)) {
           return false;
         }
@@ -7956,10 +7974,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IO.println("%%%mzn-stat: freeFirstSquares=" + squaredObjectiveTerms(costVar));
     }
     freeFirstMillis = Math.max(1, (long) (share * options.getRemainingTimeOut()));
+    // the clauses kept for the LCG solver are not in the store: they are posted in a level of
+    // their own for the search without learning, and removed with it before LCG starts
+    int root = store.level;
+    store.setLevel(root + 1);
     try {
+      for (IntVar[][] clause : sat.collectedClauses()) {
+        store.impose(new BoolClause(clause[0], clause[1]));
+      }
       executeFreeSearch(costVar);
     } finally {
       freeFirstMillis = 0;
+      store.removeLevel(root + 1);
+      store.setLevel(root);
     }
     if (options.debug()) {
       IO.println(
@@ -10155,14 +10182,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   private DepthFirstSearch<T> subSearchSeq(SearchItem<T> si, DepthFirstSearch<T> lastSearch) {
     DepthFirstSearch<T> label = null;
+    SelectChoicePoint<T> firstSelect = null;
     for (int i = 0; i < si.getSearchItems().size(); i++) {
       DepthFirstSearch<T> label_seq = sub_search(si.getSearchItems().get(i), lastSearch, false);
       if (i == 0) {
         label = label_seq;
+        firstSelect = variableSelection;
       } else {
         lastSearch.addChildSearch(label_seq);
       }
       lastSearch = getLastSearch(label_seq);
+    }
+    // the selection of the first search, which a caller labelling the returned search with
+    // variableSelection (run_sequence_search) must use, not the one of the last search
+    if (label != null) {
+      variableSelection = firstSelect;
     }
     return label;
   }

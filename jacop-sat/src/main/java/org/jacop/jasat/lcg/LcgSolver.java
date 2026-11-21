@@ -5780,6 +5780,12 @@ public final class LcgSolver implements ExternalPropagator {
     if (graphsEncoded) {
       return;
     }
+    // past the deadline the constraints stay propagators until a later call, under a later
+    // deadline (the slices of LCG next to free search): reading the constraints of a large model
+    // takes seconds (steelmillslab bench_19_5: 1.4 s past -t 10 s)
+    if (pastDeadline()) {
+      return;
+    }
     graphsEncoded = true;
     if (proof != null || rootFailed) {
       return;
@@ -5816,6 +5822,10 @@ public final class LcgSolver implements ExternalPropagator {
     CountingClauses counted = new CountingClauses(model);
     objectiveTerms = objectiveTerms();
     permutationOnly = permutationOnlyVariables();
+    if (pastDeadline()) {
+      graphsEncoded = false;
+      return;
+    }
     for (Constraint c : store.getConstraints()) {
       if (graphClauses
           && c instanceof LayeredGraphConstraint g
@@ -6331,6 +6341,11 @@ public final class LcgSolver implements ExternalPropagator {
       }
     }
     return true;
+  }
+
+  // whether the deadline of the solver has passed
+  private boolean pastDeadline() {
+    return sat.now() > sat.deadline();
   }
 
   /** The variables whose only constraints are permutations, see {@link #permutationCandidate}. */

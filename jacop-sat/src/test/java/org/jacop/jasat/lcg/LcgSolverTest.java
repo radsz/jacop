@@ -7289,6 +7289,85 @@ class LcgSolverTest {
     }
   }
 
+  /**
+   * The soft literals of the terms of a large objective took 1.3 s past -t 10 s in CoreSearch.of
+   * (traveling-tppv circ20inonbal); past the solver's deadline the core-guided phase is not taken.
+   */
+  @Test
+  void coreSearchIsNotTakenPastTheDeadline() {
+    for (boolean late : new boolean[] {false, true}) {
+      Store store = new Store();
+      int n = 300;
+      IntVar[] sums = new IntVar[2];
+      for (int s = 0; s < 2; s++) {
+        IntVar[] terms = new IntVar[n + 1];
+        int[] weights = new int[n + 1];
+        for (int i = 0; i < n; i++) {
+          terms[i] = new IntVar(store, "b" + s + "_" + i, 0, 1);
+          weights[i] = 1;
+        }
+        sums[s] = new IntVar(store, "s" + s, 0, n);
+        terms[n] = sums[s];
+        weights[n] = -1;
+        store.impose(new LinearInt(terms, weights, "==", 0));
+      }
+      IntVar obj = new IntVar(store, "obj", 0, 2 * n);
+      store.impose(
+          new LinearInt(new IntVar[] {sums[0], sums[1], obj}, new int[] {1, 1, -1}, "==", 0));
+      LcgSolver solver = new LcgSolver(store);
+      if (late) {
+        solver.sat().setDeadline(solver.sat().now() - 1);
+      }
+      CoreSearch cores = CoreSearch.of(solver, obj);
+      if (late) {
+        assertThat(cores).isNull();
+      } else {
+        assertThat(cores).isNotNull();
+      }
+    }
+  }
+
+  /**
+   * Reading and encoding the constraints of a large model as clauses took 1.4 s past -t 10 s
+   * (steelmillslab bench_19_5, in permutationOnlyVariables); past the solver's deadline every
+   * constraint stays a propagator.
+   */
+  @Test
+  void constraintsStayPropagatorsPastTheDeadline() {
+    for (boolean late : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[3];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 1);
+      }
+      // no two 1s in a row
+      Fsm fsm = new Fsm();
+      FsmState zero = new FsmState();
+      FsmState one = new FsmState();
+      fsm.allStates.add(zero);
+      fsm.allStates.add(one);
+      fsm.initState = zero;
+      fsm.finalStates.add(zero);
+      fsm.finalStates.add(one);
+      zero.addTransition(new FsmTransition(new IntervalDomain(0, 0), zero));
+      zero.addTransition(new FsmTransition(new IntervalDomain(1, 1), one));
+      one.addTransition(new FsmTransition(new IntervalDomain(0, 0), zero));
+      store.impose(new Regular(fsm, x));
+      LcgSolver solver = new LcgSolver(store);
+      if (late) {
+        solver.sat().setDeadline(solver.sat().now() - 1);
+      }
+      assertThat(solver.probeRoot(1_000_000_000L)).isTrue();
+      assertThat(solver.graphConstraintsEncoded).isEqualTo(late ? 0 : 1);
+      solver.release();
+      // the regular constraint still propagates
+      store.setLevel(store.level + 1);
+      x[0].domain.in(store.level, x[0], 1, 1);
+      x[1].domain.in(store.level, x[1], 1, 1);
+      assertThat(store.consistency()).isFalse();
+    }
+  }
+
   // Solve.alternateUnsolved stops LCG at the end of its slice and later lets it go on: after
   // unstop() minimize runs again and finds the optimum, with the learnt clauses kept
   @Test

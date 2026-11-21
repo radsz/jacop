@@ -1302,7 +1302,7 @@ class GlobalConstraints implements ParserTreeConstants {
       if (low[i] > up[i]) {
         throw Store.failException;
       }
-      counter[i] = new IntVar(store, "counter" + i, low[i], up[i]);
+      counter[i] = new IntVar(store, store.freshVariableId("counter" + i), low[i], up[i]);
     }
 
     poseClosedGcc(x, cover, counter);
@@ -4104,9 +4104,9 @@ class GlobalConstraints implements ParserTreeConstants {
 
       System.arraycopy(xx, i * dim, coords, 0, dim);
 
-      IntVar start = new IntVar(store, "start[" + i + "]", 0, 0);
-      IntVar duration = new IntVar(store, "duration[" + i + "]", 1, 1);
-      IntVar end = new IntVar(store, "end[" + i + "]", 1, 1);
+      IntVar start = new IntVar(store, store.freshVariableId("start[" + i + "]"), 0, 0);
+      IntVar duration = new IntVar(store, store.freshVariableId("duration[" + i + "]"), 1, 1);
+      IntVar end = new IntVar(store, store.freshVariableId("end[" + i + "]"), 1, 1);
       GeostObject obj = new GeostObject(i, coords, kk[i], start, duration, end);
       objects.add(obj);
     }

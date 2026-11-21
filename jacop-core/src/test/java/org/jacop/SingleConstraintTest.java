@@ -12888,4 +12888,39 @@ class SingleConstraintTest extends TestHelper {
     // x3 = 0 and exactly one pair of equal values
     assertThat(noOfAllSolutions(store, x)).isEqualTo(15);
   }
+
+  /**
+   * Every Lex decomposition of more than two vectors named its Booleans lt_0_0, eq_0_0, ..., so a
+   * second one in the same store gave them the ids of the first one's: the store's checks refused
+   * them, and without the checks the first one's Booleans were hidden from the store's variables.
+   */
+  @Test
+  void twoLexDecompositionsInOneStoreKeepTheirVariablesApart() {
+    Store single = new Store();
+    IntVar[][] y = new IntVar[3][2];
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 2; j++) {
+        y[i][j] = new IntVar(single, "y" + i + "_" + j, 0, 1);
+      }
+    }
+    single.imposeDecomposition(new Lex(y, true));
+    long booleans =
+        single.variablesHashMap.values().stream().filter(BooleanVar.class::isInstance).count();
+    // the chains a < b < c of the four 0/1 vectors of length 2
+    assertThat(noOfAllSolutions(single, y)).isEqualTo(4);
+
+    Store store = new Store();
+    IntVar[][] x = new IntVar[6][2];
+    for (int i = 0; i < 6; i++) {
+      for (int j = 0; j < 2; j++) {
+        x[i][j] = new IntVar(store, "x" + i + "_" + j, 0, 1);
+      }
+    }
+    store.imposeDecomposition(new Lex(new IntVar[][] {x[0], x[1], x[2]}, true));
+    store.imposeDecomposition(new Lex(new IntVar[][] {x[3], x[4], x[5]}, true));
+    assertThat(
+            store.variablesHashMap.values().stream().filter(BooleanVar.class::isInstance).count())
+        .isEqualTo(2 * booleans);
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(16);
+  }
 }
