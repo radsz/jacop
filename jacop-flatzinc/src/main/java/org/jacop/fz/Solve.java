@@ -8396,6 +8396,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * found is still the optimum of the model when only the objective was cut, on its worse side.
    */
   private boolean clampedDomainsKeepOptimum() {
+    if (dictionary.floatDomainsNarrowed()) {
+      return false;
+    }
     if (!dictionary.domainsClamped()
         || dictionary.onlyObjectiveWorseSideClamped(objectiveVariable, minimize)) {
       return true;
@@ -8425,8 +8428,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   /** Whether the narrowing of declared domains may hide a solution of a satisfaction problem. */
   private boolean clampedDomainsHideSolutions() {
-    return dictionary.domainsClamped()
-        && !dictionary.clampsHarmless(null, -ClampedBounds.INF, ClampedBounds.INF);
+    return dictionary.floatDomainsNarrowed()
+        || dictionary.domainsClamped()
+            && !dictionary.clampsHarmless(null, -ClampedBounds.INF, ClampedBounds.INF);
   }
 
   private boolean isSearchComplete() {

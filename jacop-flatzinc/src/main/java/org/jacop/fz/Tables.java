@@ -252,6 +252,26 @@ public class Tables {
   }
 
   /**
+   * Notes that a declared float domain reached beyond JaCoP's float range and was narrowed to it:
+   * the values cut off may hold every solution, or the better ones.
+   */
+  void noteNarrowedFloatDomain() {
+    floatDomainsNarrowed = true;
+  }
+
+  /**
+   * Tells whether a declared float domain was narrowed to JaCoP's float range. A completed search
+   * then proves neither unsatisfiability nor optimality.
+   *
+   * @return true if a declared float domain was narrowed.
+   */
+  public boolean floatDomainsNarrowed() {
+    return floatDomainsNarrowed;
+  }
+
+  private boolean floatDomainsNarrowed;
+
+  /**
    * Notes a variable declared without bounds (var int), created over JaCoP's integer range: its
    * values beyond the range are cut off as for a narrowed declared domain.
    *
@@ -618,7 +638,7 @@ public class Tables {
    *     to lie within the range.
    */
   public boolean failureMayComeFromNarrowing() {
-    if (boundedDomainsClamped()) {
+    if (floatDomainsNarrowed || boundedDomainsClamped()) {
       return true;
     }
     return !clampedDomains.isEmpty()

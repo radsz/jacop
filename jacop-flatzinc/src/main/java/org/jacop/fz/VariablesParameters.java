@@ -128,11 +128,13 @@ public class VariablesParameters implements ParserTreeConstants {
       System.err.println(
           "Minimal value for " + varKind + " " + ident + " too low; changed to " + MIN_FLOAT);
       lowFloatInterval = MIN_FLOAT;
+      dictionary.noteNarrowedFloatDomain();
     }
     if (highFloatInterval > MAX_FLOAT) {
       System.err.println(
           "Maximal value for " + varKind + " " + ident + " too high; changed to " + MAX_FLOAT);
       highFloatInterval = MAX_FLOAT;
+      dictionary.noteNarrowedFloatDomain();
     }
   }
 

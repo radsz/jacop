@@ -6321,4 +6321,18 @@ class FlatzincFrontEndTest {
       assertTrue(solutions.contains("b0 = false; b1 = true; b2 = true; x = 1;"), model + solutions);
     }
   }
+
+  @Test
+  void floatDomainNarrowedToTheFloatRangeProvesNoUnsatisfiability() throws IOException {
+    // x is declared up to 1e300 and narrowed to 1e150; ln(x) >= 400 needs x >= e^400, about
+    // 5e173, beyond the narrowed domain: the search fails, but the model has solutions
+    String model =
+        "var 1.0..1e300: x :: output_var;\n"
+            + "var 400.0..1000.0: y :: output_var;\n"
+            + "constraint float_ln(x, y);\n"
+            + "solve satisfy;\n";
+    String[] out = run(model);
+    assertFalse(out[0].contains("=====UNSATISFIABLE====="), out[0]);
+    assertTrue(out[0].contains("=====UNKNOWN====="), out[0]);
+  }
 }
