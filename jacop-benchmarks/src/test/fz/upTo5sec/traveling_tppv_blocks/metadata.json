@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["bool_clause", "int_eq_imp", "int_lin_eq", "int_lin_le", "int_ne_reif", "jacop_alldiff", "jacop_array_var_int_element_nonshifted", "jacop_regular", "jacop_table_int"],
+  "constraintFamilies": ["alldifferent", "boolean", "element", "linear", "reified", "regular", "table"],
+  "domains": []
+}

@@ -101,6 +101,20 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
 
   private final List<IntVar[]> clauses = new ArrayList<>();
 
+  // b -> x != y, for the literals of disequalities between two variables
+  private final Map<IntVar, IntVar[]> differs = new IdentityHashMap<>();
+
+  // three literal clauses, candidates for disjunctions that hold when two assignments are equal
+  private final List<IntVar[]> clauses3 = new ArrayList<>();
+
+  // a task of a conditional disjunction: a start and its length
+  private record Job(IntVar start, int length) {}
+
+  // a disjunction between two tasks that holds when their assignment variables are equal
+  private record Optional(Job a, Job b, IntVar x, IntVar y) {}
+
+  private final List<Optional> optionals = new ArrayList<>();
+
   // the cumulatives with a fixed capacity: tasks, least uses and capacity
   private static final String FALSE = "false";
 
@@ -168,6 +182,14 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
     for (IntVar[] c : clauses) {
       disjunction(c[0], c[1]);
     }
+    for (IntVar[] c : clauses3) {
+      for (int k = 0; k < 3; k++) {
+        IntVar[] xy = differs.get(c[k]);
+        if (xy != null) {
+          optionalDisjunction(c[(k + 1) % 3], c[(k + 2) % 3], xy[0], xy[1]);
+        }
+      }
+    }
     List<int[]> found = cliques.cliques();
     if (support.options.debug()) {
       FzConsole.println(
@@ -181,6 +203,9 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
     }
     if (enabled()) {
       post(found);
+      if (!FALSE.equalsIgnoreCase(System.getProperty("org.jacop.fz.optionalUnary"))) {
+        postOptional();
+      }
     }
     if (inferredEnabled()) {
       infer(found);
@@ -203,6 +228,21 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
         IntVar[] pos = support.getVarArray(child(node, 0));
         if (pos.length == 2 && support.getVarArray(child(node, 1)).length == 0) {
           clauses.add(pos);
+        } else if (pos.length == 3 && support.getVarArray(child(node, 1)).length == 0) {
+          clauses3.add(pos);
+        }
+      }
+      case "int_ne_imp", "int_ne_reif" ->
+          differs.put(aVar(node, 2), new IntVar[] {aVar(node, 0), aVar(node, 1)});
+      case "int_lin_ne_imp", "int_lin_ne_reif" -> {
+        int[] a = support.getIntArray(child(node, 0));
+        if (a != null
+            && a.length == 2
+            && a[0] == -a[1]
+            && a[0] != 0
+            && support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2)) == 0) {
+          IntVar[] x = support.getVarArray(child(node, 1));
+          differs.put(aVar(node, 3), new IntVar[] {x[0], x[1]});
         }
       }
       case "array_bool_or" -> {
@@ -302,6 +342,172 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
         }
       }
     }
+  }
+
+  // b1 \/ b2 \/ x != y where b1 orders two starts one way and b2 the other way
+  private void optionalDisjunction(IntVar b1, IntVar b2, IntVar x, IntVar y) {
+    List<Implied> first = implied.get(b1);
+    List<Implied> second = implied.get(b2);
+    if (first == null || second == null || x == y || x.singleton() || y.singleton()) {
+      return;
+    }
+    for (Implied p : first) {
+      for (Implied q : second) {
+        if (p.from == q.to && p.to == q.from && p.lag > 0 && q.lag > 0) {
+          // the tasks are known to the cliques, which order them by the precedences
+          cliques.task(p.from, p.lag);
+          cliques.task(q.from, q.lag);
+          optionals.add(new Optional(new Job(p.from, p.lag), new Job(q.from, q.lag), x, y));
+        }
+      }
+    }
+  }
+
+  /**
+   * Posts a unary resource with optional tasks for each value of the assignment variables of
+   * disjunctions that hold when two tasks are assigned to the same machine, {@code s1 + d1 <= s2 \/
+   * s2 + d2 <= s1 \/ m1 != m2}, as in flexible job shop models: the tasks that may take value v
+   * form a resource on which task i is present when {@code m_i = v}. A task's assignment variable
+   * is the one its disjunctions share; a group holds only tasks every pair of which has such a
+   * disjunction.
+   */
+  private void postOptional() {
+    if (optionals.isEmpty()) {
+      return;
+    }
+    // the assignment variable of a task: the one common to all its conditional disjunctions
+    Map<Job, IntVar> assignment = new HashMap<>();
+    Map<Job, List<Optional>> byJob = new HashMap<>();
+    for (Optional o : optionals) {
+      byJob.computeIfAbsent(o.a, k -> new ArrayList<>()).add(o);
+      byJob.computeIfAbsent(o.b, k -> new ArrayList<>()).add(o);
+    }
+    for (Map.Entry<Job, List<Optional>> e : byJob.entrySet()) {
+      IntVar common = null;
+      boolean ok = true;
+      List<IntVar> candidates = new ArrayList<>();
+      Optional f = e.getValue().get(0);
+      candidates.add(f.x);
+      candidates.add(f.y);
+      for (Optional o : e.getValue()) {
+        candidates.removeIf(v -> v != o.x && v != o.y);
+      }
+      if (candidates.size() == 1) {
+        common = candidates.get(0);
+      } else {
+        ok = false;
+      }
+      if (ok) {
+        assignment.put(e.getKey(), common);
+      }
+    }
+    // the pairs whose disjunction holds when their assignments are equal
+    Map<Job, Map<Job, Boolean>> pairs = new HashMap<>();
+    for (Optional o : optionals) {
+      IntVar xa = assignment.get(o.a);
+      IntVar xb = assignment.get(o.b);
+      if (xa == null || xb == null || xa == xb) {
+        continue;
+      }
+      if (xa == o.x && xb == o.y || xa == o.y && xb == o.x) {
+        pairs.computeIfAbsent(o.a, k -> new HashMap<>()).put(o.b, true);
+        pairs.computeIfAbsent(o.b, k -> new HashMap<>()).put(o.a, true);
+      }
+    }
+    List<Job> jobs = new ArrayList<>(pairs.keySet());
+    // a deterministic order: by start variable index and length
+    jobs.sort(
+        (u, v) ->
+            u.start.index() != v.start.index()
+                ? Integer.compare(u.start.index(), v.start.index())
+                : Integer.compare(u.length, v.length));
+    java.util.TreeSet<Integer> values = new java.util.TreeSet<>();
+    for (Job j : jobs) {
+      for (org.jacop.core.ValueEnumeration en = assignment.get(j).dom().valueEnumeration();
+          en.hasMoreElements(); ) {
+        values.add(en.nextElement());
+      }
+    }
+    IntVar one = new IntVar(support.store, 1, 1);
+    Map<Integer, IntVar> lengths = new HashMap<>();
+    Map<IntVar, Map<Integer, IntVar>> present = new IdentityHashMap<>();
+    int posted = 0;
+    for (int v : values) {
+      List<Job> left = new ArrayList<>();
+      for (Job j : jobs) {
+        if (assignment.get(j).domain.contains(v)) {
+          left.add(j);
+        }
+      }
+      while (left.size() > 2) {
+        List<Job> group = new ArrayList<>();
+        List<Job> rest = new ArrayList<>();
+        for (Job j : left) {
+          boolean fits = true;
+          for (Job g : group) {
+            if (!pairs.get(g).containsKey(j) && !disjoint(g, j)) {
+              fits = false;
+              break;
+            }
+          }
+          if (fits) {
+            group.add(j);
+          } else {
+            rest.add(j);
+          }
+        }
+        left = rest;
+        if (group.size() < 3) {
+          continue;
+        }
+        IntVar[] st = new IntVar[group.size()];
+        IntVar[] du = new IntVar[group.size()];
+        IntVar[] re = new IntVar[group.size()];
+        for (int k = 0; k < st.length; k++) {
+          Job j = group.get(k);
+          st[k] = j.start;
+          du[k] = lengths.computeIfAbsent(j.length, l -> new IntVar(support.store, l, l));
+          IntVar x = assignment.get(j);
+          re[k] =
+              present
+                  .computeIfAbsent(x, k2 -> new HashMap<>())
+                  .computeIfAbsent(
+                      v,
+                      val -> {
+                        org.jacop.core.BooleanVar b = new org.jacop.core.BooleanVar(support.store);
+                        support.pose(
+                            new org.jacop.constraints.Reified(
+                                new org.jacop.constraints.XeqC(x, val), b));
+                        return b;
+                      });
+        }
+        Constraint unary = new CumulativeUnary(st, du, re, one, true);
+        unary.setDegreeWeight(0);
+        support.delayedConstraints.add(unary);
+        posted++;
+        if (support.options.debug()) {
+          FzConsole.println(
+              "% redundant unary resource with optional tasks on "
+                  + st.length
+                  + " tasks for assignment value "
+                  + v);
+        }
+      }
+    }
+    optionalResources = posted;
+  }
+
+  private int optionalResources;
+
+  // whether the precedences or the unconditional disjunctions keep two tasks apart
+  private boolean disjoint(Job a, Job b) {
+    long[][] rows = cliques.disjoint();
+    if (rows == null) {
+      return false;
+    }
+    int i = cliques.task(a.start, a.length);
+    int j = cliques.task(b.start, b.length);
+    return i >= 0 && j >= 0 && i < rows.length && (rows[i][j >>> 6] & (1L << (j & 63))) != 0;
   }
 
   private void post(List<int[]> found) {
