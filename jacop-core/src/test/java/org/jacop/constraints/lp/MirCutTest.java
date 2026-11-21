@@ -94,6 +94,95 @@ class MirCutTest {
   }
 
   /**
+   * MIR cuts with variable bounds substituted ({@link MirCut#ofVariableBounds}) hold at every
+   * integer point that meets the row, the variable bounds and the column bounds; the factors of the
+   * variable bounds may be larger than the upper bound of their column.
+   */
+  @Test
+  void variableBoundCutsKeepEveryIntegerPointOfTheRowAndBounds() {
+    Random rnd = new Random(17);
+    int made = 0;
+    for (int run = 0; run < 100000; run++) {
+      int general = 1 + rnd.nextInt(3);
+      int binary = 1 + rnd.nextInt(2);
+      int n = general + binary;
+      long[] c = new long[n];
+      long[] lo = new long[n];
+      long[] hi = new long[n];
+      double[] value = new double[n];
+      for (int j = 0; j < n; j++) {
+        c[j] = rnd.nextInt(5) == 0 ? 0 : rnd.nextInt(41) - 20L;
+        lo[j] = j < general ? rnd.nextInt(2) : 0;
+        hi[j] = j < general ? lo[j] + 2 + rnd.nextInt(5) : 1;
+        value[j] = lo[j] + rnd.nextDouble() * ((double) hi[j] - lo[j]);
+      }
+      // variable bounds x_j <= a u (rows x - a u <= 0) and x_j >= a u (rows x - a u >= 0)
+      java.util.List<int[]> rows = new java.util.ArrayList<>();
+      java.util.List<long[]> weights = new java.util.ArrayList<>();
+      java.util.List<Long> upper = new java.util.ArrayList<>();
+      java.util.List<Long> lower = new java.util.ArrayList<>();
+      int bounds = 1 + rnd.nextInt(3);
+      for (int k = 0; k < bounds; k++) {
+        int x = rnd.nextInt(general);
+        int u = general + rnd.nextInt(binary);
+        long a = 1 + rnd.nextInt((int) hi[x] + 4);
+        boolean flip = rnd.nextBoolean();
+        rows.add(flip ? new int[] {u, x} : new int[] {x, u});
+        weights.add(flip ? new long[] {a, -1} : new long[] {1, -a});
+        boolean up = rnd.nextBoolean();
+        // flipped, the row is -x + a u, whose sides are the negated sides of x - a u
+        upper.add(up != flip ? 0L : null);
+        lower.add(up != flip ? null : 0L);
+        if (rnd.nextBoolean()) {
+          // an LP point near the variable bound, where it is substituted
+          double near = a * value[u] + (up ? -1 : 1) * 0.3 * rnd.nextDouble();
+          value[x] = Math.clamp(near, (double) lo[x], (double) hi[x]);
+        }
+      }
+      MirCut.VariableBounds vb = MirCut.VariableBounds.of(n, rows, weights, upper, lower, lo, hi);
+      if (vb == null) {
+        continue;
+      }
+      long b = rnd.nextInt(81) - 40L;
+      int[] columns = new int[n];
+      for (int j = 0; j < n; j++) {
+        columns[j] = j;
+      }
+      MirCut cut = MirCut.ofVariableBounds(columns, c, b, value, lo, hi, vb);
+      if (cut == null) {
+        continue;
+      }
+      made++;
+      long[] p = lo.clone();
+      while (p != null) {
+        boolean feasible = true;
+        long row = 0;
+        for (int j = 0; j < n; j++) {
+          row += c[j] * p[j];
+        }
+        feasible = row <= b;
+        for (int k = 0; k < rows.size() && feasible; k++) {
+          long r = weights.get(k)[0] * p[rows.get(k)[0]] + weights.get(k)[1] * p[rows.get(k)[1]];
+          feasible =
+              (upper.get(k) == null || r <= upper.get(k))
+                  && (lower.get(k) == null || r >= lower.get(k));
+        }
+        if (feasible) {
+          long lhs = 0;
+          for (int k = 0; k < cut.columns.length; k++) {
+            lhs += cut.weights[k] * p[cut.columns[k]];
+          }
+          assertThat(lhs)
+              .as("run %d cut %s at %s", run, cut, java.util.Arrays.toString(p))
+              .isLessThanOrEqualTo(cut.rhs);
+        }
+        p = next(p, lo, hi);
+      }
+    }
+    assertThat(made).isGreaterThan(500);
+  }
+
+  /**
    * A cut scaled down to a smaller largest weight ({@link MirCut#capped}, the cuts made in search)
    * still holds at every integer point of the row and keeps its weights within the cap.
    */

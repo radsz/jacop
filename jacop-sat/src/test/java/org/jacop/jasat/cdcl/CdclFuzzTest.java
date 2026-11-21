@@ -505,7 +505,7 @@ class CdclFuzzTest {
   /** Solves with a DRAT proof and checks the answer; returns the answer. */
   private static int solveChecked(List<int[]> f, int vars, long seed) throws IOException {
     CdclSolver s = new CdclSolver();
-    s.setChecking(true);
+    s.setChecking(!Boolean.getBoolean("fuzz.noCheck"));
     ByteArrayOutputStream proof = new ByteArrayOutputStream();
     DratWriter drat = new DratWriter(proof);
     s.setProof(drat);
@@ -632,7 +632,7 @@ class CdclFuzzTest {
     long base = Long.getLong("fuzz.seed", 1);
     long progress = Long.getLong("fuzz.progress", 100_000);
     long unsat = 0;
-    for (long run = 0; run < runs; run++) {
+    for (long run = Long.getLong("fuzz.first", 0); run < runs; run++) {
       long seed = base * 1_000_003L + run;
       if (Boolean.getBoolean("fuzz.trace")) {
         System.out.println("fuzz: seed " + seed);
