@@ -6813,4 +6813,27 @@ class FlatzincFrontEndTest {
     // brute force: x2 = 1, x0 = d9 = 0, d8 = x4 = d10 = d11 = 1, x6 free
     assertEquals(2, solveAll(model).size());
   }
+
+  @Test
+  void maxCliqueKeepsConflictsOfAVariableDeclaredEqualToAVertex() throws IOException {
+    // the sum names a = v0 and the conflicts name v0: the model was taken for pure maximum clique,
+    // its conflicts were left to the bound, which holds those between vertices only, and z = 9
+    StringBuilder model = new StringBuilder();
+    for (int i = 0; i < 10; i++) {
+      model.append("var 0..1: v").append(i).append(";\n");
+    }
+    model.append("var 0..1: a = v0;\nvar 0..10: z :: output_var;\n");
+    for (int i = 1; i < 10; i++) {
+      model.append("constraint int_lin_le([1,1],[v0,v").append(i).append("],1);\n");
+    }
+    model.append("constraint int_lin_le([1,1],[v1,v2],1);\n");
+    model.append(
+        "constraint int_lin_eq([1,1,1,1,1,1,1,1,1,1,-1],[a,v1,v2,v3,v4,v5,v6,v7,v8,v9,z],0);\n");
+    model.append("solve maximize z;\n");
+    for (String lcg : new String[] {"on", "off"}) {
+      String out = run(model.toString(), "--lcg", lcg)[0];
+      // v0 = 0 and one of v1, v2: 8
+      assertTrue(out.endsWith("z = 8;\n----------\n==========\n"), out);
+    }
+  }
 }
