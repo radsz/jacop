@@ -2654,6 +2654,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         if (freeSearchFirst(costVar)) {
           return freeSearch.getSolutions() > 0;
         }
+        if (fixedSearchFirst(label, select, costVar, solveType)) {
+          return numberSolutions > 0;
+        }
         return executeLcgSearch(costVar);
       }
       if (lpProbing && useFreeSearchEngine(costVar)) {
@@ -3273,6 +3276,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       } else if (worker != null) {
         lcg.setSharedBound(worker::sharedBound);
       }
+    } else if (fixedFirstCost != Integer.MAX_VALUE && !probed) {
+      // the best solution of the annotation's search without learning, which ran first
+      int firstCost = fixedFirstCost;
+      lcgLastCost = firstCost;
+      lcg.setSharedBound(() -> firstCost);
     } else if (probed) {
       lcgLastCost = probeCost;
       lcg.setSharedBound(
@@ -3299,7 +3307,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     for (IntVar[][] clause : sat.collectedClauses()) {
       lcg.addClause(clause[0], clause[1]);
     }
-    if ((ls != null || scheduled != null || probed || freeFirstValues != null)
+    if ((ls != null
+            || scheduled != null
+            || probed
+            || freeFirstValues != null
+            || fixedFirstCost != Integer.MAX_VALUE)
         && costVar instanceof IntVar cost) {
       // the solution of local search was printed already; the core-guided phase, which ignores
       // the bound, or the first descent, before the bound is taken, can find one no better. The
@@ -3640,6 +3652,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // fixed search gives way only without a solution, to the annotation's search without learning
     Thread slowCheck =
         worker == null && (free || fixedLabel != null) ? slowLcgCheck(costVar, !free) : null;
+    Thread firstCheck = fixedFirstMillis > 0 ? fixedFirstCheck(lcg) : null;
     if (lpProbing) {
       linearRelaxation.rememberSearchStart();
       lcg.atRootAfter(lpProbeMs * 1_000_000L, this::resumeRelaxation);
@@ -3653,6 +3666,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     if (lcgProbe > 0 && lcgProbeDelay > 0 && lcg.probePasses > 0) {
       printProbeStatistics(lcg);
+    }
+    if (firstCheck != null) {
+      firstCheck.interrupt();
+      firstCheck = null;
     }
     if (slowCheck != null) {
       slowCheck.interrupt();
@@ -4670,7 +4687,175 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (restartCalculator != null) {
       return executeRestartSearch(fixedLabel, fixedSelect, costVar, fixedSolveType);
     }
+    if (numberSolutions > 0 && costVar instanceof IntVar cost) {
+      // LCG gave way after the search without learning that ran first (fixedSearchFirst): the
+      // annotation's search goes on from the root under the best cost printed
+      int best = bestPrintedCost.get();
+      if (best == Integer.MIN_VALUE || best - 1 < cost.min()) {
+        // nothing better is left
+        return true;
+      }
+      if (best - 1 < cost.max()) {
+        cost.domain.inMax(store.level, cost, best - 1);
+      }
+    }
     return executeNonRestartSearch(fixedLabel, fixedSelect, costVar, fixedSolveType);
+  }
+
+  // the time the annotation's search without learning ran before LCG (fixedSearchFirst), in
+  // milliseconds (0 = it did not run), and the best cost it found
+  private long fixedFirstMillis;
+  private int fixedFirstCost = Integer.MAX_VALUE;
+  // the outcome of fixedSearchFirst, for the statistics: 0 not run, 1 it decided the model, 2 LCG
+  // kept, 3 LCG gave way to it
+  private int fixedFirstOutcome;
+
+  private void printFixedFirstStatistics() {
+    if (fixedFirstOutcome > 0 && options.getStatistics()) {
+      // the annotation's search without learning before LCG: it decided the model, LCG went on, or
+      // LCG gave way to it
+      IO.println(
+          "%%%mzn-stat: fixedFirst="
+              + switch (fixedFirstOutcome) {
+                case 1 -> "decided";
+                case 2 -> "lcg";
+                default -> "cp";
+              });
+    }
+  }
+
+  /**
+   * Runs the annotation's depth-first search without learning before LCG fixed search on an
+   * optimisation model, for the share fixed-first of the time (default 0.02; 0 = off). LCG then
+   * looks only for solutions better than the best one it printed, and gets as much time to find one
+   * as it took ({@link #fixedFirstCheck}); when it finds none, it gives way to the annotation's
+   * search without learning, which goes on from the root under the best cost. Both searches take
+   * the decisions of the annotation, so on a model where learning cuts little they find the same
+   * solutions one after the other, and the one that finds them faster gets further in the same
+   * time. On city-position (MiniZinc Challenge 2017, first_fail on 10 coordinates, an objective of
+   * 16 absolute differences) LCG and the search without learning found the same 589 solutions, LCG
+   * in 232 s and the search without learning in 14 s: LCG makes about 7,000 conflicts a second,
+   * each with about 1,900 propagations of the order literals of domains of a million values, and
+   * backjumps one level a conflict. JaCoP 4.10 proved city-5-05 in 52 s, and 5.0 not in 240 s.
+   *
+   * @param label the annotation's search
+   * @param select its choice points
+   * @param costVar the cost variable
+   * @param solveType the kind of solve item, for the debug output
+   * @return true if the search decided the model (an optimum or no solution proved)
+   */
+  private boolean fixedSearchFirst(
+      DepthFirstSearch<T> label, SelectChoicePoint<T> select, Var costVar, String solveType) {
+    double share = Double.parseDouble(options.freeConfig("fixed-first", "0.02"));
+    if (share <= 0
+        || options.freeSearch()
+        || options.getTimeOut() <= 0
+        || options.portfolioWorker() != null
+        || options.proof() != null
+        || !(costVar instanceof IntVar)
+        || restartCalculator != null
+        || dictionary.onRestart != null
+        || CdclSolver.VIRTUAL_CLOCK
+        || label == null) {
+      return false;
+    }
+    long millis = Math.max(1, (long) (share * options.getRemainingTimeOut()));
+    setLabelTimeOut(label, millis);
+    long start = System.nanoTime();
+    int before = numberSolutions;
+    executeNonRestartSearch(label, select, costVar, solveType);
+    boolean stopped = labelTimedOut(label);
+    if (!stopped) {
+      fixedFirstOutcome = 1;
+      return true;
+    }
+    resetLabelTimeOut(label);
+    if (numberSolutions > before) {
+      fixedFirstCost = bestPrintedCost.get();
+      fixedFirstMillis = Math.max(1, (System.nanoTime() - start) / 1_000_000L);
+    }
+    if (options.debug()) {
+      IO.println(
+          "% fixed search first: "
+              + (numberSolutions - before)
+              + " solutions in "
+              + (System.nanoTime() - start) / 1_000_000L
+              + " ms, best "
+              + (fixedFirstCost == Integer.MAX_VALUE ? "none" : fixedFirstCost));
+    }
+    return false;
+  }
+
+  private static void setLabelTimeOut(DepthFirstSearch<?> label, long millis) {
+    label.setTimeOutMilliseconds(millis);
+    if (label.childSearches != null) {
+      for (Search<? extends Var> child : label.childSearches) {
+        if (child instanceof DepthFirstSearch<?> d) {
+          setLabelTimeOut(d, millis);
+        } else {
+          child.setTimeOutMilliseconds(millis);
+        }
+      }
+    }
+  }
+
+  private static boolean labelTimedOut(DepthFirstSearch<?> label) {
+    if (label.timeOutOccured) {
+      return true;
+    }
+    if (label.childSearches != null) {
+      for (Search<? extends Var> child : label.childSearches) {
+        if (child instanceof DepthFirstSearch<?> d && labelTimedOut(d)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /** Clears the time-out of the annotation's search and gives it the time left. */
+  private void resetLabelTimeOut(DepthFirstSearch<?> label) {
+    clearTimeOut(label);
+    setLabelTimeOut(label, Math.max(1, options.getRemainingTimeOut()));
+  }
+
+  private static void clearTimeOut(DepthFirstSearch<?> label) {
+    label.timeOutOccured = false;
+    if (label.childSearches != null) {
+      for (Search<? extends Var> child : label.childSearches) {
+        if (child instanceof DepthFirstSearch<?> d) {
+          clearTimeOut(d);
+        }
+      }
+    }
+  }
+
+  /**
+   * Starts the check of {@link #fixedSearchFirst}: once LCG has searched as long as the search
+   * without learning ran first, LCG gives way to that search when it found no better solution.
+   *
+   * @param solver the LCG solver
+   * @return the thread of the check
+   */
+  private Thread fixedFirstCheck(LcgSolver solver) {
+    long wait = fixedFirstMillis;
+    int firstCost = fixedFirstCost;
+    fixedFirstOutcome = 2;
+    return Thread.ofVirtual()
+        .start(
+            () -> {
+              try {
+                Thread.sleep(wait);
+                if (bestPrintedCost.get() >= firstCost && !tooLateForFreeSearch(solver)) {
+                  fixedFirstOutcome = 3;
+                  lcgSlow = true;
+                  solver.stop();
+                }
+              } catch (InterruptedException _) {
+                // LCG search ended first
+                Thread.currentThread().interrupt();
+              }
+            });
   }
 
   // the best solution of LCG free search before it gave way to free search without learning
@@ -8494,6 +8679,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     printLinearRelaxationStatistics();
     printCostNetworkStatistics();
+    printFixedFirstStatistics();
 
     if (label == null) {
       IO.println("%% =====INTERRUPTED=====\n%% Model not yet posed..");
@@ -9056,6 +9242,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     printLinearRelaxationStatistics();
     printCostNetworkStatistics();
+    printFixedFirstStatistics();
 
     if (lcg != null || pureSat != null) {
       printLcgStatistics(interrupted);
