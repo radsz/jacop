@@ -411,6 +411,7 @@ setup to run configuration. -->
                                 <include>**/IndexDisjunctionFlatzincTest.java</include>
                                 <include>**/ZeroSumFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
+                                <include>**/BinPackingCostFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
                                 <include>**/OrderChannelsFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
@@ -704,6 +705,7 @@ setup to run configuration. -->
                                 <include>**/IndexDisjunctionFlatzincTest.java</include>
                                 <include>**/ZeroSumFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
+                                <include>**/BinPackingCostFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
                                 <include>**/OrderChannelsFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
@@ -992,6 +994,7 @@ setup to run configuration. -->
                                 <include>**/IndexDisjunctionFlatzincTest.java</include>
                                 <include>**/ZeroSumFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
+                                <include>**/BinPackingCostFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
                                 <include>**/OrderChannelsFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
@@ -1278,6 +1281,7 @@ setup to run configuration. -->
                                 <include>**/IndexDisjunctionFlatzincTest.java</include>
                                 <include>**/ZeroSumFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
+                                <include>**/BinPackingCostFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
                                 <include>**/OrderChannelsFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>

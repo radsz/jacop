@@ -1385,6 +1385,83 @@ class CdclSolverTest {
     }
   }
 
+  /**
+   * The lazy order keeps the same members as the eager one through inserts, removals, increased
+   * activities and reads of the top, and reads the same highest activity; once its rebuilds cost
+   * too much it becomes eager again.
+   */
+  @Test
+  void lazyVarHeapReadsTheSameTopAsTheEagerOne() {
+    Random rnd = new Random(7);
+    for (int run = 0; run < 300; run++) {
+      int n = 1 + rnd.nextInt(40);
+      double[] activity = new double[n];
+      VarHeap eager = new VarHeap();
+      VarHeap lazy = new VarHeap();
+      eager.grow(n, activity);
+      lazy.grow(n, activity);
+      lazy.setLazy(true);
+      for (int v = 0; v < n; v++) {
+        activity[v] = rnd.nextInt(10);
+        eager.insert(v);
+        lazy.insert(v);
+      }
+      for (int step = 0; step < 20 * n; step++) {
+        int v = rnd.nextInt(n);
+        switch (rnd.nextInt(5)) {
+          case 0 -> {
+            eager.remove(v);
+            lazy.remove(v);
+          }
+          case 1 -> {
+            eager.insert(v);
+            lazy.insert(v);
+          }
+          case 2 -> {
+            activity[v] += rnd.nextInt(5);
+            eager.increased(v);
+            lazy.increased(v);
+          }
+          case 3 -> {
+            if (!eager.isEmpty()) {
+              assertEquals(activity[eager.max()], activity[lazy.max()], "run " + run);
+            }
+          }
+          default -> {
+            if (!eager.isEmpty()) {
+              int e = eager.removeMax();
+              int l = lazy.removeMax();
+              assertEquals(activity[e], activity[l], "run " + run);
+              // the same member leaves both heaps
+              if (e != l) {
+                eager.remove(l);
+                eager.insert(e);
+              }
+            }
+          }
+        }
+        for (int u = 0; u < n; u++) {
+          assertEquals(eager.contains(u), lazy.contains(u), "run " + run);
+        }
+        assertEquals(eager.isEmpty(), lazy.isEmpty());
+      }
+    }
+    // a heap whose top is read after every change pays a rebuild each time and turns eager
+    double[] activity = new double[1000];
+    VarHeap heap = new VarHeap();
+    heap.grow(activity.length, activity);
+    for (int v = 0; v < activity.length; v++) {
+      heap.insert(v);
+    }
+    heap.setLazy(true);
+    for (int step = 0; step < 100 && heap.isLazy(); step++) {
+      activity[step] += 1;
+      heap.increased(step);
+      heap.max();
+    }
+    assertFalse(heap.isLazy());
+  }
+
   /** Solves with sweeping and probing on or off, checks a model or the DRAT proof. */
   private static CdclSolver solveInprocessing(List<int[]> f, int vars, boolean on)
       throws IOException {
