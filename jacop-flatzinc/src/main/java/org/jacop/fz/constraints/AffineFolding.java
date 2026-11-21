@@ -460,7 +460,7 @@ public class AffineFolding implements ParserTreeConstants {
       // read as the constraints read their arguments, so that aliases resolve the same way
       if (support.dictionary.getDeclaredVariableArray(e.getIdent()) != null) {
         vars = support.getVarArray(e);
-      } else if (support.dictionary.getVariable(e.getIdent()) != null) {
+      } else if (support.dictionary.getVariable(e) != null) {
         vars = new IntVar[] {support.getVariable(e)};
       } else {
         return;

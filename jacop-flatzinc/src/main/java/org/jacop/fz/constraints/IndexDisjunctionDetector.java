@@ -391,7 +391,11 @@ public class IndexDisjunctionDetector implements ParserTreeConstants {
 
   // the disjunction of index k, or -1 if k is left as it is; the number of literals posted
   private int rewrite(IntVar k, List<Element> es) {
-    if (solveItem.contains(k) || uses.getOrDefault(k, 0) != es.size()) {
+    // a variable declared equal to another one keeps the equality posted for the declaration,
+    // which is no constraint item: the other variable would be printed from a k or r left free
+    if (solveItem.contains(k)
+        || support.dictionary.isDeclaredEqual(k)
+        || uses.getOrDefault(k, 0) != es.size()) {
       return -1;
     }
     Relation rel = null;
@@ -400,6 +404,7 @@ public class IndexDisjunctionDetector implements ParserTreeConstants {
       if (r == null
           || (rel != null && r != rel)
           || solveItem.contains(el.r())
+          || support.dictionary.isDeclaredEqual(el.r())
           || uses.getOrDefault(el.r(), 0) != 2) {
         return -1;
       }
@@ -420,13 +425,25 @@ public class IndexDisjunctionDetector implements ParserTreeConstants {
         return -1;
       }
     }
-    // the values of k, which must select a position of every array
+    // the values of k, which must select a position of every array; the element there must lie in
+    // the domain of its result, which the disjunction does not state: a position with a constant
+    // outside it is no position, and a variable that can leave it keeps the elements
     int[] p = new int[k.getSize()];
     int n = 0;
+    values:
     for (ValueEnumeration en = k.dom().valueEnumeration(); en.hasMoreElements(); ) {
       int v = en.nextElement();
       for (Element el : es) {
         if (v < el.first() || v - (long) el.first() >= el.a().length) {
+          return -1;
+        }
+      }
+      for (Element el : es) {
+        IntVar a = el.a()[v - el.first()];
+        if (a.singleton() && !el.r().domain.contains(a.value())) {
+          continue values;
+        }
+        if (!el.r().domain.contains(a.domain)) {
           return -1;
         }
       }
@@ -640,14 +657,15 @@ public class IndexDisjunctionDetector implements ParserTreeConstants {
     }
     ASTScalarFlatExpr e = (ASTScalarFlatExpr) arg;
     if (e.getType() == 2) {
+      // a name is of a variable or of an array; the variable is kept by the identifier
+      IntVar v = support.dictionary.getVariable(e);
+      if (v != null) {
+        out.add(v);
+        return;
+      }
       IntVar[] array = support.dictionary.getDeclaredVariableArray(e.getIdent());
       if (array != null) {
         Collections.addAll(out, array);
-        return;
-      }
-      IntVar v = support.dictionary.getVariable(e.getIdent());
-      if (v != null) {
-        out.add(v);
       }
     } else if (e.getType() == 3
         && support.dictionary.getDeclaredVariableArray(e.getIdent()) != null) {

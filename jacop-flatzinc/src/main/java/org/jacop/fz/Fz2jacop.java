@@ -159,7 +159,11 @@ public class Fz2jacop {
 
     RunWhenShuttingDown t = new RunWhenShuttingDown(parser);
     if (printsAtShutdown(opt)) {
-      Runtime.getRuntime().addShutdownHook(t);
+      try {
+        Runtime.getRuntime().addShutdownHook(t);
+      } catch (IllegalStateException _) {
+        // the JVM is already shutting down (a signal right after the start): nothing to print
+      }
     }
 
     TimeLimitWatchdog watch = null;
@@ -262,7 +266,11 @@ public class Fz2jacop {
     }
 
     if (opt.getStatistics()) {
-      Runtime.getRuntime().removeShutdownHook(t);
+      try {
+        Runtime.getRuntime().removeShutdownHook(t);
+      } catch (IllegalStateException _) {
+        // the JVM is already shutting down, and the hook is running or has run
+      }
       printStatisticsTime(parser);
     }
     return status;
