@@ -72,6 +72,7 @@ import org.jacop.fz.constraints.DifferenceCyclesDetector;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
 import org.jacop.fz.constraints.ElementTableDetector;
 import org.jacop.fz.constraints.EnforcementInliner;
+import org.jacop.fz.constraints.EntailedDisequalities;
 import org.jacop.fz.constraints.ExactCoverDetector;
 import org.jacop.fz.constraints.GiantTourDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
@@ -195,6 +196,14 @@ public class Constraints implements ParserTreeConstants {
     }
 
     Options options = support.options;
+    // with clamped domains a disequality true over the clamped domain need not be true over the
+    // declared one
+    if (EntailedDisequalities.enabled() && !dictionary.domainsClamped()) {
+      int entailed = new EntailedDisequalities(support).remove(astTree);
+      if (options.debug() && entailed > 0) {
+        FzConsole.println("% " + entailed + " disequalities true by the domains removed");
+      }
+    }
     boolean manySolutions =
         (options.getAll() || options.getNumberSolutions() > 1) && satisfaction(astTree);
     // the exchanges of values that symmetry breaking breaks in a satisfaction problem compare the

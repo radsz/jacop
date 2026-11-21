@@ -1462,6 +1462,22 @@ public class Tables {
    * @param v the variable to be checked.
    * @return true if variable is output, false otherwise
    */
+  /**
+   * The output variables and the variables of the output arrays now, as a set by identity: a
+   * snapshot for callers that test many variables, where {@link #isOutput} scans every output array
+   * (n * m tests over the 37,000 variables of gfd-schedule n180f7d50m30k18).
+   *
+   * @return the variables, a new set
+   */
+  public java.util.Set<Var> outputSnapshot() {
+    java.util.Set<Var> set = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+    set.addAll(outputVariables);
+    for (OutputArrayAnnotation oa : outputArray) {
+      set.addAll(java.util.Arrays.asList(oa.getArray()));
+    }
+    return set;
+  }
+
   public boolean isOutput(Var v) {
     if (outputVariables.contains(v)) {
       return true;

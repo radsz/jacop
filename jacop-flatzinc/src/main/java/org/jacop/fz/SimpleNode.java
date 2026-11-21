@@ -178,6 +178,32 @@ public class SimpleNode implements Node, Cloneable {
     }
   }
 
+  /**
+   * Keeps only the children that a test accepts, in their order; the others are removed and the
+   * number of children shrinks.
+   *
+   * @param keep the test of a child
+   */
+  public void retainChildren(java.util.function.Predicate<Node> keep) {
+    int n = jjtGetNumChildren();
+    if (n == 0) {
+      return;
+    }
+    unpack();
+    Node[] all = children instanceof Node[] array ? array : new Node[] {(Node) children};
+    Node[] kept = new Node[n];
+    int k = 0;
+    for (Node child : all) {
+      if (keep.test(child)) {
+        kept[k++] = child;
+      }
+    }
+    if (k == n) {
+      return;
+    }
+    children = k == 0 ? null : k == 1 ? kept[0] : java.util.Arrays.copyOf(kept, k);
+  }
+
   /** Drops every child, which keeps its place: the number of children stays. */
   void releaseChildren() {
     if (children instanceof int[]) {
