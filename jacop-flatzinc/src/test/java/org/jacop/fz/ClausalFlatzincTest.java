@@ -61,15 +61,23 @@ class ClausalFlatzincTest {
 
   private static final int[][] DOMAINS = {{-1, 1}, {0, 2}, {-1, 0, 1}, {1, 3}, {0, 1}};
 
+  /** Domains of four to eight values, compiled when the limit is raised. */
+  private static final int[][] WIDE = {{-2, 3}, {0, 5}, {-3, 4}, {1, 4}, {0, 1}};
+
   /** A random model in FlatZinc. */
   static String model(long seed) {
+    return model(seed, DOMAINS);
+  }
+
+  /** A random model in FlatZinc over the given domains, the last one 0..1. */
+  static String model(long seed, int[][] domains) {
     Random r = new Random(seed);
     int n = 6 + r.nextInt(5);
     int[][] dom = new int[n][];
     StringBuilder s = new StringBuilder();
     for (int i = 0; i < n; i++) {
       // the first variable has a value other than 0 and 1, so the model is compiled
-      dom[i] = i == 0 ? DOMAINS[r.nextInt(4)] : DOMAINS[r.nextInt(DOMAINS.length)];
+      dom[i] = i == 0 ? domains[r.nextInt(4)] : domains[r.nextInt(domains.length)];
       s.append("var ").append(dom[i][0]).append("..").append(dom[i][1]).append(": x");
       s.append(i).append(" :: output_var;\n");
     }
@@ -183,7 +191,9 @@ class ClausalFlatzincTest {
       case 10:
         return "jacop_among(" + xs(r, n, k) + ",{0,1}," + x(r, n) + ")";
       case 11:
-        return "jacop_increasing(" + xs(r, n, k) + ")";
+        return (r.nextBoolean() ? "jacop_increasing(" : "jacop_strictly_increasing(")
+            + xs(r, n, k)
+            + ")";
       case 12:
         return (r.nextBoolean() ? "jacop_maximum(" : "jacop_minimum(")
             + x(r, n)
@@ -218,10 +228,52 @@ class ClausalFlatzincTest {
 
   @Test
   void compiledModelsAgreeWithSearch() throws IOException {
+    agree(DOMAINS, null);
+  }
+
+  @Test
+  void compiledModelsOverLargerDomainsAgreeWithSearch() throws IOException {
+    agree(WIDE, "8");
+  }
+
+  @Test
+  void regularOverMoreThanThreeValuesIsNotCompiled() throws IOException {
+    String small =
+        """
+        var 1..3: x0 :: output_var;
+        var 1..3: x1 :: output_var;
+        constraint jacop_regular_set([x0,x1],2,1..3,[2,2,2,2,2,2],1,{2},1);
+        constraint int_ne(x0,x1);
+        solve satisfy;
+        """;
+    assertTrue(run(small, true).contains("clausalModel=true"), small);
+    String wide = small.replace("1..3", "1..4").replace("[2,2,2,2,2,2]", "[2,2,2,2,2,2,2,2]");
+    String out = run(wide, true);
+    assertFalse(out.contains("clausalModel=true"), wide + out);
+    assertTrue(out.contains("----------"), wide + out);
+  }
+
+  private void agree(int[][] domains, String maxDomain) throws IOException {
+    String old = System.getProperty("org.jacop.fz.clausal.maxDomain");
+    if (maxDomain != null) {
+      System.setProperty("org.jacop.fz.clausal.maxDomain", maxDomain);
+    }
+    try {
+      agree(domains);
+    } finally {
+      if (old == null) {
+        System.clearProperty("org.jacop.fz.clausal.maxDomain");
+      } else {
+        System.setProperty("org.jacop.fz.clausal.maxDomain", old);
+      }
+    }
+  }
+
+  private void agree(int[][] domains) throws IOException {
     int compiled = 0;
     int unsat = 0;
     for (long seed = SEED; seed < SEED + RUNS; seed++) {
-      String fzn = model(seed);
+      String fzn = model(seed, domains);
       String with = run(fzn, true);
       String without = run(fzn, false);
       assertFalse(with.contains("rejected"), seed + "\n" + fzn + with);
