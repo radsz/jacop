@@ -107,6 +107,7 @@ import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.EqBool;
 import org.jacop.constraints.ExtensionalConflictVa;
+import org.jacop.constraints.ExtensionalSupportVa;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.IfThenBool;
@@ -12421,6 +12422,34 @@ class SingleConstraintTest extends TestHelper {
     store.impose(c);
     assertThat(store.consistency()).isTrue();
     assertThat(noOfAllSolutions(store, x)).isEqualTo(4);
+  }
+
+  /**
+   * ExtensionalSupportVa and ExtensionalConflictVa dropped their tuples at the first imposition,
+   * keeping only those valid in the domains of that level: imposed again below it (as
+   * LcgSolver.lend and release do after the store backtracked) they threw a NullPointerException.
+   */
+  @Test
+  void extensionalVaImposedAgainBelowItsLevelKeepsEveryTuple() {
+    int[][] tuples = {{0, 0}, {1, 2}, {2, 1}};
+    for (boolean support : new boolean[] {true, false}) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", 0, 2);
+      IntVar y = new IntVar(store, "y", 0, 2);
+      IntVar[] list = {x, y};
+      Constraint c =
+          support
+              ? new ExtensionalSupportVa(list, tuples)
+              : new ExtensionalConflictVa(list, tuples);
+      store.setLevel(1);
+      x.domain.in(1, x, 0, 0);
+      store.impose(c);
+      assertThat(store.consistency()).isTrue();
+      backToRoot(store);
+      store.impose(c);
+      assertThat(store.consistency()).isTrue();
+      assertThat(noOfAllSolutions(store, list)).as("support " + support).isEqualTo(support ? 3 : 6);
+    }
   }
 
   /**
