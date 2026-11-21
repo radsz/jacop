@@ -8781,6 +8781,20 @@ Version 5.0 (unreleased)
    (4,333 -> 4,637), unit-commitment L12, warehouse olil4. Wide-quick set
    at 240 s: the slices start on 2 of 62 instances.
 
+492. Under lazy clause generation a regular or MDD constraint whose
+   clauses do not fit in the budget at 400 bytes per described edge and
+   node has its literals and clauses counted, and becomes clauses when
+   those fit; the budget is charged with the counted bytes. The edges
+   between two nodes are one arc, so most graphs take far less: the 17
+   regular constraints of pentominoes 04 (MiniZinc Challenge 2020) were
+   priced at 1.46 GB and take 169 MB, so with a 10 GB heap two of them
+   were explained by cuts of the graph and the fixed search took 348-487 s
+   (Chuffed 24 s); it is solved in 8-11 s now, and two pentominoes-zayenz
+   instances unsolved at 600 s in 15 s and 104 s. Long clauses of a graph
+   are cleared of duplicates by sorting. 23 regular and MDD instances
+   (MiniZinc Challenge, XCSP 2022-2025, the regular instances of the wide
+   set), 600 s, 4 GB: total time 0.59 (fixed search) and 0.79 (-f).
+
 Version 4.11
 =============
 
