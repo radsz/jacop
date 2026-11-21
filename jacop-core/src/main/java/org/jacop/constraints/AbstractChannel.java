@@ -50,6 +50,7 @@ import org.jacop.lcg.Explainable;
 import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.PbEncodable;
 import org.jacop.lcg.PbModel;
+import org.jacop.util.VarIntMap;
 
 abstract class AbstractChannel extends Constraint
     implements Violation, SatisfiedPresent, Explainable, PbEncodable {
@@ -64,12 +65,12 @@ abstract class AbstractChannel extends Constraint
   // after changes of 0/1 variables only (x unchanged) visits just the items of those variables.
   private boolean incremental;
   // the item of each 0/1 variable, by its original index
-  private Map<String, Integer> itemOf;
+  private VarIntMap itemOf;
   // original index -> current position in item, and back
   private int[] positionOf;
   private int[] originalAt;
-  // original indices of the items whose 0/1 variable changed since the last call
-  private int[] pending;
+  // the 0/1 variables that changed since the last call
+  private Var[] pending;
   private int pendingSize;
   private boolean xChanged;
   private boolean wakeUp;
@@ -242,15 +243,15 @@ abstract class AbstractChannel extends Constraint
   }
 
   private void setUpIncremental(Store store) {
-    // keyed by name, so that no identity hash code is drawn (search orders depend on them);
-    // distinct names mean distinct variables
-    Map<String, Integer> of = new HashMap<>();
+    // VarIntMap draws no identity hash code (search orders depend on them)
+    VarIntMap of = new VarIntMap(n);
     for (int i = 0; i < n; i++) {
       IntVar b = item[i].b();
-      if (b == x || of.put(b.id(), i) != null) {
+      if (b == x || of.containsKey(b)) {
         incremental = false;
         return;
       }
+      of.put(b, i);
     }
     itemOf = of;
     positionOf = new int[n];
@@ -259,7 +260,7 @@ abstract class AbstractChannel extends Constraint
       positionOf[i] = i;
       originalAt[i] = i;
     }
-    pending = new int[n];
+    pending = new Var[n];
     pendingSize = 0;
     completed = new TimeStampInt(store, 0);
     // the first call visits every item
@@ -283,14 +284,6 @@ abstract class AbstractChannel extends Constraint
       wakeUp |= wakes(v);
       return;
     }
-    Integer original = itemOf.get(v.id());
-    if (original == null) {
-      return;
-    }
-    int i = positionOf[original];
-    if (i < position.value()) {
-      return;
-    }
     if (wakes(v)) {
       wakeUp = true;
     }
@@ -299,7 +292,8 @@ abstract class AbstractChannel extends Constraint
       xChanged = true;
       return;
     }
-    pending[pendingSize++] = original;
+    // the item is looked up only if a call follows
+    pending[pendingSize++] = v;
   }
 
   // whether the change of a 0/1 variable can prune: b = 1 always, b = 0 only for ChannelReif
@@ -426,7 +420,11 @@ abstract class AbstractChannel extends Constraint
     int start = position.value();
     int startBefore = start;
     for (int k = 0; k < pendingSize; k++) {
-      int i = positionOf[pending[k]];
+      int original = itemOf.get(pending[k]);
+      if (original == VarIntMap.ABSENT) {
+        continue;
+      }
+      int i = positionOf[original];
       if (i < start) {
         continue;
       }
