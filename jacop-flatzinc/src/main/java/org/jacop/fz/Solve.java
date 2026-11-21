@@ -3850,7 +3850,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return alternateUnsolved(costVar);
     }
     if (lcgSlow && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch(lcg)) {
-      return free ? continueWithoutLcg(costVar) : continueFixedWithoutLcg(costVar);
+      if (free) {
+        return continueWithoutLcg(costVar);
+      }
+      // the check stops LCG only without a solution, but LCG can print one between the check and
+      // the stop: the search without learning then finds no better one, which is no refutation
+      boolean found = continueFixedWithoutLcg(costVar);
+      return found || numberSolutions > 0;
     }
     return numberSolutions > 0;
   }
