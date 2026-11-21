@@ -107,6 +107,63 @@ class LcgSlowFallbackFlatzincTest {
     checkOptimum(out);
   }
 
+  // a Golomb ruler of 9 marks below 81, shortest 44: LCG finds solutions within a tenth of a
+  // second, and proves the optimum alone in about 3 s, long after its speed check
+  private static String golomb() {
+    int n = 9;
+    StringBuilder vars = new StringBuilder();
+    StringBuilder cons = new StringBuilder();
+    StringBuilder ds = new StringBuilder();
+    for (int i = 1; i <= n; i++) {
+      vars.append("var 0..80: m").append(i).append(":: output_var;\n");
+    }
+    cons.append("constraint int_eq(m1,0);\n");
+    for (int i = 1; i < n; i++) {
+      cons.append("constraint int_lt(m").append(i).append(",m").append(i + 1).append(");\n");
+    }
+    for (int i = 1; i <= n; i++) {
+      for (int j = i + 1; j <= n; j++) {
+        String d = "d" + i + "_" + j;
+        vars.append("var 1..80: ").append(d).append(";\n");
+        cons.append("constraint int_lin_eq([1,-1,-1],[m")
+            .append(j)
+            .append(",m")
+            .append(i)
+            .append(',')
+            .append(d)
+            .append("],0);\n");
+        ds.append(ds.length() == 0 ? "" : ",").append(d);
+      }
+    }
+    cons.append("constraint jacop_alldiff([").append(ds).append("]);\n");
+    cons.append("constraint int_lt(d1_2,d").append(n - 1).append('_').append(n).append(");\n");
+    return vars + cons.toString() + "solve minimize m" + n + ";\n";
+  }
+
+  @Test
+  void optimumProvedAcrossOptimisationSlices() throws IOException {
+    // LCG gives way with a solution at its speed check, free search without learning runs in
+    // slices of a store level the solver lends, and LCG gets the search back under the best cost
+    String out =
+        run(
+            golomb(),
+            "lcg-slow-rate=1000000000,lcg-slow-at=0.01,lcg-slow-stall=0,maxsat=0,lcg-cop-slices=1");
+    Matcher slices = Pattern.compile("lcgCopSlices=(\\d+)").matcher(out);
+    assertTrue(slices.find(), out);
+    assertTrue(Long.parseLong(slices.group(1)) >= 1, out);
+    List<Integer> costs = new ArrayList<>();
+    Matcher m = Pattern.compile("m9 = (\\d+);").matcher(out);
+    while (m.find()) {
+      costs.add(Integer.parseInt(m.group(1)));
+    }
+    assertTrue(costs.size() > 1, out);
+    for (int k = 1; k < costs.size(); k++) {
+      assertTrue(costs.get(k) < costs.get(k - 1), out);
+    }
+    assertEquals(44, costs.get(costs.size() - 1), out);
+    assertTrue(out.contains("=========="), out);
+  }
+
   @Test
   void solverThatGaveWayIsNotKept() {
     // free search keeps only the conflicts, deadline and clock of the LCG solver that gave way: the

@@ -355,9 +355,7 @@ public class ExtensionalConflictVa extends AbstractExtensionalVa {
 
     numberTuples = tuplesFromConstructor != null ? tuplesFromConstructor.length : 0;
 
-    if (numberTuples == 0) {
-      satisfiedAlreadyAtImposition = true;
-    }
+    satisfiedAlreadyAtImposition = numberTuples == 0;
 
     tuplesFromConstructor = null;
 

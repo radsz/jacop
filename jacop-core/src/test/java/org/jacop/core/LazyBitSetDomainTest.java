@@ -687,4 +687,39 @@ class LazyBitSetDomainTest {
     }
     return -1;
   }
+
+  @Test
+  void firstIntervalHoleIsSeenByTheIntervals() {
+    // the intervals asked for before the first hole inside the bounds must not be reused after it
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", new LazyBitSetDomain(0, 99999, true));
+    assertThat(x.domain.noIntervals()).isEqualTo(1);
+    for (IntervalEnumeration e = x.domain.intervalEnumeration(); e.hasMoreElements(); ) {
+      e.nextElement();
+    }
+    store.setLevel(1);
+    x.domain.inComplement(1, x, 500);
+    assertThat(x.domain.noIntervals()).isEqualTo(2);
+    assertThat(x.domain.rightElement(0)).isEqualTo(499);
+    assertThat(x.domain.leftElement(1)).isEqualTo(501);
+    assertThat(x.domain.getInterval(1).toString()).isEqualTo("501..99999");
+    StringBuilder intervals = new StringBuilder();
+    for (IntervalEnumeration e = x.domain.intervalEnumeration(); e.hasMoreElements(); ) {
+      intervals.append(e.nextElement()).append(' ');
+    }
+    assertThat(intervals.toString()).isEqualTo("0..499 501..99999 ");
+  }
+
+  @Test
+  void intersectAdaptOfADomainReportsChangedBounds() {
+    // both bounds move: the event must be BOUND (ANY would not wake bound-subscribed constraints)
+    LazyBitSetDomain d = new LazyBitSetDomain(-62, 68, false);
+    d.setDomain(new IntervalDomain(-62, -46).union(42, 68));
+    assertThat(d.intersectAdapt(new BoundDomain(25, 46))).isEqualTo(IntDomain.BOUND);
+    assertThat(d.toString()).isEqualTo("{42..46}");
+    // only values inside the bounds go: ANY
+    d = new LazyBitSetDomain(0, 9, false);
+    d.setDomain(new IntervalDomain(0, 9));
+    assertThat(d.intersectAdapt(new IntervalDomain(0, 3).union(6, 9))).isEqualTo(IntDomain.ANY);
+  }
 }

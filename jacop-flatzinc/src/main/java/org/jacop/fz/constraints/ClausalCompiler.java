@@ -867,7 +867,8 @@ public final class ClausalCompiler {
       case "jacop_lex_chain_lesseq_int" -> {
         IntVar[] xs = vars(n, 0);
         int cols = integer(n, 1);
-        int rows = xs.length / cols;
+        // no vectors (cols 0) give no pairs
+        int rows = cols == 0 ? 0 : xs.length / cols;
         Enc[][] vec = new Enc[cols][rows];
         for (int j = 0; j < cols; j++) {
           for (int i = 0; i < rows; i++) {
@@ -885,7 +886,8 @@ public final class ClausalCompiler {
         IntVar[] xs = vars(n, 0);
         int[] t = ints(n, 1);
         int k = xs.length;
-        for (int r = 0; r + k <= t.length; r += k) {
+        // a table without columns has no rows
+        for (int r = 0; k > 0 && r + k <= t.length; r += k) {
           int[] c = new int[k];
           for (int i = 0; i < k; i++) {
             c[i] = -enc(xs[i]).eq(t[r + i]);
@@ -1136,7 +1138,8 @@ public final class ClausalCompiler {
       starOf.add(new ArrayList<>());
     }
     rows:
-    for (int r = 0; r + k <= t.length; r += k) {
+    // a table without columns has no rows, so no selector: the empty clause
+    for (int r = 0; k > 0 && r + k <= t.length; r += k) {
       for (int i = 0; i < k; i++) {
         int a = t[r + i];
         if (!(shortTable && a == star) && !e[i].has(a)) {

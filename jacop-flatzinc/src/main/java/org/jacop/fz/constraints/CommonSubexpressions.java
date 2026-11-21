@@ -266,6 +266,10 @@ public class CommonSubexpressions implements ParserTreeConstants {
     Map<List<Object>, Integer> first = new HashMap<>();
     boolean aliased = false;
     for (int i = 0; i < nodes.size(); i++) {
+      if ((i & 255) == 255) {
+        // a round over the constraints of a large model takes seconds
+        support.checkTimeOut();
+      }
       ASTConstElem node = nodes.get(i);
       if (replaced.contains(node)) {
         continue;

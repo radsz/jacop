@@ -86,7 +86,7 @@ public class ValuePrecede extends Constraint
   private int alphaValue;
   private int betaValue;
   private int gammaValue;
-  private final InitOnce init = new InitOnce();
+  private InitOnce init = new InitOnce();
   private LinkedHashSet<IntVar> varQueue = new LinkedHashSet<>();
 
   /**
@@ -138,6 +138,9 @@ public class ValuePrecede extends Constraint
     alpha = new TimeStampInt(store, 0);
     beta = new TimeStampInt(store, 0);
     gamma = new TimeStampInt(store, 0);
+    // an imposition again (LcgSolver.release or lend imposes the same object) starts from the
+    // fresh positions above, so the initialisation is due again
+    init = new InitOnce();
 
     alphaValue = 0;
     betaValue = 0;
