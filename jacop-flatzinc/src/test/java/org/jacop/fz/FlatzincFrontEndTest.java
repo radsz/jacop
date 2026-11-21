@@ -78,6 +78,7 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.fz.constraints.AlldifferentDetector;
+import org.jacop.fz.constraints.CommonSubexpressions;
 import org.jacop.fz.constraints.PartialCopyDetector;
 import org.jacop.fz.constraints.Support;
 import org.junit.jupiter.api.Test;
@@ -6589,5 +6590,50 @@ class FlatzincFrontEndTest {
     String narrow = model.replace("-500000000..500000000", "-2000..2000");
     out = run(narrow, "-t", "60000", "--lcg", "on")[0];
     assertTrue(out.contains("b = false;\n----------\n"), out);
+  }
+
+  @Test
+  void roundOfCommonSubexpressionsStopsAtTheTimeOut() throws IOException, ParseException {
+    // the time-out was checked once per round over the constraints, which takes seconds on a large
+    // model
+    StringBuilder model = new StringBuilder();
+    int n = 600;
+    for (int i = 0; i <= n; i++) {
+      model.append("var 0..9: x").append(i).append(";\n");
+    }
+    for (int i = 0; i < n; i++) {
+      model
+          .append("constraint int_lin_le([1,-1],[x")
+          .append(i)
+          .append(", x")
+          .append(i + 1)
+          .append("], 0);\n");
+    }
+    model.append("solve satisfy;\n");
+    Path fzn = tmp.resolve("cse.fzn");
+    Files.writeString(fzn, model.toString(), StandardCharsets.UTF_8);
+    for (boolean stop : new boolean[] {false, true}) {
+      CheckCountingOptions opt =
+          new CheckCountingOptions(new String[] {"-t", "60000", fzn.toString()});
+      try (java.io.FileInputStream input = new java.io.FileInputStream(fzn.toFile())) {
+        Parser parser = new Parser(input);
+        parser.setOptions(opt);
+        parser.cc.setOptions(opt);
+        SimpleNode tree = parsedItems(parser);
+        opt.armed = true;
+        // nothing merges: one round, checked once at its start
+        if (stop) {
+          opt.passAfter = 1;
+        }
+        CommonSubexpressions cse = new CommonSubexpressions(parser.cc.support, Set.of());
+        if (stop) {
+          assertThrows(ModelTimeOut.class, () -> cse.detect(tree));
+        } else {
+          cse.detect(tree);
+          assertTrue(cse.replaced().isEmpty());
+          assertTrue(opt.checks > 1, opt.checks + " checks");
+        }
+      }
+    }
   }
 }
