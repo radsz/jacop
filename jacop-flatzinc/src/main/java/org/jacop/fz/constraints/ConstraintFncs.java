@@ -628,6 +628,11 @@ public final class ConstraintFncs {
   // posted as the pairwise disjunctions of the MiniZinc library instead of Diffn (0 = never)
   private static final int DIFFN_PAIRS = 30;
 
+  // and only when the rectangles fill at most this share of the box they can lie in
+  // (org.jacop.fz.diffnPairsDensity)
+  private static final double DIFFN_PAIRS_DENSITY =
+      Double.parseDouble(System.getProperty("org.jacop.fz.diffnPairsDensity", "0.05"));
+
   /**
    * Posts a diffn of few rectangles under LCG fixed search as the decomposition of the MiniZinc
    * library: for each pair of rectangles, one of the four ways to lie apart (left, right, below,
@@ -659,6 +664,15 @@ public final class ConstraintFncs {
     };
     int count = origin[0].length;
     if (count < 2 || count > most) {
+      return false;
+    }
+    double density = diffnDensity(origin, length);
+    if (support.options.debug()) {
+      System.out.println("% diffn: " + count + " rectangles, density " + density);
+    }
+    // sparse placements only: on pillars-and-planks (MZNC 2020, density 0.375 to 0.6) Diffn proves
+    // p-d12 in 7 s, the pairs not in 240 s; the cargo stockyards have densities 0.003 to 0.02
+    if (density > DIFFN_PAIRS_DENSITY) {
       return false;
     }
     // origin[d][a] + length[d][a] - origin[d][b] <= 0 for each pair and way, unless decided
@@ -700,6 +714,25 @@ public final class ConstraintFncs {
       poseClause(literals, none);
     }
     return true;
+  }
+
+  /** The least area of the rectangles over the area of the box their origins and lengths allow. */
+  private static double diffnDensity(IntVar[][] origin, IntVar[][] length) {
+    double area = 0;
+    for (int i = 0; i < origin[0].length; i++) {
+      area += (double) Math.max(0, length[0][i].min()) * Math.max(0, length[1][i].min());
+    }
+    double box = 1;
+    for (int d = 0; d < 2; d++) {
+      long low = Long.MAX_VALUE;
+      long high = Long.MIN_VALUE;
+      for (int i = 0; i < origin[d].length; i++) {
+        low = Math.min(low, origin[d][i].min());
+        high = Math.max(high, (long) origin[d][i].max() + length[d][i].max());
+      }
+      box *= Math.max(1, high - low);
+    }
+    return area / box;
   }
 
   /** The relation sum(weights * vars) <= rhs of one way two rectangles lie apart. */

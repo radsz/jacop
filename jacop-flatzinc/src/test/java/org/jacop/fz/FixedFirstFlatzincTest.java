@@ -165,9 +165,10 @@ class FixedFirstFlatzincTest {
           .append(");\n");
     }
     for (int i = 0; i < squares; i++) {
-      s.append("var 0..").append(total).append(": y").append(i).append(":: output_var;\n");
+      // a tall strip, so that the squares fill little of it, as diffnByPairs requires
+      s.append("var 0..").append(20 * total).append(": y").append(i).append(":: output_var;\n");
     }
-    s.append("var 0..").append(total).append(": cost:: output_var;\n");
+    s.append("var 0..").append(21 * total).append(": cost:: output_var;\n");
     s.append(con);
     s.append("constraint jacop_diff2_strict([")
         .append(xs)
