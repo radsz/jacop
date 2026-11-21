@@ -356,7 +356,7 @@ public class Support implements ParserTreeConstants {
       int val = node.getInt();
       return dictionary.getConstant(val);
     } else if (node.getType() == 2) { // ident
-      IntVar int_boolVar = dictionary.getVariable(node.getIdent());
+      IntVar int_boolVar = dictionary.getVariable(node);
       if (int_boolVar == null) {
         int bInt = dictionary.getInt(node.getIdent());
         return dictionary.getConstant(bInt); // new IntVar(store, bInt, bInt);
@@ -807,7 +807,7 @@ public class Support implements ParserTreeConstants {
 
     ASTScalarFlatExpr e = (ASTScalarFlatExpr) node.jjtGetChild(0);
     if (e != null) {
-      return dictionary.getVariable(e.getIdent());
+      return dictionary.getVariable(e);
     } else {
       throw new IllegalArgumentException(
           "Wrong variable identified in \"defines_var\" annotation" + node);
@@ -885,10 +885,24 @@ public class Support implements ParserTreeConstants {
    * @throws ModelTimeOut when it has passed
    */
   void checkTimeOut() {
-    if (options != null && options.timeOutPassed()) {
+    // the clock is read at the first and every 64th call after it, and stays passed once it is: the
+    // detectors call this for each constraint they read, 160 million times (2 s) on the 3.9
+    // million clauses of MaxSAT 2021 haplotyping-pedigrees
+    if (options == null) {
+      return;
+    }
+    if (timedOut != options && (timeOutChecks++ & 63) == 0 && options.timeOutPassed()) {
+      timedOut = options;
+    }
+    if (timedOut == options) {
       throw new ModelTimeOut();
     }
   }
+
+  // the calls of checkTimeOut, and the options whose time-out one found passed
+  private int timeOutChecks;
+
+  private Options timedOut;
 
   /** Posts the conflict cliques of the bin packing constraints over the same bins. */
   public void detectBinPackingCliques() {
@@ -1613,6 +1627,34 @@ public class Support implements ParserTreeConstants {
     return c;
   }
 
+  /**
+   * Runs a propagation of the model being built, which stops with {@link ModelTimeOut} once the
+   * time-out has passed: bounds that converge one unit per step (x &lt; y &lt; z &lt; x over wide
+   * domains) take minutes to fail. A failure at the time-out proves nothing, so it is no failure.
+   *
+   * @param propagation the propagation, which throws FailException when the model fails
+   * @throws FailException when the model fails before the time-out
+   */
+  public void propagateUntilTimeOut(Runnable propagation) throws FailException {
+    boolean deadline =
+        options != null && options.getTimeOut() > 0 && store.getConsistencyDeadline() == 0;
+    if (deadline) {
+      store.setConsistencyDeadline(System.currentTimeMillis() + options.getRemainingTimeOut());
+    }
+    try {
+      propagation.run();
+    } catch (FailException e) {
+      if (deadline && store.isConsistencyDeadlinePassed()) {
+        throw new ModelTimeOut();
+      }
+      throw e;
+    } finally {
+      if (deadline) {
+        store.setConsistencyDeadline(0);
+      }
+    }
+  }
+
   void pose(Constraint c) throws FailException {
 
     if (activeControl != null && activeControl.negated()) {
@@ -1634,11 +1676,15 @@ public class Support implements ParserTreeConstants {
       }
     }
 
-    if (constraintPriority >= 0 && constraintPriority <= 4) {
-      store.imposeWithConsistency(c, constraintPriority);
-    } else {
-      store.imposeWithConsistency(c);
-    }
+    Constraint posted = c;
+    propagateUntilTimeOut(
+        () -> {
+          if (constraintPriority >= 0 && constraintPriority <= 4) {
+            store.imposeWithConsistency(posted, constraintPriority);
+          } else {
+            store.imposeWithConsistency(posted);
+          }
+        });
 
     if (options.debug()) {
       String s = "% " + c;

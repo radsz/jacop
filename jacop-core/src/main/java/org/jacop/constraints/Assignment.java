@@ -112,6 +112,14 @@ public class Assignment extends Constraint
   /** One-time work of the first consistency call. */
   final InitOnce init = new InitOnce();
 
+  /**
+   * The lowest level of the queued changes. The store may raise its level before consistency
+   * (Store.raiseLevelBeforeConsistency, set by Alldistinct and others when imposed), so changes of
+   * level l can reach the constraint first at level l + 1, where recentDomainPruning does not show
+   * them; the domains are then scanned in full, as by the first consistency.
+   */
+  private int pendingLevel = Integer.MAX_VALUE;
+
   IntervalDomain rangeX;
   IntervalDomain rangeD;
 
@@ -238,6 +246,7 @@ public class Assignment extends Constraint
       isQueued[queued[k]] = false;
     }
     queuedSize = 0;
+    pendingLevel = Integer.MAX_VALUE;
   }
 
   @Override
@@ -245,6 +254,10 @@ public class Assignment extends Constraint
 
     if (init.begin(store)) {
       initRangesAndPropagateInitial(store);
+    } else if (pendingLevel < store.level) {
+      pendingLevel = Integer.MAX_VALUE;
+      propagateInitialFromX(store);
+      propagateInitialFromD(store);
     }
 
     while (queuedSize > 0) {
@@ -262,6 +275,7 @@ public class Assignment extends Constraint
         propagateFromPrunedVariable(store, round[k]);
       }
     }
+    pendingLevel = Integer.MAX_VALUE;
   }
 
   private void initRangesAndPropagateInitial(Store store) {
@@ -385,6 +399,9 @@ public class Assignment extends Constraint
 
   @Override
   public void queueVariable(int level, Var v) {
+    if (level < pendingLevel) {
+      pendingLevel = level;
+    }
     int slot = slotOf.get(v);
     if (slot != VarIntMap.ABSENT && !isQueued[slot]) {
       isQueued[slot] = true;

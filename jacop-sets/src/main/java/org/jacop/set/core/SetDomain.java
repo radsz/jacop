@@ -85,7 +85,7 @@ public abstract class SetDomain extends Domain {
     {GROUND, GLB_EVENT, LUB_EVENT, BOUND, ANY, CARDINALITY_EVENT}, // GROUND event
     {GLB_EVENT, BOUND, ANY, CARDINALITY_EVENT}, // GLB event
     {LUB_EVENT, BOUND, ANY, CARDINALITY_EVENT}, // LUB event
-    {BOUND, ANY, CARDINALITY_EVENT}, // BOUND event
+    {GLB_EVENT, LUB_EVENT, BOUND, ANY, CARDINALITY_EVENT}, // BOUND event: glb and lub changed
     {ANY, CARDINALITY_EVENT}, // ANY event
     {ANY, CARDINALITY_EVENT} // CARDINALITY event, a change of the domain that ANY must also see
   };

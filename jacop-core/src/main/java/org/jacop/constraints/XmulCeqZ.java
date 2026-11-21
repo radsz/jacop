@@ -96,7 +96,12 @@ public class XmulCeqZ extends AbstractConstraintXandCandZ
     if (c != 0) {
 
       if (x.singleton()) {
-        z.domain.inComplement(store.level, z, x.value() * c);
+        // in long: a product beyond the int range is no value of z, and its wrapped value may be
+        // one
+        long product = (long) x.value() * c;
+        if (product == (int) product) {
+          z.domain.inComplement(store.level, z, (int) product);
+        }
       }
 
       if (z.singleton()) {
@@ -119,7 +124,7 @@ public class XmulCeqZ extends AbstractConstraintXandCandZ
 
   @Override
   public boolean satisfied() {
-    return grounded() && x.min() * c == z.min();
+    return grounded() && (long) x.min() * c == z.min();
   }
 
   @Override

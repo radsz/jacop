@@ -560,6 +560,16 @@ public class ConjunctionSum extends Constraint
   public void impose(Store store) {
     super.impose(store);
     this.store = store;
+    // a second imposition starts from no active term and no watch, as the first
+    stackSize = 0;
+    fixedSum = 0;
+    Arrays.fill(active, false);
+    Arrays.fill(bucketSize, 0);
+    Arrays.fill(cost, 0);
+    Arrays.fill(pendingCount, 0);
+    Arrays.fill(watchSize, 0);
+    Arrays.fill(queued, false);
+    queueSize = 0;
     for (int t = 0; t < weights.length; t++) {
       if (weights[t] == 0) {
         continue;

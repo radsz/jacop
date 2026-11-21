@@ -510,7 +510,9 @@ public class LinearRelaxation extends Constraint
   private LpSolver beforeExtra;
   private int baseRows;
   private long extraLimits;
-  private static final int EXTRA_LIMITS = Integer.getInteger("org.jacop.lp.extraLimits", 3);
+  private static final boolean ROOT_RECUT_PROPERTY = Boolean.getBoolean("org.jacop.lp.rootRecut");
+  private static final int EXTRA_LIMITS =
+      Integer.getInteger("org.jacop.lp.extraLimits", ROOT_RECUT_PROPERTY ? 1_000_000 : 3);
 
   // the extra rows of a dense tableau whose search solves get fewer pivots than this move to the
   // sparse simplex when it costs at most a quarter of the tableau per pivot (moveExtraToSparse)
@@ -959,7 +961,8 @@ public class LinearRelaxation extends Constraint
   // on the wide set (220, 60 s) it was neutral under -f and cost the proof of ATSP instance10 in
   // the default mode (LP time 0.4 s to 3.8 s), while the root reduced costs alone gain the same
   // not final, so that tests can switch it on
-  static boolean restartSolvesOn = "true".equals(System.getProperty("org.jacop.lp.restartSolves"));
+  static boolean restartSolvesOn =
+      ROOT_RECUT_PROPERTY || "true".equals(System.getProperty("org.jacop.lp.restartSolves"));
   private static final boolean RESTART_CUTS =
       !FALSE.equals(System.getProperty("org.jacop.lp.restartCuts"));
   private int rootLevel = -1;
@@ -977,7 +980,34 @@ public class LinearRelaxation extends Constraint
   // (TankAllocation, XCSP 2025). Such cuts hold while the root level stays; should the search ever
   // remove that level, the relaxation stops solving and checks only the rows made before them
   // not final, so that tests can switch it on
-  static boolean restartBoundsOn = "true".equals(System.getProperty("org.jacop.lp.restartBounds"));
+  static boolean restartBoundsOn =
+      ROOT_RECUT_PROPERTY || "true".equals(System.getProperty("org.jacop.lp.restartBounds"));
+
+  // root re-cuts, with org.jacop.lp.rootRecut=true (which also turns on restartSolves,
+  // restartBounds and keeps the extra rows, extraLimits 1,000,000): the reduced costs of a solve at
+  // the root level fix columns there, and the propagation that follows tightens other bounds, but
+  // the cut rounds ran only over the bounds the solve started from. A restart solve now runs as
+  // well when the bounds of the root level changed without a better bound of the objective, until
+  // nothing changes, and when an incumbent closed a tenth of the gap left at the last one. As
+  // CP-SAT's LP worker, which cuts again at level zero after each fixing (unit-commitment L10 of
+  // the
+  // MiniZinc Challenge 2023 with the optimum 1,703,450 as upper bound, -f: root bound 1.644M to
+  // 1.681M in 2 s and 1.7024M after 180 s). The restart solves take at most
+  // org.jacop.lp.restartShare (0.05) of the time since the relaxation was made: without the cap
+  // the wide-quick set took 8 % longer under -f (20_is A3PZaPjnUz 4.3 to 19 s, 84 restart solves).
+  // not final, so that tests can switch it on
+  static boolean rootRecutOn = ROOT_RECUT_PROPERTY;
+  private static final double RESTART_SHARE =
+      Double.parseDouble(System.getProperty("org.jacop.lp.restartShare", "0.05"));
+  private final long createdNanos = System.nanoTime();
+  // the time spent in restart solves
+  private long restartNanos;
+  // the gap between the bound of the objective and the LP bound at the last restart solve
+  private double restartGap = Double.POSITIVE_INFINITY;
+
+  /** Statistics: restart solves made because the bounds of the root level changed. */
+  public long rootRecuts;
+
   // the rows before the first cut over tightened root bounds, or -1 when there is none
   private int tightFrom = -1;
   // the root level was removed after cuts over its tightened bounds: they no longer hold
@@ -2815,6 +2845,24 @@ public class LinearRelaxation extends Constraint
     }
   }
 
+  // the time-out of the run, as System.nanoTime(): no root solve goes on past it
+  private long runDeadline = Long.MAX_VALUE;
+
+  /**
+   * Sets when the run ends: a root solve stops there with its status LIMIT, as at its own budget.
+   *
+   * @param nanoTime the time-out as given by {@link System#nanoTime()}
+   */
+  public void setDeadline(long nanoTime) {
+    runDeadline = nanoTime;
+  }
+
+  // whether the time-out of the run has passed: no root solve starts after it (a dense one is done
+  // in one call)
+  private boolean runDeadlinePassed() {
+    return runDeadline != Long.MAX_VALUE && System.nanoTime() - runDeadline > 0;
+  }
+
   /**
    * Returns whether the relaxation is large: over the size caps of the sparse simplex in search,
    * and so solved at the root only.
@@ -3199,10 +3247,12 @@ public class LinearRelaxation extends Constraint
     if (rootLevel < 0) {
       rootLevel = store.level;
       rootObjective = objectiveBound();
-    } else if (store.level <= rootLevel && objectiveBound() != rootObjective) {
+    } else if (store.level <= rootLevel && rootChanged()) {
+      boolean recut = objectiveBound() == rootObjective;
       rootObjective = objectiveBound();
-      if (restartSolvesOn && rootBoundsChanged() && ++restartsWaited >= restartPeriod) {
+      if (restartSolvesOn && restartDue(recut)) {
         restartsWaited = 0;
+        countRestart(recut);
         restartSolve(store);
         checkGround();
         return;
@@ -3283,6 +3333,58 @@ public class LinearRelaxation extends Constraint
     checkGround();
   }
 
+  /**
+   * Moves the root level of the relaxation up to the root of a search that starts above it and
+   * stays there until it ends, such as free search without learning after LCG gave way: that search
+   * restarts to its own root, never to the level of the first solve, so with org.jacop.lp.rootRecut
+   * the restart solves and their cuts over the root bounds go on at its root (unit-commitment L10
+   * of the MiniZinc Challenge 2023, -f 240 s: bound 1.621M to 1.662M, optimum 1,703,450).
+   *
+   * @param level the root level of the search, above the current root level
+   */
+  public void searchRoot(int level) {
+    if (rootRecutOn && rootLevel >= 0 && level > rootLevel) {
+      rootLevel = level;
+      rootObjective = objectiveBound();
+      restartPeriod = 1;
+      restartsWaited = 0;
+    }
+  }
+
+  // whether the bound of the objective changed at the root level since the last check, or, with
+  // org.jacop.lp.rootRecut, the bounds of the root level changed after the first solve
+  private boolean rootChanged() {
+    return objectiveBound() != rootObjective
+        || rootRecutOn && restartSolvesOn && calls > 0 && rootBoundsChanged();
+  }
+
+  // whether a restart solve is due: the root bounds changed, and the solve was waited for, re-cuts
+  // the root (recut), or follows an incumbent that closed a tenth of the gap, within its time share
+  private boolean restartDue(boolean recut) {
+    return rootBoundsChanged()
+        && (recut || ++restartsWaited >= restartPeriod || rootRecutOn && gapShrunk())
+        && (!rootRecutOn || restartTimeLeft());
+  }
+
+  // counts a restart solve and records the gap it starts from
+  private void countRestart(boolean recut) {
+    if (recut) {
+      rootRecuts++;
+    }
+    restartGap = Math.abs(objectiveBound() - lp.value(0));
+  }
+
+  // whether the incumbent closed at least a tenth of the gap left at the last restart solve: each
+  // such step is worth a solve, as the reduced costs fix more in the smaller gap
+  private boolean gapShrunk() {
+    return Math.abs(objectiveBound() - lp.value(0)) <= 0.9 * restartGap;
+  }
+
+  // whether the restart solves stay within their share of the time since the relaxation was made
+  private boolean restartTimeLeft() {
+    return restartNanos <= RESTART_SHARE * (System.nanoTime() - createdNanos);
+  }
+
   // propagates the root forms again on the current branch when the bound of the objective has
   // improved since they were last propagated on it. The bounds they were propagated with are
   // trailed by level, so that the prunings undone by a backtrack are made again: at the level of
@@ -3305,14 +3407,61 @@ public class LinearRelaxation extends Constraint
       rootBoundsAt = Arrays.copyOf(rootBoundsAt, 2 * rootBoundsSize);
       rootBoundsLevel = Arrays.copyOf(rootBoundsLevel, 2 * rootBoundsSize);
     }
+    // a skipped bound is not recorded, so a later call propagates the bound of its time
+    if (rootReducedSkips > 0) {
+      rootReducedSkips--;
+      rootReducedSkipped++;
+      return;
+    }
     rootBoundsAt[rootBoundsSize] = bound;
     rootBoundsLevel[rootBoundsSize++] = store.level;
+    rootReducedPasses++;
     long pruned = prunings;
-    for (int k = 0; k < rootForms.length; k++) {
-      propagate(store, rootForms[k], rootFacts[k], rootCertificates[k]);
+    boolean useful = true;
+    try {
+      long scanned = 0;
+      for (int k = 0; k < rootForms.length; k++) {
+        propagate(store, rootForms[k], rootFacts[k], rootCertificates[k]);
+        scanned += rootForms[k].vars().length;
+      }
+      // a pruning a pass scans more than ROOT_REDUCED_SCAN columns for counts as none: on a row
+      // of n columns whose bound moves at every decision, one pruning a pass is quadratic. A pass
+      // over fewer than ROOT_REDUCED_MIN_COLUMNS columns is cheap and always counts as useful
+      useful =
+          scanned < ROOT_REDUCED_MIN_COLUMNS || (prunings - pruned) * ROOT_REDUCED_SCAN >= scanned;
+    } finally {
+      // a pass that pruned (almost) nothing doubles the passes skipped before the next one, one
+      // that pruned or failed starts again at every change of the bound
+      rootReducedPeriod = useful ? 1 : Math.min(2 * rootReducedPeriod, ROOT_REDUCED_MAX_PERIOD);
+      rootReducedSkips = rootReducedPeriod - 1;
     }
     rootPrunings += prunings - pruned;
   }
+
+  // the bound of the objective changes not only with the solutions: under assumptions or
+  // decisions on its terms its upper bound falls at every one of them. In the core-guided phase on
+  // Security-CPS test61 (MaxSAT Evaluation 2021: 16,010 soft clauses, 20,347 columns), each call
+  // assumes the softs one by one and every assumption scanned the root forms again, without a
+  // pruning: 0.9 s a core instead of 0.23 s. Passes that prune nothing back off exponentially
+  private static final int ROOT_REDUCED_MAX_PERIOD = 128;
+
+  // the columns a pass may scan for each pruning it makes and still count as useful: units learnt
+  // at the root moved the bound of jacop_lex_less_int over 2 x 20,000 columns maximizing a sum
+  // 60,000 times, 46 s of passes over 40,000 columns
+  private static final int ROOT_REDUCED_SCAN = 64;
+
+  // the columns below which a pass never backs off: accap instance5 (MiniZinc Challenge 2019, 116
+  // columns) made 2 million passes, about a tenth of its time, and their 69 rare prunings found
+  // 114 in 600 s; backed off to 16,000 passes, one pruning and 134
+  private static final int ROOT_REDUCED_MIN_COLUMNS = 1000;
+  private int rootReducedPeriod = 1;
+  private int rootReducedSkips;
+
+  /** The passes of the root reduced costs skipped by their back-off. */
+  public long rootReducedSkipped;
+
+  /** The passes of the root reduced costs made. */
+  public long rootReducedPasses;
 
   // whether the bounds of a column other than the objective are tighter than at the last solve at
   // the root level: with only the bound of the objective changed, a solve again finds the same
@@ -3380,6 +3529,7 @@ public class LinearRelaxation extends Constraint
     } finally {
       restarting = false;
       solveNanos += System.nanoTime() - started;
+      restartNanos += System.nanoTime() - started;
       scanned = 0;
     }
   }
@@ -4118,6 +4268,9 @@ public class LinearRelaxation extends Constraint
   }
 
   private int rootSolve(LpSolver s, int pivots, long work, long nanos) {
+    if (runDeadlinePassed()) {
+      return LpSolver.LIMIT;
+    }
     if (s instanceof DualSimplex) {
       return s.solve(pivots);
     }
@@ -4134,6 +4287,9 @@ public class LinearRelaxation extends Constraint
       pivots = Integer.MAX_VALUE;
       work = Long.MAX_VALUE;
       nanos = Math.max(0, largeDeadline - now);
+    }
+    if (runDeadline != Long.MAX_VALUE) {
+      nanos = Math.min(nanos, Math.max(0, runDeadline - System.nanoTime()));
     }
     return solveWithin(s, pivots, work, nanos);
   }
@@ -6648,6 +6804,9 @@ public class LinearRelaxation extends Constraint
   // a root solve within at most the given pivots and nanoseconds, also on a large relaxation (whose
   // root solves otherwise share the time of its root)
   private int rootSolveCapped(LpSolver s, int pivots, long nanos) {
+    if (runDeadlinePassed()) {
+      return LpSolver.LIMIT;
+    }
     if (s instanceof DualSimplex) {
       return s.solve(pivots);
     }
@@ -6658,6 +6817,9 @@ public class LinearRelaxation extends Constraint
         largeDeadline = now + largeRootNanos;
       }
       cap = Math.min(cap, Math.max(0, largeDeadline - now));
+    }
+    if (runDeadline != Long.MAX_VALUE) {
+      cap = Math.min(cap, Math.max(0, runDeadline - System.nanoTime()));
     }
     return solveWithin(s, pivots, rootWork(), cap);
   }

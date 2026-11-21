@@ -355,6 +355,22 @@ public final class ClampedBounds {
             trueIfThenElses.add(new IntVar[][] {c, x});
           }
         }
+        case "jacop_table_int" -> {
+          // each variable takes a value of its column of the tuples
+          IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+          int[] t = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+          if (t != null && x.length > 0 && t.length > 0 && t.length % x.length == 0) {
+            for (int i = 0; i < x.length; i++) {
+              long low = Long.MAX_VALUE;
+              long high = Long.MIN_VALUE;
+              for (int j = i; j < t.length; j += x.length) {
+                low = Math.min(low, t[j]);
+                high = Math.max(high, t[j]);
+              }
+              functions.add(new long[] {ELEMENT_CONST, id(x[i]), low, high});
+            }
+          }
+        }
         case "bool2int" -> {
           IntVar z = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
           functions.add(new long[] {ELEMENT_CONST, id(z), 0, 1});
@@ -478,7 +494,7 @@ public final class ClampedBounds {
       if (array != null) {
         out.addAll(Arrays.asList(array));
       } else {
-        IntVar v = support.dictionary.getVariable(e.getIdent());
+        IntVar v = support.dictionary.getVariable(e);
         if (v != null) {
           out.add(v);
         }

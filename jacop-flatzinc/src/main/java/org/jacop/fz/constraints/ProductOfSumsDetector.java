@@ -101,6 +101,9 @@ public class ProductOfSumsDetector implements ParserTreeConstants {
 
   private final Set<SimpleNode> skipped = new HashSet<>();
 
+  // the Boolean variables that an output integer variable is an alias of; null until first used
+  private Set<IntVar> outputTargets;
+
   private int products;
 
   private int terms;
@@ -207,6 +210,21 @@ public class ProductOfSumsDetector implements ParserTreeConstants {
             ? occurrences.getOrDefault(y, 0) == 4
             : occurrences.getOrDefault(y, 0) == 2 && occurrences.getOrDefault(ind.p(), 0) == 2;
     if (!used || support.dictionary.isOutput(y) || support.dictionary.isOutput(ind.p())) {
+      return null;
+    }
+    if (outputTargets == null) {
+      outputTargets = Collections.newSetFromMap(new IdentityHashMap<>());
+      support.dictionary.aliasTable.forEach(
+          (alias, target) -> {
+            if (support.dictionary.isOutput(alias)) {
+              outputTargets.add(target);
+            }
+          });
+    }
+    // a variable declared equal keeps the equality posted for its declaration
+    if (outputTargets.contains(ind.p())
+        || support.dictionary.isDeclaredEqual(y)
+        || support.dictionary.isDeclaredEqual(ind.p())) {
       return null;
     }
     Conjunction c = conjunctions.get(ind.p());
