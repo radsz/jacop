@@ -6787,4 +6787,30 @@ class FlatzincFrontEndTest {
     String out = run(model, "-t", "5000", "--lcg", "on")[0];
     assertTrue(out.endsWith("x = 0;\nobj = 8;\nb = true;\n----------\n==========\n"), out);
   }
+
+  @Test
+  void knapsackSurrogateKeepsBooleanItemsApart() throws IOException {
+    // every Boolean variable has store index -1, so the detector merged d9 and d11 (bool2int
+    // aliases of b3 and b7) into one item of the surrogate knapsack and refuted the model
+    String model =
+        """
+        var 0..1: x0 :: output_var;
+        var 0..1: x2 :: output_var;
+        var bool: b3 :: output_var;
+        var 0..1: x4 :: output_var;
+        var 0..1: x6 :: output_var;
+        var bool: b7 :: output_var;
+        var 0..1: d8 :: output_var;
+        var 0..1: d9 :: output_var;
+        var 0..1: d10 :: output_var;
+        var 0..1: d11 :: output_var;
+        constraint bool2int(b3,d9);
+        constraint bool2int(b7,d11);
+        constraint int_lin_le([7,1,2],[x2,d9,x0],7);
+        constraint int_lin_le([-2,-9,-7,-2,-4,-6,-1,-9],[x0,d8,x2,d9,x4,d10,x6,d11],-34);
+        solve satisfy;
+        """;
+    // brute force: x2 = 1, x0 = d9 = 0, d8 = x4 = d10 = d11 = 1, x6 free
+    assertEquals(2, solveAll(model).size());
+  }
 }
