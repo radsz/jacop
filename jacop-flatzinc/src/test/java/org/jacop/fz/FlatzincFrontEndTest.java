@@ -6399,4 +6399,17 @@ class FlatzincFrontEndTest {
     String[] out = run(product);
     assertFalse(out[0].contains("=====UNSATISFIABLE====="), out[0]);
   }
+
+  @Test
+  void verboseStatisticsOfLcgWithRestartsPrintTheSolution() throws IOException {
+    // --restart with LCG keeps a restart calculator but no restart search: printing the verbose
+    // statistics of a solution read the restarts of that missing search (NullPointerException)
+    String model =
+        "var 1..3: x :: output_var;\n"
+            + "var 1..3: y :: output_var;\n"
+            + "constraint int_lt(x,y);\n"
+            + "solve minimize y;\n";
+    String[] out = run(model, "-v", "--lcg", "on", "--restart", "luby", "-t", "5000");
+    assertTrue(out[0].contains("y = 2;") && out[0].contains("=========="), out[0] + out[1]);
+  }
 }

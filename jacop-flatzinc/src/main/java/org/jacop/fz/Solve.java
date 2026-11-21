@@ -9741,7 +9741,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           .append(nf.format(cpuTime == 0 ? 0.0 : (double) nodes / (cpuTime / 1000)))
           .append("\n");
     }
-    if (restartCalculator != null) {
+    // LCG search keeps the restart calculator of --restart without a restart search
+    if (restartCalculator != null && rs != null) {
       printBuffer.append("%%%mzn-stat: restarts=").append(nf.format(rs.restarts())).append("\n");
     }
     printBuffer.append("%%%mzn-stat: solveTime=").append(nf.format(cpuTime / 1000)).append("\n");
