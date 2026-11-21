@@ -535,6 +535,22 @@ class XcspReaderTest {
   }
 
   @Test
+  void halfReifiedUnaryLiterals() throws IOException {
+    check(
+        vars(3, -2, 3),
+        "<intension> or(ne(x[0],1),eq(x[1],0),gt(mul(-3,x[2]),-4)) </intension>"
+            + "<intension> or(eq(x[0],1),le(x[1],-1),ne(x[2],2)) </intension>"
+            + "<intension> or(lt(x[0],0),ge(mul(2,x[1]),3)) </intension>",
+        3,
+        -2,
+        3,
+        t ->
+            (t[0] != 1 || t[1] == 0 || -3 * t[2] > -4)
+                && (t[0] == 1 || t[1] <= -1 || t[2] != 2)
+                && (t[0] < 0 || 2 * t[1] >= 3));
+  }
+
+  @Test
   void matrixElement() throws IOException {
     // a constant matrix (SEDF of XCSP 2025) and one of variables
     check(

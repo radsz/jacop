@@ -72,6 +72,10 @@ final class FznModel {
       return new Lit(b, !neg);
     }
 
+    Lit not(boolean flip) {
+      return flip ? not() : this;
+    }
+
     static Lit of(boolean v) {
       return v ? TRUE : FALSE;
     }
@@ -629,7 +633,7 @@ final class FznModel {
     }
     Lin n = normalize(op.equals("ne") ? "eq" : op, l);
     if (n.n == 1) {
-      return lit(op, l);
+      return unaryHalfLit(op, n.a[0], n.v[0], n.c);
     }
     Lit full = memo("lit:" + (op.equals("ne") ? "eq" : op) + ":" + n.key());
     if (full != null) {
@@ -640,12 +644,12 @@ final class FznModel {
     if (known != null) {
       return known;
     }
+    // a half reification does not define its literal
     FznVar r = auxBool();
-    r.defined = true;
     if (n.n == 2 && n.c == 0 && n.a[0] == -n.a[1] && Math.abs(n.a[0]) == 1) {
       FznVar x = n.a[0] == 1 ? n.v[0] : n.v[1];
       FznVar y = n.a[0] == 1 ? n.v[1] : n.v[0];
-      constraint("int_" + op + "_imp(" + x.name + "," + y.name + "," + r.name + ")", r);
+      constraint("int_" + op + "_imp(" + x.name + "," + y.name + "," + r.name + ")", null);
     } else {
       constraint(
           "int_lin_"
@@ -659,8 +663,57 @@ final class FznModel {
               + ","
               + r.name
               + ")",
-          r);
+          null);
     }
+    Lit result = new Lit(r, false);
+    memo(key, result);
+    return result;
+  }
+
+  // b -> a * x + c op 0, op eq, ne or le; the full literal when it exists or x is 0/1
+  private Lit unaryHalfLit(String op, long a, FznVar x, long c) {
+    if (x.boolView != null || x.dom.isZeroOne()) {
+      return unaryLit(op.equals("ne") ? "eq" : op, a, x, c).not(op.equals("ne"));
+    }
+    String text;
+    String key;
+    if (!op.equals("le")) {
+      if (c % a != 0) {
+        return Lit.of(op.equals("ne"));
+      }
+      long v = -c / a;
+      if (!x.dom.contains(v)) {
+        return Lit.of(op.equals("ne"));
+      }
+      Lit full = memo("eqv:" + x.id + ":" + v);
+      if (full != null) {
+        return full.not(op.equals("ne"));
+      }
+      key = "imp" + op + ":" + x.id + ":" + v;
+      text = "int_" + op + "_imp(" + x.name + "," + v + ",";
+    } else {
+      boolean upper = a > 0;
+      long k = upper ? Math.floorDiv(-c, a) : Math.ceilDiv(c, -a);
+      Lit full = memo("le:" + x.id + ":" + (upper ? "u" : "l") + k);
+      if (full != null) {
+        return full;
+      }
+      if (upper ? x.dom.max() <= k : x.dom.min() >= k) {
+        return Lit.TRUE;
+      }
+      if (upper ? x.dom.min() > k : x.dom.max() < k) {
+        return Lit.FALSE;
+      }
+      key = "imple:" + x.id + ":" + (upper ? "u" : "l") + k;
+      text =
+          upper ? "int_le_imp(" + x.name + "," + k + "," : "int_le_imp(" + k + "," + x.name + ",";
+    }
+    Lit known = memo(key);
+    if (known != null) {
+      return known;
+    }
+    FznVar r = auxBool();
+    constraint(text + r.name + ")", null);
     Lit result = new Lit(r, false);
     memo(key, result);
     return result;
