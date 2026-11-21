@@ -33,6 +33,7 @@ package org.jacop.fz.constraints;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -92,7 +93,9 @@ public class AbsoluteDifferenceDetector implements ParserTreeConstants {
    */
   private record Disequality(IntVar x, IntVar y, int d, SimpleNode token) {}
 
-  private final Map<IntVar, Absolute> absolutes = new IdentityHashMap<>();
+  // in the order of the model, so that the cliques found from the disequalities do not depend on
+  // identity hash codes
+  private final Map<IntVar, Absolute> absolutes = new LinkedHashMap<>();
 
   private final Map<IntVar, Definition> definitions = new IdentityHashMap<>();
 
