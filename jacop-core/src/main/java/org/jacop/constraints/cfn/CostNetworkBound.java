@@ -32,8 +32,10 @@ package org.jacop.constraints.cfn;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.Stateful;
@@ -157,13 +159,21 @@ public final class CostNetworkBound extends Constraint
    * @param objective the objective
    * @param maximize whether the objective is maximised; the network is then a lower bound of minus
    *     the objective
-   * @param x the variables of the network, distinct
+   * @param x the variables of the network, distinct and without the objective
    * @param network the network over the values of x, a lower bound of the objective (or of minus
    *     the objective when maximised) for every solution
    */
   public CostNetworkBound(IntVar objective, boolean maximize, IntVar[] x, CostNetwork network) {
     if (x.length != network.size()) {
       throw new IllegalArgumentException("a network of another size");
+    }
+    Set<IntVar> distinct = Collections.newSetFromMap(new IdentityHashMap<>());
+    distinct.add(objective);
+    for (IntVar v : x) {
+      if (!distinct.add(v)) {
+        throw new IllegalArgumentException(
+            "variable " + v.id() + " repeated in x or the objective in x");
+      }
     }
     this.numberId = idNumber.incrementAndGet();
     this.objective = objective;

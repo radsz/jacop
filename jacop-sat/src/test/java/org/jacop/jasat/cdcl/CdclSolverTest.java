@@ -1465,4 +1465,35 @@ class CdclSolverTest {
     assertTrue(s.sweepEquivalences > 0);
     assertEquals(s.modelValue(1), s.modelValue(4));
   }
+
+  @Test
+  void dimacsLiteralsBeyondIntAreRejected() {
+    // 4294967297 wrapped to the literal 1, which made the formula unsatisfiable with -1
+    for (String cnf :
+        new String[] {
+          "p cnf 1 2\n4294967297 0\n-1 0\n",
+          "p cnf 1 1\n2147483648 0\n",
+          "p cnf 3000000000 1\n1 0\n"
+        }) {
+      assertThrows(
+          IOException.class,
+          () ->
+              DimacsReader.read(
+                  new ByteArrayInputStream(cnf.getBytes(StandardCharsets.US_ASCII)),
+                  new CdclSolver()),
+          cnf);
+    }
+  }
+
+  @Test
+  void dimacsHeaderOfAnotherFormatIsRejected() {
+    // a WCNF file read as CNF took its weights for literals and answered SATISFIABLE
+    String wcnf = "p wcnf 2 2 10\n10 1 0\n3 -1 0\n";
+    assertThrows(
+        IOException.class,
+        () ->
+            DimacsReader.read(
+                new ByteArrayInputStream(wcnf.getBytes(StandardCharsets.US_ASCII)),
+                new CdclSolver()));
+  }
 }
