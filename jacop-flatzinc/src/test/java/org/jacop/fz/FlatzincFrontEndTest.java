@@ -6648,4 +6648,110 @@ class FlatzincFrontEndTest {
       }
     }
   }
+
+  /**
+   * A portfolio reads the model before any of its threads starts, without looking at the time-out:
+   * road_33 (86 MB) answered 1.9 s after -t 2000 from Portfolio.readModel on a slow disk. A model
+   * that never arrives (a pipe no one writes) held the run for good; a command-line run ends a
+   * second after its time-out, with UNKNOWN, as one thread does.
+   */
+  @Test
+  void commandLinePortfolioEndsAtItsTimeOutWhileReading() throws IOException, InterruptedException {
+    Path fifo = tmp.resolve("never.fzn");
+    Process mkfifo;
+    try {
+      mkfifo = new ProcessBuilder("mkfifo", fifo.toString()).start();
+    } catch (IOException e) {
+      org.junit.jupiter.api.Assumptions.abort("no mkfifo: " + e.getMessage());
+      return;
+    }
+    org.junit.jupiter.api.Assumptions.assumeTrue(
+        mkfifo.waitFor(30, TimeUnit.SECONDS) && mkfifo.exitValue() == 0, "no named pipe");
+    Path java = Path.of(System.getProperty("java.home"), "bin", "java");
+    Path log = tmp.resolve("never.out");
+    ProcessBuilder pb =
+        new ProcessBuilder(
+            java.toString(),
+            "-cp",
+            System.getProperty("java.class.path"),
+            "org.jacop.fz.Fz2jacop",
+            "-p",
+            "2",
+            "-t",
+            "500",
+            fifo.toString());
+    pb.redirectErrorStream(true);
+    pb.redirectOutput(log.toFile());
+    // a writer that never writes nor closes the pipe: the run can open the model, and reading it
+    // waits for good, as for a large model on a slow disk
+    Thread writer =
+        new Thread(
+            () -> {
+              try (OutputStream w = Files.newOutputStream(fifo)) {
+                Thread.sleep(120_000);
+              } catch (IOException | InterruptedException _) {
+                // the test is over
+              }
+            });
+    writer.setDaemon(true);
+    writer.start();
+    Process p = pb.start();
+    boolean ended = p.waitFor(60, TimeUnit.SECONDS);
+    if (!ended) {
+      p.destroyForcibly();
+      p.waitFor(10, TimeUnit.SECONDS);
+    }
+    writer.interrupt();
+    String out = Files.readString(log, StandardCharsets.UTF_8);
+    assertTrue(ended, "still reading 60 s after -t 500: " + out);
+    assertEquals(0, p.exitValue(), out);
+    assertTrue(out.contains("=====UNKNOWN=====\n%% =====TIME-OUT====="), out);
+  }
+
+  /**
+   * The watchdog of a portfolio prints the answer the run lacks once: the best solution, or
+   * UNKNOWN, with the time-out; nothing once the answer is out, and no solution after its own.
+   */
+  @Test
+  void portfolioWatchdogPrintsTheAnswerOnce() throws InterruptedException {
+    Options options = new Options(new String[] {"-p", "2", "-t", "1000", "m.fzn"});
+    int[] halts = new int[1];
+    Runnable halt = () -> halts[0]++;
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    PrintStream out = new PrintStream(buffer, true, StandardCharsets.UTF_8);
+
+    Portfolio none = new Portfolio(options);
+    none.timeLimit(out, System.currentTimeMillis(), halt);
+    none.timeLimit(out, System.currentTimeMillis(), halt);
+    assertEquals(
+        "=====UNKNOWN=====\n%% =====TIME-OUT=====\n", buffer.toString(StandardCharsets.UTF_8));
+    assertEquals(1, halts[0]);
+
+    buffer.reset();
+    Portfolio solved = new Portfolio(options);
+    Portfolio.Worker w = solved.new Worker("w", List.of());
+    w.solution("x = 7;\n----------\n", 7, false, new String[0], new int[0]);
+    solved.timeLimit(out, System.currentTimeMillis(), halt);
+    // a thread that finds a better solution once the watchdog fired is too late
+    w.solution("x = 5;\n----------\n", 5, false, new String[0], new int[0]);
+    solved.timeLimit(out, System.currentTimeMillis(), halt);
+    assertEquals(
+        "x = 7;\n----------\n%% =====TIME-OUT=====\n", buffer.toString(StandardCharsets.UTF_8));
+    assertEquals(2, halts[0]);
+
+    // started, it fires on its own after the delay
+    buffer.reset();
+    CountDownLatch fired = new CountDownLatch(1);
+    PrintStream saved = System.out;
+    Portfolio stuck = new Portfolio(options);
+    try {
+      System.setOut(out);
+      stuck.startWatchdog(10, fired::countDown);
+    } finally {
+      System.setOut(saved);
+    }
+    assertTrue(fired.await(30, TimeUnit.SECONDS));
+    assertEquals(
+        "=====UNKNOWN=====\n%% =====TIME-OUT=====\n", buffer.toString(StandardCharsets.UTF_8));
+  }
 }
