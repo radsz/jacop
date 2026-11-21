@@ -1073,11 +1073,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       refutationBuildNanos = System.nanoTime() - built;
       if (refutation != null) {
         refutation.setTimeLimit(options.getTimeOut());
+        if (options.getTimeOut() > 0 && !CdclSolver.VIRTUAL_CLOCK) {
+          refutation.setDeadline(System.nanoTime() + options.getRemainingTimeOut() * 1_000_000L);
+        }
         store.impose(refutation);
       }
     }
     if (linearRelaxation != null) {
       linearRelaxation.setTimeLimit(options.getTimeOut());
+      if (options.getTimeOut() > 0 && !CdclSolver.VIRTUAL_CLOCK) {
+        linearRelaxation.setDeadline(
+            System.nanoTime() + options.getRemainingTimeOut() * 1_000_000L);
+      }
       store.impose(linearRelaxation);
       if (lpProbeMs > 0
           && (!options.freeSearch() || FREE_LP_PROBE)

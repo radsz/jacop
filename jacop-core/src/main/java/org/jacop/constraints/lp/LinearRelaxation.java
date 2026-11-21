@@ -2815,6 +2815,24 @@ public class LinearRelaxation extends Constraint
     }
   }
 
+  // the time-out of the run, as System.nanoTime(): no root solve goes on past it
+  private long runDeadline = Long.MAX_VALUE;
+
+  /**
+   * Sets when the run ends: a root solve stops there with its status LIMIT, as at its own budget.
+   *
+   * @param nanoTime the time-out as given by {@link System#nanoTime()}
+   */
+  public void setDeadline(long nanoTime) {
+    runDeadline = nanoTime;
+  }
+
+  // whether the time-out of the run has passed: no root solve starts after it (a dense one is done
+  // in one call)
+  private boolean runDeadlinePassed() {
+    return runDeadline != Long.MAX_VALUE && System.nanoTime() - runDeadline > 0;
+  }
+
   /**
    * Returns whether the relaxation is large: over the size caps of the sparse simplex in search,
    * and so solved at the root only.
@@ -4118,6 +4136,9 @@ public class LinearRelaxation extends Constraint
   }
 
   private int rootSolve(LpSolver s, int pivots, long work, long nanos) {
+    if (runDeadlinePassed()) {
+      return LpSolver.LIMIT;
+    }
     if (s instanceof DualSimplex) {
       return s.solve(pivots);
     }
@@ -4134,6 +4155,9 @@ public class LinearRelaxation extends Constraint
       pivots = Integer.MAX_VALUE;
       work = Long.MAX_VALUE;
       nanos = Math.max(0, largeDeadline - now);
+    }
+    if (runDeadline != Long.MAX_VALUE) {
+      nanos = Math.min(nanos, Math.max(0, runDeadline - System.nanoTime()));
     }
     return solveWithin(s, pivots, work, nanos);
   }
@@ -6648,6 +6672,9 @@ public class LinearRelaxation extends Constraint
   // a root solve within at most the given pivots and nanoseconds, also on a large relaxation (whose
   // root solves otherwise share the time of its root)
   private int rootSolveCapped(LpSolver s, int pivots, long nanos) {
+    if (runDeadlinePassed()) {
+      return LpSolver.LIMIT;
+    }
     if (s instanceof DualSimplex) {
       return s.solve(pivots);
     }
@@ -6658,6 +6685,9 @@ public class LinearRelaxation extends Constraint
         largeDeadline = now + largeRootNanos;
       }
       cap = Math.min(cap, Math.max(0, largeDeadline - now));
+    }
+    if (runDeadline != Long.MAX_VALUE) {
+      cap = Math.min(cap, Math.max(0, runDeadline - System.nanoTime()));
     }
     return solveWithin(s, pivots, rootWork(), cap);
   }
