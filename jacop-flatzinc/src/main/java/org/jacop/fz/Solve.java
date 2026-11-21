@@ -4241,7 +4241,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private boolean tasteFixedWithoutLearning() {
     fixedTasteDue = false;
     CdclSolver sat = lcg.sat();
-    long tasteMillis = Math.max(1, (sat.now() - lcgStart) / 1_000_000L);
+    double share = Double.parseDouble(options.freeConfig("lcg-fixed-share", "0.25"));
+    long tasteMillis = Math.max(1, (long) (share * (sat.now() - lcgStart) / 1_000_000L));
     double ratio = Double.parseDouble(options.freeConfig("lcg-fixed-ratio", "1"));
     double lcgPosition = fixedTasteLcgProgress;
     long tasteEnd = System.currentTimeMillis() + tasteMillis;
@@ -4258,7 +4259,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             if (!decided[0] && System.currentTimeMillis() >= tasteEnd) {
               decided[0] = true;
               fixedTasteCpProgress = fixedTreePosition();
-              keep[0] = fixedTasteCpProgress > ratio * lcgPosition;
+              // a negative ratio keeps it whatever the positions (for tests)
+              keep[0] = ratio < 0 || fixedTasteCpProgress > ratio * lcgPosition;
               if (!keep[0]) {
                 label.setTimeOutMilliseconds(0);
                 if (label.childSearches != null) {

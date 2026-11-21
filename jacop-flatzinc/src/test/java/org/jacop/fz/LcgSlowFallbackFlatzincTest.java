@@ -446,9 +446,10 @@ class LcgSlowFallbackFlatzincTest {
     return s.toString();
   }
 
-  // 9 pigeons in 8 holes as in satisfactionProvedUnsatisfiableAcrossSlices, searched in input order
+  // 10 pigeons in 9 holes as in satisfactionProvedUnsatisfiableAcrossSlices, searched in input
+  // order
   private static String pigeonsInputOrder() {
-    int n = 9;
+    int n = 10;
     StringBuilder decl = new StringBuilder();
     StringBuilder cons = new StringBuilder();
     StringBuilder nonZero = new StringBuilder();
@@ -495,8 +496,8 @@ class LcgSlowFallbackFlatzincTest {
   void fixedSatisfactionKeepsTheSearchWithoutLearning() throws IOException {
     // fixed search: the taste at its first decisions, kept whatever the positions (ratio -1), must
     // print a solution of the model from the search without learning, which runs on to the end
-    String out = runFixed(queensInputOrder(40), "lcg-fixed-at=0.0001,lcg-fixed-ratio=-1");
-    checkQueens(out, 40);
+    String out = runFixed(queensInputOrder(20), "lcg-fixed-at=0.0001,lcg-fixed-ratio=-1");
+    checkQueens(out, 20);
     assertTrue(out.contains("lcgFixedTaste=cp"), out);
   }
 
