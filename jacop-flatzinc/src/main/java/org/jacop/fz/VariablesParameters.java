@@ -527,6 +527,9 @@ public class VariablesParameters implements ParserTreeConstants {
       }
     }
     table.addSearchFloatVar(aVar);
+    if (annotations.contains("is_defined_var") || annotations.contains("var_is_introduced")) {
+      table.addIntroducedFloatVar(aVar);
+    }
     if (outputVar) {
       table.addOutVar(aVar);
     }

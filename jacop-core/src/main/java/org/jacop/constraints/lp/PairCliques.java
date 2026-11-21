@@ -32,12 +32,9 @@ package org.jacop.constraints.lp;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.jacop.core.IntVar;
 import org.jacop.lcg.LinearForm;
 
@@ -96,14 +93,11 @@ final class PairCliques {
     List<IntVar> vars = new ArrayList<>();
     // the conflict of each pair row, as two literals: 2 j for x_j = 1, 2 j + 1 for x_j = 0
     int[][] pair = new int[forms.size()][];
-    Map<Long, Integer> edges = new HashMap<>();
+    LongSet edges = new LongSet();
     for (int i = 0; i < forms.size(); i++) {
       int[] p = conflict(forms.get(i), column, vars);
       if (p != null) {
-        long key = key(p[0], p[1]);
-        if (!edges.containsKey(key)) {
-          edges.put(key, i);
-        }
+        edges.add(key(p[0], p[1]));
         pair[i] = p;
       }
     }
@@ -116,7 +110,7 @@ final class PairCliques {
       adjacent.add(new ArrayList<>());
     }
     for (int[] p : pair) {
-      if (p != null && edges.get(key(p[0], p[1])) != null) {
+      if (p != null) {
         adjacent.get(p[0]).add(p[1]);
         adjacent.get(p[1]).add(p[0]);
       }
@@ -149,7 +143,7 @@ final class PairCliques {
       }
     }
     Conflicts conflicts = new Conflicts(neighbours, edges);
-    Set<Long> covered = new HashSet<>();
+    LongSet covered = new LongSet();
     List<int[]> found = new ArrayList<>();
     long entries = 0;
     for (int i = 0; i < pair.length && entries < MAX_ENTRIES; i++) {
@@ -188,17 +182,17 @@ final class PairCliques {
 
   /**
    * The conflicts between literals: bit sets of the neighbours when they take at most {@link
-   * #MAX_BITS} bits, the map of the edges otherwise.
+   * #MAX_BITS} bits, the set of the edges otherwise.
    */
   private static final class Conflicts {
 
     private static final long MAX_BITS = 64L << 20;
 
-    private final Map<Long, Integer> edges;
+    private final LongSet edges;
 
     private final long[][] bits;
 
-    Conflicts(int[][] neighbours, Map<Long, Integer> edges) {
+    Conflicts(int[][] neighbours, LongSet edges) {
       this.edges = edges;
       int literals = neighbours.length;
       int words = (literals + 63) >>> 6;
@@ -215,7 +209,7 @@ final class PairCliques {
     }
 
     boolean contains(int a, int b) {
-      return bits != null ? (bits[a][b >>> 6] & (1L << b)) != 0 : edges.containsKey(key(a, b));
+      return bits != null ? (bits[a][b >>> 6] & (1L << b)) != 0 : edges.contains(key(a, b));
     }
   }
 
@@ -318,6 +312,77 @@ final class PairCliques {
       p[k] = a[k] > 0 ? 2 * j : 2 * j + 1;
     }
     return p;
+  }
+
+  /**
+   * A set of non-negative longs with open addressing: the pair keys of models with millions of pair
+   * rows (MaxSAT 2021 haplotyping-pedigrees) were boxed in hash maps, 5 s of the 18 s the
+   * relaxation took to build.
+   */
+  private static final class LongSet {
+
+    private static final long EMPTY = -1L;
+
+    private long[] keys = newTable(16);
+
+    private int size;
+
+    private static long[] newTable(int capacity) {
+      long[] t = new long[capacity];
+      Arrays.fill(t, EMPTY);
+      return t;
+    }
+
+    private static int slot(long key, int mask) {
+      long h = key * 0x9E3779B97F4A7C15L;
+      return (int) (h ^ (h >>> 32)) & mask;
+    }
+
+    int size() {
+      return size;
+    }
+
+    boolean contains(long key) {
+      int mask = keys.length - 1;
+      for (int i = slot(key, mask); ; i = (i + 1) & mask) {
+        long k = keys[i];
+        if (k == key) {
+          return true;
+        }
+        if (k == EMPTY) {
+          return false;
+        }
+      }
+    }
+
+    void add(long key) {
+      if (2 * (size + 1) > keys.length) {
+        long[] old = keys;
+        keys = newTable(2 * old.length);
+        size = 0;
+        for (long k : old) {
+          if (k != EMPTY) {
+            insert(k);
+          }
+        }
+      }
+      insert(key);
+    }
+
+    private void insert(long key) {
+      int mask = keys.length - 1;
+      for (int i = slot(key, mask); ; i = (i + 1) & mask) {
+        long k = keys[i];
+        if (k == key) {
+          return;
+        }
+        if (k == EMPTY) {
+          keys[i] = key;
+          size++;
+          return;
+        }
+      }
+    }
   }
 
   private static long key(int a, int b) {
