@@ -3660,6 +3660,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // learning, which runs in this frame, would keep the solver and its clauses
       slowCheck = null;
     }
+    if (fixedTasteDue && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch(lcg)) {
+      return tasteFixedWithoutLearning();
+    }
     if (lcgSliceDue && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch(lcg)) {
       return alternateWithoutLearning();
     }
@@ -4012,7 +4015,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // fixed search backtracks the annotation's decisions about one level a conflict whatever
       // learning cuts, so the probe cannot tell; on the 53 satisfaction instances of the wide set
       // at 240 s it lost 2 instances and 9 % of the time there
-      return unsolvedOnly ? null : satisfactionProbe(lcg);
+      return unsolvedOnly ? fixedSatisfactionTaste(lcg) : satisfactionProbe(lcg);
     }
     if (rate <= 0 || options.getTimeOut() <= 0) {
       return null;
@@ -4076,6 +4079,257 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 Thread.currentThread().interrupt();
               }
             });
+  }
+
+  // set when LCG stopped under fixed satisfaction search for a taste of the search without learning
+  private volatile boolean fixedTasteDue;
+  // the input order variables of the annotation and their root values, in the order of the values
+  private IntVar[] fixedTasteVars;
+  private int[][] fixedTasteValues;
+  // LCG's position in the annotation's tree when it stopped for the taste
+  private double fixedTasteLcgProgress;
+  // the outcome of the taste, for the statistics: 0 none, 1 LCG kept, 2 without learning kept
+  private int fixedTasteOutcome;
+  private double fixedTasteCpProgress;
+
+  /**
+   * Starts the taste of a fixed satisfaction search: at a share of the time limit (lcg-fixed-at,
+   * 0.05; a negative share turns it off) LCG stops and the annotation's depth-first search without
+   * learning runs for as long as LCG did. Both follow the same tree, so the one that got further in
+   * it in the same time explores it faster (see {@link #fixedTreePosition}): the search without
+   * learning goes on to the end when it got lcg-fixed-ratio (4) times further than LCG, otherwise
+   * it stops and LCG goes on. Learning under fixed search backtracks the annotation's decisions
+   * about one level a conflict whatever learning cuts, so the jumps of the satisfaction probe of
+   * free search cannot tell; the position in the tree can, but only for an annotation whose tree
+   * has a fixed order: one int_search or bool_search with input_order and indomain_min or
+   * indomain_max. On costas-array (MiniZinc Challenge 2015) LCG cuts the failures of the search
+   * without learning by about 10 % at a 25th of its nodes per second: n = 16 takes 229 s with LCG
+   * and 9 s without learning.
+   *
+   * @param solver the LCG solver
+   * @return null; the taste runs from an alarm of the solver, in its search
+   */
+  private Thread fixedSatisfactionTaste(LcgSolver solver) {
+    double at = Double.parseDouble(options.freeConfig("lcg-fixed-at", "0.05"));
+    if (at < 0
+        || options.getTimeOut() <= 0
+        || restartCalculator != null
+        || fixedLabel == null
+        || options.getAll()
+        || options.getNumberSolutions() > 1
+        || !fixedTreeOrder()) {
+      if (options.debug()) {
+        IO.println(
+            "%% no fixed taste: at="
+                + at
+                + " restart="
+                + (restartCalculator != null)
+                + " label="
+                + fixedLabel
+                + " children="
+                + (fixedLabel != null && fixedLabel.childSearches != null)
+                + " all="
+                + options.getAll()
+                + " n="
+                + options.getNumberSolutions()
+                + " item="
+                + annotatedSearch);
+      }
+      return null;
+    }
+    lcgStart = solver.sat().now();
+    long limit = CdclSolver.VIRTUAL_CLOCK ? options.getTimeOut() : options.getRemainingTimeOut();
+    long first = Math.max(1, (long) (at * limit));
+    solver
+        .sat()
+        .setAlarm(
+            lcgStart + first * 1_000_000L,
+            () -> {
+              if (numberSolutions == 0 && !tooLateForFreeSearch(solver)) {
+                fixedTasteLcgProgress = fixedTreePosition();
+                fixedTasteDue = true;
+                solver.sat().interrupt();
+              }
+            });
+    return null;
+  }
+
+  /**
+   * Whether the annotation's tree has a fixed order, in which {@link #fixedTreePosition} tells how
+   * far a depth-first search got; if so, keeps its variables and their root values.
+   */
+  private boolean fixedTreeOrder() {
+    SearchItem<T> item = annotatedSearch;
+    if (item == null
+        || !(INT_SEARCH.equals(item.type()) || BOOL_SEARCH.equals(item.type()))
+        || !"input_order".equals(item.varSelection())) {
+      return false;
+    }
+    String value = item.indomain();
+    boolean max = "indomain_max".equals(value);
+    if (!(max || value == null || "indomain_min".equals(value) || "indomain".equals(value))) {
+      return false;
+    }
+    Var[] vars = item.vars();
+    IntVar[] x = new IntVar[vars.length];
+    int[][] values = new int[vars.length][];
+    for (int i = 0; i < vars.length; i++) {
+      if (!(vars[i] instanceof IntVar v)) {
+        return false;
+      }
+      x[i] = v;
+      int[] d = new int[v.getSize()];
+      int k = 0;
+      for (ValueEnumeration e = v.domain.valueEnumeration(); e.hasMoreElements(); ) {
+        d[k++] = e.nextElement();
+      }
+      if (max) {
+        for (int a = 0, b = k - 1; a < b; a++, b--) {
+          int t = d[a];
+          d[a] = d[b];
+          d[b] = t;
+        }
+      }
+      values[i] = d;
+    }
+    fixedTasteVars = x;
+    fixedTasteValues = values;
+    return true;
+  }
+
+  /**
+   * Returns how far a depth-first search in the annotation's tree got, as the share of the tree
+   * left of the current node, counting each subtree of a variable's value as an equal share of the
+   * subtree of its parent (the lexicographic position of the current values in their root order):
+   * the variables are read in input order while fixed, each at the rank of its value among its root
+   * values. Search with and without learning take the same decisions in this order, so the shares
+   * they reach in the same time compare their speeds.
+   *
+   * @return the position, from 0 to 1
+   */
+  private double fixedTreePosition() {
+    double position = 0;
+    double width = 1;
+    for (int i = 0; i < fixedTasteVars.length && width > 1e-300; i++) {
+      IntVar x = fixedTasteVars[i];
+      if (!x.singleton()) {
+        break;
+      }
+      int[] d = fixedTasteValues[i];
+      if (d.length <= 1) {
+        continue;
+      }
+      int v = x.value();
+      int rank = 0;
+      while (rank < d.length && d[rank] != v) {
+        rank++;
+      }
+      if (rank == d.length) {
+        break;
+      }
+      width /= d.length;
+      position += rank * width;
+    }
+    return position;
+  }
+
+  /**
+   * Runs the taste of {@link #fixedSatisfactionTaste}: the annotation's search without learning,
+   * with the clauses of the store, for as long as LCG ran; it goes on to the end when it got
+   * further in the tree than LCG by lcg-fixed-ratio, otherwise LCG goes on.
+   */
+  private boolean tasteFixedWithoutLearning() {
+    fixedTasteDue = false;
+    CdclSolver sat = lcg.sat();
+    long tasteMillis = Math.max(1, (sat.now() - lcgStart) / 1_000_000L);
+    double ratio = Double.parseDouble(options.freeConfig("lcg-fixed-ratio", "1"));
+    double lcgPosition = fixedTasteLcgProgress;
+    long tasteEnd = System.currentTimeMillis() + tasteMillis;
+    DepthFirstSearch<T> label = fixedLabel;
+    ConsistencyListener previous = label.getConsistencyListener();
+    boolean[] decided = {false};
+    boolean[] keep = {false};
+    label.setConsistencyListener(
+        new ConsistencyListener() {
+          @Override
+          public boolean executeAfterConsistency(boolean consistent) {
+            boolean c =
+                previous == null ? consistent : previous.executeAfterConsistency(consistent);
+            if (!decided[0] && System.currentTimeMillis() >= tasteEnd) {
+              decided[0] = true;
+              fixedTasteCpProgress = fixedTreePosition();
+              keep[0] = fixedTasteCpProgress > ratio * lcgPosition;
+              if (!keep[0]) {
+                label.setTimeOutMilliseconds(0);
+                if (label.childSearches != null) {
+                  // the completion of the variables the annotation leaves stops too
+                  for (Search<? extends Var> child : label.childSearches) {
+                    child.setTimeOutMilliseconds(0);
+                  }
+                }
+              }
+            }
+            return c;
+          }
+
+          @Override
+          public void setChildrenListeners(ConsistencyListener[] children) {
+            // no children
+          }
+
+          @Override
+          public void setChildrenListeners(ConsistencyListener child) {
+            // no children
+          }
+        });
+    if (options.debug()) {
+      IO.println(
+          "%% LCG stopped after "
+              + sat.conflicts
+              + " conflicts at position "
+              + lcgPosition
+              + "; "
+              + tasteMillis
+              + " ms of the annotation's search without learning");
+    }
+    boolean found;
+    int root = store.level;
+    store.setLevel(root + 1);
+    Runnable giveBack = lcg.lend();
+    try {
+      for (IntVar[][] clause : this.sat.collectedClauses()) {
+        store.impose(new BoolClause(clause[0], clause[1]));
+      }
+      found = executeNonRestartSearch(label, fixedSelect, null, fixedSolveType);
+    } finally {
+      label.setConsistencyListener(previous);
+      store.removeLevel(root + 1);
+      store.setLevel(root);
+      giveBack.run();
+    }
+    fixedTasteOutcome = keep[0] || !decided[0] ? 2 : 1;
+    if (options.debug()) {
+      IO.println(
+          "%% search without learning at position "
+              + fixedTasteCpProgress
+              + (fixedTasteOutcome == 2 ? ": kept" : ": LCG goes on"));
+    }
+    if (found || numberSolutions > 0) {
+      lcgStatus = CdclSolver.SAT;
+      return true;
+    }
+    if (!label.timeOutOccured) {
+      // the search without learning explored the whole tree
+      lcgStatus = CdclSolver.UNSAT;
+      return false;
+    }
+    if (fixedTasteOutcome == 2 || options.getRemainingTimeOut() <= 0) {
+      lcgStatus = CdclSolver.UNKNOWN;
+      return false;
+    }
+    label.timeOutOccured = false;
+    lcgStatus = lcg.solve();
+    return numberSolutions > 0;
   }
 
   /**
@@ -5328,6 +5582,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         if (lcgSatSlices > 0) {
           // slices of search without learning between runs of LCG on a satisfaction model
           IO.println("%%%mzn-stat: lcgSatSlices=" + lcgSatSlices);
+        }
+        if (fixedTasteOutcome > 0) {
+          // the taste of fixed satisfaction search: lcg (LCG went on) or cp (without learning)
+          IO.println("%%%mzn-stat: lcgFixedTaste=" + (fixedTasteOutcome == 2 ? "cp" : "lcg"));
         }
         if (lcgSlowDeferred > 0) {
           // LCG made too few conflicts but kept finding better solutions or bounds
