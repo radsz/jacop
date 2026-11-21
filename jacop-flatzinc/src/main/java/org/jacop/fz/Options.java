@@ -228,7 +228,8 @@ public class Options {
                 without restarts: the annotation's search without learning runs first for this
                 share of the time, default 0.005; 0 = off; LCG then gets fixed-first-lcg times
                 as long, default 3, at least fixed-first-lcg-min ms, default 1000, to find a
-                better solution, or gives way to the search without learning),
+                better solution, or gives way to the search without learning if that search ran
+                fixed-first-rate times as many nodes per second, default 3),
                 fixed-completion=output|activity (with --lcg, without -f, for a model with a
                 search annotation: output (default) decides the output variables the annotation
                 leaves open in input order, lower half first, as fixed search without --lcg does;

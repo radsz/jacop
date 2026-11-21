@@ -4718,6 +4718,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // the best cost of LCG's own solutions, printed or not: LCG that reached the first search's best
   // cost goes on (open-stacks problem_15_15: the first search found the optimum 7 at once, and LCG,
   // which proves it in 7 s, gave way to a proof of 14 s)
+  // the nodes of that search
+  private long fixedFirstNodes;
+
   private volatile int fixedFirstLcgBest = Integer.MAX_VALUE;
   // the outcome of fixedSearchFirst, for the statistics: 0 not run, 1 it decided the model, 2 LCG
   // kept, 3 LCG gave way to it
@@ -4777,6 +4780,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     setLabelTimeOut(label, millis);
     long start = System.nanoTime();
     int before = numberSolutions;
+    long nodesBefore = labelNodes(label);
     // the clauses kept for the LCG solver, which the store does not hold, in a level of their own
     int root = store.level;
     store.setLevel(root + 1);
@@ -4798,6 +4802,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (numberSolutions > before) {
       fixedFirstCost = bestPrintedCost.get();
       fixedFirstMillis = Math.max(1, (System.nanoTime() - start) / 1_000_000L);
+      fixedFirstNodes = labelNodes(label) - nodesBefore;
     }
     if (options.debug()) {
       IO.println(
@@ -4809,6 +4814,38 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + (fixedFirstCost == Integer.MAX_VALUE ? "none" : fixedFirstCost));
     }
     return false;
+  }
+
+  /** The nodes of the annotation's searches: the label, its child searches and the final ones. */
+  private long labelNodes(DepthFirstSearch<?> label) {
+    Set<Search<?>> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    long nodes = labelNodes(label, seen);
+    if (finalSearch != null) {
+      for (DepthFirstSearch<T> s : finalSearch) {
+        nodes += s == null ? 0 : labelNodes(s, seen);
+      }
+    }
+    if (listSeqSearches != null) {
+      for (Search<T> s : listSeqSearches) {
+        nodes += s instanceof DepthFirstSearch<?> d ? labelNodes(d, seen) : 0;
+      }
+    }
+    return nodes;
+  }
+
+  private static long labelNodes(DepthFirstSearch<?> label, Set<Search<?>> seen) {
+    if (!seen.add(label)) {
+      return 0;
+    }
+    long nodes = label.getNodes();
+    if (label.childSearches != null) {
+      for (Search<? extends Var> child : label.childSearches) {
+        if (child instanceof DepthFirstSearch<?> d) {
+          nodes += labelNodes(d, seen);
+        }
+      }
+    }
+    return nodes;
   }
 
   private static void setLabelTimeOut(DepthFirstSearch<?> label, long millis) {
@@ -4874,13 +4911,35 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 (Double.parseDouble(options.freeConfig("fixed-first-lcg", "3")) * fixedFirstMillis),
             Long.parseLong(options.freeConfig("fixed-first-lcg-min", "1000")));
     int firstCost = fixedFirstCost;
+    // LCG gives way only when it is much slower per node: at 240 s, the search without learning
+    // ran 6.8 times as many nodes per second in its first second as LCG after it on city-5-06
+    // (MZNC 2017), but 0.5 and 0.7 times on celar graph11 (2013) and mapping mesh_star_mpeg
+    // (2021), where LCG, behind at first, proved the optimum (mapping 13 s against 31 s) or ended
+    // better (celar 450009 against 492506) than after giving way
+    double ratio = Double.parseDouble(options.freeConfig("fixed-first-rate", "3"));
+    double firstRate = (double) fixedFirstNodes / fixedFirstMillis;
+    long decisionsBefore = solver.sat().decisions;
+    long started = System.nanoTime();
     fixedFirstOutcome = 2;
     return Thread.ofVirtual()
         .start(
             () -> {
               try {
                 Thread.sleep(wait);
-                if (fixedFirstLcgBest > firstCost && !tooLateForFreeSearch(solver)) {
+                double lcgMillis = Math.max(1, (System.nanoTime() - started) / 1_000_000L);
+                double lcgRate = (solver.sat().decisions - decisionsBefore) / lcgMillis;
+                if (options.debug()) {
+                  IO.println(
+                      "% fixed search first: "
+                          + firstRate
+                          + " nodes/ms, LCG "
+                          + lcgRate
+                          + " nodes/ms, best "
+                          + fixedFirstLcgBest);
+                }
+                if (fixedFirstLcgBest > firstCost
+                    && firstRate >= ratio * lcgRate
+                    && !tooLateForFreeSearch(solver)) {
                   fixedFirstOutcome = 3;
                   lcgSlow = true;
                   solver.stop();

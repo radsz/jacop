@@ -199,7 +199,7 @@ class FixedFirstFlatzincTest {
       for (String config :
           new String[] {
             "",
-            "fixed-first=0.0005,fixed-first-lcg=0,fixed-first-lcg-min=0",
+            "fixed-first=0.0005,fixed-first-lcg=0,fixed-first-lcg-min=0,fixed-first-rate=0",
             "fixed-first=0.0005,fixed-first-lcg-min=60000"
           }) {
         String out = run(model, config, "");
