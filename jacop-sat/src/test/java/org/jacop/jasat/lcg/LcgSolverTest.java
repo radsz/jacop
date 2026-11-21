@@ -7171,4 +7171,38 @@ class LcgSolverTest {
     }
     return holds;
   }
+
+  @Test
+  void primeCubesOfRandomTwelveColumnTablesAreRejectedQuickly() {
+    // table_bool/bt_12 (upTo5sec): 60 tables of 12 columns and 100 tuples (about 1 s each before),
+    // each with more prime cubes than the limit; merging the cubes before counting them took 47 s
+    // of CPU and 2 GB. The bound is wide for slow machines: 40 tables took 40 s before.
+    Random random = new Random(12);
+    assertTimeoutPreemptively(
+        Duration.ofSeconds(20),
+        () -> {
+          for (int t = 0; t < 40; t++) {
+            boolean[] allowed = new boolean[1 << 12];
+            for (int u = 0; u < 100; u++) {
+              allowed[random.nextInt(1 << 12)] = true;
+            }
+            assertThat(LcgSolver.forbiddenPrimeCubes(allowed, 12, 512)).isEmpty();
+          }
+        });
+    // the count agrees with the cubes found by merging
+    for (int t = 0; t < 300; t++) {
+      int n = 1 + random.nextInt(8);
+      boolean[] allowed = new boolean[1 << n];
+      double share = random.nextDouble();
+      for (int p = 0; p < allowed.length; p++) {
+        allowed[p] = random.nextDouble() < share;
+      }
+      int count = LcgSolver.forbiddenPrimeCubes(allowed, n, Integer.MAX_VALUE).orElseThrow().size();
+      assertThat(LcgSolver.forbiddenPrimeCount(allowed, n, Integer.MAX_VALUE)).isEqualTo(count);
+      assertThat(LcgSolver.forbiddenPrimeCubes(allowed, n, count)).isPresent();
+      if (count > 0) {
+        assertThat(LcgSolver.forbiddenPrimeCubes(allowed, n, count - 1)).isEmpty();
+      }
+    }
+  }
 }

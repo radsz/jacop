@@ -385,6 +385,42 @@ class ObjectivePresolveFlatzincTest {
     return l;
   }
 
+  /**
+   * Affine folding replaces z = 1 - x in the cost row and leaves z in no constraint. The replaced
+   * definition is still in the parsed model: read as the exactly-one set {z, x}, it moved the cost
+   * of x onto the free z, and the run printed cost 6 as the optimum of a model whose optimum is 11
+   * (x = 0, so z = 1: 5 + 3 + 3).
+   */
+  @Test
+  void aDefinitionThatFoldingReplacedGivesNoFact() throws IOException {
+    String model =
+        """
+        var bool: xb :: output_var;
+        var bool: p :: output_var;
+        var bool: q :: output_var;
+        var 0..1: x;
+        var 0..1: z;
+        var 0..1: a1 :: output_var;
+        var 0..1: b1 :: output_var;
+        var 0..1: a2 :: output_var;
+        var 0..1: b2 :: output_var;
+        var -100..100: cost :: output_var :: is_defined_var;
+        constraint bool2int(xb,x);
+        constraint bool_clause([p],[xb]);
+        constraint bool_clause([q],[xb]);
+        constraint bool_clause([],[p,q]);
+        constraint int_lin_eq([1,1],[z,x],1) :: defines_var(z);
+        constraint int_lin_eq([1,1],[a1,b1],1);
+        constraint int_lin_eq([1,1],[a2,b2],1);
+        constraint int_lin_eq([5,3,3,3,3,-1],[z,a1,b1,a2,b2,cost],0) :: defines_var(cost);
+        solve minimize cost;
+        """;
+    for (String presolve : new String[] {"on", "off"}) {
+      String out = run(model, presolve);
+      assertThat(out).contains("cost = 11;").contains("==========").doesNotContain("cost = 6;");
+    }
+  }
+
   /** The output with neither presolve nor objective presolve. */
   private String reference(String model, String... options) throws IOException {
     String key = "org.jacop.fz.objectivePresolve";

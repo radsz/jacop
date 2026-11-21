@@ -221,6 +221,16 @@ public class ArborescenceBound extends Constraint
     if (lower > cost.max()) {
       throw Store.failException;
     }
+    // a second virtual edge: no single root reaches every node (the minimum takes one otherwise)
+    int virtualEdges = 0;
+    for (int v = 0; v < n; v++) {
+      if (inEdge[v] >= m) {
+        virtualEdges++;
+      }
+    }
+    if (virtualEdges > 1) {
+      throw Store.failException;
+    }
     cost.domain.inMin(store.level, cost, (int) Math.max(lower, Integer.MIN_VALUE));
 
     long slack = cost.max() - lower;
