@@ -6437,4 +6437,40 @@ class FlatzincFrontEndTest {
       assertTrue(out[0].contains("x = " + (sense.equals("minimize") ? 0 : 1) + ";"), out[0]);
     }
   }
+
+  @Test
+  void portfolioDoesNotWaitForAStuckThreadPastTheTimeOut() throws InterruptedException {
+    // a thread in a start-up phase that does not look at the time-out (the root LP, the trail of
+    // lazy clause generation) held the run for up to 10 s after the answer was printed
+    CountDownLatch release = new CountDownLatch(1);
+    Thread stuck =
+        new Thread(
+            () -> {
+              boolean done = false;
+              while (!done) {
+                try {
+                  done = release.await(60, TimeUnit.SECONDS);
+                } catch (InterruptedException _) {
+                  // a phase that ignores interrupts
+                }
+              }
+            });
+    stuck.setDaemon(true);
+    stuck.start();
+    try {
+      long start = System.nanoTime();
+      Portfolio.join(List.of(stuck), System.currentTimeMillis());
+      long millis = (System.nanoTime() - start) / 1_000_000;
+      assertTrue(stuck.isAlive());
+      // 0.3 s after the time-out; 10 s before
+      assertTrue(millis < 5_000, millis + " ms");
+      // a thread that ends is waited for
+      Thread quick = new Thread(() -> {});
+      quick.start();
+      Portfolio.join(List.of(quick), 0);
+      assertFalse(quick.isAlive());
+    } finally {
+      release.countDown();
+    }
+  }
 }
