@@ -236,6 +236,12 @@ class OperationConstraints implements ParserTreeConstants {
   /** The most pairs of factor values {@link #restrictToProducts} enumerates. */
   private static final int PRODUCT_PAIRS = 1 << 12;
 
+  // the most values of a factor whose square gets the squares as its domain: each value is an
+  // interval of the domain, and the 30 squares of factors 0..1000 in euler_39 made its search 7 s
+  // ->
+  // 94 s; the squares of the reduced gbac instances have factors of 225 to 332 values
+  private static final int SQUARE_FACTOR_VALUES = 1 << 9;
+
   /**
    * Restricts z in x * y = z to the products of the values of x and y when there are at most {@link
    * #PRODUCT_PAIRS} pairs. XmulYeqZ keeps bounds only, so a product of small domains spans an
@@ -249,7 +255,7 @@ class OperationConstraints implements ParserTreeConstants {
   private void restrictToProducts(IntVar x, IntVar y, IntVar z) {
     // a square has one product per value of its factor
     long pairs = x == y ? x.getSize() : (long) x.getSize() * y.getSize();
-    if (x == z || y == z || pairs > PRODUCT_PAIRS) {
+    if (x == z || y == z || pairs > (x == y ? SQUARE_FACTOR_VALUES : PRODUCT_PAIRS)) {
       return;
     }
     long[] products = new long[(int) pairs];

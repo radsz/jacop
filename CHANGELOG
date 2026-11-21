@@ -9013,8 +9013,10 @@ Version 5.0 (unreleased)
    constraint of Schaus, Deville, Dupont and Regin, CPAIOR 2007, and the
    dispersion constraints of Pesant, INFORMS Journal on Computing 27(4),
    2015, bound the same sum of a balance cost). The square x * x of a
-   factor of 65 to 4,096 values now gets the squares as its domain; before,
+   factor of 65 to 512 values now gets the squares as its domain; before,
    the count of factor pairs went over its limit and left an interval.
+   Wider factors keep the interval: the squares of 1,001 values each made
+   euler_39 search 7 s -> 94 s.
    MiniZinc Challenge gbac, the 9 reduced instances on which it fires,
    600 s: -f proved 4 -> 7, total 3,482 -> 1,939 s (2020 UD5 600 -> 80 s,
    2016 UD10 263 -> 3 s); default search proved 0 -> 4, total 5,401 ->
