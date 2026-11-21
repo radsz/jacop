@@ -1077,6 +1077,16 @@ public class Options {
   }
 
   /**
+   * Returns how many time-out checks of the model set-up share one reading of the clock: the
+   * detectors check the time-out for each constraint they read. A power of two.
+   *
+   * @return the number of checks per reading of the clock.
+   */
+  public int timeOutCheckStride() {
+    return 64;
+  }
+
+  /**
    * It checks whether the time-out has passed.
    *
    * @return true if a time-out was set and it has passed.
