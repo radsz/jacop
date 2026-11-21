@@ -11622,4 +11622,69 @@ class SingleConstraintTest extends TestHelper {
     large.impose(new XmulYeqC(p, q, 999_983 * 2));
     assertThat(large.consistency()).isFalse();
   }
+
+  // ConsistencyChecker repeated mode: an arc variable that is also an arrival time was pruned by
+  // the time bounds of the same pass, which left every variable fixed to a set of predecessors that
+  // is no circuit; SequenceMdd now repeats its pass while a variable with two roles changes
+  @Test
+  public void testSequenceMddWithAnArcThatIsAlsoATimeAcceptsOnlyCircuits() {
+    int none = org.jacop.constraints.SequenceMdd.NONE;
+    int[][] travel = {{1, 2, 2}, {2, 0, 0}, {0, 1, 1}};
+    int[] delta = {1, 0, 0};
+    long expected = 0;
+    int[] outValues = {0, 1, 2, 3, 5};
+    for (int a0 = 1; a0 <= 2; a0++) {
+      for (int a1 : new int[] {0, 2}) {
+        for (int a2 = 0; a2 <= 2; a2++) {
+          for (int o0 : outValues) {
+            for (int o1 : outValues) {
+              int[] arc = {a0, a1, a2};
+              int[] in = {a0, a2, a2};
+              int[] out = {o0, o1, o0};
+              if (Arrays.stream(arc).distinct().count() != 3) {
+                continue;
+              }
+              int[] succ = new int[3];
+              for (int i = 0; i < 3; i++) {
+                succ[arc[i]] = i;
+              }
+              boolean ok = succ[succ[succ[0]]] == 0 && succ[0] != 0 && succ[succ[0]] != 0;
+              for (int at = 0, k = 0; ok && k < 3; k++, at = succ[at]) {
+                int next = succ[at];
+                ok = travel[at][next] == none || in[next] >= out[at] + travel[at][next];
+              }
+              for (int j = 1; ok && j < 3; j++) {
+                ok = delta[j] == none || out[j] >= in[j] + delta[j];
+              }
+              if (ok) {
+                expected++;
+              }
+            }
+          }
+        }
+      }
+    }
+    Store store = new Store();
+    IntVar a0 = new IntVar(store, "a0", 1, 2);
+    IntVar a1 = new IntVar(store, "a1", 0, 0);
+    a1.addDom(2, 2);
+    IntVar a2 = new IntVar(store, "a2", 0, 2);
+    IntVar o0 = new IntVar(store, "o0", 0, 3);
+    o0.addDom(5, 5);
+    IntVar o1 = new IntVar(store, "o1", 0, 3);
+    o1.addDom(5, 5);
+    store.impose(
+        new org.jacop.constraints.SequenceMdd(
+            new IntVar[] {a0, a1, a2},
+            true,
+            0,
+            new IntVar[] {a0, a2, a2},
+            new IntVar[] {o0, o1, o0},
+            travel,
+            delta,
+            0,
+            2));
+    assertThat((long) countSolutions(store, new IntVar[] {a0, a1, a2, o0, o1}, new Random(1)))
+        .isEqualTo(expected);
+  }
 }

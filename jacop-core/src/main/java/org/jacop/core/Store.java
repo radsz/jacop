@@ -212,6 +212,13 @@ public class Store {
    */
   public DomainChangeRecorder domainWatcher;
 
+  /**
+   * A second receiver of every domain change of an integer variable, for a search heuristic that
+   * tracks the variables changed by propagation (pick/dom) next to dom/wdeg, which owns {@link
+   * #domainWatcher}. Null by default, which costs one test per change.
+   */
+  public DomainChangeRecorder domainTracker;
+
   /** It stores constraint that has recently failed during store.consistency() execution. */
   public Constraint recentlyFailedConstraint;
 
@@ -609,8 +616,13 @@ public class Store {
       queueViews(v, pruningEvent);
     }
 
-    if (domainWatcher != null && v instanceof IntVar x) {
-      domainWatcher.domainChanged(x, pruningEvent);
+    if ((domainWatcher != null || domainTracker != null) && v instanceof IntVar x) {
+      if (domainWatcher != null) {
+        domainWatcher.domainChanged(x, pruningEvent);
+      }
+      if (domainTracker != null) {
+        domainTracker.domainChanged(x, pruningEvent);
+      }
     }
   }
 
@@ -638,6 +650,9 @@ public class Store {
       }
       if (domainWatcher != null) {
         domainWatcher.domainChanged(view, event);
+      }
+      if (domainTracker != null) {
+        domainTracker.domainChanged(view, event);
       }
     }
   }

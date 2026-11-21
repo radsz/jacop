@@ -1685,6 +1685,9 @@ public final class LcgSolver implements ExternalPropagator {
     long cap = dom[n].max();
     int[] d = lines.durations();
     int[] r = lines.uses();
+    if (proofSharedStarts(lines, slot, variables, unique, cap)) {
+      return;
+    }
     int[] lo = new int[n];
     int[] hi = new int[n];
     TreeMap<Long, Long> profile = new TreeMap<>();
@@ -1792,6 +1795,69 @@ public final class LcgSolver implements ExternalPropagator {
     if (operands >= 2) {
       proof.pol(pol);
     }
+  }
+
+  /**
+   * Writes the steps for tasks of one start variable whose uses together exceed the limit: they all
+   * cover their start, so no value of it is possible. The time table encoding needs a case split on
+   * the start for that, which unit propagation does not do, so each value v of the start under the
+   * hypotheses gets the rup step {@code [s >= v] -> [s >= v + 1]} (with the limit above its bound
+   * as a third literal), by the load line at v; the hypotheses' bounds of the start then meet by
+   * unit propagation.
+   *
+   * @return whether such tasks were found and the steps written
+   */
+  private boolean proofSharedStarts(
+      OpbEncoder.TimetableLines lines, int[] slot, int[] variables, IntDomain[] dom, long cap) {
+    int[] starts = lines.starts();
+    int[] d = lines.durations();
+    int[] r = lines.uses();
+    long[] use = new long[variables.length];
+    int overloaded = -1;
+    for (int i = 0; i < starts.length; i++) {
+      if (d[i] > 0 && r[i] > 0) {
+        use[slot[i]] += r[i];
+        if (use[slot[i]] > cap) {
+          overloaded = slot[i];
+        }
+      }
+    }
+    if (overloaded < 0) {
+      return false;
+    }
+    int s = variables[overloaded];
+    String limitAbove = proofAtLeast(lines.limit(), cap + 1);
+    if ("1".equals(limitAbove)) {
+      return false;
+    }
+    for (ValueEnumeration e = dom[overloaded].valueEnumeration(); e.hasMoreElements(); ) {
+      int v = e.nextElement();
+      StringBuilder step = new StringBuilder("rup");
+      String from = proofAtLeast(s, v);
+      String after = proofAtLeast(s, (long) v + 1);
+      if (!"1".equals(from)) {
+        step.append(" 1 ~").append(from);
+      }
+      if (!"0".equals(after)) {
+        step.append(" 1 ").append(after);
+      }
+      if (!"0".equals(limitAbove)) {
+        step.append(" 1 ").append(limitAbove);
+      }
+      proof.lemma(step.append(CLAUSE_END));
+    }
+    return true;
+  }
+
+  // the proof model's literal [x >= v] of variable i, or "1" or "0" when its root domain decides it
+  private String proofAtLeast(int i, long v) {
+    IntDomain d = proofModelDomains[i];
+    if (d == null || v <= d.min()) {
+      return "1";
+    } else if (v > d.max()) {
+      return "0";
+    }
+    return OpbEncoder.ge(i, (int) v);
   }
 
   /**
@@ -7767,6 +7833,40 @@ public final class LcgSolver implements ExternalPropagator {
       c.impose(store);
     }
     encodedConstraints.clear();
+  }
+
+  /**
+   * Lends the store to search without learning for a while, keeping the solver, its learnt clauses
+   * and its trail: the trail stops recording, and the constraints that went to the solver as
+   * clauses propagate again. The caller must open a store level above the root first, run its
+   * search above it, remove it, and then call the returned action, which takes the constraints back
+   * and records again; {@link #solve} then goes on where it stopped.
+   *
+   * @return the action that gives the store back to the solver
+   */
+  public Runnable lend() {
+    trail.suspend();
+    List<Constraint> lent = new ArrayList<>(encodedGraphs.size() + encodedConstraints.size());
+    lent.addAll(encodedGraphs);
+    lent.addAll(encodedConstraints);
+    int[] entailedAt = new int[lent.size()];
+    for (int k = 0; k < entailedAt.length; k++) {
+      entailedAt[k] = lent.get(k).entailedAt();
+    }
+    for (LayeredGraphConstraint g : encodedGraphs) {
+      g.restoreConstraint(store);
+    }
+    for (Constraint c : encodedConstraints) {
+      // imposed above the root: removing that level detaches the constraint again
+      store.clearEntailed(c);
+      c.impose(store);
+    }
+    return () -> {
+      for (int k = 0; k < entailedAt.length; k++) {
+        lent.get(k).setEntailedAt(entailedAt[k]);
+      }
+      trail.resume();
+    };
   }
 
   /**

@@ -61,6 +61,7 @@ import org.jacop.constraints.Circuit;
 import org.jacop.constraints.ConditionalSelect;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
+import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.CountValues;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
@@ -606,6 +607,36 @@ class VeriPbProofTest {
             two));
     LcgSolver lcg = withProof(store);
     assertThat(lcg.minimize(x4)).isEqualTo(CdclSolver.UNSAT);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS INF INF");
+  }
+
+  @Test
+  void tasksSharingAStartBeyondTheLimitAreRefuted() {
+    // two tasks of use 2 start at x4 under a limit of 2: they overlap at x4 whatever it is, but no
+    // window of the time table is overloaded by energy, so the failure needs a step per value of
+    // x4 (proof fuzz seed 75817982)
+    Store store = new Store();
+    IntVar x0 = values(store, "x0", 1, 3);
+    IntVar x1 = values(store, "x1", 1, 3);
+    IntVar x2 = new IntVar(store, "x2", 0, 3);
+    IntVar x3 = values(store, "x3", -1, 3);
+    IntVar x4 = new IntVar(store, "x4", -1, 4);
+    IntVar x6 = values(store, "x6", 0, 1, 3);
+    IntVar one = new IntVar(store, "one", 1, 1);
+    IntVar two = new IntVar(store, "two", 2, 2);
+    store.impose(new AlldifferentExceptZero(new IntVar[] {x2, x0, x6}));
+    store.impose(
+        new Cumulative(
+            new IntVar[] {x4, x4, x2},
+            new IntVar[] {one, two, two},
+            new IntVar[] {two, two, two},
+            two));
+    store.impose(new Max(new IntVar[] {x4, x3, x3}, x0));
+    store.impose(new CountBounds(new IntVar[] {x1, x0}, 2, 0, 1));
+    LcgSolver lcg = withProof(store);
+    assertThat(lcg.minimize(x1)).isEqualTo(CdclSolver.UNSAT);
     RupChecker checker = new RupChecker();
     assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
     assertThat(checker.conclusion).isEqualTo("BOUNDS INF INF");

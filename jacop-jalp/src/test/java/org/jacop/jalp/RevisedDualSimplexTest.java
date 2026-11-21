@@ -520,6 +520,43 @@ class RevisedDualSimplexTest {
     assertThat(lp.pivots()).isEqualTo(lp.reducedPivots());
   }
 
+  /**
+   * A row of n column singletons that differ in cost alone took n^2 steps at presolve: the
+   * implied-free test of each singleton read the whole row (40,000 terms of a FlatZinc sum, 9 s),
+   * and the search for parallel columns tried every earlier column of the same pattern (50,000
+   * columns, 16 s).
+   */
+  @Test
+  void columnSingletonsOfALongRowArePresolvedInLinearTime() {
+    int n = 100_000;
+    int[] idx = new int[n];
+    double[] val = new double[n];
+    double[] cost = new double[n];
+    for (int j = 0; j < n; j++) {
+      idx[j] = j;
+      val[j] = 1;
+      cost[j] = 1 + (double) j / n;
+    }
+    RevisedDualSimplex lp =
+        new RevisedDualSimplex(
+            new int[][] {idx},
+            new double[][] {val},
+            new double[] {3},
+            new double[] {Double.POSITIVE_INFINITY},
+            cost,
+            true);
+    for (int j = 0; j < n; j++) {
+      lp.setBounds(j, 0, 1);
+    }
+    int status =
+        org.junit.jupiter.api.Assertions.assertTimeoutPreemptively(
+            java.time.Duration.ofSeconds(10), () -> lp.solve(1_000_000));
+    assertThat(status).isEqualTo(RevisedDualSimplex.OPTIMAL);
+    // the three cheapest columns at 1
+    double best = 3 + 3.0 / n;
+    assertThat(lp.objective()).isCloseTo(best, offset(1e-6));
+  }
+
   @Test
   void forcingRowFixesItsColumnsAndPostsolvesAnOptimalBasis() {
     // x + y <= 0 over x, y in [0, 5] holds only at x = y = 0; then x + 2y + z >= 2 makes z >= 2.
@@ -542,6 +579,33 @@ class RevisedDualSimplexTest {
     assertThat(lp.presolveReductions()[Presolve.FORCING_ROW]).isEqualTo(1);
     assertThat(lp.objective()).isCloseTo(2, org.assertj.core.data.Offset.offset(1e-9));
     assertThat(lp.pivots()).isEqualTo(lp.reducedPivots());
+  }
+
+  @Test
+  void impliedFreeColumnOfAnEquationIsAggregated() {
+    // x + y + z = 4 with y, z in [0, 1] implies x in [2, 4], inside its bounds [0, 10]; x is in
+    // two more rows (x + w >= 3, x - y <= 3.5), so it is substituted out with its equation.
+    // min x + w = 3 (x in [2, 3], w = 3 - x)
+    double inf = Double.POSITIVE_INFINITY;
+    int[][] cols = {{0, 1, 2}, {0, 3}, {0, 1}};
+    double[][] vals = {{1, 1, 1}, {1, 1}, {1, -1}};
+    double[] lo = {4, 3, -inf};
+    double[] hi = {4, inf, 3.5};
+    double[] cost = {1, 0, 0, 1};
+    for (boolean presolve : new boolean[] {false, true}) {
+      RevisedDualSimplex lp = new RevisedDualSimplex(cols, vals, lo, hi, cost, true);
+      lp.setExact(true);
+      lp.setPresolve(presolve);
+      lp.setBounds(0, 0, 10);
+      lp.setBounds(1, 0, 1);
+      lp.setBounds(2, 0, 1);
+      lp.setBounds(3, 0, 10);
+      assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      assertThat(lp.objective()).isCloseTo(3, org.assertj.core.data.Offset.offset(1e-9));
+      if (presolve) {
+        assertThat(lp.presolveReductions()[Presolve.AGGREGATED_COLUMN]).isEqualTo(1);
+      }
+    }
   }
 
   @Test
@@ -673,7 +737,7 @@ class RevisedDualSimplexTest {
     // the chunks of the chunked solves, apart so that they leave the problems as they were
     Random chunks = new Random(29);
     Random parallels = new Random(31);
-    int[] reductions = new int[9];
+    int[] reductions = new int[10];
     int runs = Integer.getInteger("jalp.test.runs", 3000) / 3;
     int reduced = 0;
     int optimal = 0;

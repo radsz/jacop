@@ -30,8 +30,10 @@
 
 package org.jacop.lcg;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.constraints.Constraint;
@@ -113,7 +115,12 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   // the store level when the trail was created, the level of the root domains
   private final int rootLevel;
 
-  // boolean variables, which have no store index, by the order they were first seen
+  // boolean variables, which have no store index, by the order they were first seen (index i has
+  // number 2 i + 1). A BooleanVar keeps its number itself while this trail owns it; only those
+  // another trail took over, and variables without a store index that are no BooleanVar, are in
+  // booleanIds (a map of boxed numbers for every boolean variable took 11 MB of the 413 MB of
+  // rcpsp_max psp_ubo500_33 during LCG search)
+  private final List<IntVar> booleans = new ArrayList<>();
   private final Map<IntVar, Integer> booleanIds = new IdentityHashMap<>();
 
   // one mark per entry, shared by the explanations that mark entries (see entryMark), and the
@@ -206,11 +213,29 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
       store.domainChangeRecorder = null;
     }
     store.removeLevelLateListeners.remove(this);
-    for (IntVar x : booleanIds.keySet()) {
+    for (IntVar x : booleans) {
       if (x instanceof BooleanVar b && b.trailOwner == this) {
+        booleanIds.put(b, b.trailId / 2);
         b.trailOwner = null;
       }
     }
+  }
+
+  /**
+   * Stops recording the store's changes for a while, for search without learning above the level of
+   * the root domains; {@link #resume} records them again. The trail keeps its entries and its
+   * numbering, and must be resumed at the level it was suspended at, with the store's domains as
+   * they were then.
+   */
+  public void suspend() {
+    if (store.domainChangeRecorder == this) {
+      store.domainChangeRecorder = null;
+    }
+  }
+
+  /** Records the store's changes again after {@link #suspend}. */
+  public void resume() {
+    store.domainChangeRecorder = this;
   }
 
   /**
@@ -227,12 +252,22 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     }
     if (x instanceof BooleanVar b) {
       if (b.trailOwner != this) {
-        b.trailId = 2 * booleanIds.computeIfAbsent(x, v -> booleanIds.size()) + 1;
+        if (b.trailOwner instanceof AtomicTrail other) {
+          // the other trail keeps the number it gave in its map from now on
+          other.booleanIds.put(b, b.trailId / 2);
+        }
+        Integer known = booleanIds.remove(b);
+        b.trailId = 2 * (known != null ? known : newBoolean(b)) + 1;
         b.trailOwner = this;
       }
       return b.trailId;
     }
-    return 2 * booleanIds.computeIfAbsent(x, v -> booleanIds.size()) + 1;
+    return 2 * booleanIds.computeIfAbsent(x, this::newBoolean) + 1;
+  }
+
+  private int newBoolean(IntVar x) {
+    booleans.add(x);
+    return booleans.size() - 1;
   }
 
   private int slot(IntVar x) {

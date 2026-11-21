@@ -31,7 +31,9 @@
 package org.jacop.presolve;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -182,6 +184,27 @@ class DominanceNogoodsTest {
     store.impose(new LinearInt(new IntVar[] {a, b, p}, new int[] {1, 2, -1}, "==", 0));
     DominanceNogoods.Outcome o = new DominanceNogoods(store, p, true).run();
     assertThat(o.skipped()).isNotNull();
+  }
+
+  @Test
+  void definitionsOfLongEqualitiesTakeLinearTime() {
+    // p = sum(x) with p narrowed below the sum, so every term of the row is tried as the defined
+    // variable; each try summed the whole row (60,000 terms: 25 s, rcpsp-wet-diverse-like rows)
+    int n = 60_000;
+    Store store = new Store();
+    IntVar[] x = new IntVar[n + 1];
+    int[] w = new int[n + 1];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, 0, 1);
+      w[i] = 1;
+    }
+    IntVar p = new IntVar(store, "p", 0, 3);
+    x[n] = p;
+    w[n] = -1;
+    store.impose(new LinearInt(x, w, "==", 0));
+    assertThat(store.consistency()).isTrue();
+    assertTimeoutPreemptively(
+        Duration.ofSeconds(10), () -> new DominanceNogoods(store, p, false).run());
   }
 
   private static Integer best(Model model, Iterable<List<Integer>> solutions) {
