@@ -8716,6 +8716,7 @@ Version 5.0 (unreleased)
    answer, the same 647 solved plus pds-80, total time 7,013 -> 6,806 s,
    fome12 111 -> 60 s, sgpf5y6 62 -> 30 s.
    -Dorg.jacop.jalp.presolveAggregate=false turns it off.
+
 488. The clausal compilation of satisfaction models (entry 468) takes
    domains of up to 64 values (was 3). A variable that appears only in
    tables, alldifferent, the lists of counts and sums of three or more
