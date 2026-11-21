@@ -258,8 +258,12 @@ class BoundDomain extends IntDomain {
   @Override
   public boolean contains(IntDomain domain) {
 
+    if (domain.isEmpty()) {
+      return true;
+    }
+
     if (isEmpty()) {
-      return domain.isEmpty();
+      return false;
     }
 
     return minBound <= domain.min() && maxBound >= domain.max();
@@ -862,6 +866,11 @@ class BoundDomain extends IntDomain {
 
   @Override
   public void setDomain(IntDomain domain) {
+
+    if (domain.isEmpty()) {
+      clear();
+      return;
+    }
 
     if (domain.domainId() == BOUND_DOMAIN_ID) {
 

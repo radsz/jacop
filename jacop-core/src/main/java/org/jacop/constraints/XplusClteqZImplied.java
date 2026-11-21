@@ -156,15 +156,15 @@ public class XplusClteqZImplied extends PrimitiveConstraint
     } else if (off()) {
       removeConstraint();
     } else if (b.singleton()) {
-      x.domain.inMax(store.level, x, z.max() - c);
-      z.domain.inMin(store.level, z, x.min() + c);
-      if (x.max() + c <= z.min()) {
+      x.domain.inMax(store.level, x, long2int((long) z.max() - c));
+      z.domain.inMin(store.level, z, long2int((long) x.min() + c));
+      if ((long) x.max() + c <= z.min()) {
         removeConstraint();
       }
-    } else if (x.min() + c > z.max()) {
+    } else if ((long) x.min() + c > z.max()) {
       b.domain.inValue(store.level, b, 1 - on);
       removeConstraint();
-    } else if (x.max() + c <= z.min()) {
+    } else if ((long) x.max() + c <= z.min()) {
       removeConstraint();
     }
   }
@@ -180,18 +180,18 @@ public class XplusClteqZImplied extends PrimitiveConstraint
     if (x == z) {
       return;
     }
-    x.domain.inMin(store.level, x, z.min() - c + 1);
-    z.domain.inMax(store.level, z, x.max() + c - 1);
+    x.domain.inMin(store.level, x, long2int((long) z.min() - c + 1));
+    z.domain.inMax(store.level, z, long2int((long) x.max() + c - 1));
   }
 
   @Override
   public boolean satisfied() {
-    return off() || (x == z ? c <= 0 : x.max() + c <= z.min());
+    return off() || (x == z ? c <= 0 : (long) x.max() + c <= z.min());
   }
 
   @Override
   public boolean notSatisfied() {
-    return b.singleton() && !off() && (x == z ? c > 0 : x.min() + c > z.max());
+    return b.singleton() && !off() && (x == z ? c > 0 : (long) x.min() + c > z.max());
   }
 
   @Override

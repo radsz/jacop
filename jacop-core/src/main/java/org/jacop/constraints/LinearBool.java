@@ -325,6 +325,8 @@ public class LinearBool extends Constraint
       imposeWatched(store);
       return;
     }
+    // imposed again above the root after a watched imposition: the watches stay in the store
+    watched = false;
 
     position = new VarIntMap(x.length);
     for (int i = 0; i < x.length; i++) {
@@ -479,7 +481,10 @@ public class LinearBool extends Constraint
         prefix[side].set(SLACK, (int) -degree[side]);
       }
     }
-    watching = new boolean[2][x.length];
+    if (watching == null) {
+      // imposed again, the watches of the first imposition are still in the store
+      watching = new boolean[2][x.length];
+    }
 
     store.addChanged(this);
     store.countConstraint();
@@ -493,6 +498,9 @@ public class LinearBool extends Constraint
 
   @Override
   public boolean valueWatchFired(int level, Var v, int tag) {
+    if (!watched) {
+      return false;
+    }
     int i = tag >> 1;
     int side = tag & 1;
     if (i >= prefix[side].get(K)) {

@@ -6891,10 +6891,44 @@ class LcgSolverTest {
     return found ? cost.value() : Long.MAX_VALUE;
   }
 
-  // Solve.alternateUnsolved stops LCG at the end of its slice and later lets it go on: after
-  // resume() minimize runs again and finds the optimum, with the learnt clauses kept
   @Test
-  void resumeTakesBackStop() {
+  void primeCubesOfRandomTwelveColumnTablesAreRejectedQuickly() {
+    // table_bool/bt_12 (upTo5sec): 60 tables of 12 columns and 100 tuples (about 1 s each before),
+    // each with more prime cubes than the limit; merging the cubes before counting them took 47 s
+    // of CPU and 2 GB. The bound is wide for slow machines: 40 tables took 40 s before.
+    Random random = new Random(12);
+    assertTimeoutPreemptively(
+        Duration.ofSeconds(20),
+        () -> {
+          for (int t = 0; t < 40; t++) {
+            boolean[] allowed = new boolean[1 << 12];
+            for (int u = 0; u < 100; u++) {
+              allowed[random.nextInt(1 << 12)] = true;
+            }
+            assertThat(LcgSolver.forbiddenPrimeCubes(allowed, 12, 512)).isEmpty();
+          }
+        });
+    // the count agrees with the cubes found by merging
+    for (int t = 0; t < 300; t++) {
+      int n = 1 + random.nextInt(8);
+      boolean[] allowed = new boolean[1 << n];
+      double share = random.nextDouble();
+      for (int p = 0; p < allowed.length; p++) {
+        allowed[p] = random.nextDouble() < share;
+      }
+      int count = LcgSolver.forbiddenPrimeCubes(allowed, n, Integer.MAX_VALUE).orElseThrow().size();
+      assertThat(LcgSolver.forbiddenPrimeCount(allowed, n, Integer.MAX_VALUE)).isEqualTo(count);
+      assertThat(LcgSolver.forbiddenPrimeCubes(allowed, n, count)).isPresent();
+      if (count > 0) {
+        assertThat(LcgSolver.forbiddenPrimeCubes(allowed, n, count - 1)).isEmpty();
+      }
+    }
+  }
+
+  // Solve.alternateUnsolved stops LCG at the end of its slice and later lets it go on: after
+  // unstop() minimize runs again and finds the optimum, with the learnt clauses kept
+  @Test
+  void unstopTakesBackStop() {
     Store store = new Store();
     IntVar[] x = new IntVar[4];
     for (int i = 0; i < x.length; i++) {
@@ -6907,7 +6941,7 @@ class LcgSolverTest {
     LcgSolver solver = new LcgSolver(store);
     solver.stop();
     assertThat(solver.minimize(cost)).isEqualTo(CdclSolver.UNKNOWN);
-    solver.resume();
+    solver.unstop();
     assertThat(solver.minimize(cost)).isEqualTo(CdclSolver.SAT);
     // 3*1 + 2*2 + 1*3 + 0*4
     assertThat(solver.value(cost)).isEqualTo(10);

@@ -1017,10 +1017,7 @@ public final class CdclSolver {
     interrupted = true;
   }
 
-  /**
-   * Takes back {@link #cancel()}: later calls of {@link #solve} run again. Not safe while a search
-   * runs.
-   */
+  /** Takes back {@link #cancel()}: later calls of {@link #solve} run again. */
   public void uncancel() {
     cancelled = false;
     interrupted = false;
@@ -3565,6 +3562,10 @@ public final class CdclSolver {
           lit = external.propagate();
         }
         if (lit == 0) {
+          // a propagation cut by the deadline is no fixpoint: no decision and no model follow
+          if (external.propagationCut()) {
+            outOfTime = true;
+          }
           return NO_CONFLICT;
         }
         implied = toLit(lit);

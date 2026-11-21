@@ -252,6 +252,26 @@ public class Tables {
   }
 
   /**
+   * Notes that a declared float domain reached beyond JaCoP's float range and was narrowed to it:
+   * the values cut off may hold every solution, or the better ones.
+   */
+  void noteNarrowedFloatDomain() {
+    floatDomainsNarrowed = true;
+  }
+
+  /**
+   * Tells whether a declared float domain was narrowed to JaCoP's float range. A completed search
+   * then proves neither unsatisfiability nor optimality.
+   *
+   * @return true if a declared float domain was narrowed.
+   */
+  public boolean floatDomainsNarrowed() {
+    return floatDomainsNarrowed;
+  }
+
+  private boolean floatDomainsNarrowed;
+
+  /**
    * Notes a variable declared without bounds (var int), created over JaCoP's integer range: its
    * values beyond the range are cut off as for a narrowed declared domain.
    *
@@ -266,6 +286,7 @@ public class Tables {
   private final List<IntVar[]> declaredEqualities = new ArrayList<>();
   private final Set<IntVar> declaredEqual = Collections.newSetFromMap(new IdentityHashMap<>());
   private final IdentityHashMap<IntVar, long[]> boundsBeforeEquality = new IdentityHashMap<>();
+  private final Set<SetVar> declaredEqualSets = Collections.newSetFromMap(new IdentityHashMap<>());
   // the factor the objective was divided by (ObjectiveScaling), and the identifiers of the
   // variables that hold the divided values
   private long objectiveScale = 1;
@@ -304,6 +325,28 @@ public class Tables {
    */
   public boolean isDeclaredEqual(IntVar v) {
     return declaredEqual.contains(v);
+  }
+
+  /**
+   * Notes that the declaration of a set variable makes it equal to another one.
+   *
+   * @param x the declared variable
+   * @param y the variable it is declared equal to
+   */
+  void noteDeclaredEquality(SetVar x, SetVar y) {
+    declaredEqualSets.add(x);
+    declaredEqualSets.add(y);
+  }
+
+  /**
+   * Whether a declaration makes the set variable equal to another one. Such a variable must not be
+   * left without constraints, since the equality posted for the declaration stays on it.
+   *
+   * @param v the set variable
+   * @return true if a declaration makes v equal to another set variable
+   */
+  public boolean isDeclaredEqual(SetVar v) {
+    return declaredEqualSets.contains(v);
   }
 
   /**
@@ -595,7 +638,7 @@ public class Tables {
    *     to lie within the range.
    */
   public boolean failureMayComeFromNarrowing() {
-    if (boundedDomainsClamped()) {
+    if (floatDomainsNarrowed || boundedDomainsClamped()) {
       return true;
     }
     return !clampedDomains.isEmpty()
