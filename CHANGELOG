@@ -8781,7 +8781,32 @@ Version 5.0 (unreleased)
    (4,333 -> 4,637), unit-commitment L12, warehouse olil4. Wide-quick set
    at 240 s: the slices start on 2 of 62 instances.
 
-492. The FlatZinc front end rewrites an absolute difference that only
+492. Two opt-in strengthenings of the root linear relaxation.
+   -Dorg.jacop.lp.clauseRows=true: the clause rows of lazy clause
+   generation over columns the relaxation already has no longer drop out
+   when the share of further rows is full. They come after every other
+   extra row, and the extra-row trial keeps them only when they make the
+   relaxation infeasible or raise its bound; otherwise it keeps the rows
+   before them. On MiniZinc Challenge 2023 unit-commitment L10 the share
+   left out 2,668 such rows, among them every x + not x = 1 of the
+   commitments: the root relaxation solved as a MIP had the optimum
+   1,633,000 instead of 1,703,450.
+   -Dorg.jacop.lp.vbMir=true: the MIR cuts of the rows also substitute
+   variable bounds x <= a u and x >= a u, u a 0/1 column, for the bounds of
+   x when they are nearer to the LP value (the complemented MIR with
+   variable bounds of H. Marchand and L. A. Wolsey, Aggregation and mixed
+   integer rounding to solve MIPs, Operations Research 49(3), 2001), as the
+   c-MIR separators of SCIP and HiGHS do. The statistic lpVbCuts counts
+   them.
+   With both, the L10 root cut bound goes from 1,622,000 to 1,698,000 (the
+   HiGHS root reaches 1,702,500). 600 s bounds: L10 1,621,135 ->
+   1,698,060 (-f) and 1,621,210 -> 1,696,570 (default), L12 1,348,290 ->
+   1,419,720 (-f), L15 15,857,935 -> 17,442,805 (-f). Both flags on the 41
+   instances whose relaxation they change (39 of the 240 of the wide set
+   plus L10 and L15), 600 s: the same 26 solved in each mode, total time
+   default 0.994 and -f 1.007.
+
+493. The FlatZinc front end rewrites an absolute difference that only
    excludes values: t = x - y and a = |t|, with t and a used nowhere
    else, become bounds on x - y and x - y != d for the at most 8 values d
    (-Dorg.jacop.fz.absoluteDifference.maxHoles) that the domains of t and
@@ -8801,7 +8826,7 @@ Version 5.0 (unreleased)
    proved in 44 s; no instance of the wide set fires. Off with
    -Dorg.jacop.fz.absoluteDifference=false and under --proof.
 
-493. The FlatZinc front end posts a network flow with fixed weights
+494. The FlatZinc front end posts a network flow with fixed weights
    (network_flow, network_flow_cost) as its flow conservation rows and
    cost row under free search (-f), and as those rows next to NetworkFlow
    otherwise. NetworkFlow's reduced-cost arc analysis, a shortest path
