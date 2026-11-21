@@ -4763,7 +4763,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     setLabelTimeOut(label, millis);
     long start = System.nanoTime();
     int before = numberSolutions;
-    executeNonRestartSearch(label, select, costVar, solveType);
+    // the clauses kept for the LCG solver, which the store does not hold, in a level of their own
+    int root = store.level;
+    store.setLevel(root + 1);
+    try {
+      for (IntVar[][] clause : sat.collectedClauses()) {
+        store.impose(new BoolClause(clause[0], clause[1]));
+      }
+      executeNonRestartSearch(label, select, costVar, solveType);
+    } finally {
+      store.removeLevel(root + 1);
+      store.setLevel(root);
+    }
     boolean stopped = labelTimedOut(label);
     if (!stopped) {
       fixedFirstOutcome = 1;
