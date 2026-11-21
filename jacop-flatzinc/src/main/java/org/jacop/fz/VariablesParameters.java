@@ -79,6 +79,8 @@ public class VariablesParameters implements ParserTreeConstants {
   int lowInterval;
   // the last interval read when it was narrowed to JaCoP's range, or null
   private ASTIntTiExprTail clampedInterval;
+  // the narrowing of a declared domain {a, b, ...} with values beyond the range, without its ident
+  private Tables.ClampedDomain clampedList;
   int highInterval;
   double lowFloatInterval;
   double highFloatInterval;
@@ -128,11 +130,13 @@ public class VariablesParameters implements ParserTreeConstants {
       System.err.println(
           "Minimal value for " + varKind + " " + ident + " too low; changed to " + MIN_FLOAT);
       lowFloatInterval = MIN_FLOAT;
+      dictionary.noteNarrowedFloatDomain();
     }
     if (highFloatInterval > MAX_FLOAT) {
       System.err.println(
           "Maximal value for " + varKind + " " + ident + " too high; changed to " + MAX_FLOAT);
       highFloatInterval = MAX_FLOAT;
+      dictionary.noteNarrowedFloatDomain();
     }
   }
 
@@ -184,7 +188,43 @@ public class VariablesParameters implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Leaves out of the domain {a, b, ...} of an integer variable the values beyond JaCoP's integer
+   * range, as a declared interval is narrowed to it, and notes the narrowing.
+   */
+  private void narrowIntList() {
+    ArrayList<Integer> within = new ArrayList<>();
+    for (Integer e : intList) {
+      if (e >= IntDomain.MIN_INT && e <= IntDomain.MAX_INT) {
+        within.add(e);
+      }
+    }
+    if (within.isEmpty()) {
+      throw new ArithmeticException(
+          "domain "
+              + intList
+              + " lies outside the integer range "
+              + IntDomain.MIN_INT
+              + ".."
+              + IntDomain.MAX_INT
+              + " supported by JaCoP");
+    }
+    if (within.size() < intList.size()) {
+      int low = intList.stream().mapToInt(Integer::intValue).min().getAsInt();
+      int high = intList.stream().mapToInt(Integer::intValue).max().getAsInt();
+      clampedList =
+          new Tables.ClampedDomain(
+              null, low + ".." + high, low < IntDomain.MIN_INT, high > IntDomain.MAX_INT, false);
+      intList = within;
+    }
+  }
+
   private void noteClampedDomain(String ident) {
+    if (clampedList != null) {
+      dictionary.noteClampedDomain(
+          new Tables.ClampedDomain(
+              ident, clampedList.declared(), clampedList.low(), clampedList.high(), false));
+    }
     if (clampedInterval != null) {
       dictionary.noteClampedDomain(
           new Tables.ClampedDomain(
@@ -453,6 +493,7 @@ public class VariablesParameters implements ParserTreeConstants {
         pose(store, new AeqS(aVar, setValue));
       } else {
         SetVar initSetVar = getSetFlatExpr_var(store, node, initChild);
+        table.noteDeclaredEquality(aVar, initSetVar);
         pose(store, new AeqB(aVar, initSetVar));
       }
     }
@@ -943,6 +984,7 @@ public class VariablesParameters implements ParserTreeConstants {
   // 10- range set {|1..n, m, ...|}
   int getType(SimpleNode node) {
     clampedInterval = null;
+    clampedList = null;
     SimpleNode child = (SimpleNode) node.jjtGetChild(0);
     if (child.getId() == JJTINTTIEXPRTAIL) {
       return getTypeFromIntTail((ASTIntTiExprTail) child);
@@ -969,6 +1011,7 @@ public class VariablesParameters implements ParserTreeConstants {
         break;
       case 2:
         extractIntList((ASTIntLiterals) child.jjtGetChild(0));
+        narrowIntList();
         break;
       default:
         throw new RuntimeException("Internal error in " + getClass().getName());

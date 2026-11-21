@@ -497,6 +497,19 @@ public class CumulativeUnary extends Cumulative {
     }
   }
 
+  /**
+   * It imposes the constraint; the tasks left out are made again at the first consistency call, so
+   * that the same object imposed again after the level of a first imposition was removed does not
+   * read their time stamp.
+   *
+   * @param store the constraint store in which the constraint is imposed.
+   */
+  @Override
+  public void impose(Store store) {
+    leftOut = null;
+    super.impose(store);
+  }
+
   private void initTasks(Store store) {
     int n = tvn.length;
     leftOutStack = new int[n];

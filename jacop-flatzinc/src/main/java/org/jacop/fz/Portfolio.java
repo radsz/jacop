@@ -356,16 +356,11 @@ final class Portfolio {
         // the JVM is shutting down: the hook finds the answer printed
       }
     }
-    // the threads stop within milliseconds in search, later when stopped while reading the model
-    long joinDeadline = System.currentTimeMillis() + JOIN_MILLIS;
+    List<Thread> threadsToJoin = new ArrayList<>();
     for (Worker w : workers) {
-      try {
-        w.thread.join(Math.max(1, joinDeadline - System.currentTimeMillis()));
-      } catch (InterruptedException _) {
-        Thread.currentThread().interrupt();
-        break;
-      }
+      threadsToJoin.add(w.thread);
     }
+    join(threadsToJoin, timeOutAt);
     if (options.searchStatistics()) {
       out.print(workerStatistics());
       out.flush();
@@ -398,6 +393,32 @@ final class Portfolio {
       s.append("%%%mzn-stat-end\n");
     }
     return s.toString();
+  }
+
+  /**
+   * Waits for the stopped threads to end after the answer is printed. The threads stop within
+   * milliseconds in search, later when stopped while reading the model; a thread in a start-up
+   * phase that does not look at the time-out is not waited for past it: the threads are daemons,
+   * and the answer is out.
+   *
+   * @param threads the threads
+   * @param timeOutAt when the time-out passes (System.currentTimeMillis()), 0 without one
+   */
+  static void join(List<Thread> threads, long timeOutAt) {
+    long joinDeadline = System.currentTimeMillis() + JOIN_MILLIS;
+    if (timeOutAt > 0) {
+      joinDeadline =
+          Math.min(
+              joinDeadline, Math.max(System.currentTimeMillis(), timeOutAt) + STOP_MARGIN_MILLIS);
+    }
+    for (Thread t : threads) {
+      try {
+        t.join(Math.max(1, joinDeadline - System.currentTimeMillis()));
+      } catch (InterruptedException _) {
+        Thread.currentThread().interrupt();
+        break;
+      }
+    }
   }
 
   /**

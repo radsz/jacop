@@ -42,6 +42,7 @@ import java.util.function.Predicate;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.util.IntLattice;
 
 /**
@@ -498,9 +499,16 @@ public final class LinearEqualities {
         throw Store.failException;
       }
       if (before <= MAX_HOLES_DOMAIN) {
-        IntervalDomain d = new IntervalDomain((int) ((last - first) / mod) + 2);
-        for (long v = first; v <= last; v += mod) {
-          d.unionAdapt((int) v, (int) v);
+        // over the few values of x: the congruent values of a wide range are far more
+        IntervalDomain d = new IntervalDomain(before + 1);
+        for (ValueEnumeration e = x.domain.valueEnumeration(); e.hasMoreElements(); ) {
+          int v = e.nextElement();
+          if (Math.floorMod(v - res, mod) == 0) {
+            d.unionAdapt(v, v);
+          }
+        }
+        if (d.isEmpty()) {
+          throw Store.failException;
         }
         x.domain.in(store.level, x, d);
       } else {

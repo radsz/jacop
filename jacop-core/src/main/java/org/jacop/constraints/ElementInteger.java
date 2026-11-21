@@ -267,6 +267,18 @@ public class ElementInteger extends AbstractElement
   }
 
   @Override
+  protected void initFirstConsistencyCheck(Store store) {
+    super.initFirstConsistencyCheck(store);
+    // a constant beyond the range of domains is no value of the value variable, and domains
+    // cannot hold it when the values of the positions are collected
+    for (int pos = 0; pos < list.length; pos++) {
+      if (list[pos] < IntDomain.MIN_INT || list[pos] > IntDomain.MAX_INT) {
+        index.domain.inComplement(store.level, index, pos + 1 + indexOffset);
+      }
+    }
+  }
+
+  @Override
   public void consistency(Store store) {
 
     if (init.begin(store)) {

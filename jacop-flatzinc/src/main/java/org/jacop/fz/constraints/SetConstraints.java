@@ -105,7 +105,7 @@ class SetConstraints implements ParserTreeConstants {
 
     Map<Integer, Integer> weightOf = new HashMap<>();
     for (int j = 0; j < values.length; j++) {
-      weightOf.merge(values[j], weights[j], Integer::sum);
+      weightOf.merge(values[j], weights[j], Math::addExact);
     }
     int[] lub = selected.domain.lub().toIntArray();
     int[] lubWeights = new int[lub.length];
@@ -324,6 +324,14 @@ class SetConstraints implements ParserTreeConstants {
   void gen_partition_set(SimpleNode node) {
     SetVar[] s = support.getSetVarArray((SimpleNode) node.jjtGetChild(0));
     IntDomain u = support.getSetLiteral(node, 1);
+
+    // no set: their union is empty, so only an empty universe is partitioned
+    if (s.length == 0) {
+      if (!u.isEmpty()) {
+        throw Store.failException;
+      }
+      return;
+    }
 
     support.pose(new PartitionSet(s, u));
   }

@@ -51,7 +51,9 @@ public class BoundDomainIntervalEnumeration extends IntervalEnumeration {
    * @param max the right bound of the BoundDomain.
    */
   public BoundDomainIntervalEnumeration(int min, int max) {
-    i = new Interval(min, max);
+    // an empty BoundDomain (min > max) has no interval
+    done = min > max;
+    i = done ? null : new Interval(min, max);
   }
 
   @Override
