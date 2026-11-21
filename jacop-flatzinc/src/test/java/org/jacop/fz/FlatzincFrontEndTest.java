@@ -6195,4 +6195,22 @@ class FlatzincFrontEndTest {
     }
     assertEquals(expected, solveAll(model).size());
   }
+
+  @Test
+  void indexDisjunctionKeepsTheDomainOfAnElementResult() throws IOException {
+    // r0 = [x0,x1][k] takes only 0 or 2, and x0, x1 are 1 or 2, so r0 = 2 and r0 < r1 has no
+    // solution; the disjunction x0 < x1 or x1 < x0 without the domain of r0 printed r0 = 1
+    String model =
+        "var 1..2: x0 :: output_var;\n"
+            + "var 1..2: x1 :: output_var;\n"
+            + "var 1..2: k0 :: output_var;\n"
+            + "var {0,2}: r0 :: output_var;\n"
+            + "var 0..2: r1 :: output_var;\n"
+            + "constraint array_var_int_element(k0,[x0,x1],r0);\n"
+            + "constraint array_var_int_element(k0,[x1,x0],r1);\n"
+            + "constraint int_lt(r0,r1);\n"
+            + "solve satisfy;\n";
+    String[] out = run(model);
+    assertTrue(out[0].contains("=====UNSATISFIABLE====="), out[0] + out[1]);
+  }
 }
