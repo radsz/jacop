@@ -173,6 +173,7 @@ public class Constraints implements ParserTreeConstants {
 
   void generateAllConstraints(SimpleNode astTree) throws Throwable {
 
+    dictionary.searchAnnotated = searchAnnotated(astTree);
     // an objective declared beyond the integer range is divided by the factor its definition
     // forces on it, instead of being narrowed
     ObjectiveScaling.apply(support, astTree);
@@ -1144,6 +1145,20 @@ public class Constraints implements ParserTreeConstants {
   private boolean hasFloatVariables() {
     for (int i = 0; i < store.size(); i++) {
       if (store.vars[i] instanceof FloatVar) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** Whether the solve item, a child of the model's end, carries a search annotation. */
+  private static boolean searchAnnotated(Node node) {
+    for (int i = node.jjtGetNumChildren() - 1; i >= 0; i--) {
+      Node child = node.jjtGetChild(i);
+      if (child instanceof ASTSolveItem item) {
+        return item.jjtGetNumChildren() > 1;
+      }
+      if (child instanceof ASTModelEnd && searchAnnotated(child)) {
         return true;
       }
     }

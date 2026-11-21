@@ -32,6 +32,7 @@ package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -3983,6 +3984,29 @@ class GlobalConstraints implements ParserTreeConstants {
     support.delayedConstraints.add(support.binPackingCardinality.binPacking(bin, cc, w, minBin));
     support.binPackingCliques.add(bin, cc, w, minBin);
     support.binPackingPermutations.add(bin, cc, w, minBin);
+    if (BIN_LOADS_DEFINED && !support.dictionary.isSearchAnnotated()) {
+      markLoadsDefined(bin, cc);
+    }
+  }
+
+  // the loads of a bin packing follow from the bins of its items: free search branches on them
+  // last, and LNS relaxes the bins only. The balanced academic curriculum of XCSP 2026 (BACPj,
+  // 500 courses in 100 periods of at least 2 courses) translated without defines_var annotations
+  // branched on the credit loads, the variables of its sum-of-squares objective, and found no
+  // solution in 240 s; on the bins the first solution comes in a second. Only in a model without
+  // a search annotation: the MiniZinc Challenge models carry one, and on gbac at 600 s with -f
+  // the loads defined made 6 of 19 objectives worse and 1 better
+  static final boolean BIN_LOADS_DEFINED =
+      !FALSE.equals(System.getProperty("org.jacop.fz.binPackingLoadsDefined"));
+
+  private void markLoadsDefined(IntVar[] bin, IntVar[] load) {
+    Set<IntVar> bins = Collections.newSetFromMap(new IdentityHashMap<>());
+    bins.addAll(Arrays.asList(bin));
+    for (IntVar l : load) {
+      if (!l.singleton() && !bins.contains(l)) {
+        support.dictionary.addDefinedVar(l);
+      }
+    }
   }
 
   void gen_jacop_bin_packing_capacity(SimpleNode node) {
