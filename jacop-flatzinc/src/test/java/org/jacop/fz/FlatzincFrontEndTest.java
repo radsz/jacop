@@ -3307,6 +3307,74 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void networkFlowModesKeepTheSolutions() throws IOException {
+    // the flow conservation rows, NetworkFlow, or both, with and without free search: the same
+    // flows and costs on random networks
+    Random rnd = new Random(20261121);
+    for (int run = 0; run < 25; run++) {
+      String model = randomNetworkFlow(rnd);
+      Set<String> reference = null;
+      for (String mode : new String[] {"global", "rows", "both", "auto"}) {
+        System.setProperty("org.jacop.fz.networkFlow", mode);
+        try {
+          for (String[] options : new String[][] {{}, {"-f"}}) {
+            Set<String> solutions = new TreeSet<>(solveAllInOrder(model, options));
+            if (reference == null) {
+              reference = solutions;
+            }
+            assertEquals(
+                reference, solutions, mode + " " + Arrays.toString(options) + "\n" + model);
+          }
+        } finally {
+          System.clearProperty("org.jacop.fz.networkFlow");
+        }
+      }
+    }
+  }
+
+  // a network of 3 to 5 nodes and up to 7 arcs with flows 0..2 and fixed weights 0..3, balances
+  // that add up to 0, as jacop_networkflow (nodes numbered from 1)
+  private static String randomNetworkFlow(Random rnd) {
+    int nodes = 3 + rnd.nextInt(3);
+    int arcs = 3 + rnd.nextInt(5);
+    StringBuilder m = new StringBuilder();
+    StringJoiner arc = new StringJoiner(",", "[", "]");
+    StringJoiner flows = new StringJoiner(",", "[", "]");
+    StringJoiner weights = new StringJoiner(",", "[", "]");
+    for (int i = 0; i < arcs; i++) {
+      int from = 1 + rnd.nextInt(nodes);
+      int to = 1 + (from + rnd.nextInt(nodes - 1)) % nodes;
+      arc.add(from + "," + to);
+      m.append("var 0..2: f").append(i).append(" :: output_var;\n");
+      flows.add("f" + i);
+      weights.add(Integer.toString(rnd.nextInt(4)));
+    }
+    int[] balance = new int[nodes];
+    for (int k = 0; k < 2; k++) {
+      int a = rnd.nextInt(nodes);
+      int b = rnd.nextInt(nodes);
+      balance[a]++;
+      balance[b]--;
+    }
+    StringJoiner b = new StringJoiner(",", "[", "]");
+    for (int v : balance) {
+      b.add(Integer.toString(v));
+    }
+    m.append("var 0..100: cost :: output_var;\n");
+    m.append("constraint jacop_networkflow(")
+        .append(arc)
+        .append(",")
+        .append(flows)
+        .append(",")
+        .append(weights)
+        .append(",")
+        .append(b)
+        .append(",cost);\n");
+    m.append("solve satisfy;\n");
+    return m.toString();
+  }
+
+  @Test
   void absoluteDifferencesOfQueensBecomeDiagonalCliques() throws IOException {
     // t = q[i] - q[j], a = |t| with a hole at j - i: the rewrite drops t and a, and the diagonals
     // become all-different cliques with offsets (CPAI08 queens-100: 34 s and 43,168 nodes under

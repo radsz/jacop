@@ -8737,6 +8737,18 @@ Version 5.0 (unreleased)
    proved in 44 s; no instance of the wide set fires. Off with
    -Dorg.jacop.fz.absoluteDifference=false and under --proof.
 
+489. The FlatZinc front end posts a network flow with fixed weights
+   (network_flow, network_flow_cost) as its flow conservation rows and
+   cost row under free search (-f), and as those rows next to NetworkFlow
+   otherwise. NetworkFlow's reduced-cost arc analysis, a shortest path
+   per arc, cost about 80 % of the time on the small networks of the
+   MiniZinc Challenge mapping problem (16 networks of 11 nodes and 36
+   arcs) and pruned too little to pay for it. Mapping and nfc 2015-2022
+   (30 instances, 120 s, two seeds): -f 841 -> 598 s (2018 ring_mp3
+   28-111 -> 7 s), default 945 -> 687 s (2016 mesh3x3_mp3 proved in
+   12-18 s, not in 120 s before). -Dorg.jacop.fz.networkFlow=global
+   restores the old posting; rows and both choose one.
+
 Version 4.11
 =============
 
