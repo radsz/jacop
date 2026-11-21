@@ -273,13 +273,14 @@ class PermutationElementSumsFlatzincTest {
   // g_k) or (g_k, x_k) with g_k = f(x_k) for one function f of few values, sometimes with a pair
   // more (no function then), and a linear constraint on the g_k
   private static String randomTableModel(Random random) {
-    int n = 3 + random.nextInt(3);
+    int n = 4 + random.nextInt(4);
     int u = n + (random.nextInt(4) == 0 ? 1 : 0);
-    // two groups half of the time: the counts are posted only for at most u / 2 distinct values
-    int groups = 2 + random.nextInt(2);
+    // the counts are posted only for 3 to u / 2 distinct values; two values are counted by the sum
+    int groups = n >= 6 ? 3 : 2;
     int[] f = new int[u];
     for (int j = 0; j < u; j++) {
-      f[j] = random.nextInt(groups);
+      // every value of the function at least once
+      f[j] = j < groups ? j : random.nextInt(groups);
     }
     StringBuilder fzn = new StringBuilder();
     StringBuilder xs = new StringBuilder();
@@ -287,7 +288,7 @@ class PermutationElementSumsFlatzincTest {
     StringBuilder ws = new StringBuilder();
     for (int k = 0; k < n; k++) {
       fzn.append("var 0..").append(u - 1).append(": x_").append(k);
-      fzn.append(";\nvar 0..2: g_").append(k).append(";\n");
+      fzn.append(";\nvar 0..3: g_").append(k).append(";\n");
       xs.append(k == 0 ? "" : ",").append("x_").append(k);
       gs.append(k == 0 ? "" : ",").append("g_").append(k);
       ws.append(k == 0 ? "" : ",").append(1 + random.nextInt(3));
@@ -307,7 +308,7 @@ class PermutationElementSumsFlatzincTest {
         pair(pairs, swap, j, f[j]);
       }
       if (random.nextInt(10) == 0) {
-        pair(pairs, swap, random.nextInt(u), random.nextInt(3));
+        pair(pairs, swap, random.nextInt(u), random.nextInt(4));
       }
       fzn.append("constraint jacop_table_int([");
       fzn.append(swap ? "g_" + k + ",x_" + k : "x_" + k + ",g_" + k);
@@ -374,6 +375,17 @@ class PermutationElementSumsFlatzincTest {
     // equal groups have solutions, and the counts keep them
     out = run(shopper(new int[] {3, 3, 3}), "-s", "--search-statistics");
     assertTrue(out.contains("----------"), out);
+  }
+
+  @Test
+  void twoValuedArraysGetNoCounts() throws IOException {
+    // two groups: each count is a linear function of the sum, which is posted and still refutes
+    // the unequal groups; the counts only slowed the search (open-stacks problem_15_15 -f, 0/1
+    // arrays: 12,620 -> 21,573 nodes)
+    String out = run(shopper(new int[] {3, 2}), "-s", "--search-statistics");
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+    assertTrue(out.contains("%%%mzn-stat: permutationElementCounts=0\n"), out);
+    assertTrue(out.contains("%%%mzn-stat: permutationElementSums=2\n"), out);
   }
 
   private static void element(StringBuilder fzn, String x, String array, String y, int first) {

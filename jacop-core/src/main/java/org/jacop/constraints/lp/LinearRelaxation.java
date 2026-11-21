@@ -30,7 +30,6 @@
 
 package org.jacop.constraints.lp;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -151,6 +150,9 @@ public class LinearRelaxation extends Constraint
   // the value encodings ahead of the other extra rows, tried alone first when not every candidate
   // row fits the share (see of)
   private int leadExtra = 0;
+  // the clause rows past the share (org.jacop.lp.clauseRows), which come after every other extra
+  // row: the rows before them are tried without them, and they are kept only when they do better
+  private int clauseTail = 0;
   private static final boolean LEAD_ENCODINGS =
       !FALSE.equals(System.getProperty("org.jacop.lp.leadEncodings"));
   // the rows, the cuts last
@@ -241,6 +243,19 @@ public class LinearRelaxation extends Constraint
   private static final int POOL_AGE = Integer.getInteger("org.jacop.lp.poolAge", 100);
   private static final boolean POOL_EXTRA = Boolean.getBoolean("org.jacop.lp.poolExtra");
   private static final boolean POOL_CUTS = Boolean.getBoolean("org.jacop.lp.poolCuts");
+  // whether the clause rows over columns already in the relaxation that are past the share of the
+  // further rows are tried after them (fitsSimplex, addExtraRows)
+  static final boolean CLAUSE_ROWS = Boolean.getBoolean("org.jacop.lp.clauseRows");
+  // whether the MIR cuts of the rows also substitute variable bounds x <= a u, x >= a u
+  // (MirCut.ofVariableBounds)
+  static final boolean VB_MIR = Boolean.getBoolean("org.jacop.lp.vbMir");
+  // the variable bounds of the rows, read once at the first cut round
+  private MirCut.VariableBounds variableBounds;
+  private boolean variableBoundsRead;
+
+  /** The MIR cuts made with variable bounds substituted. */
+  public long vbCuts;
+
   private static final long WORK = Long.getLong("org.jacop.lp.work", 20_000_000L);
   private static final long ROOT_WORK = Long.getLong("org.jacop.lp.rootWork", 1_000_000_000L);
 
@@ -1676,7 +1691,8 @@ public class LinearRelaxation extends Constraint
                 + first
                 + (bySparse && leading.isEmpty() ? encoded : 0)
             : Long.MAX_VALUE;
-    if (!fitsSimplex(localForms, candidates, simplex, auto, share, own, further)
+    List<LinearForm> tail = CLAUSE_ROWS ? new ArrayList<>() : null;
+    if (!fitsSimplex(localForms, candidates, simplex, auto, share, own, further, tail)
         && objective != null) {
       // not all fit: after the value encodings, the rows nearest to the objective first, since rows
       // far from it rarely move its bound (tiny-cvrp: 852 of 6,936 rows, those over the variables
@@ -1684,6 +1700,9 @@ public class LinearRelaxation extends Constraint
       // to fit); the tried value encodings stay after the other rows, since the retry without them
       // takes the rows before them
       further.clear();
+      if (tail != null) {
+        tail.clear();
+      }
       List<LinearForm> sorted = fitOrder(localForms, candidates, first, triedSet, flow, objective);
       if (LEAD_ENCODINGS && !encodingSet.isEmpty() && first < candidates.size()) {
         // the value encodings of the model's variables go right after the leading rows: they are
@@ -1706,7 +1725,7 @@ public class LinearRelaxation extends Constraint
           share = share == Long.MAX_VALUE ? share : share + enc.size();
         }
       }
-      boolean fitted = fitsSimplex(localForms, sorted, simplex, auto, share, own, further);
+      boolean fitted = fitsSimplex(localForms, sorted, simplex, auto, share, own, further, tail);
       if (!fitted && nearRowsOn && auto && (simplex == Simplex.DENSE || bySparse)) {
         // the rows over the terms of the objective do not fit the dense tableau (or the share of
         // the sparse simplex that the value encodings chose): the sparse simplex takes them all,
@@ -1731,15 +1750,23 @@ public class LinearRelaxation extends Constraint
           ahead += near.contains(f) ? 0 : 1;
         }
         long nearShare = Math.max(share, (long) first + near.size() + ahead);
-        fitsSimplex(localForms, sorted, Simplex.SPARSE, true, nearShare, own, sparse);
+        List<LinearForm> sparseTail = CLAUSE_ROWS ? new ArrayList<>() : null;
+        fitsSimplex(localForms, sorted, Simplex.SPARSE, true, nearShare, own, sparse, sparseTail);
         if (localForms.size() + near.size() <= sparseMaxRows
             && containsAll(sparse, near)
             && !containsAll(further, near)) {
           further = sparse;
+          tail = sparseTail;
           simplex = Simplex.SPARSE;
           nearRows = near.size();
         }
       }
+    }
+    Set<LinearForm> tailSet = Collections.newSetFromMap(new IdentityHashMap<>());
+    if (tail != null && !tail.isEmpty()) {
+      further = new ArrayList<>(further);
+      further.addAll(tail);
+      tailSet.addAll(tail);
     }
     LinearRelaxation r = new LinearRelaxation(localForms, further, objective, maximize, simplex);
     r.nearRows = nearRows;
@@ -1750,8 +1777,14 @@ public class LinearRelaxation extends Constraint
     // (gapd
     // 10x200: 7 pivots a solve, every one stopped at the limit and the relaxation stalled after 32)
     r.keepEncodings = exempt > 0 || bySparse;
-    r.plainExtra = (int) r.extraForms.stream().filter(f -> !triedSet.contains(f)).count();
-    r.triedExtra = (int) r.extraForms.stream().filter(f -> !flow.contains(f)).count();
+    r.clauseTail = (int) r.extraForms.stream().filter(tailSet::contains).count();
+    r.plainExtra =
+        (int)
+            r.extraForms.stream()
+                .filter(f -> !triedSet.contains(f) && !tailSet.contains(f))
+                .count();
+    r.triedExtra =
+        (int) r.extraForms.stream().filter(f -> !flow.contains(f) && !tailSet.contains(f)).count();
     if (encodingsLead) {
       int lead = 0;
       while (lead < r.extraForms.size() && encodingSet.contains(r.extraForms.get(lead))) {
@@ -2358,37 +2391,71 @@ public class LinearRelaxation extends Constraint
   }
 
   // the distances of the candidates from the objective (byDistance)
+  // breadth first from the objective over the rows and their columns, with the columns numbered
+  // and the rows of each column in one array: the lists and boxed depths of each column took 5 s
+  // on the 4 million clause rows of MaxSAT 2021 haplotyping-pedigrees
   private static int[] distances(
       List<LinearForm> forms, List<LinearForm> candidates, IntVar objective) {
     List<LinearForm> all = new ArrayList<>(forms.size() + candidates.size());
     all.addAll(forms);
     all.addAll(candidates);
-    Map<IntVar, List<Integer>> rowsOf = new IdentityHashMap<>();
+    Map<IntVar, Integer> number = new IdentityHashMap<>();
+    number.put(objective, 0);
+    int[][] columns = new int[all.size()][];
+    int entries = 0;
     for (int i = 0; i < all.size(); i++) {
-      for (IntVar v : all.get(i).vars()) {
-        rowsOf.computeIfAbsent(v, k -> new ArrayList<>()).add(i);
+      IntVar[] vars = all.get(i).vars();
+      int[] c = new int[vars.length];
+      for (int k = 0; k < vars.length; k++) {
+        Integer n = number.get(vars[k]);
+        if (n == null) {
+          n = number.size();
+          number.put(vars[k], n);
+        }
+        c[k] = n;
+      }
+      columns[i] = c;
+      entries += c.length;
+    }
+    int n = number.size();
+    int[] start = new int[n + 1];
+    for (int[] c : columns) {
+      for (int v : c) {
+        start[v + 1]++;
+      }
+    }
+    for (int v = 0; v < n; v++) {
+      start[v + 1] += start[v];
+    }
+    int[] rowsOf = new int[entries];
+    int[] fill = Arrays.copyOf(start, n);
+    for (int i = 0; i < columns.length; i++) {
+      for (int v : columns[i]) {
+        rowsOf[fill[v]++] = i;
       }
     }
     int[] distance = new int[all.size()];
     Arrays.fill(distance, Integer.MAX_VALUE);
-    Set<IntVar> seen = Collections.newSetFromMap(new IdentityHashMap<>());
-    ArrayDeque<IntVar> queue = new ArrayDeque<>();
-    Map<IntVar, Integer> depth = new IdentityHashMap<>();
-    seen.add(objective);
-    depth.put(objective, 0);
-    queue.add(objective);
-    while (!queue.isEmpty()) {
-      IntVar v = queue.poll();
-      int d = depth.get(v);
-      for (int i : rowsOf.getOrDefault(v, List.of())) {
+    int[] depth = new int[n];
+    Arrays.fill(depth, -1);
+    int[] queue = new int[n];
+    int head = 0;
+    int tail = 0;
+    depth[0] = 0;
+    queue[tail++] = 0;
+    while (head < tail) {
+      int v = queue[head++];
+      int d = depth[v];
+      for (int r = start[v]; r < start[v + 1]; r++) {
+        int i = rowsOf[r];
         if (distance[i] != Integer.MAX_VALUE) {
           continue;
         }
         distance[i] = d;
-        for (IntVar u : all.get(i).vars()) {
-          if (seen.add(u)) {
-            depth.put(u, d + 1);
-            queue.add(u);
+        for (int u : columns[i]) {
+          if (depth[u] < 0) {
+            depth[u] = d + 1;
+            queue[tail++] = u;
           }
         }
       }
@@ -2557,6 +2624,20 @@ public class LinearRelaxation extends Constraint
       long share,
       Set<LinearForm> own,
       List<LinearForm> further) {
+    return fitsSimplex(forms, candidates, simplex, denseCap, share, own, further, null);
+  }
+
+  // as above; with a tail given, the clause rows over columns already taken that are past the
+  // share go to it instead of being left out
+  private static boolean fitsSimplex(
+      List<LinearForm> forms,
+      List<LinearForm> candidates,
+      Simplex simplex,
+      boolean denseCap,
+      long share,
+      Set<LinearForm> own,
+      List<LinearForm> further,
+      List<LinearForm> tail) {
     if (tooLarge(forms, simplex)) {
       return false;
     }
@@ -2586,7 +2667,17 @@ public class LinearRelaxation extends Constraint
         return false;
       }
       if (denseCap && simplex != Simplex.DENSE && !ownShare && counted >= share) {
-        if (own.isEmpty()) {
+        // a clause row over columns the relaxation has already adds no column: with
+        // org.jacop.lp.clauseRows it goes to the tail, tried after the others (unit commitment
+        // L10: 2,668 of them past the share, among them every x + not x = 1 of the commitments,
+        // and without them the relaxation as a MIP has the optimum 1,633,000 instead of 1,703,450)
+        if (tail != null && added == 0 && ClauseSimplification.isClause(f)) {
+          tail.add(f);
+          nonzeros += f.vars().length;
+          fitted = false;
+          continue;
+        }
+        if (own.isEmpty() && tail == null) {
           return false;
         }
         // the share of the others is full: the rows with a share of their own may still come
@@ -3407,14 +3498,61 @@ public class LinearRelaxation extends Constraint
       rootBoundsAt = Arrays.copyOf(rootBoundsAt, 2 * rootBoundsSize);
       rootBoundsLevel = Arrays.copyOf(rootBoundsLevel, 2 * rootBoundsSize);
     }
+    // a skipped bound is not recorded, so a later call propagates the bound of its time
+    if (rootReducedSkips > 0) {
+      rootReducedSkips--;
+      rootReducedSkipped++;
+      return;
+    }
     rootBoundsAt[rootBoundsSize] = bound;
     rootBoundsLevel[rootBoundsSize++] = store.level;
+    rootReducedPasses++;
     long pruned = prunings;
-    for (int k = 0; k < rootForms.length; k++) {
-      propagate(store, rootForms[k], rootFacts[k], rootCertificates[k]);
+    boolean useful = true;
+    try {
+      long scanned = 0;
+      for (int k = 0; k < rootForms.length; k++) {
+        propagate(store, rootForms[k], rootFacts[k], rootCertificates[k]);
+        scanned += rootForms[k].vars().length;
+      }
+      // a pruning a pass scans more than ROOT_REDUCED_SCAN columns for counts as none: on a row
+      // of n columns whose bound moves at every decision, one pruning a pass is quadratic. A pass
+      // over fewer than ROOT_REDUCED_MIN_COLUMNS columns is cheap and always counts as useful
+      useful =
+          scanned < ROOT_REDUCED_MIN_COLUMNS || (prunings - pruned) * ROOT_REDUCED_SCAN >= scanned;
+    } finally {
+      // a pass that pruned (almost) nothing doubles the passes skipped before the next one, one
+      // that pruned or failed starts again at every change of the bound
+      rootReducedPeriod = useful ? 1 : Math.min(2 * rootReducedPeriod, ROOT_REDUCED_MAX_PERIOD);
+      rootReducedSkips = rootReducedPeriod - 1;
     }
     rootPrunings += prunings - pruned;
   }
+
+  // the bound of the objective changes not only with the solutions: under assumptions or
+  // decisions on its terms its upper bound falls at every one of them. In the core-guided phase on
+  // Security-CPS test61 (MaxSAT Evaluation 2021: 16,010 soft clauses, 20,347 columns), each call
+  // assumes the softs one by one and every assumption scanned the root forms again, without a
+  // pruning: 0.9 s a core instead of 0.23 s. Passes that prune nothing back off exponentially
+  private static final int ROOT_REDUCED_MAX_PERIOD = 128;
+
+  // the columns a pass may scan for each pruning it makes and still count as useful: units learnt
+  // at the root moved the bound of jacop_lex_less_int over 2 x 20,000 columns maximizing a sum
+  // 60,000 times, 46 s of passes over 40,000 columns
+  private static final int ROOT_REDUCED_SCAN = 64;
+
+  // the columns below which a pass never backs off: accap instance5 (MiniZinc Challenge 2019, 116
+  // columns) made 2 million passes, about a tenth of its time, and their 69 rare prunings found
+  // 114 in 600 s; backed off to 16,000 passes, one pruning and 134
+  private static final int ROOT_REDUCED_MIN_COLUMNS = 1000;
+  private int rootReducedPeriod = 1;
+  private int rootReducedSkips;
+
+  /** The passes of the root reduced costs skipped by their back-off. */
+  public long rootReducedSkipped;
+
+  /** The passes of the root reduced costs made. */
+  public long rootReducedPasses;
 
   // whether the bounds of a column other than the objective are tighter than at the last solve at
   // the root level: with only the bound of the objective changed, a solve again finds the same
@@ -4783,6 +4921,20 @@ public class LinearRelaxation extends Constraint
     for (int i = 0; i < original; i++) {
       unitRows[i] = rowAggregate(i);
     }
+    if (VB_MIR && !variableBoundsRead) {
+      variableBoundsRead = true;
+      List<int[]> rc = new ArrayList<>();
+      List<long[]> rw = new ArrayList<>();
+      List<Long> up = new ArrayList<>();
+      List<Long> down = new ArrayList<>();
+      for (Aggregate g : unitRows) {
+        rc.add(g.columns());
+        rw.add(g.coef());
+        up.add(g.hasUpper() ? g.upper() : null);
+        down.add(g.hasLower() ? g.lower() : null);
+      }
+      variableBounds = MirCut.VariableBounds.of(n, rc, rw, up, down, lo, hi);
+    }
     Set<List<Long>> seen = new HashSet<>();
     if (!restarting) {
       mirRows = unitRows;
@@ -6085,6 +6237,14 @@ public class LinearRelaxation extends Constraint
       mir(unitRows[i], value, lo, hi, found);
     }
     labelled(found, unitBefore, "mir");
+    if (variableBounds != null && !coversOnly) {
+      int vbBefore = found.size();
+      for (Aggregate row : unitRows) {
+        vbMir(row, value, lo, hi, found, variableBounds);
+      }
+      vbCuts += found.size() - vbBefore;
+      labelled(found, vbBefore, "vbmir");
+    }
     Set<MirCut> covers = Collections.newSetFromMap(new IdentityHashMap<>());
     if (coverOn) {
       int coverBefore = found.size();
@@ -6352,6 +6512,38 @@ public class LinearRelaxation extends Constraint
     }
   }
 
+  // the MIR cuts of both sides of a row after the substitution of variable bounds
+  private static void vbMir(
+      Aggregate g,
+      double[] value,
+      long[] lo,
+      long[] hi,
+      List<MirCut> found,
+      MirCut.VariableBounds bounds) {
+    if (g == null) {
+      return;
+    }
+    if (g.hasUpper()) {
+      MirCut c = MirCut.ofVariableBounds(g.columns(), g.coef(), g.upper(), value, lo, hi, bounds);
+      if (c != null) {
+        found.add(c);
+      }
+    }
+    if (g.hasLower() && g.lower() != Long.MIN_VALUE) {
+      long[] neg = new long[g.coef().length];
+      for (int k = 0; k < neg.length; k++) {
+        if (g.coef()[k] == Long.MIN_VALUE) {
+          return;
+        }
+        neg[k] = -g.coef()[k];
+      }
+      MirCut c = MirCut.ofVariableBounds(g.columns(), neg, -g.lower(), value, lo, hi, bounds);
+      if (c != null) {
+        found.add(c);
+      }
+    }
+  }
+
   private static void mir(Aggregate g, double[] value, long[] lo, long[] hi, List<MirCut> found) {
     if (g == null) {
       return;
@@ -6405,14 +6597,16 @@ public class LinearRelaxation extends Constraint
     // its bound, not for being few. Once a prefix is kept, only the flow models are tried without:
     // they are kept only when they do better than the rows before them
     int lead = Math.min(leadExtra, k);
+    // without the clause rows past the share: tried after all of them, kept when those do no better
+    int untailed = k - Math.min(clauseTail, k);
     // with the value encodings ahead of rows that did not all fit, the encodings alone are tried
     // first: the rows after them are only a share of the candidates, and a trial over all of them
     // can spend the root budget without an optimal solve (ROADEF 2020 A_06: 6,720 rows over 39,003
     // columns stopped at the limit, and the encodings tried after them got no time)
     int[] prefixes =
         lead > 0 && lead < k
-            ? IntStream.of(lead, k, tiered, plain).filter(q -> q > 0).distinct().toArray()
-            : IntStream.of(k, tiered, plain).filter(q -> q > 0).distinct().toArray();
+            ? IntStream.of(lead, k, untailed, tiered, plain).filter(q -> q > 0).distinct().toArray()
+            : IntStream.of(k, untailed, tiered, plain).filter(q -> q > 0).distinct().toArray();
     LpSolver full = null;
     int kept = 0;
     int keptStatus = status;

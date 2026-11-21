@@ -37,6 +37,7 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.jacop.constraints.Assignment;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Reified;
@@ -78,6 +79,7 @@ import org.jacop.fz.SimpleNode;
  * @version 5.0
  */
 public class NumberedPathDetector {
+  private static final Set<String> KINDS = Set.of("jacop_alldiff");
 
   private final Support support;
 
@@ -137,6 +139,10 @@ public class NumberedPathDetector {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
+    // a numbering is all different
+    if (!support.hasConstraint(astTree, KINDS)) {
+      return;
+    }
     support.forEachConstraint(astTree, this::collect);
     for (IntVar[] x : alldiffs) {
       tryPath(x);

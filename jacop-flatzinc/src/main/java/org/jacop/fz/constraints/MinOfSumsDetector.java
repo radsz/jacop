@@ -58,6 +58,7 @@ import org.jacop.fz.SimpleNode;
  * @version 5.0
  */
 public class MinOfSumsDetector implements ParserTreeConstants {
+  private static final Set<String> KINDS = Set.of("int_min", "jacop_minimum");
 
   private final Support support;
 
@@ -99,6 +100,10 @@ public class MinOfSumsDetector implements ParserTreeConstants {
    * @return the minimum and sum constraint nodes it replaces, which must not be posted.
    */
   public Set<SimpleNode> detect(SimpleNode astTree) {
+    // the sums are merged only below a minimum
+    if (!support.hasConstraint(astTree, KINDS)) {
+      return new HashSet<>();
+    }
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {
