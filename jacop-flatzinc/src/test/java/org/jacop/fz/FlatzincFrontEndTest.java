@@ -4914,7 +4914,8 @@ class FlatzincFrontEndTest {
   }
 
   @Test
-  void defaultLcgIsLeftOutForFloatModelsAndAllSolutionsOfSatisfactionProblems() throws IOException {
+  void defaultLcgIsLeftOutForFloatModelsAndEnumeratesAllSolutionsOfSatisfactionProblems()
+      throws IOException {
     // LCG on by default must not change how a model it cannot solve is solved: no "--lcg ignored"
     // message, and the Boolean constraints are not turned into clauses
     String floats =
@@ -4941,8 +4942,11 @@ class FlatzincFrontEndTest {
       out = run(sat, "-a");
       assertFalse(out[0].contains("--lcg ignored"), out[0]);
       assertEquals(2, out[0].split("----------", -1).length - 1, out[0]);
-      // asked for, LCG is still reported as ignored
-      assertTrue(run(sat, "-a", "--lcg")[0].contains("--lcg ignored"));
+      // asked for, LCG enumerates the solutions with blocking clauses
+      out = run(sat, "-a", "--lcg");
+      assertFalse(out[0].contains("--lcg ignored"), out[0]);
+      assertEquals(2, out[0].split("----------", -1).length - 1, out[0]);
+      assertTrue(out[0].contains("=========="), out[0]);
     } finally {
       restoreProperty("jacop.lcg", lcg);
     }

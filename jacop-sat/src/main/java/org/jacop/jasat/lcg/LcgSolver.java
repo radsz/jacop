@@ -248,6 +248,9 @@ public final class LcgSolver implements ExternalPropagator {
   private int[] propagated = new int[16]; // per DIMACS variable pushed as an atom: its entry
   private int[] solution;
   private Runnable onSolution;
+  // the variables whose values each solution of a satisfaction search excludes, so that the search
+  // goes on to the next solution (see setEnumeration); null: the search stops at the first one
+  private int[] enumerated;
   // takes the objective's bound at the root each time minimize leaves the root with a better one
   private LongConsumer onBound;
   private long lastBound = Long.MIN_VALUE;
@@ -7187,6 +7190,103 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Makes {@link #solve} enumerate the solutions that differ on the given variables, as the search
+   * for all solutions of a satisfaction model does: after each solution, given to the action of
+   * {@link #onSolution}, the solver adds the clause that one of the variables takes another value
+   * and goes on, with its learnt clauses, until it finds no more ({@link CdclSolver#UNSAT}: every
+   * solution was found) or is stopped. Two solutions that differ only on other variables count as
+   * one, so the variables are those whose values the solution callback prints (the output
+   * variables). This is the solution blocking of Chuffed's all-solution search (Chu, Stuckey; "Lazy
+   * clause generation reengineered", CP 2009). Call it before {@link #solve}, at the root.
+   *
+   * @param vars the variables that tell two solutions apart; variables fixed at the root are left
+   *     out
+   * @return false when one of the variables is not fixed and not a variable of the solver (it
+   *     cannot be told apart), true when the enumeration is set
+   */
+  public boolean setEnumeration(Collection<? extends IntVar> vars) {
+    if (objective >= 0 || proof != null) {
+      throw new IllegalStateException("enumeration is for a satisfaction search without a proof");
+    }
+    int[] ids = new int[vars.size()];
+    int n = 0;
+    Set<Integer> seen = new HashSet<>();
+    for (IntVar x : vars) {
+      if (x.singleton()) {
+        continue;
+      }
+      int i = idOf(x);
+      if (i < 0 || unused[i]) {
+        return false;
+      }
+      if (seen.add(i)) {
+        ids[n++] = i;
+      }
+    }
+    enumerated = Arrays.copyOf(ids, n);
+    return true;
+  }
+
+  /** Statistics: the solutions that the enumeration excluded by a clause (see setEnumeration). */
+  public long blockedSolutions;
+
+  // the solutions excluded by the negation of their decisions, all on enumerated variables
+  public long decisionBlocked;
+
+  // whether an index is one of the enumerated variables
+  private boolean[] isEnumerated;
+
+  /**
+   * The clause that excludes the last solution on the enumerated variables. When every decision of
+   * the solver is an atom of an enumerated variable, the decisions imply the whole solution, and
+   * every solution with the same values of the enumerated variables satisfies them: the negation of
+   * the decisions is then the clause, as in Chuffed. It is shorter than one literal per enumerated
+   * variable and watched on the latest decisions, where the clauses over all the enumerated
+   * variables pile up on the watches of the same few literals: balanced brackets (52 printed
+   * variables, 742,900 solutions) printed 4 times fewer solutions a second with them alone.
+   */
+  private int[] blockingClause() {
+    if (isEnumerated == null) {
+      isEnumerated = new boolean[vars.length];
+      for (int i : enumerated) {
+        isEnumerated[i] = true;
+      }
+    }
+    int[] decisions = sat.decisionLiterals();
+    boolean onEnumerated = true;
+    for (int k = 0; k < decisions.length && onEnumerated; k++) {
+      Atom a = atom(decisions[k]);
+      onEnumerated = a != null && a.var < isEnumerated.length && isEnumerated[a.var];
+    }
+    if (onEnumerated) {
+      decisionBlocked++;
+      int[] clause = new int[decisions.length];
+      for (int k = 0; k < decisions.length; k++) {
+        clause[k] = -decisions[k];
+      }
+      return clause;
+    }
+    int[] clause = new int[enumerated.length];
+    int n = 0;
+    for (int i : enumerated) {
+      IntDomain d = root[i];
+      int v = solution[i];
+      if (d.singleton()) {
+        continue;
+      }
+      // x != v as a bound literal at the ends of the root domain, which [x = v] need not exist for
+      if (v == d.min()) {
+        clause[n++] = geLit(i, v + 1);
+      } else if (v == d.max()) {
+        clause[n++] = -geLit(i, v);
+      } else {
+        clause[n++] = -eqVar(i, v);
+      }
+    }
+    return Arrays.copyOf(clause, n);
+  }
+
+  /**
    * Sets the action that takes the bound of the objective that {@link #minimize} has proved: no
    * solution better than the best one has a smaller value of the objective. It is called whenever
    * the search leaves the root with a better bound than before, after the root's propagation, so a
@@ -9494,6 +9594,12 @@ public final class LcgSolver implements ExternalPropagator {
     if (restartsAfterSolution) {
       restartsAfterSolution = false;
       sat.setRestarts(true);
+    }
+    if (objective < 0 && enumerated != null) {
+      // the literals first, so that the linking clauses of a new [x = v] come before the clause
+      blockedSolutions++;
+      structural.add(blockingClause());
+      return false;
     }
     if (objective < 0) {
       return true;
