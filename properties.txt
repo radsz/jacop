@@ -499,7 +499,7 @@ unless stated otherwise):
 - org.jacop.fz.costNetwork: CostNetworkBound on an objective that is a
   sum of unary and binary cost tables (weighted constraint satisfaction:
   frequency assignment, photograph selection, protein design); default
-  false, off under --proof.
+  true, off under --proof.
 - org.jacop.cfn.rootMs, org.jacop.cfn.sweeps: the most milliseconds and
   sweeps of the reparametrisation at the root; default 2000 and 1000.
 - org.jacop.cfn.maxDomain, org.jacop.cfn.maxEntries, org.jacop.cfn.nodes:

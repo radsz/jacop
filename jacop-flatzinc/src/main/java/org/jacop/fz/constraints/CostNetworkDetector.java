@@ -76,7 +76,8 @@ import org.jacop.fz.constraints.IntensionTableDetector.Tabulator;
  *
  * Every function is the projection of some constraints of the model, so every solution of the model
  * costs at least the network's cost: the bound holds whatever is left out. A term the network does
- * not cover adds its least value. Switched on by {@code -Dorg.jacop.fz.costNetwork=true}.
+ * not cover adds its least value. On by default; {@code -Dorg.jacop.fz.costNetwork=false} switches
+ * it off.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -151,21 +152,26 @@ public final class CostNetworkDetector implements ParserTreeConstants {
   /**
    * It tells if the bound is on.
    *
-   * @return true if the system property org.jacop.fz.costNetwork is true.
+   * @return false only if the system property org.jacop.fz.costNetwork is false.
    */
   public static boolean enabled() {
-    return Boolean.getBoolean("org.jacop.fz.costNetwork");
+    return Boolean.parseBoolean(System.getProperty("org.jacop.fz.costNetwork", "true"));
   }
 
   /**
    * It reads the constraint items of the model.
    *
    * @param astTree the root of the parsed model.
+   * @param skipped constraint nodes that earlier detectors replaced; they are not posted, and their
+   *     variables may be left with any value, so they are not read.
    */
-  public void collect(SimpleNode astTree) {
+  public void collect(SimpleNode astTree, Set<SimpleNode> skipped) {
     support.forEachConstraint(
         astTree,
         node -> {
+          if (skipped.contains(node)) {
+            return;
+          }
           String name = node.getName();
           try {
             if (name.equals("jacop_table_int")) {
