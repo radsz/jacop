@@ -1312,6 +1312,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.nearRows
             + "\n%%%mzn-stat: lpRestartSolves="
             + r.restartSolves
+            + "\n%%%mzn-stat: lpRootRecuts="
+            + r.rootRecuts
             + "\n%%%mzn-stat: lpRestartBoundCuts="
             + r.restartBoundCuts
             + "\n%%%mzn-stat: lpRestartCutBound="
@@ -6837,6 +6839,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return new SimpleSelect<>(vars.toArray(new IntVar[0]), null, new IndomainMin<>());
   }
 
+  // the restarts of free search return to its own root, which the relaxation takes as its root
+  // level for the restart solves of org.jacop.lp.rootRecut (LinearRelaxation.searchRoot)
+  private void addRelaxationRoot(List<SearchMonitor> monitors, boolean optimisation) {
+    LinearRelaxation relaxation = linearRelaxation;
+    if (relaxation != null && optimisation) {
+      monitors.add(
+          new SearchMonitor() {
+            @Override
+            public void onStart(FreeSearch search) {
+              relaxation.searchRoot(store.level);
+            }
+          });
+    }
+  }
+
   /**
    * Runs free search with the FreeSearch engine. It branches on the set variables first, then on
    * the integer and Boolean variables, then on the objective and on the float variables. The
@@ -6927,6 +6944,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
 
     SequenceSelect free = new SequenceSelect(selects);
+    addRelaxationRoot(monitors, optimisation);
     FreeSearch.Builder builder =
         FreeSearch.builder(store, free)
             .restarts(restarts)

@@ -8679,7 +8679,45 @@ Version 5.0 (unreleased)
    18 s, brazil58 proved in 174 s), 25 unsolved tours worse; -f 27 -> 28
    proved, time 11,642 -> 11,044 s, 11 tours worse.
 
-487. Lazy clause generation enumerates the solutions of satisfaction
+484. Root re-cuts of the linear relaxation, off by default
+   (-Dorg.jacop.lp.rootRecut=true, which turns on
+   org.jacop.lp.restartSolves and org.jacop.lp.restartBounds and keeps the
+   extra rows). The reduced costs of a solve at the root level fix columns
+   there and the propagation that follows tightens other bounds, but the
+   cut rounds ran only over the bounds that solve started from. The
+   relaxation now solves again with new cut rounds whenever the bounds of
+   the root level changed, and when an incumbent closed a tenth of the gap
+   left at the last such solve, as the LP worker of CP-SAT cuts again at
+   level zero after each fixing. Free search without learning, which
+   restarts to its own root a level above the first solve, gives that level
+   to the relaxation as its root (LinearRelaxation.searchRoot). The solves
+   take at most org.jacop.lp.restartShare (0.05) of the time since the
+   relaxation was made. MiniZinc Challenge 2023 unit-commitment, -f 600 s:
+   bound L10 1,626,260 -> 1,629,955 (optimum 1,703,450, 1,661,820 in one
+   240 s run), L12 1,348,290 -> 1,360,605; with the L10 optimum as upper
+   bound the root bound goes from 1.644M to 1.681M in 2 s and to 1.7024M at
+   180 s. L15 -f found worse solutions (40.6M-45.7M against 35.1M-38.4M).
+   Wide-quick set at 240 s, total time -f 2,906 -> 2,914 s and default
+   4,593 -> 4,587 s; wide set at 60 s, -f 0.995 and default 1.001; the same
+   instances solved.
+
+487. JaLP's presolve aggregates: in an equation of 3 to 16 columns, a column
+   of 2 to 8 entries whose bounds the equation implies is substituted out
+   of its other rows, and the equation and the column go (free column
+   substitution, Andersen and Andersen, Presolving in linear programming,
+   Mathematical Programming 71 (1995) 221-245, section 3.3; the
+   aggregator of HiGHS). The pivot is at least 1 % of the other entries of
+   its row and column, and the fill is bounded per substitution and in
+   all. Found by comparing traces of a patched HiGHS 1.15.1 with JaLP's
+   new trace (-Dorg.jacop.jalp.trace=file: one line per presolve
+   reduction, pivot and factorization): MIPLIB 2017 app1-2 13.4 s -> 1.8 s,
+   13,897 -> 610 pivots (HiGHS 681), with the same presolved size as
+   HiGHS. On the 687 LPs of the osolpro LP bench at 120 s: no wrong
+   answer, the same 647 solved plus pds-80, total time 7,013 -> 6,806 s,
+   fome12 111 -> 60 s, sgpf5y6 62 -> 30 s.
+   -Dorg.jacop.jalp.presolveAggregate=false turns it off.
+
+488. Lazy clause generation enumerates the solutions of satisfaction
    problems with -a and -n N (N > 1): every solution adds a blocking clause
    and the search ends, unsatisfiable, once all solutions are printed
    (Chu and Stuckey, Lazy clause generation reengineered, CP 2009; the

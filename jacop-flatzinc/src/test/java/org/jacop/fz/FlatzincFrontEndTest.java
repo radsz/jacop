@@ -1556,6 +1556,18 @@ class FlatzincFrontEndTest {
             solve maximize m;
             """);
     assertTrue(out[0].endsWith("m = 25;\n----------\n==========\n"), out[0]);
+    // a table bounds each variable by its column: -a ends with ==========
+    out =
+        run(
+            """
+            var 1..3: k :: output_var;
+            var int: c :: output_var;
+            constraint jacop_table_int([k, c], [1, 12000, 2, 8000, 3, 10000]);
+            solve satisfy;
+            """,
+            "-a");
+    assertEquals(3, out[0].split("----------", -1).length - 1, out[0]);
+    assertTrue(out[0].endsWith("----------\n==========\n"), out[0]);
   }
 
   /**
