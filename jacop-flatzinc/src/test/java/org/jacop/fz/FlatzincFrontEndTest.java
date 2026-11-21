@@ -7433,4 +7433,24 @@ class FlatzincFrontEndTest {
       assertEquals(1, lastStatus);
     }
   }
+
+  @Test
+  void aParameterInTheArrayOfASearchAnnotationIsAConstant() throws IOException {
+    // a parameter in the array of a search was looked up as a variable only: the null in its place
+    // threw a NullPointerException in every variable selection but input_order, and in set_search
+    // and float_search
+    String ints =
+        "var 1..3: x :: output_var;\nint: c = 2;\n"
+            + "solve :: int_search([c, x], first_fail, indomain_max, complete) satisfy;\n";
+    assertEquals("x = 3;\n----------\n", run(ints)[0]);
+    assertEquals(3, solveAll(ints).size());
+    String sets =
+        "var set of 1..3: s :: output_var;\nset of int: p = {1};\n"
+            + "solve :: set_search([s, p], first_fail, indomain_min, complete) satisfy;\n";
+    assertEquals(8, solveAll(sets).size());
+    String floats =
+        "var 1.0..3.0: f :: output_var;\nfloat: p = 1.0;\n"
+            + "solve :: float_search([f, p], 0.1, input_order, indomain_split, complete) satisfy;\n";
+    assertTrue(run(floats)[0].endsWith("----------\n"), run(floats)[0]);
+  }
 }
