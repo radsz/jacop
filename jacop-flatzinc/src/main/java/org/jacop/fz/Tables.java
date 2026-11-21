@@ -116,6 +116,8 @@ public class Tables {
   final ArrayList<Var[]> defaultSearchSetArrays = new ArrayList<>();
   // variables named by a defines_var annotation of a constraint
   final ArrayList<Var> definedVariables = new ArrayList<>();
+  // whether the solve item carries a search annotation; set before the constraints are posted
+  boolean searchAnnotated;
 
   // variables that no constraint uses any more, such as the sums merged into a minimum
   final ArrayList<Var> unusedVariables = new ArrayList<>();
@@ -823,6 +825,7 @@ public class Tables {
     t.unusedVariables.addAll(map.get(unusedVariables));
     t.auxiliaryVariables.addAll(map.get(auxiliaryVariables));
     t.splitSums.addAll(map.get(splitSums));
+    t.searchAnnotated = searchAnnotated;
     t.overlapSetRows = overlapSetRows;
     t.overlapSetRowsDefined.addAll(map.get(overlapSetRowsDefined));
     for (LinearForm f : overlapUnitRows) {
@@ -1387,6 +1390,16 @@ public class Tables {
    */
   public void addDefinedVar(Var v) {
     definedVariables.add(v);
+  }
+
+  /**
+   * Tells whether the solve item carries a search annotation. It is known before the constraints
+   * are posted.
+   *
+   * @return true when the model names a search
+   */
+  public boolean isSearchAnnotated() {
+    return searchAnnotated;
   }
 
   /**

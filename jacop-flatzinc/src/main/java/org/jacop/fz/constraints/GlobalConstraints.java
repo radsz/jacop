@@ -3846,7 +3846,7 @@ class GlobalConstraints implements ParserTreeConstants {
     support.delayedConstraints.add(support.binPackingCardinality.binPacking(bin, cc, w, minBin));
     support.binPackingCliques.add(bin, cc, w, minBin);
     support.binPackingPermutations.add(bin, cc, w, minBin);
-    if (BIN_LOADS_DEFINED) {
+    if (BIN_LOADS_DEFINED && !support.dictionary.isSearchAnnotated()) {
       markLoadsDefined(bin, cc);
     }
   }
@@ -3855,7 +3855,9 @@ class GlobalConstraints implements ParserTreeConstants {
   // last, and LNS relaxes the bins only. The balanced academic curriculum of XCSP 2026 (BACPj,
   // 500 courses in 100 periods of at least 2 courses) translated without defines_var annotations
   // branched on the credit loads, the variables of its sum-of-squares objective, and found no
-  // solution in 240 s; on the bins the first solution comes in a second
+  // solution in 240 s; on the bins the first solution comes in a second. Only in a model without
+  // a search annotation: the MiniZinc Challenge models carry one, and on gbac at 600 s with -f
+  // the loads defined made 6 of 19 objectives worse and 1 better
   static final boolean BIN_LOADS_DEFINED =
       !"false".equals(System.getProperty("org.jacop.fz.binPackingLoadsDefined"));
 

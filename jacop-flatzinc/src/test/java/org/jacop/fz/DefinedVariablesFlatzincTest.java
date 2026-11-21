@@ -95,6 +95,19 @@ class DefinedVariablesFlatzincTest {
     assertThat(tables.definedVariables)
         .contains(tables.getVariable("l1"), tables.getVariable("l2"))
         .doesNotContain(tables.getVariable("x1"), tables.getVariable("x2"));
+
+    // a search annotation names what to branch on: the loads stay as they are
+    Path annotated = dir.resolve("loads-annotated.fzn");
+    Files.writeString(
+        annotated,
+        Files.readString(model)
+            .replace(
+                "solve minimize l1;",
+                "solve :: int_search([x1, x2, x3], input_order, indomain_min, complete)"
+                    + " minimize l1;"));
+    Tables withAnnotation = load(annotated);
+    assertThat(withAnnotation.definedVariables)
+        .doesNotContain(withAnnotation.getVariable("l1"), withAnnotation.getVariable("l2"));
   }
 
   private static Tables load(Path model) {

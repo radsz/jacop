@@ -8717,6 +8717,21 @@ Version 5.0 (unreleased)
    fome12 111 -> 60 s, sgpf5y6 62 -> 30 s.
    -Dorg.jacop.jalp.presolveAggregate=false turns it off.
 
+488. In a model without a search annotation, the FlatZinc front end counts
+   the loads of a bin packing (jacop_bin_packing) as defined by it, as if
+   a defines_var annotation named them: free search branches on the bins
+   of the items first (item 369) and LNS relaxes bins only (lns-defined).
+   XCSP translations carry no defines_var annotations; on the balanced
+   academic curriculum of XCSP 2026 (BACPj, objective the sum of squared
+   period loads) free search branched on the loads, filled the periods
+   with small loads and found no solution of 01-20 and 01-40 in 600 s
+   (-f); now the first solution comes in 18 and 282 s, and 01-04, 01-05
+   and 01-06 are proved in 21, 18 and 15 s instead of 25-108, 176-181 and
+   99-258 s. The MiniZinc Challenge models with a bin packing all carry a
+   search annotation and are unchanged: with the loads defined there,
+   gbac under -f got worse at 600 s (6 of 19 objectives worse, 1 better).
+   -Dorg.jacop.fz.binPackingLoadsDefined=false turns it off.
+
 Version 4.11
 =============
 
