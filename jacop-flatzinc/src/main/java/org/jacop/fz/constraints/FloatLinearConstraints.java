@@ -103,6 +103,27 @@ class FloatLinearConstraints implements ParserTreeConstants {
     FloatVar[] p2 = support.getFloatVarArray((SimpleNode) node.jjtGetChild(1));
     double p3 = support.getFloat((ASTScalarFlatExpr) node.jjtGetChild(2));
 
+    if (p2.length == 0) {
+      // the empty sum is the constant test 0 rel p3, which LinearFloat rejects
+      boolean holds =
+          switch (operation) {
+            case Support.EQ -> p3 == 0;
+            case Support.NE -> p3 != 0;
+            case Support.LT -> 0 < p3;
+            case Support.LE -> 0 <= p3;
+            default ->
+                throw new IllegalArgumentException(
+                    "%% ERROR: Constraint floating-point operation not supported.");
+          };
+      if (reified) {
+        IntVar p4 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
+        p4.domain.inValue(store.level, p4, holds ? 1 : 0);
+      } else if (!holds) {
+        throw Store.failException;
+      }
+      return;
+    }
+
     if (reified) {
       IntVar p4 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
       floatLinRelationReified(operation, p1, p2, p3, p4);

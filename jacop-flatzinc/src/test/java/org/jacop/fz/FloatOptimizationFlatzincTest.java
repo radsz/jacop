@@ -31,6 +31,7 @@
 package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -43,6 +44,7 @@ import java.nio.file.Path;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
@@ -83,6 +85,24 @@ class FloatOptimizationFlatzincTest {
     assertEquals(49318.0, value(out, "objective"), 0.1, out);
   }
 
+  /**
+   * hakank's transp1, 61 equations and 100 inequalities, run without a time-out: the node budget of
+   * a run of the bisection stopped the search as a time-out, so it printed =====TIME-OUT===== after
+   * a second, and its annotated search found nothing below the point of the relaxation at the root
+   * in 27 s. The relaxation is the whole model, so the bisection starts at once and proves the
+   * optimum (199,693.06) within the precision 0.01 of the annotation.
+   */
+  @Test
+  @Timeout(60)
+  void linearModelWithoutTimeOutIsProved() throws IOException {
+    for (String[] options : new String[][] {{}, {"-f"}}) {
+      String out = solveWithoutTimeOut("transp1.fzn", options);
+      assertTrue(out.contains("=========="), out);
+      assertFalse(out.contains("TIME-OUT"), out);
+      assertEquals(199693.06, value(out, "z"), 0.01 * 199693.06, out);
+    }
+  }
+
   private static double value(String out, String name) {
     Matcher m = Pattern.compile("(?m)^" + name + " = ([-0-9.eE]+);").matcher(out);
     double v = Double.NaN;
@@ -93,7 +113,16 @@ class FloatOptimizationFlatzincTest {
   }
 
   private String solve(String name, String... options) throws IOException {
+    String[] args = new String[options.length + 2];
+    System.arraycopy(options, 0, args, 0, options.length);
+    args[options.length] = "-t";
+    args[options.length + 1] = "30000";
+    return solveWithoutTimeOut(name, args);
+  }
+
+  private String solveWithoutTimeOut(String name, String... options) throws IOException {
     Path fzn = tmp.resolve(name);
+    Files.deleteIfExists(fzn);
     try (InputStream in = getClass().getResourceAsStream("floats/" + name)) {
       Files.copy(in, fzn);
     }
@@ -101,11 +130,9 @@ class FloatOptimizationFlatzincTest {
     PrintStream originalOut = System.out;
     try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8)) {
       System.setOut(capture);
-      String[] args = new String[options.length + 3];
+      String[] args = new String[options.length + 1];
       System.arraycopy(options, 0, args, 0, options.length);
-      args[options.length] = "-t";
-      args[options.length + 1] = "30000";
-      args[options.length + 2] = fzn.toString();
+      args[options.length] = fzn.toString();
       new Fz2jacop().callMain(args);
     } finally {
       System.setOut(originalOut);

@@ -103,7 +103,7 @@ public class MultiCumulative extends Constraint implements Copyable<MultiCumulat
   private final int[] startExcluded;
   private final boolean[] startConsidered;
   private final int[] activeMap;
-  private final TimeStampInt activePnt;
+  private TimeStampInt activePnt;
 
   /**
    * It creates a multi-resource cumulative constraint.
@@ -213,6 +213,19 @@ public class MultiCumulative extends Constraint implements Copyable<MultiCumulat
     setScope(Stream.concat(Arrays.stream(starts), Arrays.stream(limits)));
 
     activePnt = new TimeStampInt(limits[0].getStore(), 0);
+  }
+
+  /**
+   * It imposes the constraint with all tasks active from the store's level: the time stamp of a
+   * constraint made above the root, or imposed again after the level of a first imposition was
+   * removed, would hold no value.
+   *
+   * @param store the constraint store in which the constraint is imposed.
+   */
+  @Override
+  public void impose(Store store) {
+    activePnt = new TimeStampInt(store, 0);
+    super.impose(store);
   }
 
   @Override

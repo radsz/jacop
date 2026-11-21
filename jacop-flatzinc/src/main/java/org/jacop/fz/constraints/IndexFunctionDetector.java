@@ -94,6 +94,8 @@ import org.jacop.fz.SimpleNode;
  * @version 5.0
  */
 public class IndexFunctionDetector implements ParserTreeConstants {
+  private static final Set<String> KINDS =
+      Set.of("int_times", "int_lin_le_imp", "int_le_imp", "int_lt_imp", "int_eq_imp", "int_ne_imp");
 
   /** The largest domain of an index whose functions are expanded. */
   static final int MAX_VALUES = 64;
@@ -175,7 +177,7 @@ public class IndexFunctionDetector implements ParserTreeConstants {
 
   private final Map<IntVar, Integer> occurrences = new IdentityHashMap<>();
 
-  private final Map<String, IntVar> conditions = new HashMap<>();
+  private final Map<List<Object>, IntVar> conditions = new HashMap<>();
 
   private int unfolded;
 
@@ -214,6 +216,10 @@ public class IndexFunctionDetector implements ParserTreeConstants {
    * @return the int_times constraint nodes it replaces, which must not be posted.
    */
   public Set<SimpleNode> detect(SimpleNode astTree) {
+    // products are rewritten and clauses unfolded only over half-reified comparisons
+    if (!support.hasConstraint(astTree, KINDS)) {
+      return replaced;
+    }
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       switch (node.getId()) {
@@ -471,12 +477,22 @@ public class IndexFunctionDetector implements ParserTreeConstants {
     IntVar[] vs = terms.keySet().toArray(new IntVar[0]);
     int[] ws = new int[vs.length];
     int i = 0;
-    StringBuilder key = new StringBuilder(c.op()).append(':').append(rhs);
+    // the variables themselves in the key: they compare by identity, and two of them can share an
+    // identity hash code
+    List<Object> key = new ArrayList<>();
+    key.add(c.op());
+    key.add(rhs);
     for (Map.Entry<IntVar, Long> t : terms.entrySet()) {
-      ws[i++] = (int) (long) t.getValue();
-      key.append(':').append(System.identityHashCode(t.getKey())).append('*').append(t.getValue());
+      long w = t.getValue();
+      if (w < Integer.MIN_VALUE || w > Integer.MAX_VALUE) {
+        // a variable repeated in the comparison: its merged weight does not fit an int
+        return null;
+      }
+      ws[i++] = (int) w;
+      key.add(t.getKey());
+      key.add(w);
     }
-    IntVar l = conditions.get(key.toString());
+    IntVar l = conditions.get(key);
     if (l == null && dryRun) {
       return OPEN;
     }
@@ -489,7 +505,7 @@ public class IndexFunctionDetector implements ParserTreeConstants {
             default -> "!=";
           };
       support.pose(new Reified(new LinearInt(vs, ws, rel, (int) rhs), l));
-      conditions.put(key.toString(), l);
+      conditions.put(key, l);
     }
     return l;
   }

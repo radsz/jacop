@@ -147,6 +147,12 @@ class ElementConstraints implements ParserTreeConstants {
   /** Poses p2[p1] = p3 where first is the index of p2[0]. */
   void poseElementInteger(IntVar p1, int[] p2, IntVar p3, int first) {
     p1.domain.in(store.level, p1, first, IntDomain.MAX_INT);
+    // a constant beyond the range of domains is no value of p3, and XeqC rejects it
+    for (int k = 0; k < p2.length; k++) {
+      if (p2[k] < IntDomain.MIN_INT || p2[k] > IntDomain.MAX_INT) {
+        p1.domain.inComplement(store.level, p1, first + k);
+      }
+    }
     support.permutationElementSums.add(p1, p2, p3, first);
 
     int[] newP2 = extractSubArray(p1, p2, first);
@@ -316,10 +322,13 @@ class ElementConstraints implements ParserTreeConstants {
   }
 
   void poseElementFloat(IntVar p1, double[] p2, FloatVar p3) {
-    p1.domain.in(store.level, p1, 1, IntDomain.MAX_INT);
+    // the index lies in 1..p2.length; the values copied below start at p1.min()
+    if (p2.length == 0) {
+      throw Store.failException;
+    }
+    p1.domain.in(store.level, p1, 1, p2.length);
 
-    int newP2Length = p1.max() - p1.min() + 1;
-    int listLength = Math.min(p2.length, newP2Length);
+    int listLength = p1.max() - p1.min() + 1;
     double[] newP2 = new double[listLength];
     for (int i = 0; i < listLength; i++) {
       newP2[i] = p2[p1.min() - 1 + i];

@@ -134,6 +134,8 @@ import org.jacop.fz.SimpleNode;
  * and comb cuts).
  */
 public class GiantTourDetector implements ParserTreeConstants {
+  private static final Set<String> KINDS =
+      Set.of("jacop_circuit", "jacop_circuit_offset", "jacop_subcircuit");
 
   // the fewest customers worth a Routes
   private static final int MIN_CUSTOMERS = 3;
@@ -255,6 +257,10 @@ public class GiantTourDetector implements ParserTreeConstants {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
+    // a giant tour is a circuit
+    if (!support.hasConstraint(astTree, KINDS)) {
+      return;
+    }
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {
@@ -336,8 +342,8 @@ public class GiantTourDetector implements ParserTreeConstants {
       return;
     }
     ASTScalarFlatExpr r = scalar(node, 2);
-    if (r.getType() == 2 && support.dictionary.getVariable(r.getIdent()) != null) {
-      IntVar v = support.dictionary.getVariable(r.getIdent());
+    if (r.getType() == 2 && support.dictionary.getVariable(r) != null) {
+      IntVar v = support.dictionary.getVariable(r);
       if (!v.singleton()) {
         return;
       }
@@ -385,7 +391,7 @@ public class GiantTourDetector implements ParserTreeConstants {
       return;
     }
     ASTScalarFlatExpr r = scalar(node, 2);
-    if (r.getType() == 2 && support.dictionary.getVariable(r.getIdent()) != null) {
+    if (r.getType() == 2 && support.dictionary.getVariable(r) != null) {
       return;
     }
     long rhs = support.getVariable(r).value();
@@ -763,21 +769,28 @@ public class GiantTourDetector implements ParserTreeConstants {
    * Edge elimination (TspEdgeElimination) for a pure symmetric travelling salesman problem: the
    * model minimizes obj = sum(i) c[i][x[i]] + constant, where each x[i] occurs only in the circuit
    * and in its cost element, each cost only in its element and in that sum, and obj in no other
-   * constraint. The arcs i -> j left by the domains of x[i] and of its cost must be symmetric and
-   * have symmetric costs. Missing edges get a length larger than any tour, so that no improving
+   * constraint, with no alias and with an interval domain. The arcs i -> j left by the domains of
+   * x[i] and of its cost must be symmetric and have symmetric costs. Missing edges get a length larger than any tour, so that no improving
    * move uses one. The removed successors are in no optimal tour; every optimal tour stays, so the
    * optimum is kept, while the tours that are not optimal can go.
    */
   private void eliminateEdges(IntVar[] x, int offset) {
     int n = x.length;
     IntVar obj = minimized;
-    if (n < 5 || obj == null || occurrences.getOrDefault(obj, 0) != 1) {
+    // a hole in the domain of obj could forbid the optimal length and make a longer tour optimal
+    if (n < 5
+        || obj == null
+        || occurrences.getOrDefault(obj, 0) != 1
+        || obj.domain.noIntervals() != 1) {
       return;
     }
     Set<IntVar> aliased = Collections.newSetFromMap(new IdentityHashMap<>());
     aliased.addAll(support.dictionary.aliasTable.keySet());
     aliased.addAll(support.dictionary.aliasTable.values());
     support.dictionary.addDeclaredEqualities(aliased);
+    if (aliased.contains(obj)) {
+      return;
+    }
     IntVar[] cost = new IntVar[n];
     Element[] element = new Element[n];
     Map<IntVar, Integer> node = new IdentityHashMap<>();

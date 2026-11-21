@@ -95,6 +95,17 @@ public final class AffineDomain extends IntDomain {
     return new long[] {ceilPre(max), floorPre(min)};
   }
 
+  /**
+   * The base values u with a*u + b in min..max that are within MIN_INT..MAX_INT, as {lo, hi}; empty
+   * when lo &gt; hi.
+   */
+  private long[] basePreimage(int min, int max) {
+    long[] r = preimage(min, max);
+    r[0] = Math.max(r[0], IntDomain.MIN_INT);
+    r[1] = Math.min(r[1], IntDomain.MAX_INT);
+    return r;
+  }
+
   private static int clamp(long v) {
     if (v < IntDomain.MIN_INT) {
       return IntDomain.MIN_INT;
@@ -232,7 +243,7 @@ public final class AffineDomain extends IntDomain {
 
   @Override
   public boolean isIntersecting(int min, int max) {
-    long[] r = preimage(min, max);
+    long[] r = basePreimage(min, max);
     return r[0] <= r[1] && base.domain.isIntersecting(clamp(r[0]), clamp(r[1]));
   }
 
@@ -416,7 +427,7 @@ public final class AffineDomain extends IntDomain {
 
   @Override
   public void in(int storeLevel, Var v, int min, int max) {
-    long[] r = preimage(min, max);
+    long[] r = basePreimage(min, max);
     if (r[0] > r[1]) {
       throw failException;
     }
@@ -503,7 +514,7 @@ public final class AffineDomain extends IntDomain {
 
   @Override
   public void inComplement(int storeLevel, Var v, int min, int max) {
-    long[] r = preimage(min, max);
+    long[] r = basePreimage(min, max);
     if (r[0] <= r[1]) {
       base.domain.inComplement(storeLevel, base, clamp(r[0]), clamp(r[1]));
     }
@@ -607,7 +618,7 @@ public final class AffineDomain extends IntDomain {
 
   @Override
   public void setDomain(int min, int max) {
-    long[] r = preimage(min, max);
+    long[] r = basePreimage(min, max);
     if (r[0] > r[1]) {
       base.domain.clear();
     } else {
@@ -624,7 +635,7 @@ public final class AffineDomain extends IntDomain {
 
   @Override
   public void subtractAdapt(int min, int max) {
-    long[] r = preimage(min, max);
+    long[] r = basePreimage(min, max);
     if (r[0] <= r[1]) {
       base.domain.subtractAdapt(clamp(r[0]), clamp(r[1]));
     }
@@ -637,7 +648,7 @@ public final class AffineDomain extends IntDomain {
 
   @Override
   public int intersectAdapt(int min, int max) {
-    long[] r = preimage(min, max);
+    long[] r = basePreimage(min, max);
     if (r[0] > r[1]) {
       base.domain.clear();
       return GROUND;

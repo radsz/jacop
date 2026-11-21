@@ -70,13 +70,14 @@ import org.jacop.set.core.SetVar;
  * constraint left, and the set variables without constraints get no membership literals.
  *
  * <p>Only chains whose intermediate sets appear nowhere else (not in other constraints, the search,
- * the objective or the output) are replaced. The system property {@code
- * org.jacop.fz.setUnion=false} turns it off.
+ * the objective, the output or a declaration such as {@code var set of 1..9: w = u}) are replaced.
+ * The system property {@code org.jacop.fz.setUnion=false} turns it off.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
  */
 public class SetUnionDetector implements ParserTreeConstants {
+  private static final Set<String> KINDS = Set.of("set_union");
 
   /**
    * At least this many singletons in a replaced chain. A short chain has few inner unions to save,
@@ -166,6 +167,10 @@ public class SetUnionDetector implements ParserTreeConstants {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
+    // only unions are replaced
+    if (!support.hasConstraint(astTree, KINDS)) {
+      return;
+    }
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {
@@ -256,7 +261,8 @@ public class SetUnionDetector implements ParserTreeConstants {
     return occurrences.getOrDefault(c, 0) == 2
         && operands.getOrDefault(c, 0) == 1
         && c.domain.glb().isEmpty()
-        && !support.dictionary.isOutput(c);
+        && !support.dictionary.isOutput(c)
+        && !support.dictionary.isDeclaredEqual(c);
   }
 
   /** A singleton set {e} that only feeds one union. */
@@ -269,7 +275,8 @@ public class SetUnionDetector implements ParserTreeConstants {
         && operands.getOrDefault(s, 0) == 1
         && !unions.containsKey(s)
         && s.domain.glb().isEmpty()
-        && !support.dictionary.isOutput(s);
+        && !support.dictionary.isOutput(s)
+        && !support.dictionary.isDeclaredEqual(s);
   }
 
   private void replace(SetVar root, ASTConstElem node) {
