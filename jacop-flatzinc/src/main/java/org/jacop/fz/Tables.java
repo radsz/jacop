@@ -814,6 +814,28 @@ public class Tables {
   }
 
   /**
+   * Returns whether the identity names a parameter, a variable or an array of the model, of any
+   * type, so that a pass of the front end that names an array of its own takes another identity.
+   *
+   * @param ident the identity
+   * @return true when the model or a pass declared it
+   */
+  public boolean isIdentifier(String ident) {
+    return intTable.containsKey(ident)
+        || floatTable.containsKey(ident)
+        || intArrayTable.containsKey(ident)
+        || floatArrayTable.containsKey(ident)
+        || setTable.containsKey(ident)
+        || setArrayTable.containsKey(ident)
+        || variableTable.containsKey(ident)
+        || variableArrayTable.containsKey(ident)
+        || variableFloatTable.containsKey(ident)
+        || variableFloatArrayTable.containsKey(ident)
+        || setVariableTable.containsKey(ident)
+        || setVariableArrayTable.containsKey(ident);
+  }
+
+  /**
    * Returns whether the variable of the given identity was merged into another one as its alias, as
    * the integer of {@code bool2int} is merged into its Boolean.
    *
