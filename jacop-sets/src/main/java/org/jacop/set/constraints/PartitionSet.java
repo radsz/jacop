@@ -286,8 +286,8 @@ public class PartitionSet extends Constraint
 
   /**
    * Explains the elementwise rule under lazy clause generation: an element of the universe leaves a
-   * set because another set holds it, and joins a set because every other set lost it. The
-   * prunings of the cardinalities get the generic reason.
+   * set because another set holds it, and joins a set because every other set lost it. The prunings
+   * of the cardinalities get the generic reason.
    */
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {

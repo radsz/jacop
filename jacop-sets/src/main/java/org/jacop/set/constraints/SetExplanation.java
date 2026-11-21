@@ -476,8 +476,8 @@ final class SetExplanation {
   }
 
   /**
-   * Explains a failure of {@link #explainOneOf}'s rule: an element in two sets, or an element of the
-   * universe in none.
+   * Explains a failure of {@link #explainOneOf}'s rule: an element in two sets, or an element of
+   * the universe in none.
    *
    * @param trail the trail
    * @param sets the sets, which must be distinct

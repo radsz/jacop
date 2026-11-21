@@ -1166,8 +1166,7 @@ public class Options {
    */
   public boolean lcgEnumerates() {
     return lcg
-        && (lcgGiven
-            || LCG_ALL && threads == 1 && proof == null && presolve == Presolve.OFF);
+        && (lcgGiven || LCG_ALL && threads == 1 && proof == null && presolve == Presolve.OFF);
   }
 
   // org.jacop.fz.lcgAll=off: LCG on by default leaves the solutions of -a and -n N to search

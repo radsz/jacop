@@ -6996,8 +6996,8 @@ public final class LcgSolver implements ExternalPropagator {
    * and goes on, with its learnt clauses, until it finds no more ({@link CdclSolver#UNSAT}: every
    * solution was found) or is stopped. Two solutions that differ only on other variables count as
    * one, so the variables are those whose values the solution callback prints (the output
-   * variables). This is the solution blocking of Chuffed's all-solution search (Chu, Stuckey;
-   * "Lazy clause generation reengineered", CP 2009). Call it before {@link #solve}, at the root.
+   * variables). This is the solution blocking of Chuffed's all-solution search (Chu, Stuckey; "Lazy
+   * clause generation reengineered", CP 2009). Call it before {@link #solve}, at the root.
    *
    * @param vars the variables that tell two solutions apart; variables fixed at the root are left
    *     out
