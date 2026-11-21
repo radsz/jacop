@@ -5585,6 +5585,9 @@ public final class LcgSolver implements ExternalPropagator {
 
   private boolean graphClauses = GRAPH_CLAUSES;
 
+  // the bytes the clauses of layered graphs may take, or -1 for their share of the heap
+  private long graphClauseBudget = -1;
+
   /**
    * The share of the heap that the clauses of layered graphs may take, {@code
    * jacop.lcg.graphClauses.heapShare}; graphs past it are propagated and explained by cuts.
@@ -5593,10 +5596,24 @@ public final class LcgSolver implements ExternalPropagator {
       Double.parseDouble(System.getProperty("jacop.lcg.graphClauses.heapShare", "0.125"));
 
   // The bytes that a described edge or node of a layered graph takes in the solver once it is
-  // clauses: a literal with its solver arrays and watches, and up to four clauses.
+  // clauses, at most: a literal with its solver arrays and watches, and up to four clauses.
   // MagicSquare-mdd-10
   // (XCSP 2023), 22 diagrams of 201,000 edges and nodes, took about 2 GB.
   private static final long GRAPH_CLAUSE_BYTES = 400;
+
+  // The bytes of the clauses of a graph once they are counted (graphClauseBytes): per new
+  // literal, per clause and per literal of a clause. Most graphs take far less than
+  // GRAPH_CLAUSE_BYTES per edge: the edges between two nodes are one arc, and an arc that is the
+  // only one into its target or out of its source has no literal. The 17 regular constraints of
+  // pentominoes 04 (MiniZinc Challenge 2020) describe 3.6 million edges and nodes and became
+  // 296,000 literals and 1.08 million clauses of 8.5 million literals, 169 MB, not the 1.46 GB
+  // that bound gives, so at 10 GB of heap two of them were left to cut explanations, which took
+  // 95 % of the time: 348 s instead of 5 s.
+  private static final long GRAPH_LITERAL_BYTES = 192;
+
+  private static final long GRAPH_CLAUSE_HEADER_BYTES = 48;
+
+  private static final long GRAPH_CLAUSE_LITERAL_BYTES = 8;
 
   /** Statistics: layered-graph constraints left as propagators because their clauses do not fit. */
   public long graphConstraintsTooLarge;
@@ -5617,11 +5634,120 @@ public final class LcgSolver implements ExternalPropagator {
     graphClauses = on;
   }
 
+  /**
+   * Sets the bytes that the clauses of layered graphs may take in all, in place of {@code
+   * jacop.lcg.graphClauses.heapShare} of the heap, before the solver starts.
+   *
+   * @param bytes the bytes
+   */
+  void setGraphClauseBudget(long bytes) {
+    graphClauseBudget = bytes;
+  }
+
   /** Statistics: layered-graph constraints given to the solver as clauses. */
   public long graphConstraintsEncoded;
 
   /** Statistics: clauses implied by constraints ({@link ImpliedClauses}) given to the solver. */
   public long impliedClauses;
+
+  /**
+   * Whether the clauses of a layered graph fit in the bytes left for them: at once when its
+   * described size times {@link #GRAPH_CLAUSE_BYTES} fits, otherwise by counting its clauses,
+   * unless a graph not larger than this one was counted and did not fit.
+   *
+   * @param g the graph
+   * @param left the bytes left for the clauses of graphs
+   * @param misfit the described size of the smallest graph counted that did not fit
+   * @return true when its clauses fit
+   */
+  private static boolean graphFits(LayeredGraphConstraint g, long left, long misfit) {
+    long size = g.describedSize();
+    if (size <= left / GRAPH_CLAUSE_BYTES) {
+      return true;
+    }
+    if (size >= misfit) {
+      return false;
+    }
+    CountingClauses counted = new CountingClauses(null);
+    counted.limit = left;
+    try {
+      return !g.encodeClauses(counted) || counted.bytes() <= left;
+    } catch (OverBudget _) {
+      return false;
+    }
+  }
+
+  /** Ends the counting of the clauses of a graph once they no longer fit. */
+  private static final class OverBudget extends RuntimeException {
+    private static final long serialVersionUID = 1L;
+
+    OverBudget() {
+      super(null, null, false, false);
+    }
+  }
+
+  /**
+   * Counts the literals and clauses a constraint gives, and passes them on to a model, or with no
+   * model only counts them (its literals then stand for nothing).
+   */
+  private static final class CountingClauses implements ClauseModel {
+    private final ClauseModel model;
+    private long literals;
+    private long clauses;
+    private long clauseLiterals;
+    private int next;
+    // counting only, the bytes past which counting stops
+    private long limit = Long.MAX_VALUE;
+
+    CountingClauses(ClauseModel model) {
+      this.model = model;
+    }
+
+    CountingClauses reset() {
+      literals = 0;
+      clauses = 0;
+      clauseLiterals = 0;
+      return this;
+    }
+
+    // the bytes the counted literals and clauses take in the solver
+    long bytes() {
+      return literals * GRAPH_LITERAL_BYTES
+          + clauses * GRAPH_CLAUSE_HEADER_BYTES
+          + clauseLiterals * GRAPH_CLAUSE_LITERAL_BYTES;
+    }
+
+    @Override
+    public int newLiteral() {
+      literals++;
+      return model != null ? model.newLiteral() : fresh();
+    }
+
+    @Override
+    public int valueLiteral(IntVar x, int v) {
+      // a value's literal exists without the clauses; counting, each use stands for a new one
+      return model != null ? model.valueLiteral(x, v) : fresh();
+    }
+
+    // a literal different from every one given before, away from the constants of the encodings
+    private int fresh() {
+      if (next == Integer.MAX_VALUE / 2) {
+        next = 0;
+      }
+      return ++next;
+    }
+
+    @Override
+    public void clause(int[] literals, int size) {
+      clauses++;
+      clauseLiterals += size;
+      if (model != null) {
+        model.clause(literals, size);
+      } else if (bytes() > limit) {
+        throw new OverBudget();
+      }
+    }
+  }
 
   /**
    * Gives the solver every layered-graph constraint of the store as clauses ({@link
@@ -5660,22 +5786,30 @@ public final class LcgSolver implements ExternalPropagator {
           }
         };
     boolean propagatorLeft = false;
-    // the described edges and nodes the clauses of the graphs may take in all
+    // the bytes the clauses of the graphs may take in all, those they take, and the described
+    // size of the smallest graph whose counted clauses did not fit
     long graphBudget =
-        (long) (GRAPH_CLAUSES_HEAP_SHARE * Runtime.getRuntime().maxMemory()) / GRAPH_CLAUSE_BYTES;
-    long graphUnits = 0;
+        graphClauseBudget >= 0
+            ? graphClauseBudget
+            : (long) (GRAPH_CLAUSES_HEAP_SHARE * Runtime.getRuntime().maxMemory());
+    long graphBytes = 0;
+    long graphMisfit = Long.MAX_VALUE;
+    CountingClauses counted = new CountingClauses(model);
     objectiveTerms = objectiveTerms();
     permutationOnly = permutationOnlyVariables();
     for (Constraint c : store.getConstraints()) {
       if (graphClauses
           && c instanceof LayeredGraphConstraint g
-          && graphUnits + g.describedSize() > graphBudget) {
+          && !graphFits(g, graphBudget - graphBytes, graphMisfit)) {
         // too large to be clauses: WordDesign2-words-mdd-025 (XCSP 2023) has 300 diagrams of 2.4
         // million edges and nodes
+        graphMisfit = Math.min(graphMisfit, g.describedSize());
         graphConstraintsTooLarge++;
         propagatorLeft = true;
-      } else if (graphClauses && c instanceof LayeredGraphConstraint g && g.encodeClauses(model)) {
-        graphUnits += g.describedSize();
+      } else if (graphClauses
+          && c instanceof LayeredGraphConstraint g
+          && g.encodeClauses(counted.reset())) {
+        graphBytes += counted.bytes();
         g.removeConstraint();
         encodedGraphs.add(g);
         graphConstraintsEncoded++;
