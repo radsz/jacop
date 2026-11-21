@@ -8771,7 +8771,10 @@ Version 5.0 (unreleased)
    of activity otherwise (roster chicroster_dataset_large_20 99 -> 98 in a
    third less time, hoist PU_2_8_1 +3 %); -f unchanged. -Djacop.jasat.lazyOrder=false and
    -Djacop.lcg.lazyOrder=false keep the orders eager. -s prints the
-   literals of the learnt clauses as lcgLearntLiterals.
+   literals of the learnt clauses as lcgLearntLiterals. LcgSolver also
+   reads the bounds of the root domains, checked for the literal of every
+   atom, from int arrays: the same search, sudoku_opt p29 and
+   gfd-schedule n100 -2.9 % each, wide-quick -f -0.9 %, default -0.2 %.
 
 Version 4.11
 =============
