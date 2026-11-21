@@ -196,26 +196,28 @@ class MddLinearSumFlatzincTest {
     assertEquals(solutions(run(fzn, "false", "-a")), solutions(out));
   }
 
+  /**
+   * Two diagrams that share the named arrays of levels, sources and targets and differ in their
+   * labels: the second (u = v) took the sum found for the first (x + y = 1).
+   */
   @Test
-  void diagramsSharingTheirNodeArraysAreCheckedEachOnItsOwn() throws IOException {
-    // both diagrams have the shape of x0 + x1 = 2 and name the same node and target arrays, but
-    // the second one's labels make it y0 + y1 = 3 with y0 >= 1
+  void diagramsSharingTheirSourcesKeepTheirOwnLabels() throws IOException {
     String fzn =
         """
-        array[1..6] of int: F = [1,1,1,2,3,4];
-        array[1..6] of int: T = [2,3,4,0,0,0];
-        array[1..4] of int: L = [1,2,2,2];
-        var 0..2: x0:: output_var;
-        var 0..2: x1:: output_var;
-        var 0..3: y0:: output_var;
-        var 0..3: y1:: output_var;
-        constraint jacop_mdd([x0,x1],L,F,[{0},{1},{2},{2},{1},{0}],T);
-        constraint jacop_mdd([y0,y1],L,F,[{1},{2},{3},{2},{1},{0}],T);
+        array [1..3] of int: L = [1,2,2];
+        array [1..4] of int: F = [1,1,2,3];
+        array [1..4] of int: T = [2,3,0,0];
+        var 0..1: x :: output_var;
+        var 0..1: y :: output_var;
+        var 0..1: u :: output_var;
+        var 0..1: v :: output_var;
+        constraint jacop_mdd([x,y],L,F,[{0},{1},{1},{0}],T);
+        constraint jacop_mdd([u,v],L,F,[{0},{1},{0},{1}],T);
         solve satisfy;
         """;
-    String off = run(fzn, "false", "-a");
-    assertEquals(9, solutions(off).size(), off);
-    assertEquals(solutions(off), solutions(run(fzn, null, "-a")));
+    Set<String> expected = solutions(run(fzn, "false", "-a"));
+    assertEquals(4, expected.size());
+    assertEquals(expected, solutions(run(fzn, null, "-a")));
   }
 
   private String run(String model, String property, String... options) throws IOException {

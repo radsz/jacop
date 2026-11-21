@@ -67,20 +67,20 @@ public final class MddLinearSum {
 
   private MddLinearSum() {}
 
-  /**
-   * The per diagram result of the structural part of the check, shared by calls on one graph: by
-   * the identity of all four arrays, since diagrams may share some of them (named FlatZinc arrays)
-   * and differ in the others.
-   */
-  private static final Map<Graph, Object> STRUCTURE = new HashMap<>();
+  /** The per diagram result of the structural part of the check, shared by calls on one graph. */
+  private static final Map<Diagram, Object> STRUCTURE = new HashMap<>();
 
-  private static final class Graph {
+  /**
+   * A diagram by the identity of its four arrays. Two diagrams of one model may share a named array
+   * of sources and differ in their labels, so the sources alone do not name a diagram.
+   */
+  private static final class Diagram {
     private final int[] level;
     private final int[] from;
     private final IntDomain[] label;
     private final int[] to;
 
-    Graph(int[] level, int[] from, IntDomain[] label, int[] to) {
+    Diagram(int[] level, int[] from, IntDomain[] label, int[] to) {
       this.level = level;
       this.from = from;
       this.label = label;
@@ -89,24 +89,19 @@ public final class MddLinearSum {
 
     @Override
     public boolean equals(Object o) {
-      return o instanceof Graph g
-          && g.level == level
-          && g.from == from
-          && g.label == label
-          && g.to == to;
+      return o instanceof Diagram d
+          && d.level == level
+          && d.from == from
+          && d.label == label
+          && d.to == to;
     }
 
     @Override
     public int hashCode() {
-      int h = System.identityHashCode(level);
-      h = 31 * h + System.identityHashCode(from);
-      h = 31 * h + System.identityHashCode(label);
-      return 31 * h + System.identityHashCode(to);
-    }
-
-    @Override
-    public String toString() {
-      return "Graph of " + from.length + " edges";
+      return 31
+              * (31 * (31 * System.identityHashCode(level) + System.identityHashCode(from))
+                  + System.identityHashCode(label))
+          + System.identityHashCode(to);
     }
   }
 
@@ -143,11 +138,11 @@ public final class MddLinearSum {
    */
   public static synchronized Long sum(
       IntVar[] x, int[] level, int[] from, IntDomain[] label, int[] to) {
-    Graph graph = new Graph(level, from, label, to);
-    Object s = STRUCTURE.get(graph);
+    Diagram diagram = new Diagram(level, from, label, to);
+    Object s = STRUCTURE.get(diagram);
     if (s == null) {
       s = structure(x.length, level, from, label, to);
-      STRUCTURE.put(graph, s);
+      STRUCTURE.put(diagram, s);
     }
     if (s == NOT_A_SUM) {
       return null;
