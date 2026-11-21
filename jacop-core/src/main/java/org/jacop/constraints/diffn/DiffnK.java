@@ -109,6 +109,13 @@ public class DiffnK extends Constraint implements SatisfiedPresent, Copyable<Dif
    */
   private boolean prunedOnce;
 
+  /**
+   * The lowest level of the changes since the last pruning. When it is below the current level, the
+   * store raised its level before this consistency and the boxes fixed at that level were not
+   * checked there, so no fixed box is skipped.
+   */
+  private int pendingLevel = Integer.MAX_VALUE;
+
   private long[] events;
   private boolean[] active;
   private long[] crossSection;
@@ -274,6 +281,13 @@ public class DiffnK extends Constraint implements SatisfiedPresent, Copyable<Dif
       for (IntVar l : box[i].length) {
         l.domain.inMin(store.level, l, 0);
       }
+    }
+  }
+
+  @Override
+  public void queueVariable(int level, Var v) {
+    if (level < pendingLevel) {
+      pendingLevel = level;
     }
   }
 
@@ -521,11 +535,12 @@ public class DiffnK extends Constraint implements SatisfiedPresent, Copyable<Dif
 
   private void pruning() {
 
+    boolean skipFixed = prunedOnce && pendingLevel >= store.level;
     for (int i = 0; i < box.length; i++) {
       Box b = box[i];
       BitSet current = candidates[i].value();
 
-      if (prunedOnce && b.fixedBefore(store.level)) {
+      if (skipFixed && b.fixedBefore(store.level)) {
         // the other boxes still have b as a candidate and prune against it
         if (!current.isEmpty()) {
           candidates[i].update(new BitSet());
@@ -568,6 +583,7 @@ public class DiffnK extends Constraint implements SatisfiedPresent, Copyable<Dif
       }
     }
     prunedOnce = true;
+    pendingLevel = Integer.MAX_VALUE;
   }
 
   /** True if the two boxes can never overlap again, whatever their remaining values. */

@@ -124,8 +124,12 @@ public class Sum extends Constraint implements SatisfiedPresent, Copyable<Sum>, 
       applySumDomainAndPropagateToVariables(store, pointer, lowerBoundSum, upperBoundSum);
     } while (store.propagationHasOccurred);
 
-    nextGroundedPosition.update(pointer);
-    sumGrounded.update(long2int(sumGroundedLocal));
+    // the trailed sum is an int: a fixed part beyond it is summed again at the next call, since a
+    // clamped value would be taken for the sum itself once negative terms bring it back in range
+    if (sumGroundedLocal == (int) sumGroundedLocal) {
+      nextGroundedPosition.update(pointer);
+      sumGrounded.update((int) sumGroundedLocal);
+    }
   }
 
   private long[] collectGroundedAndBounds(int pointer, long sumGroundedLocal) {
@@ -226,7 +230,7 @@ public class Sum extends Constraint implements SatisfiedPresent, Copyable<Sum>, 
       return false;
     }
 
-    int sumAll = 0;
+    long sumAll = 0;
     for (IntVar v : list) {
       sumAll += v.min();
     }

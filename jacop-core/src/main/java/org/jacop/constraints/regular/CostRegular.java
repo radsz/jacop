@@ -117,7 +117,7 @@ public class CostRegular extends Constraint
   private List<Constraint> constraints;
 
   /** One-time work of the first consistency call. */
-  private final InitOnce init = new InitOnce();
+  private InitOnce init = new InitOnce();
 
   /** Set while this constraint prunes domains, so its own changes are not queued again. */
   private boolean pruning;
@@ -372,6 +372,9 @@ public class CostRegular extends Constraint
   @Override
   public void impose(Store store) {
 
+    // a second imposition prunes its new graph to the domains at its first consistency call
+    init = new InitOnce();
+    stable = false;
     buildGraph();
 
     super.impose(store);

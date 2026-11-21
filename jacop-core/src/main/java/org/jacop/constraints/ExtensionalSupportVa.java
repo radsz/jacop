@@ -55,7 +55,7 @@ public class ExtensionalSupportVa extends AbstractExtensionalVa {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** Restricts the domains to the values of the tuples, in the first consistency call. */
-  final InitOnce init = new InitOnce();
+  InitOnce init = new InitOnce();
 
   LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
 
@@ -139,6 +139,8 @@ public class ExtensionalSupportVa extends AbstractExtensionalVa {
   public void impose(Store store) {
 
     super.impose(store);
+    // a second imposition restricts the domains to the values of its tuples again
+    init = new InitOnce();
     filterAndIndexTuples(store);
     tuplesFromConstructor = null;
     store.raiseLevelBeforeConsistency = true;
