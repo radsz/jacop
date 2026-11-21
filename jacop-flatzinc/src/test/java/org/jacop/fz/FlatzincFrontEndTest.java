@@ -6754,4 +6754,37 @@ class FlatzincFrontEndTest {
     assertEquals(
         "=====UNKNOWN=====\n%% =====TIME-OUT=====\n", buffer.toString(StandardCharsets.UTF_8));
   }
+
+  @Test
+  void freeSearchFirstKeepsTheClausesOfLcg() throws IOException {
+    // a sum of four squares runs free search without learning before LCG when a time-out is given;
+    // the clauses collected for LCG were not in its store, so it ignored b and printed x = 1
+    String model =
+        """
+        var 0..3: x :: output_var;
+        var -3..3: d;
+        var -2..3: m;
+        var 0..9: s1;
+        var 2..13: u;
+        var 0..168: s2;
+        var 0..4: v;
+        var 0..16: s3;
+        var -5..7: w;
+        var 0..49: s4;
+        var -260..260: obj :: output_var;
+        var bool: b :: output_var;
+        constraint int_lin_eq([-1,2],[d,x],3);
+        constraint int_max(d,-2,m);
+        constraint int_times(m,m,s1);
+        constraint int_times(u,u,s2);
+        constraint int_pow(v,2,s3);
+        constraint int_pow(w,2,s4);
+        constraint int_lin_eq([1,1,1,3,-1],[s1,s2,s3,s4,obj],0);
+        constraint int_le_reif(x, 0, b);
+        constraint bool_clause([b], []);
+        solve minimize obj;
+        """;
+    String out = run(model, "-t", "5000", "--lcg", "on")[0];
+    assertTrue(out.endsWith("x = 0;\nobj = 8;\nb = true;\n----------\n==========\n"), out);
+  }
 }

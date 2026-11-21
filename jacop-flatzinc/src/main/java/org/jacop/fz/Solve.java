@@ -7107,10 +7107,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IO.println("%%%mzn-stat: freeFirstSquares=" + squaredObjectiveTerms(costVar));
     }
     freeFirstMillis = Math.max(1, (long) (share * options.getRemainingTimeOut()));
+    // the clauses kept for the LCG solver are not in the store: they are posted in a level of
+    // their own for the search without learning, and removed with it before LCG starts
+    int root = store.level;
+    store.setLevel(root + 1);
     try {
+      for (IntVar[][] clause : sat.collectedClauses()) {
+        store.impose(new BoolClause(clause[0], clause[1]));
+      }
       executeFreeSearch(costVar);
     } finally {
       freeFirstMillis = 0;
+      store.removeLevel(root + 1);
+      store.setLevel(root);
     }
     if (options.debug()) {
       IO.println(
