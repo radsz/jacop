@@ -5669,7 +5669,7 @@ public final class LcgSolver implements ExternalPropagator {
     counted.limit = left;
     try {
       return !g.encodeClauses(counted) || counted.bytes() <= left;
-    } catch (OverBudget e) {
+    } catch (OverBudget _) {
       return false;
     }
   }

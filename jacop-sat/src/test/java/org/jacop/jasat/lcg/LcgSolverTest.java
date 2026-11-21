@@ -6735,13 +6735,6 @@ class LcgSolverTest {
   }
 
   /**
-   * Routes without its own degrees (as the FlatZinc detector posts it, beside exactly-one rows)
-   * explains a failure only by what it propagates itself: never by a node whose arcs out or in are
-   * all 0, which only the rows rule out. The explanation checker copies the constraint alone, so
-   * such a reason showed as wrong (2014 stochastic-vrp under --lcg). The optimum must match a
-   * search with the degrees kept by Routes.
-   */
-  /**
    * A layered graph whose described edges are many but whose clauses are few becomes clauses: the
    * budget is checked against its counted clauses, not only against the bytes a described edge may
    * take at most. Six of the 17 regular constraints of pentominoes 04 (MiniZinc Challenge 2020)
@@ -6795,6 +6788,13 @@ class LcgSolverTest {
     assertThat(small.graphConstraintsTooLarge).isOne();
   }
 
+  /**
+   * Routes without its own degrees (as the FlatZinc detector posts it, beside exactly-one rows)
+   * explains a failure only by what it propagates itself: never by a node whose arcs out or in are
+   * all 0, which only the rows rule out. The explanation checker copies the constraint alone, so
+   * such a reason showed as wrong (2014 stochastic-vrp under --lcg). The optimum must match a
+   * search with the degrees kept by Routes.
+   */
   /**
    * A regular constraint that became clauses propagates again after the solver releases the store,
    * also when the solver was built above the root level, where removing a constraint only marks it
