@@ -219,6 +219,20 @@ class LcgSlowFallbackFlatzincTest {
   }
 
   @Test
+  void slowLcgGoingDeepBetweenConflictsIsKept() {
+    // cable_tree_wiring A073 (MiniZinc Challenge 2020): 957 conflicts, 3 solutions and about
+    // 1,000 decisions per conflict at the check of a 600 s run
+    assertTrue(Solve.deepDescents(957, 957_000, 3, 100));
+    // rect-euler EU_combined (2026), which gains from the hand-over: 76 decisions per conflict
+    assertFalse(Solve.deepDescents(5_343, 406_301, 10, 100));
+    // unit-commitment L12 (2023): deep descents that end in solutions, not conflicts
+    assertFalse(Solve.deepDescents(126, 3_982_469, 1_074, 100));
+    // no conflict yet; 0 turns the rule off
+    assertFalse(Solve.deepDescents(0, 100_000, 0, 100));
+    assertFalse(Solve.deepDescents(957, 957_000, 3, 0));
+  }
+
+  @Test
   void theWindowSeesSolutionsFoundBeforeTheFirstCheck() {
     long s = 1_000_000_000L;
     int noCost = Integer.MAX_VALUE;
