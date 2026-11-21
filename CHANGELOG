@@ -8679,6 +8679,27 @@ Version 5.0 (unreleased)
    18 s, brazil58 proved in 174 s), 25 unsolved tours worse; -f 27 -> 28
    proved, time 11,642 -> 11,044 s, 11 tours worse.
 
+487. The clausal compilation of satisfaction models (entry 468) takes
+   domains of up to 64 values (was 3). A variable that appears only in
+   tables, alldifferent, the lists of counts and sums of three or more
+   terms gets direct literals with at-least-one and at-most-one clauses
+   and no order literals (direct encoding: de Kleer, A comparison of ATMS
+   and CSP techniques, IJCAI 1989; Walsh, SAT v CSP, CP 2000); binary
+   tables get the support encoding, on which unit propagation keeps arc
+   consistency (Kasif, On the parallel complexity of discrete relaxation
+   in constraint satisfaction networks, AIJ 45, 1990; Gent, Arc
+   consistency in SAT, ECAI 2002); strictly increasing is compiled.
+   Models with a regular constraint over more than 3 values
+   (-Dorg.jacop.fz.clausal.regularDomain) and CNFs of more than 2M
+   clauses (-Dorg.jacop.fz.clausal.maxClauses) stay with lazy clause
+   generation; -Dorg.jacop.fz.clausal.direct=false gives every variable
+   order literals. It fires on 211 of 798 XCSP CSP models of 2022-2026
+   (30 before) and on 5 of the 240 wide-set instances under -f. 600 s on
+   the 76 of them that take more than 30 s: 32 -> 38 decided, total
+   29,947 -> 26,975 s; newly decided Eternity-08-07, HyperSudoku-06,
+   FRB-45-21-1, FRB-53-24-1, EFPA-4-4-5-11 (UNSAT), EFPA-6-4-4-13,
+   Ortholatin-08; lost SocialGolfers-08-04-11 and FRB-45-21-3.
+
 Version 4.11
 =============
 
