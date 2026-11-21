@@ -667,8 +667,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return;
     }
     long start = timer.getCpuTime();
-    DominanceNogoods.Outcome o =
-        new DominanceNogoods(store, objective, k == 1).run(sat.collectedClauses());
+    DominanceNogoods dominance = new DominanceNogoods(store, objective, k == 1);
+    if (options.getTimeOut() > 0) {
+      dominance.setDeadline(System.nanoTime() + options.getRemainingTimeOut() * 1_000_000L);
+    }
+    DominanceNogoods.Outcome o = dominance.run(sat.collectedClauses());
     boolean ok = store.consistency();
     if (options.searchStatistics()) {
       IO.println(
@@ -1073,11 +1076,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       refutationBuildNanos = System.nanoTime() - built;
       if (refutation != null) {
         refutation.setTimeLimit(options.getTimeOut());
+        if (options.getTimeOut() > 0 && !CdclSolver.VIRTUAL_CLOCK) {
+          refutation.setDeadline(System.nanoTime() + options.getRemainingTimeOut() * 1_000_000L);
+        }
         store.impose(refutation);
       }
     }
     if (linearRelaxation != null) {
       linearRelaxation.setTimeLimit(options.getTimeOut());
+      if (options.getTimeOut() > 0 && !CdclSolver.VIRTUAL_CLOCK) {
+        linearRelaxation.setDeadline(
+            System.nanoTime() + options.getRemainingTimeOut() * 1_000_000L);
+      }
       store.impose(linearRelaxation);
       if (lpProbeMs > 0
           && (!options.freeSearch() || FREE_LP_PROBE)
@@ -1451,7 +1461,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (modelRoot == null) {
       return null;
     }
-    return new ObjectiveDetector(new Support(store, dictionary, sat))
+    return new ObjectiveDetector(new Support(store, dictionary, sat), dictionary.unusedVariables)
         .collect(modelRoot, objective, k == 1);
   }
 
@@ -2896,8 +2906,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         return "the model has float variables";
       }
     }
+    for (int i = 0; i < store.size(); i++) {
+      // LCG mirrors every element a set may still take by a 0/1 variable
+      if (store.vars[i] instanceof SetVar s
+          && (long) s.domain.lub().getSize() - s.domain.glb().getSize() > MAX_MIRRORED_ELEMENTS) {
+        return "a set variable has more than " + MAX_MIRRORED_ELEMENTS + " open elements";
+      }
+    }
     return null;
   }
+
+  // the most elements of a set variable that LCG mirrors by 0/1 variables
+  private static final int MAX_MIRRORED_ELEMENTS = 1 << 20;
 
   // -Djacop.lcg.probe=share: root probing of the 0/1 variables and small domains before LCG
   // search, for at most this share of the time left; 0 is off, the default of model search
@@ -8414,6 +8434,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * found is still the optimum of the model when only the objective was cut, on its worse side.
    */
   private boolean clampedDomainsKeepOptimum() {
+    if (dictionary.floatDomainsNarrowed()) {
+      return false;
+    }
     if (!dictionary.domainsClamped()
         || dictionary.onlyObjectiveWorseSideClamped(objectiveVariable, minimize)) {
       return true;
@@ -8443,8 +8466,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   /** Whether the narrowing of declared domains may hide a solution of a satisfaction problem. */
   private boolean clampedDomainsHideSolutions() {
-    return dictionary.domainsClamped()
-        && !dictionary.clampsHarmless(null, -ClampedBounds.INF, ClampedBounds.INF);
+    return dictionary.floatDomainsNarrowed()
+        || dictionary.domainsClamped()
+            && !dictionary.clampsHarmless(null, -ClampedBounds.INF, ClampedBounds.INF);
   }
 
   private boolean isSearchComplete() {
@@ -9745,7 +9769,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           .append(nf.format(cpuTime == 0 ? 0.0 : (double) nodes / (cpuTime / 1000)))
           .append("\n");
     }
-    if (restartCalculator != null) {
+    // LCG search keeps the restart calculator of --restart without a restart search
+    if (restartCalculator != null && rs != null) {
       printBuffer.append("%%%mzn-stat: restarts=").append(nf.format(rs.restarts())).append("\n");
     }
     printBuffer.append("%%%mzn-stat: solveTime=").append(nf.format(cpuTime / 1000)).append("\n");

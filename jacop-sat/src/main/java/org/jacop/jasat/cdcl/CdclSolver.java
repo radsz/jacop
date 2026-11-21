@@ -3556,6 +3556,10 @@ public final class CdclSolver {
           lit = external.propagate();
         }
         if (lit == 0) {
+          // a propagation cut by the deadline is no fixpoint: no decision and no model follow
+          if (external.propagationCut()) {
+            outOfTime = true;
+          }
           return NO_CONFLICT;
         }
         implied = toLit(lit);

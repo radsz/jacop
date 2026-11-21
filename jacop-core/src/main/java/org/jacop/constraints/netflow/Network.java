@@ -79,6 +79,20 @@ public class Network extends NetworkSimplex implements MutableNetwork {
   /** Number of modified arcs at each level. */
   public TimeStampInt modifiedSize;
 
+  /**
+   * The lowest level of the variable changes being processed, when below the store level: the store
+   * may raise its level before a consistency (Store.raiseLevelBeforeConsistency), so changes of
+   * level l are processed at level l + 1. The arcs then modified are recorded at l + 1, whose
+   * removal restores them from the domains of level l, and they must be restored again when l is
+   * removed.
+   */
+  int lateLevel = Integer.MAX_VALUE;
+
+  /** Arcs modified for changes of a lower level, with the level whose removal restores them. */
+  private final List<ArcCompanion> lateArcs = new ArrayList<>();
+
+  private final List<Integer> lateArcLevels = new ArrayList<>();
+
   // Data structure for pruning
 
   /** The store. */
@@ -108,6 +122,8 @@ public class Network extends NetworkSimplex implements MutableNetwork {
   public void initialize(Store store) {
 
     this.store = store;
+    lateArcs.clear();
+    lateArcLevels.clear();
     this.deletedSize = new TimeStampInt(store, 0);
     this.modifiedSize = new TimeStampInt(store, 0);
   }
@@ -218,6 +234,11 @@ public class Network extends NetworkSimplex implements MutableNetwork {
   @Override
   public void modified(ArcCompanion companion) {
 
+    if (lateLevel < store.level) {
+      lateArcs.add(companion);
+      lateArcLevels.add(lateLevel);
+    }
+
     if (lastModifiedArcs.add(companion)) {
       modifiedArcs.add(companion);
       modifiedSize.update(modifiedArcs.size());
@@ -245,8 +266,12 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     }
   }
 
-  /** Backtracks the network by restoring deleted and modified arcs to their previous state. */
-  public void backtrack() {
+  /**
+   * Backtracks the network by restoring deleted and modified arcs to their previous state.
+   *
+   * @param level the removed level.
+   */
+  public void backtrack(int level) {
 
     // Arcs modified at the removed levels are no longer modified at the current level. Without
     // this, an arc modified at a deeper level and then again at the current level (for example by
@@ -265,6 +290,33 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     for (int i = modifiedArcs.size() - 1; i >= size; i--) {
       ArcCompanion companion = modifiedArcs.remove(i);
       restore(companion);
+    }
+
+    // arcs modified at a higher level for changes of this level
+    for (int i = lateArcs.size() - 1; i >= 0; i--) {
+      if (lateArcLevels.get(i) >= level) {
+        lateArcLevels.remove(i);
+        restore(lateArcs.remove(i));
+      }
+    }
+  }
+
+  /**
+   * Restores every arc deleted or modified since the network was initialized, when the level at
+   * which its constraint was imposed is removed: the time stamps of the sizes have no value below
+   * that level, and the network must be whole for a later imposition of the same constraint.
+   */
+  public void backtrackAll() {
+    lastModifiedArcs.clear();
+    for (int i = deletedArcs.size() - 1; i >= 0; i--) {
+      add(deletedArcs.remove(i));
+    }
+    for (int i = modifiedArcs.size() - 1; i >= 0; i--) {
+      restore(modifiedArcs.remove(i));
+    }
+    for (int i = lateArcs.size() - 1; i >= 0; i--) {
+      lateArcLevels.remove(i);
+      restore(lateArcs.remove(i));
     }
   }
 

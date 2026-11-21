@@ -31,6 +31,10 @@
 package org.jacop.fz.constraints;
 
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
 import org.jacop.fz.ASTAnnExpr;
@@ -58,7 +62,11 @@ import org.jacop.presolve.ObjectivePresolve;
  */
 public class ObjectiveDetector implements ParserTreeConstants {
 
+  private static final IntVar[] NONE = new IntVar[0];
+
   private final Support support;
+
+  private final Set<Var> removed;
 
   /**
    * It creates a detector reading variables through the given support.
@@ -66,7 +74,24 @@ public class ObjectiveDetector implements ParserTreeConstants {
    * @param support the support of the FlatZinc front end.
    */
   public ObjectiveDetector(Support support) {
+    this(support, Set.of());
+  }
+
+  /**
+   * It creates a detector that leaves out the constraints over variables the front end removed.
+   *
+   * <p>A pass such as affine folding replaces the definition of a variable and leaves the variable
+   * in no constraint. The replaced item is still in the parsed model, but it no longer holds in the
+   * store, so no fact may be drawn from it.
+   *
+   * @param support the support of the FlatZinc front end.
+   * @param removed the variables the front end left unconstrained.
+   */
+  public ObjectiveDetector(Support support, Collection<? extends Var> removed) {
     this.support = support;
+    Set<Var> set = Collections.newSetFromMap(new IdentityHashMap<>());
+    set.addAll(removed);
+    this.removed = set;
   }
 
   /**
@@ -111,6 +136,9 @@ public class ObjectiveDetector implements ParserTreeConstants {
           return;
         }
         IntVar rhs = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+        if (gone(x, rhs)) {
+          return;
+        }
         if (rhs.singleton()) {
           presolve.addEquation(x, a, rhs.value(), definedVar(item));
         } else {
@@ -126,7 +154,12 @@ public class ObjectiveDetector implements ParserTreeConstants {
         int[] a = support.getIntArray(child(node, 0));
         IntVar[] x = support.getVarArray(child(node, 1));
         IntVar rhs = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-        if (a != null && a.length == x.length && rhs.singleton() && rhs.value() == 1 && unit(a)) {
+        if (a != null
+            && a.length == x.length
+            && rhs.singleton()
+            && rhs.value() == 1
+            && unit(a)
+            && !gone(x)) {
           presolve.addAtMostOne(x);
         }
       }
@@ -134,35 +167,42 @@ public class ObjectiveDetector implements ParserTreeConstants {
         IntVar[] x = support.getVarArray(child(node, 0));
         int value = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
         IntVar n = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-        presolve.addCount(x, value, n);
+        if (!gone(x, n)) {
+          presolve.addCount(x, value, n);
+        }
       }
       case "int_eq_reif" -> {
         IntVar x = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
         IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
         IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+        if (gone(NONE, x, y, b)) {
+          return;
+        }
         if (y.singleton() && !x.singleton()) {
           presolve.addValueLiteral(x, y.value(), b);
         } else if (x.singleton() && !y.singleton()) {
           presolve.addValueLiteral(y, x.value(), b);
         }
       }
-      case "bool2int", "bool_eq" ->
-          presolve.addEquality(
-              support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0)),
-              support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1)));
-      case "array_bool_or" ->
-          presolve.addOr(
-              support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1)),
-              support.getVarArray(child(node, 0)));
-      case "bool_clause_reif" -> {
-        if (support.getVarArray(child(node, 1)).length == 0) {
-          presolve.addOr(
-              support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2)),
-              support.getVarArray(child(node, 0)));
+      case "bool2int", "bool_eq" -> {
+        IntVar x = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+        IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+        if (!gone(NONE, x, y)) {
+          presolve.addEquality(x, y);
         }
       }
-      case "jacop_alldiff", "jacop_alldistinct" ->
-          presolve.addAllDifferent(support.getVarArray(child(node, 0)));
+      case "array_bool_or" -> or(presolve, node, 1);
+      case "bool_clause_reif" -> {
+        if (support.getVarArray(child(node, 1)).length == 0) {
+          or(presolve, node, 2);
+        }
+      }
+      case "jacop_alldiff", "jacop_alldistinct" -> {
+        IntVar[] x = support.getVarArray(child(node, 0));
+        if (!gone(x)) {
+          presolve.addAllDifferent(x);
+        }
+      }
       case "array_int_element" -> element(presolve, node, support.getIntArray(child(node, 1)), 1);
       case "array_var_int_element" -> element(presolve, node, constants(child(node, 1)), 1);
       case "jacop_array_var_int_element_nonshifted" ->
@@ -175,6 +215,32 @@ public class ObjectiveDetector implements ParserTreeConstants {
         // not used by objective presolve
       }
     }
+  }
+
+  private void or(ObjectivePresolve presolve, ASTConstElem node, int result) {
+    IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(result));
+    IntVar[] x = support.getVarArray(child(node, 0));
+    if (!gone(x, r)) {
+      presolve.addOr(r, x);
+    }
+  }
+
+  // true when the front end removed one of the variables, so their constraint is not posted
+  private boolean gone(IntVar[] list, IntVar... others) {
+    if (removed.isEmpty()) {
+      return false;
+    }
+    for (IntVar v : list) {
+      if (removed.contains(v)) {
+        return true;
+      }
+    }
+    for (IntVar v : others) {
+      if (removed.contains(v)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static boolean unit(int[] a) {
@@ -192,6 +258,9 @@ public class ObjectiveDetector implements ParserTreeConstants {
     }
     IntVar index = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
     IntVar value = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+    if (gone(NONE, index, value)) {
+      return;
+    }
     presolve.addElement(index, array, firstIndex, value);
   }
 

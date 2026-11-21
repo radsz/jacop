@@ -141,7 +141,7 @@ public class MultiCostRegular extends Constraint
   private boolean lagrangian;
 
   /** One-time work of the first consistency call. */
-  private final InitOnce init = new InitOnce();
+  private InitOnce init = new InitOnce();
 
   /** Set while this constraint prunes domains, so its own changes are not queued again. */
   private boolean pruning;
@@ -448,6 +448,9 @@ public class MultiCostRegular extends Constraint
   @Override
   public void impose(Store store) {
 
+    // a second imposition prunes its new graph to the domains at its first consistency call
+    init = new InitOnce();
+    stable = false;
     buildGraph();
 
     super.impose(store);

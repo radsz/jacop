@@ -308,7 +308,7 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
       return 0;
     }
     if (ranges == null) {
-      ranges = new int[] {minBound, lo - 1, hi + 1, maxBound};
+      setRanges(new int[] {minBound, lo - 1, hi + 1, maxBound}, 2);
     } else {
       // the intervals within the bounds without lo..hi
       int n = ranges.length >>> 1;
@@ -1698,11 +1698,13 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
     if (result.getSize() == size) {
       return NONE;
     }
+    int previousMin = minBound;
+    int previousMax = maxBound;
     assign(result);
-    if (isEmpty()) {
+    if (isEmpty() || singleton()) {
       return GROUND;
     }
-    return singleton() ? GROUND : ANY;
+    return minBound != previousMin || maxBound != previousMax ? BOUND : ANY;
   }
 
   @Override
