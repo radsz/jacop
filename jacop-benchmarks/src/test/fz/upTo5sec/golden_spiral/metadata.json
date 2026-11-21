@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["float_cos", "float_exp", "float_lin_eq", "float_sin", "float_times"],
+  "constraintFamilies": ["float"],
+  "domains": []
+}

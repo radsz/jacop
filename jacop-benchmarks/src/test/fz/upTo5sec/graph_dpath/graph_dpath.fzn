@@ -1,0 +1,22 @@
+
+predicate jacop_dpath(array [int] of int: from,array [int] of int: to,var int: s,var int: t,array [int] of var bool: ns,array [int] of var bool: es,int: base);
+array [1..9] of int: to = [2,3,3,4,4,5,5,4,2];
+array [1..9] of int: from = [1,1,2,2,3,3,4,2,4];
+var bool: X_INTRODUCED_16_;
+var bool: X_INTRODUCED_17_;
+var bool: X_INTRODUCED_18_;
+var bool: X_INTRODUCED_19_;
+var bool: X_INTRODUCED_20_;
+var bool: X_INTRODUCED_21_;
+var bool: X_INTRODUCED_22_;
+var bool: X_INTRODUCED_23_;
+var bool: X_INTRODUCED_24_;
+var bool: X_INTRODUCED_25_;
+var bool: X_INTRODUCED_26_;
+var bool: X_INTRODUCED_27_;
+var bool: X_INTRODUCED_28_;
+var bool: X_INTRODUCED_29_;
+array [1..5] of var bool: ns:: output_array([1..5]) = [X_INTRODUCED_16_,X_INTRODUCED_17_,X_INTRODUCED_18_,X_INTRODUCED_19_,X_INTRODUCED_20_];
+array [1..9] of var bool: es:: output_array([1..9]) = [X_INTRODUCED_21_,X_INTRODUCED_22_,X_INTRODUCED_23_,X_INTRODUCED_24_,X_INTRODUCED_25_,X_INTRODUCED_26_,X_INTRODUCED_27_,X_INTRODUCED_28_,X_INTRODUCED_29_];
+constraint jacop_dpath(from,to,1,5,ns,es,1);
+solve  satisfy;

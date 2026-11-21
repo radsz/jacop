@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["jacop_count_values", "jacop_count_values_bounds"],
+  "constraintFamilies": ["counting"],
+  "domains": []
+}

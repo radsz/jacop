@@ -1,0 +1,1971 @@
+/*
+ * Tables.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.fz;
+
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.jacop.api.VarMap;
+import org.jacop.constraints.Routes;
+import org.jacop.constraints.TableCliques;
+import org.jacop.constraints.lp.TimeIndexedBound;
+import org.jacop.core.BooleanVar;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
+import org.jacop.floats.core.FloatVar;
+import org.jacop.fz.constraints.ClampedBounds;
+import org.jacop.fz.constraints.IndexDisjunctionDetector;
+import org.jacop.fz.constraints.SaturatedProducts;
+import org.jacop.fz.constraints.TableVariableElimination;
+import org.jacop.fz.constraints.ZeroSumDetector;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.LinearForm;
+import org.jacop.set.core.BoundSetDomain;
+import org.jacop.set.core.SetVar;
+
+/**
+ * This class contains information about all variables, including the variables which are used by
+ * search.
+ *
+ * @author Krzysztof Kuchcinski
+ * @version 5.0
+ */
+public class Tables {
+
+  public final Map<IntVar, IntVar> aliasTable = new LinkedHashMap<>();
+
+  // aliasTable by the store index of the key, for getAlias, whose lookups of aliasTable missed the
+  // cache on large models (a sixth of the set-up of MaxSAT 2021 relational-inference ar-2); the
+  // key is kept too, since a variable of another store may have the same index, and two keys with
+  // one index (of two stores) leave getAlias to aliasTable
+  private IntVar[] aliasKeys = new IntVar[0];
+
+  private IntVar[] aliasValues = new IntVar[0];
+
+  private boolean sharedAliasIndex;
+
+  /** Under --proof, the trail of the root propagation, which the proof derives; null otherwise. */
+  AtomicTrail rootTrail;
+
+  /** Whether --proof wrote the proof that the root propagation fails. */
+  boolean rootFailureProved;
+
+  /** The Boolean variables that integer variables are aliases of (the values of aliasTable). */
+  private final Set<IntVar> aliasTargets = new HashSet<>();
+
+  final HashMap<Integer, IntVar> constantTable = new HashMap<>();
+  final HashMap<Integer, BooleanVar> constantTableBoolean = new HashMap<>();
+  final HashMap<Double, FloatVar> constantFloatTable = new HashMap<>();
+  // intTable keeps both int & bool (0=false, 1=true) parameters
+  final HashMap<String, Integer> intTable = new HashMap<>();
+  final HashMap<String, Double> floatTable = new HashMap<>();
+  final HashMap<String, int[]> intArrayTable =
+      new HashMap<>(); // boolean are also stored here as 0/1 values
+  // arrays of parameters read as arrays of constants while the constraints are posted: each
+  // detector that looked at an element read the array again, boxing every entry (2000 elements
+  // over one array of 20,000 integers: 5 GB of Integer allocated by six detectors)
+  private final HashMap<String, IntVar[]> constantArrayTable = new HashMap<>();
+  final HashMap<String, double[]> floatArrayTable = new HashMap<>();
+  final HashMap<String, IntDomain> setTable = new HashMap<>();
+  final HashMap<String, IntDomain[]> setArrayTable = new HashMap<>();
+  final HashMap<String, IntVar> variableTable = new HashMap<>();
+  final HashMap<String, IntVar[]> variableArrayTable = new HashMap<>();
+  final HashMap<String, FloatVar> variableFloatTable = new HashMap<>();
+  final HashMap<String, FloatVar[]> variableFloatArrayTable = new HashMap<>();
+  final HashMap<String, SetVar> setVariableTable = new HashMap<>();
+  final HashMap<String, SetVar[]> setVariableArrayTable = new HashMap<>();
+  final ArrayList<Var> outputVariables = new ArrayList<>();
+  final ArrayList<OutputArrayAnnotation> outputArray = new ArrayList<>();
+  final ArrayList<Var> defaultSearchVariables = new ArrayList<>();
+
+  // variables the search labels before any other (the lattice variables of a reformulation)
+  final ArrayList<Var> searchFirst = new ArrayList<>();
+  final ArrayList<Var> defaultSearchFloatVariables = new ArrayList<>();
+  final ArrayList<Var[]> defaultSearchArrays = new ArrayList<>();
+  final ArrayList<Var[]> defaultSearchFloatArrays = new ArrayList<>();
+  final ArrayList<Var> defaultSearchSetVariables = new ArrayList<>();
+  final ArrayList<Var[]> defaultSearchSetArrays = new ArrayList<>();
+  // variables named by a defines_var annotation of a constraint
+  final ArrayList<Var> definedVariables = new ArrayList<>();
+  // the variables of definedVariables named by a half-reified constraint (b -> c, MiniZinc *_imp),
+  // which bounds b but does not fix it from the other variables
+  final ArrayList<Var> halfDefinedVariables = new ArrayList<>();
+  // whether the solve item carries a search annotation; set before the constraints are posted
+  boolean searchAnnotated;
+
+  // float variables declared var_is_introduced or is_defined_var: MiniZinc's intermediate results
+  final ArrayList<Var> introducedFloatVariables = new ArrayList<>();
+
+  // variables that no constraint uses any more, such as the sums merged into a minimum
+  final ArrayList<Var> unusedVariables = new ArrayList<>();
+
+  /** The variables that table variable elimination joined out of the model, or null. */
+  TableVariableElimination tableElimination;
+
+  // the output variables whose defining sums ZeroSumDetector dropped, null if none
+  ZeroSumDetector.OutputSums zeroSums;
+
+  // the index variables and results that IndexDisjunctionDetector left out, null if none
+  IndexDisjunctionDetector.Values indexDisjunctions;
+
+  // the cost function network of the objective (-Dorg.jacop.fz.costNetwork=true), until Solve
+  // builds
+  // its bound
+  org.jacop.fz.constraints.CostNetworkDetector costNetwork;
+
+  // a satisfaction model over small domains compiled into one CNF, which Solve gives to JaSAT
+  public org.jacop.fz.constraints.ClausalModel clausalModel;
+
+  // variables the detectors add for redundant constraints, which follow from the model's own: the
+  // search of lazy clause generation branches on them last
+  final ArrayList<Var> auxiliaryVariables = new ArrayList<>();
+
+  // the block sums of linear constraints split for lazy clause generation
+  final ArrayList<IntVar> splitSums = new ArrayList<>();
+
+  // whether the linear rows of the model were set rows before linear overlap factoring rewrote
+  // them (LinearOverlapDetector.setRows), and the integer variables they define
+  boolean overlapSetRows;
+
+  final ArrayList<IntVar> overlapSetRowsDefined = new ArrayList<>();
+
+  // the rows that linear overlap factoring reduced to a multiple of one sub-sum, k * z rel c:
+  // posted as bounds of z, they reach the linear relaxation only from here
+  final ArrayList<LinearForm> overlapUnitRows = new ArrayList<>();
+
+  // the tables of the model, for the clique rows of the linear relaxation
+  private final ArrayList<TableCliques.Table> tables = new ArrayList<>();
+
+  // vehicle routes found in the model and not imposed, for the route neighbourhoods of LNS
+  private final ArrayList<Routes> lnsRoutes = new ArrayList<>();
+  // IntVar zero, one;
+  Store store;
+  int numberBoolVariables;
+  int numberFloatVariables;
+  int numberSetVariables;
+  // MiniZinc on_restart built-ins of the model, or null
+  OnRestart onRestart;
+
+  /**
+   * The tiling by arithmetic progressions found in the model ({@link
+   * org.jacop.fz.constraints.ProgressionTilingDetector}), whose branching satisfaction search
+   * without an annotation uses, or null.
+   */
+  public org.jacop.fz.constraints.ProgressionTilingDetector.Tiling progressionTiling;
+
+  /**
+   * The positions of the values of the Hamiltonian paths written as a numbering ({@link
+   * org.jacop.fz.constraints.NumberedPathDetector}): positions[k] is the cell (1-based) of value k
+   * + 1. The satisfaction search of a model without an annotation follows the path over them.
+   */
+  public final List<IntVar[]> pathPositions = new ArrayList<>();
+
+  /**
+   * The bound of a model of maximum clique and nothing else ({@link
+   * org.jacop.fz.constraints.MaxCliqueDetector}), whose search without an annotation branches on
+   * its vertices, or null.
+   */
+  public org.jacop.constraints.MaxCliqueBound maxClique;
+
+  // the domains of the variables of inverse channels as declared, before the constraints prune
+  // them, for ConditionalValueSwaps
+  private final Map<IntVar, IntDomain> channelDomains = new IdentityHashMap<>();
+
+  /**
+   * Records the domain of a variable of an inverse channel before the constraints of the model
+   * prune it.
+   *
+   * @param v the variable
+   */
+  public void recordChannelDomain(IntVar v) {
+    channelDomains.computeIfAbsent(v, x -> x.dom().cloneLight());
+  }
+
+  /**
+   * The domain of a variable of an inverse channel as declared.
+   *
+   * @param v the variable
+   * @return its domain before the constraints were posted, or its current domain if it was not
+   *     recorded
+   */
+  IntDomain channelDomain(IntVar v) {
+    IntDomain d = channelDomains.get(v);
+    return d != null ? d : v.dom();
+  }
+
+  // the variables defined as functions of bin loads, for the arc-flow blocks of the time-indexed
+  // bound (org.jacop.lp.arcFlow)
+  List<TimeIndexedBound.LoadFunction> loadFunctions = List.of();
+  // variables whose declared domain reached beyond JaCoP's integer range and was narrowed to it
+  private final ArrayList<ClampedDomain> clampedDomains = new ArrayList<>();
+
+  /**
+   * A variable whose declared domain was narrowed to JaCoP's integer range.
+   *
+   * @param ident the variable's identifier
+   * @param declared the declared bounds, as written in the model
+   * @param low whether the lower bound was raised
+   * @param high whether the upper bound was lowered
+   * @param unbounded whether the variable was declared without bounds (var int)
+   */
+  record ClampedDomain(
+      String ident, String declared, boolean low, boolean high, boolean unbounded) {}
+
+  /**
+   * It constructs the storage object to store different objects, like int, array of ints, sets, ...
+   * .
+   */
+  public Tables() {}
+
+  /**
+   * Constructs the storage object with a store reference.
+   *
+   * @param s the constraint store
+   */
+  public Tables(Store s) {
+    this.store = s;
+  }
+
+  void noteClampedDomain(ClampedDomain d) {
+    clampedDomains.add(d);
+  }
+
+  /**
+   * Notes that a declared float domain reached beyond JaCoP's float range and was narrowed to it:
+   * the values cut off may hold every solution, or the better ones.
+   */
+  void noteNarrowedFloatDomain() {
+    floatDomainsNarrowed = true;
+  }
+
+  /**
+   * Tells whether a declared float domain was narrowed to JaCoP's float range. A completed search
+   * then proves neither unsatisfiability nor optimality.
+   *
+   * @return true if a declared float domain was narrowed.
+   */
+  public boolean floatDomainsNarrowed() {
+    return floatDomainsNarrowed;
+  }
+
+  private boolean floatDomainsNarrowed;
+
+  /**
+   * Notes a variable declared without bounds (var int), created over JaCoP's integer range: its
+   * values beyond the range are cut off as for a narrowed declared domain.
+   *
+   * @param ident the identifier of the variable or of the array of variables
+   */
+  void noteUnboundedDomain(String ident) {
+    clampedDomains.add(new ClampedDomain(ident, "int", true, true, true));
+  }
+
+  // pairs of variables a declaration makes equal (var int: x = y), with the bounds each had
+  // before the equality was imposed
+  private final List<IntVar[]> declaredEqualities = new ArrayList<>();
+  private final Set<IntVar> declaredEqual = Collections.newSetFromMap(new IdentityHashMap<>());
+  private final IdentityHashMap<IntVar, long[]> boundsBeforeEquality = new IdentityHashMap<>();
+  private final Set<SetVar> declaredEqualSets = Collections.newSetFromMap(new IdentityHashMap<>());
+  // the factor the objective was divided by (ObjectiveScaling), and the identifiers of the
+  // variables that hold the divided values
+  private long objectiveScale = 1;
+  private final Set<String> scaledIdents = new HashSet<>();
+
+  /**
+   * Notes that the declaration of a variable makes it equal to another, before the equality is
+   * imposed.
+   *
+   * @param x the declared variable
+   * @param y the variable it is declared equal to
+   */
+  void noteDeclaredEquality(IntVar x, IntVar y) {
+    declaredEqualities.add(new IntVar[] {x, y});
+    declaredEqual.add(x);
+    declaredEqual.add(y);
+    boundsBeforeEquality.putIfAbsent(x, new long[] {x.min(), x.max()});
+    boundsBeforeEquality.putIfAbsent(y, new long[] {y.min(), y.max()});
+  }
+
+  /**
+   * The pairs of variables declarations make equal.
+   *
+   * @return the pairs
+   */
+  public List<IntVar[]> declaredEqualities() {
+    return declaredEqualities;
+  }
+
+  /**
+   * Whether a declaration makes the variable equal to another one. Such a variable must not become
+   * an alias or be folded away, since the equality posted for the declaration stays on it.
+   *
+   * @param v the variable
+   * @return true if v is in a pair of {@link #declaredEqualities()}
+   */
+  public boolean isDeclaredEqual(IntVar v) {
+    return declaredEqual.contains(v);
+  }
+
+  /**
+   * Notes that the declaration of a set variable makes it equal to another one.
+   *
+   * @param x the declared variable
+   * @param y the variable it is declared equal to
+   */
+  void noteDeclaredEquality(SetVar x, SetVar y) {
+    declaredEqualSets.add(x);
+    declaredEqualSets.add(y);
+  }
+
+  /**
+   * Whether a declaration makes the set variable equal to another one. Such a variable must not be
+   * left without constraints, since the equality posted for the declaration stays on it.
+   *
+   * @param v the set variable
+   * @return true if a declaration makes v equal to another set variable
+   */
+  public boolean isDeclaredEqual(SetVar v) {
+    return declaredEqualSets.contains(v);
+  }
+
+  /**
+   * Adds the variables of the pairs declarations make equal. A detector that removes or merges
+   * variables must keep them, like the variables of the alias table, since the equality posted for
+   * a declaration is not among the model's constraint items.
+   *
+   * @param into the set the variables are added to
+   */
+  public void addDeclaredEqualities(Collection<IntVar> into) {
+    for (IntVar[] pair : declaredEqualities) {
+      into.add(pair[0]);
+      into.add(pair[1]);
+    }
+  }
+
+  /**
+   * The declared bounds of a variable narrowed to JaCoP's range, or null for one not narrowed.
+   *
+   * @param v the variable
+   * @return {low, high} as declared, or null
+   */
+  public long[] clampedDeclaredBounds(IntVar v) {
+    for (ClampedDomain d : clampedDomains) {
+      if (!d.unbounded() && variableTable.get(d.ident()) == v) {
+        return declaredInterval(d.declared());
+      }
+    }
+    return null;
+  }
+
+  /**
+   * The bounds a variable was declared with, before the equalities of declarations narrowed them:
+   * beyond JaCoP's range for a narrowed one, unbounded for one declared without bounds.
+   *
+   * @param v the variable
+   * @return {low, high}
+   */
+  public long[] declaredMemberBounds(IntVar v) {
+    long[] b = clampedDeclaredBounds(v);
+    if (b != null) {
+      return b;
+    }
+    b = boundsBeforeEquality.get(v);
+    if (b == null) {
+      b = new long[] {v.min(), v.max()};
+    }
+    return new long[] {
+      b[0] <= IntDomain.MIN_INT ? -ClampedBounds.INF : b[0],
+      b[1] >= IntDomain.MAX_INT ? ClampedBounds.INF : b[1]
+    };
+  }
+
+  /**
+   * Records that a variable holds the objective divided by a factor: its declared domain is no
+   * longer narrowed, and its values are printed multiplied by the factor.
+   *
+   * @param v the variable
+   * @param factor the factor
+   */
+  public void scale(IntVar v, long factor) {
+    clampedDomains.removeIf(d -> variableTable.get(d.ident()) == v);
+    objectiveScale = factor;
+    scaledIdents.add(v.id());
+  }
+
+  /**
+   * The factor the objective was divided by, 1 when it was not.
+   *
+   * @return the factor
+   */
+  public long objectiveScale() {
+    return objectiveScale;
+  }
+
+  /**
+   * The factor the values of an output variable are multiplied by when printed.
+   *
+   * @param ident the identifier of the variable
+   * @return the factor, 1 for most variables
+   */
+  long outputScale(String ident) {
+    return scaledIdents.contains(ident) ? objectiveScale : 1;
+  }
+
+  /**
+   * The variables of the output arrays.
+   *
+   * @return the arrays
+   */
+  public List<Var[]> outputArrays() {
+    List<Var[]> list = new ArrayList<>();
+    for (OutputArrayAnnotation a : outputArray) {
+      list.add(a.getArray());
+    }
+    return list;
+  }
+
+  // the domains of the variables as declared, by store index, when a domain was narrowed
+  private int[] declaredMin;
+  private int[] declaredMax;
+  // the declared bounds of the narrowed variables, beyond JaCoP's range
+  private final IdentityHashMap<IntVar, long[]> clampedDeclared = new IdentityHashMap<>();
+  // the reasoning that may show the narrowing harmless, or null
+  private ClampedBounds clampedBounds;
+  // the narrowed products that may be posted saturated (SaturatedProducts), and those posted so
+  private Set<IntVar> saturationCandidates = Set.of();
+  private final Set<IntVar> saturatedProducts = Collections.newSetFromMap(new IdentityHashMap<>());
+
+  /**
+   * Records the domains of the variables as declared, before any constraint narrows them, when a
+   * declared domain was narrowed to JaCoP's integer range.
+   */
+  public void recordDeclaredDomains() {
+    if (clampedDomains.isEmpty()) {
+      return;
+    }
+    int n = store.size();
+    declaredMin = new int[n];
+    declaredMax = new int[n];
+    for (int i = 0; i < n; i++) {
+      if (store.vars[i] instanceof IntVar v) {
+        declaredMin[i] = v.min();
+        declaredMax[i] = v.max();
+      }
+    }
+    for (ClampedDomain d : clampedDomains) {
+      long[] b = declaredInterval(d.declared());
+      IntVar v = variableTable.get(d.ident());
+      if (v != null) {
+        clampedDeclared.put(v, b);
+      }
+      IntVar[] a = variableArrayTable.get(d.ident());
+      if (a != null) {
+        for (IntVar x : a) {
+          clampedDeclared.put(x, b);
+        }
+      }
+    }
+  }
+
+  private static long[] declaredInterval(String interval) {
+    if (interval.equals("int")) {
+      return new long[] {-ClampedBounds.INF, ClampedBounds.INF};
+    }
+    int dots = interval.indexOf("..");
+    return new long[] {
+      saturated(new BigInteger(interval.substring(0, dots).trim())),
+      saturated(new BigInteger(interval.substring(dots + 2).trim()))
+    };
+  }
+
+  private static long saturated(BigInteger b) {
+    BigInteger inf = BigInteger.valueOf(ClampedBounds.INF);
+    return b.max(inf.negate()).min(inf).longValue();
+  }
+
+  /**
+   * The bounds of a variable as the model declares them: beyond JaCoP's range for a narrowed one,
+   * unbounded for one created after the declarations that is not a constant.
+   *
+   * @param v the variable
+   * @return {low, high}
+   */
+  public long[] declaredBounds(IntVar v) {
+    long[] b = clampedDeclared.get(v);
+    if (b != null) {
+      return b;
+    }
+    int i = v.index();
+    if (declaredMin != null && i >= 0 && i < declaredMin.length && store.vars[i] == v) {
+      return new long[] {declaredMin[i], declaredMax[i]};
+    }
+    if (v.singleton() && constantTable.get(v.value()) == v) {
+      return new long[] {v.value(), v.value()};
+    }
+    return new long[] {-ClampedBounds.INF, ClampedBounds.INF};
+  }
+
+  /**
+   * The narrowed variables, as the constraints name them after aliases.
+   *
+   * @return the variables
+   */
+  public List<IntVar> narrowedVariables() {
+    List<IntVar> list = new ArrayList<>();
+    for (ClampedDomain d : clampedDomains) {
+      IntVar v = getVariable(d.ident());
+      if (v != null) {
+        list.add(v);
+      }
+      IntVar[] a = variableArrayTable.get(d.ident());
+      if (a != null) {
+        for (IntVar x : a) {
+          list.add(getAlias(x));
+        }
+      }
+    }
+    return list;
+  }
+
+  /**
+   * Sets the narrowed products that may be posted saturated at the ends of JaCoP's range.
+   *
+   * @param products the products {@link SaturatedProducts} found
+   */
+  public void setSaturationCandidates(Set<IntVar> products) {
+    saturationCandidates = products;
+  }
+
+  /**
+   * Tells whether the product z of int_times is posted saturated at the ends of JaCoP's range, and
+   * records that it is.
+   *
+   * @param z the product, after aliases
+   * @return true if z is one of the products {@link SaturatedProducts} found
+   */
+  public boolean postSaturated(IntVar z) {
+    if (!saturationCandidates.contains(z)) {
+      return false;
+    }
+    saturatedProducts.add(z);
+    return true;
+  }
+
+  /**
+   * The products posted saturated at the ends of JaCoP's range.
+   *
+   * @return the products
+   */
+  public Set<IntVar> saturatedProducts() {
+    return saturatedProducts;
+  }
+
+  /**
+   * Sets the reasoning that may show the narrowing of declared domains harmless.
+   *
+   * @param bounds the reasoning
+   */
+  public void setClampedBounds(ClampedBounds bounds) {
+    clampedBounds = bounds;
+  }
+
+  /**
+   * Tells whether the narrowing cut off no solution whose objective is within the given bounds, by
+   * {@link ClampedBounds}.
+   *
+   * @param objective the variable of the objective, or null
+   * @param low the least value of the objective that matters
+   * @param high the largest value of the objective that matters
+   * @return true if it is shown harmless
+   */
+  boolean clampsHarmless(IntVar objective, long low, long high) {
+    return clampedBounds != null && clampedBounds.harmless(objective, low, high);
+  }
+
+  /**
+   * Tells whether a declared domain was narrowed to JaCoP's integer range. The search then covers
+   * only part of the model: its solutions are solutions of the model, but a completed search proves
+   * neither unsatisfiability nor, unless only the objective lost values worse than a solution
+   * found, optimality.
+   *
+   * @return true if a declared domain was narrowed.
+   */
+  public boolean domainsClamped() {
+    return !clampedDomains.isEmpty();
+  }
+
+  /**
+   * Tells whether a domain declared with bounds was narrowed to JaCoP's integer range, leaving
+   * aside the variables declared without bounds.
+   *
+   * @return true if a domain declared with bounds was narrowed.
+   */
+  public boolean boundedDomainsClamped() {
+    for (ClampedDomain d : clampedDomains) {
+      if (!d.unbounded()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Tells whether a failure may come from the values cut off by narrowing domains to JaCoP's
+   * integer range, so that it proves no unsatisfiability.
+   *
+   * @return false if no domain was narrowed, or only unbounded ones that the rows of the model show
+   *     to lie within the range.
+   */
+  public boolean failureMayComeFromNarrowing() {
+    if (floatDomainsNarrowed || boundedDomainsClamped()) {
+      return true;
+    }
+    return !clampedDomains.isEmpty()
+        && !clampsHarmless(null, -ClampedBounds.INF, ClampedBounds.INF);
+  }
+
+  /**
+   * Tells whether only the objective was narrowed, and only on its worse side, so that no value cut
+   * off can be better than a solution found.
+   *
+   * @param objective the variable of the objective
+   * @param minimize whether the objective is minimised
+   * @return true if every narrowed domain is the objective's, cut on its worse side.
+   */
+  boolean onlyObjectiveWorseSideClamped(Var objective, boolean minimize) {
+    for (ClampedDomain d : clampedDomains) {
+      if (getVariable(d.ident()) != objective || (minimize ? d.low() : d.high())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Returns the warning about domains narrowed to JaCoP's integer range.
+   *
+   * @return the warning, as a FlatZinc comment line.
+   */
+  String clampedDomainsWarning() {
+    List<ClampedDomain> bounded = clampedDomains.stream().filter(d -> !d.unbounded()).toList();
+    int n = bounded.size();
+    ClampedDomain first = bounded.getFirst();
+    return "%% Warning: "
+        + n
+        + (n == 1 ? " variable domain reaches" : " variable domains reach")
+        + " beyond JaCoP's integer range "
+        + IntDomain.MIN_INT
+        + ".."
+        + IntDomain.MAX_INT
+        + " and "
+        + (n == 1 ? "was" : "were")
+        + " narrowed to it (first: "
+        + first.ident()
+        + " "
+        + first.declared()
+        + "); a completed search is reported as optimal only if the objective alone lost values"
+        + " worse than its solutions, and never as unsatisfiable";
+  }
+
+  /**
+   * Returns the on_restart built-ins of the model, created at the first call.
+   *
+   * @return the on_restart built-ins.
+   */
+  public OnRestart onRestart() {
+    if (onRestart == null) {
+      onRestart = new OnRestart();
+    }
+    return onRestart;
+  }
+
+  /**
+   * Returns a constant integer variable for the given value.
+   *
+   * @param c the constant value
+   * @return the constant integer variable
+   */
+  public IntVar getConstant(int c) {
+    IntVar v = constantTable.get(c);
+
+    if (v == null) {
+      v = new IntVar(store, c, c);
+      constantTable.put(c, v);
+    }
+
+    return v;
+  }
+
+  /**
+   * Returns a constant boolean variable for the given value.
+   *
+   * @param c the constant value (0 or 1)
+   * @return the constant boolean variable
+   */
+  public BooleanVar getConstantBoolean(int c) {
+    BooleanVar v = constantTableBoolean.get(c);
+
+    if (v == null) {
+      v = new BooleanVar(store, c, c);
+      constantTableBoolean.put(c, v);
+    }
+
+    return v;
+  }
+
+  /**
+   * Returns a constant float variable for the given value.
+   *
+   * @param c the constant value
+   * @return the constant float variable
+   */
+  public FloatVar getFloatConstant(double c) {
+    FloatVar v = constantFloatTable.get(c);
+
+    if (v == null) {
+      v = new FloatVar(store, c, c);
+      constantFloatTable.put(c, v);
+    }
+
+    return v;
+  }
+
+  /**
+   * Adds an alias relationship between two integer variables.
+   *
+   * @param b the boolean/integer variable that is an alias
+   * @param v the variable being aliased
+   */
+  public void addAlias(IntVar b, IntVar v) {
+    IntVar x = aliasTable.get(v);
+    if (x == null) {
+      putAlias(v, b);
+      aliasTargets.add(b);
+    } else {
+      System.err.println("%% Double int var alias for bool var");
+    }
+  }
+
+  /**
+   * Makes a variable an alias of another one, together with the variables that are aliases of it.
+   *
+   * @param to the variable that stays.
+   * @param from the variable that becomes an alias of {@code to}.
+   * @param aliasesOfFrom the variables whose alias is {@code from}.
+   */
+  public void mergeAlias(IntVar to, IntVar from, List<IntVar> aliasesOfFrom) {
+    for (IntVar v : aliasesOfFrom) {
+      putAlias(v, to);
+    }
+    aliasTargets.remove(from);
+    if (!aliasesOfFrom.isEmpty()) {
+      aliasTargets.add(to);
+    }
+    addAlias(to, from);
+  }
+
+  /**
+   * Tells whether integer variables are aliases of a variable.
+   *
+   * @param b the variable
+   * @return true if some integer variable is an alias of b
+   */
+  public boolean isAliasTarget(IntVar b) {
+    return aliasTargets.contains(b);
+  }
+
+  /**
+   * Returns whether the variable of the given identity was merged into another one as its alias, as
+   * the integer of {@code bool2int} is merged into its Boolean.
+   *
+   * @param ident the identity of the variable
+   * @return true when the identity names an alias of another variable
+   */
+  public boolean isAlias(String ident) {
+    IntVar v = variableTable.get(ident);
+    return v != null && aliasTable.containsKey(v);
+  }
+
+  private void putAlias(IntVar v, IntVar to) {
+    aliasTable.put(v, to);
+    int i = v.index();
+    if (i >= 0) {
+      if (i >= aliasKeys.length) {
+        int n = Math.max(i + 1, 2 * aliasKeys.length);
+        aliasKeys = Arrays.copyOf(aliasKeys, n);
+        aliasValues = Arrays.copyOf(aliasValues, n);
+      }
+      sharedAliasIndex |= aliasKeys[i] != null && aliasKeys[i] != v;
+      aliasKeys[i] = v;
+      aliasValues[i] = to;
+    }
+  }
+
+  /**
+   * Returns the alias for a variable, or the variable itself if no alias exists.
+   *
+   * @param b the variable to look up
+   * @return the alias variable or the original variable
+   */
+  public IntVar getAlias(IntVar b) {
+    if (b == null) {
+      return null;
+    }
+    int i = b.index();
+    if (i >= 0 && !sharedAliasIndex) {
+      return i < aliasKeys.length && aliasKeys[i] == b ? aliasValues[i] : b;
+    }
+    IntVar v = aliasTable.get(b);
+    if (v == null) {
+      return b;
+    } else {
+      return v;
+    }
+  }
+
+  /**
+   * Returns a copy of these tables over other variables, for example over the variables of a store
+   * derived by presolve. Parameters are shared, every variable is mapped, and constants created
+   * later go into the map's target store.
+   *
+   * @param map the mapping of every variable of these tables.
+   * @return the mapped tables.
+   */
+  Tables mapTo(VarMap map) {
+    Tables t = new Tables(map.target());
+    mapValues(constantTable, t.constantTable, map);
+    mapValues(constantTableBoolean, t.constantTableBoolean, map);
+    mapValues(constantFloatTable, t.constantFloatTable, map);
+    aliasTable.forEach((k, v) -> t.putAlias(map.get(k), map.get(v)));
+    aliasTargets.forEach(v -> t.aliasTargets.add(map.get(v)));
+    t.intTable.putAll(intTable);
+    t.floatTable.putAll(floatTable);
+    t.intArrayTable.putAll(intArrayTable);
+    t.floatArrayTable.putAll(floatArrayTable);
+    t.setTable.putAll(setTable);
+    t.setArrayTable.putAll(setArrayTable);
+    mapValues(variableTable, t.variableTable, map);
+    mapArrays(variableArrayTable, t.variableArrayTable, map);
+    mapValues(variableFloatTable, t.variableFloatTable, map);
+    mapArrays(variableFloatArrayTable, t.variableFloatArrayTable, map);
+    mapValues(setVariableTable, t.setVariableTable, map);
+    mapArrays(setVariableArrayTable, t.setVariableArrayTable, map);
+    t.outputVariables.addAll(map.get(outputVariables));
+    for (OutputArrayAnnotation a : outputArray) {
+      OutputArrayAnnotation mapped = new OutputArrayAnnotation(a.id, a.indexes);
+      mapped.setArray(map.get(a.getArray()));
+      t.outputArray.add(mapped);
+    }
+    t.defaultSearchVariables.addAll(map.get(defaultSearchVariables));
+    t.searchFirst.addAll(map.get(searchFirst));
+    t.defaultSearchFloatVariables.addAll(map.get(defaultSearchFloatVariables));
+    t.defaultSearchSetVariables.addAll(map.get(defaultSearchSetVariables));
+    defaultSearchArrays.forEach(a -> t.defaultSearchArrays.add(map.get(a)));
+    defaultSearchFloatArrays.forEach(a -> t.defaultSearchFloatArrays.add(map.get(a)));
+    defaultSearchSetArrays.forEach(a -> t.defaultSearchSetArrays.add(map.get(a)));
+    t.definedVariables.addAll(map.get(definedVariables));
+    t.halfDefinedVariables.addAll(map.get(halfDefinedVariables));
+    t.introducedFloatVariables.addAll(map.get(introducedFloatVariables));
+    t.unusedVariables.addAll(map.get(unusedVariables));
+    t.auxiliaryVariables.addAll(map.get(auxiliaryVariables));
+    t.splitSums.addAll(map.get(splitSums));
+    t.searchAnnotated = searchAnnotated;
+    t.overlapSetRows = overlapSetRows;
+    t.overlapSetRowsDefined.addAll(map.get(overlapSetRowsDefined));
+    for (LinearForm f : overlapUnitRows) {
+      IntVar[] vs = new IntVar[f.vars().length];
+      for (int k = 0; k < vs.length; k++) {
+        vs[k] = map.get(f.vars()[k]);
+      }
+      t.overlapUnitRows.add(new LinearForm(vs, f.weights(), f.c(), f.relation()));
+    }
+    lnsRoutes.forEach(r -> t.lnsRoutes.add(r.copy(map)));
+    t.zeroSums = zeroSums == null ? null : zeroSums.copy(map);
+    t.indexDisjunctions = indexDisjunctions == null ? null : indexDisjunctions.copy(map);
+    t.objectiveScale = objectiveScale;
+    t.scaledIdents.addAll(scaledIdents);
+    t.numberBoolVariables = numberBoolVariables;
+    t.numberFloatVariables = numberFloatVariables;
+    t.numberSetVariables = numberSetVariables;
+    return t;
+  }
+
+  private static <K, V extends Var> void mapValues(Map<K, V> from, Map<K, V> to, VarMap map) {
+    from.forEach((k, v) -> to.put(k, map.get(v)));
+  }
+
+  private static <K, V extends Var> void mapArrays(Map<K, V[]> from, Map<K, V[]> to, VarMap map) {
+    from.forEach((k, v) -> to.put(k, map.get(v)));
+  }
+
+  /**
+   * Removes variables from the default search, which labels every variable without an annotation.
+   *
+   * @param vars the variables, which no constraint needs fixed.
+   */
+  void removeFromDefaultSearch(Set<Var> vars) {
+    defaultSearchVariables.removeIf(vars::contains);
+    defaultSearchArrays.replaceAll(
+        a -> Arrays.stream(a).filter(v -> !vars.contains(v)).toArray(n -> Arrays.copyOf(a, n)));
+    defaultSearchSetVariables.removeIf(vars::contains);
+    defaultSearchSetArrays.replaceAll(
+        a -> Arrays.stream(a).filter(v -> !vars.contains(v)).toArray(n -> Arrays.copyOf(a, n)));
+  }
+
+  /**
+   * The Booleans that stand in the search for the 0..1 integer variables made their aliases, so
+   * that default search orders them as it ordered those integer variables.
+   */
+  final Set<IntVar> searchedAsIntegers = new HashSet<>();
+
+  /** The 0..1 integer variables made aliases of Booleans by int_eq_reif(x, 1, b). */
+  final Set<IntVar> binaryEqAliases = new HashSet<>();
+
+  /**
+   * Replaces the 0..1 integer variables made aliases of Booleans by their Booleans in the search.
+   */
+  void searchAliasTargets(Set<IntVar> aliases) {
+    if (aliases.isEmpty()) {
+      return;
+    }
+    Set<Var> seen = new HashSet<>();
+    List<Var> search = new ArrayList<>(defaultSearchVariables.size());
+    for (Var v : defaultSearchVariables) {
+      Var w = v;
+      if (v instanceof IntVar x && aliases.contains(x)) {
+        w = aliasTable.get(x);
+        searchedAsIntegers.add((IntVar) w);
+      }
+      if (seen.add(w)) {
+        search.add(w);
+      }
+    }
+    defaultSearchVariables.clear();
+    defaultSearchVariables.addAll(search);
+  }
+
+  /** Removes aliased variables from the search variable collection. */
+  public void removeAliasFromSearch() {
+
+    defaultSearchVariables.removeIf(aliasTable::containsKey);
+  }
+
+  /**
+   * It adds an int parameter.
+   *
+   * @param ident the identity of the added int parameter.
+   * @param val the value of the parameter.
+   */
+  public void addInt(String ident, int val) {
+    intTable.put(ident, val);
+  }
+
+  /**
+   * It returns an int parameter of a given identity.
+   *
+   * @param ident the identify of the parameter.
+   * @return the int value of the specified parameter.
+   */
+  public int getInt(String ident) {
+    Integer iVal = intTable.get(ident);
+    if (iVal != null) {
+      return iVal;
+    } else {
+      throw new RuntimeException(
+          "Symbol \"" + ident + "\" does not have assigned value when refered; execution aborted");
+    }
+  }
+
+  /**
+   * It returns an Integer parameter of a given identity.
+   *
+   * @param ident the identify of the parameter.
+   * @return the int value of the specified parameter.
+   */
+  public Integer checkInt(String ident) {
+    return intTable.get(ident);
+  }
+
+  /**
+   * It adds an float parameter.
+   *
+   * @param ident the identity of the added int parameter.
+   * @param val the value of the parameter.
+   */
+  public void addFloat(String ident, double val) {
+    floatTable.put(ident, val);
+  }
+
+  /**
+   * It returns an float parameter of a given identity.
+   *
+   * @param ident the identify of the parameter.
+   * @return the double value of the specified parameter.
+   */
+  public double getFloat(String ident) {
+    Double dVal = floatTable.get(ident);
+    if (dVal != null) {
+      return dVal;
+    } else {
+      throw new RuntimeException(
+          "Symbol \"" + ident + "\" does not have assigned value when refered; execution aborted");
+    }
+  }
+
+  /**
+   * It returns an Double parameter of a given identity.
+   *
+   * @param ident the identify of the parameter.
+   * @return the Double value of the specified parameter.
+   */
+  public Double checkFloat(String ident) {
+    return floatTable.get(ident);
+  }
+
+  /**
+   * It stores an int array.
+   *
+   * @param ident the identity of the stored array.
+   * @param array the array being stored.
+   */
+  public void addIntArray(String ident, int[] array) {
+    if (array != null && array.length >= INTERNED_ARRAY_LENGTH) {
+      array = internedIntArrays.computeIfAbsent(new IntArrayContents(array), k -> k).array();
+    }
+    intArrayTable.put(ident, array);
+  }
+
+  /**
+   * Arrays of integer parameters of at least this length are kept once for each content. MiniZinc
+   * writes a table posted on many scopes as a separate array for each constraint: Steiner3-11 (XCSP
+   * 2026) has 153 copies of one table of 5 million entries, 3 GB as separate arrays.
+   */
+  static final int INTERNED_ARRAY_LENGTH = 1024;
+
+  // the long arrays of integer parameters read so far, by content
+  private final Map<IntArrayContents, IntArrayContents> internedIntArrays = new HashMap<>();
+
+  /** An array of integers compared by content. */
+  private record IntArrayContents(int[] array, int hash) {
+    IntArrayContents(int[] array) {
+      this(array, Arrays.hashCode(array));
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof IntArrayContents(int[] other, int otherHash)
+          && otherHash == hash
+          && Arrays.equals(other, array);
+    }
+
+    @Override
+    public int hashCode() {
+      return hash;
+    }
+
+    @Override
+    public String toString() {
+      return "IntArrayContents[length=" + array.length + ", hash=" + hash + "]";
+    }
+  }
+
+  /**
+   * It obtains the int array of the given unique identity.
+   *
+   * @param ident the identity of the required array.
+   * @return the int array with the specified identity.
+   */
+  public int[] getIntArray(String ident) {
+    return intArrayTable.get(ident);
+  }
+
+  /**
+   * It adds a set of the given identity.
+   *
+   * @param ident the identity of the set being added.
+   * @param val the set being added.
+   */
+  public void addSet(String ident, IntDomain val) {
+    setTable.put(ident, val);
+  }
+
+  /**
+   * It returns the set of the given identity.
+   *
+   * @param ident the identity of the searched set.
+   * @return the set of the given identity.
+   */
+  public IntDomain getSet(String ident) {
+    return setTable.get(ident);
+  }
+
+  /**
+   * It adds the set array to the storage.
+   *
+   * @param ident the identity of the added set array.
+   * @param array the array being added.
+   */
+  public void addSetArray(String ident, IntDomain[] array) {
+    if (array != null && array.length >= INTERNED_ARRAY_LENGTH) {
+      array = internedSetArrays.computeIfAbsent(new SetArrayContents(array), k -> k).array();
+    }
+    setArrayTable.put(ident, array);
+  }
+
+  // the long arrays of set parameters read so far, by content: MiniZinc writes the label sets of an
+  // MDD again for every constraint that uses it (WordDesign2-words-mdd-025, XCSP 2023: 31 copies of
+  // 1.8 million sets, 230 MB each)
+  private final Map<SetArrayContents, SetArrayContents> internedSetArrays = new HashMap<>();
+
+  /** An array of sets compared by content. */
+  private record SetArrayContents(IntDomain[] array, int hash) {
+    SetArrayContents(IntDomain[] array) {
+      this(array, hash(array));
+    }
+
+    private static int hash(IntDomain[] array) {
+      int h = 1;
+      for (IntDomain d : array) {
+        h = 31 * h + (d == null || d.isEmpty() ? 0 : 31 * (31 * d.min() + d.max()) + d.getSize());
+      }
+      return h;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (!(o instanceof SetArrayContents(IntDomain[] other, int otherHash))
+          || otherHash != hash
+          || other.length != array.length) {
+        return false;
+      }
+      for (int i = 0; i < array.length; i++) {
+        IntDomain a = array[i];
+        IntDomain b = other[i];
+        if (a != b && (a == null || b == null || !a.eq(b))) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return hash;
+    }
+
+    @Override
+    public String toString() {
+      return "SetArrayContents[length=" + array.length + ", hash=" + hash + "]";
+    }
+  }
+
+  /**
+   * It returns the set array of the given id.
+   *
+   * @param ident the unique id of the looked for set array.
+   * @return the set array of the given identity.
+   */
+  public IntDomain[] getSetArray(String ident) {
+    return setArrayTable.get(ident);
+  }
+
+  /**
+   * Stores a float array with the given identifier.
+   *
+   * @param ident the identity of the stored array
+   * @param array the float array being stored
+   */
+  public void addFloatArray(String ident, double[] array) {
+    // already exists ";
+    floatArrayTable.put(ident, array);
+  }
+
+  /**
+   * It obtains the int array of the given unique identity.
+   *
+   * @param ident the identity of the required array.
+   * @return the int array with the specified identity.
+   */
+  public double[] getFloatArray(String ident) {
+    return floatArrayTable.get(ident);
+  }
+
+  /**
+   * It adds a variable with a given identity to the storage.
+   *
+   * @param ident the identity of the added variable.
+   * @param v the variable being added.
+   */
+  public void addVariable(String ident, IntVar v) {
+    variableTable.put(ident, v);
+  }
+
+  /**
+   * It returns the variable of the given identity.
+   *
+   * @param ident the identity of the returned variable.
+   * @return the variable of the given identity.
+   */
+  public IntVar getVariable(String ident) {
+    return getAlias(variableTable.get(ident));
+  }
+
+  /**
+   * It returns the variable an identifier node names, as {@link #getVariable(String)} does with its
+   * identifier, reading the variable kept by the identifier while it is of the store of these
+   * tables.
+   *
+   * @param node the node of an identifier.
+   * @return the variable of the identifier, or null when it names no variable.
+   */
+  public IntVar getVariable(ASTScalarFlatExpr node) {
+    Ident ident = node.ident();
+    if (ident == null) {
+      return getVariable(node.getIdent());
+    }
+    IntVar v = ident.variable;
+    // a variable of the store of these tables is the one the name was declared as: variableTable
+    // only grows, and mapTo gives tables over another store
+    if (v == null || v.store != store || store == null) {
+      v = variableTable.get(ident.name);
+      if (v == null) {
+        return null;
+      }
+      ident.variable = v;
+    }
+    return getAlias(v);
+  }
+
+  /**
+   * It adds a variable with a given identity to the storage.
+   *
+   * @param ident the identity of the added variable.
+   * @param v the variable being added.
+   */
+  public void addFloatVariable(String ident, FloatVar v) {
+    variableFloatTable.put(ident, v);
+  }
+
+  /**
+   * It returns the variable of the given identity.
+   *
+   * @param ident the identity of the returned variable.
+   * @return the variable of the given identity.
+   */
+  public FloatVar getFloatVariable(String ident) {
+    return variableFloatTable.get(ident);
+  }
+
+  /**
+   * It adds a variable array to the storage.
+   *
+   * @param ident the identity of the added variable array.
+   * @param array the array of variables being added.
+   */
+  public void addVariableArray(String ident, IntVar[] array) {
+    variableArrayTable.put(ident, array);
+  }
+
+  /**
+   * It returns the variable array of the given identity.
+   *
+   * @param ident the identity of the returned variable array.
+   * @return the variable array of the given identity.
+   */
+  public IntVar[] getVariableArray(String ident) {
+    IntVar[] a = variableArrayTable.get(ident);
+    if (a == null) {
+      int[] intA = intArrayTable.get(ident);
+      if (intA != null) {
+        a = constantArrayTable.get(ident);
+        if (a == null) {
+          a = new IntVar[intA.length];
+          for (int i = 0; i < intA.length; i++) {
+            a[i] = getConstant(intA[i]);
+          }
+          constantArrayTable.put(ident, a);
+        }
+      } else {
+        return null;
+      }
+    } else {
+      for (int i = 0; i < a.length; i++) {
+        a[i] = getAlias(a[i]);
+      }
+    }
+    return a;
+  }
+
+  /**
+   * It forgets the arrays of parameters read as arrays of constants by {@link
+   * #getVariableArray(String)}, once the constraints are posted.
+   */
+  void releaseConstantArrays() {
+    constantArrayTable.clear();
+  }
+
+  /**
+   * It returns the array of variables of the given identity, or null if there is none. Unlike
+   * {@link #getVariableArray(String)} it does not read an array of integer parameters as an array
+   * of constants, so the passes that look for the variables of the constraints skip the tables:
+   * reading a table of millions of entries as constants cost an array of millions of references at
+   * every look and made one constant variable for each distinct value of the table (84,000 on
+   * CrosswordDesign-09, XCSP 2026, each then a variable of LCG).
+   *
+   * @param ident the identity of the array.
+   * @return the array of variables, or null if ident is not an array of variables.
+   */
+  public IntVar[] getDeclaredVariableArray(String ident) {
+    return variableArrayTable.containsKey(ident) ? getVariableArray(ident) : null;
+  }
+
+  /**
+   * It adds a float variable array to the storage.
+   *
+   * @param ident the identity of the added variable array.
+   * @param array the array of variables being added.
+   */
+  public void addVariableFloatArray(String ident, FloatVar[] array) {
+    variableFloatArrayTable.put(ident, array);
+  }
+
+  /**
+   * It returns the float variable array of the given identity.
+   *
+   * @param ident the identity of the returned variable array.
+   * @return the variable array of the given identity.
+   */
+  public FloatVar[] getVariableFloatArray(String ident) {
+    FloatVar[] a = variableFloatArrayTable.get(ident);
+    if (a == null) {
+      double[] floatA = floatArrayTable.get(ident);
+      if (floatA != null) {
+        a = new FloatVar[floatA.length];
+        for (int i = 0; i < floatA.length; i++) {
+          a[i] = getFloatConstant(floatA[i]); // new FloatVar(store, floatA[i], floatA[i]);
+        }
+      } else {
+        throw new IllegalArgumentException("Array identifier does not exist: " + ident);
+      }
+    }
+    return a;
+  }
+
+  /**
+   * It adds the set variable of the given identity.
+   *
+   * @param ident the identity of the added set variable.
+   * @param v the set variable being added.
+   */
+  public void addSetVariable(String ident, SetVar v) {
+    setVariableTable.put(ident, v);
+  }
+
+  /**
+   * It returns the set variable of the given identity.
+   *
+   * @param ident the identity of the returned set variable.
+   * @return the set variable of the given identity.
+   */
+  public SetVar getSetVariable(String ident) {
+    return setVariableTable.get(ident);
+  }
+
+  /**
+   * It stores the array of the set variables with the specified identity.
+   *
+   * @param ident the identity of the stored array of set variables.
+   * @param array the array of set variables being added.
+   */
+  public void addSetVariableArray(String ident, SetVar[] array) {
+    setVariableArrayTable.put(ident, array);
+  }
+
+  /**
+   * It returns the array of set variables of the given identity.
+   *
+   * @param ident the identity of the returned array of set variables.
+   * @return the array of set variables with the given identity.
+   */
+  /**
+   * It returns the array of set variables of the given identity, if there is one.
+   *
+   * @param ident the identity of the array.
+   * @return the array of set variables, or null when no array of set variables has that identity.
+   */
+  public SetVar[] getSetVariableArrayOrNull(String ident) {
+    return setVariableArrayTable.get(ident);
+  }
+
+  /**
+   * It returns the array of set variables of the given identity.
+   *
+   * @param ident the identity of the returned array of set variables.
+   * @return the array of set variables with the given identity.
+   */
+  public SetVar[] getSetVariableArray(String ident) {
+    SetVar[] a = setVariableArrayTable.get(ident);
+    if (a == null) {
+      IntDomain[] setA = setArrayTable.get(ident);
+      a = new SetVar[setA.length];
+      for (int i = 0; i < setA.length; i++) {
+        a[i] = new SetVar(store, new BoundSetDomain(setA[i], setA[i]));
+      }
+    }
+    return a;
+  }
+
+  /**
+   * It adds an output variable.
+   *
+   * @param v the output variable being added.
+   */
+  public void addOutVar(Var v) {
+    outputVariables.add(v);
+  }
+
+  /**
+   * It checks whether a variable is output variable.
+   *
+   * @param v the variable to be checked.
+   * @return true if variable is output, false otherwise
+   */
+  public boolean isOutput(Var v) {
+    if (outputVariables.contains(v)) {
+      return true;
+    } else {
+      for (OutputArrayAnnotation oa : outputArray) {
+        if (oa.contains(v)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * It adds an output array annotation.
+   *
+   * @param v the output array annotation being added.
+   */
+  public void addOutArray(OutputArrayAnnotation v) {
+    outputArray.add(v);
+  }
+
+  /**
+   * Records a variable named by a defines_var annotation.
+   *
+   * @param v the defined variable
+   */
+  public void addDefinedVar(Var v) {
+    definedVariables.add(v);
+  }
+
+  /**
+   * Records a variable named by the defines_var annotation of a half-reified constraint (MiniZinc
+   * *_imp, b -&gt; c): it is recorded as defined, but the other variables do not fix it.
+   *
+   * @param v the variable
+   */
+  public void addHalfDefinedVar(Var v) {
+    definedVariables.add(v);
+    halfDefinedVariables.add(v);
+  }
+
+  /**
+   * Tells whether the solve item carries a search annotation. It is known before the constraints
+   * are posted.
+   *
+   * @return true when the model names a search
+   */
+  public boolean isSearchAnnotated() {
+    return searchAnnotated;
+  }
+
+  /**
+   * Records a float variable that MiniZinc introduced (var_is_introduced or is_defined_var).
+   *
+   * @param v the introduced float variable
+   */
+  public void addIntroducedFloatVar(Var v) {
+    introducedFloatVariables.add(v);
+  }
+
+  /**
+   * Returns the float variables that MiniZinc introduced (var_is_introduced or is_defined_var).
+   *
+   * @return the introduced float variables
+   */
+  public List<Var> introducedFloatVariables() {
+    return introducedFloatVariables;
+  }
+
+  /**
+   * Records the block sum of a linear constraint split for lazy clause generation. It is also a
+   * defined variable.
+   *
+   * @param v the block sum
+   */
+  public void addSplitSum(IntVar v) {
+    splitSums.add(v);
+    definedVariables.add(v);
+  }
+
+  /**
+   * Returns the block sums of the linear constraints split for lazy clause generation, which the
+   * linear relaxation replaces by their blocks.
+   *
+   * @return the block sums
+   */
+  public List<IntVar> splitSums() {
+    return splitSums;
+  }
+
+  /**
+   * Records a row that linear overlap factoring reduced to a multiple of one sub-sum variable.
+   *
+   * @param f the row, over the sub-sum variable
+   */
+  public void addOverlapUnitRow(LinearForm f) {
+    overlapUnitRows.add(f);
+  }
+
+  /**
+   * Returns the rows that linear overlap factoring reduced to a multiple of one sub-sum variable,
+   * which the store holds as bounds of that variable; the linear relaxation substitutes the sum
+   * back and has the rows of the model.
+   *
+   * @return the rows
+   */
+  public List<LinearForm> overlapUnitRows() {
+    return overlapUnitRows;
+  }
+
+  /**
+   * Records that the linear rows of the model were set rows over 0/1 variables before linear
+   * overlap factoring rewrote them, apart from rows defining the given integer variables.
+   *
+   * @param defined the integer variables that rows define, such as the objective of a set cover
+   */
+  public void setOverlapSetRows(List<IntVar> defined) {
+    overlapSetRows = true;
+    overlapSetRowsDefined.addAll(defined);
+  }
+
+  /**
+   * Tells whether the linear rows of the model were set rows over 0/1 variables before linear
+   * overlap factoring rewrote them, apart from a row defining the objective.
+   *
+   * @param objective the variable minimized or maximized
+   * @return whether the model's linear rows were set rows before the factoring
+   */
+  public boolean overlapSetRows(IntVar objective) {
+    return overlapSetRows && overlapSetRowsDefined.stream().allMatch(v -> v == objective);
+  }
+
+  /**
+   * Records a table over distinct variables for the clique rows of the linear relaxation.
+   *
+   * @param x the variables
+   * @param tuples the allowed tuples
+   */
+  public void addTable(IntVar[] x, int[][] tuples) {
+    tables.add(new TableCliques.Table(x, tuples));
+  }
+
+  /**
+   * Records vehicle routes of the model, not imposed, for the route neighbourhoods of large
+   * neighbourhood search.
+   *
+   * @param routes the routes
+   */
+  public void addLnsRoutes(Routes routes) {
+    lnsRoutes.add(routes);
+  }
+
+  /**
+   * Returns the vehicle routes recorded for large neighbourhood search.
+   *
+   * @return the routes
+   */
+  public List<Routes> lnsRoutes() {
+    return lnsRoutes;
+  }
+
+  /**
+   * Adds variables that a detector created for redundant constraints and that follow from the
+   * variables of the model, so that the search of lazy clause generation branches on them last.
+   *
+   * @param vs the variables.
+   */
+  public void addAuxiliaryVariables(Collection<? extends Var> vs) {
+    auxiliaryVariables.addAll(vs);
+  }
+
+  /**
+   * Returns the tables of the model recorded for the clique rows of the linear relaxation.
+   *
+   * @return the tables
+   */
+  public List<TableCliques.Table> tables() {
+    return tables;
+  }
+
+  /**
+   * It adds a search variable.
+   *
+   * @param v the search variable being added.
+   */
+  public void addSearchVar(Var v) {
+    defaultSearchVariables.add(v);
+  }
+
+  /**
+   * It adds variables that the search labels before any other, whatever the search annotation.
+   *
+   * @param vars the variables.
+   */
+  public void searchFirst(List<? extends Var> vars) {
+    searchFirst.addAll(vars);
+  }
+
+  /**
+   * The variables that the search labels before any other.
+   *
+   * @return the variables, in order.
+   */
+  public List<Var> searchFirst() {
+    return searchFirst;
+  }
+
+  /**
+   * It adds a search variable.
+   *
+   * @param v the search variable being added.
+   */
+  public void addSearchFloatVar(Var v) {
+    defaultSearchFloatVariables.add(v);
+  }
+
+  /**
+   * It adds a search array.
+   *
+   * @param v the search array being added.
+   */
+  public void addSearchArray(Var[] v) {
+    defaultSearchArrays.add(v);
+  }
+
+  /**
+   * It adds a search array.
+   *
+   * @param v the search array being added.
+   */
+  public void addSearchFloatArray(Var[] v) {
+    defaultSearchFloatArrays.add(v);
+  }
+
+  /**
+   * It adds a search set variable.
+   *
+   * @param v the set search variable being added.
+   */
+  public void addSearchSetVar(Var v) {
+    defaultSearchSetVariables.add(v);
+  }
+
+  /**
+   * It adds an array of search set variables.
+   *
+   * @param v array of set variables being added
+   */
+  public void addSearchSetArray(Var[] v) {
+    defaultSearchSetArrays.add(v);
+  }
+
+  /**
+   * Sets the number of all variable types.
+   *
+   * @param nb the number of boolean variables
+   * @param ns the number of set variables
+   * @param nf the number of float variables
+   */
+  public void setNumberOfAllVariables(int nb, int ns, int nf) {
+    numberBoolVariables = nb;
+    numberSetVariables = ns;
+    numberFloatVariables = nf;
+  }
+
+  /**
+   * Returns the number of boolean variables.
+   *
+   * @return the number of boolean variables
+   */
+  public int getNumberBoolVariables() {
+    return numberBoolVariables;
+  }
+
+  /**
+   * Sets the number of boolean variables.
+   *
+   * @param n the number of boolean variables
+   */
+  public void setNumberBoolVariables(int n) {
+    numberBoolVariables = n;
+  }
+
+  /**
+   * Returns the number of float variables.
+   *
+   * @return the number of float variables
+   */
+  public int getNumberFloatVariables() {
+    return numberFloatVariables;
+  }
+
+  /**
+   * Sets the number of float variables.
+   *
+   * @param n the number of float variables
+   */
+  public void setNumberFloatVariables(int n) {
+    numberFloatVariables = n;
+  }
+
+  /**
+   * Returns the number of set variables.
+   *
+   * @return the number of set variables
+   */
+  public int getNumberSetVariables() {
+    return numberSetVariables;
+  }
+
+  /**
+   * Sets the number of set variables.
+   *
+   * @param n the number of set variables
+   */
+  public void setNumberSetVariables(int n) {
+    numberSetVariables = n;
+  }
+
+  // StringBuilder to be used instead of normal string additions.
+
+  /** {@inheritDoc} */
+  @SuppressWarnings("unchecked")
+  @Override
+  public String toString() {
+
+    Map[] dictionary = {
+      intTable, // 0
+      intArrayTable, // 1
+      setTable, // 2
+      setArrayTable, // 3
+      variableTable, // 4
+      variableArrayTable, // 5
+      setVariableTable, // 6
+      setVariableArrayTable, // 7
+      floatArrayTable, // 8
+      floatTable, // 9
+      variableFloatTable, // 10
+      variableFloatArrayTable, // 11
+      constantTable, // 12
+      aliasTable // 13
+    };
+
+    int indexIntArray = 1;
+    int indexSetArray = 3;
+    int indexVariableArray = 5;
+    int indexSetVariableArray = 7;
+    int indexFloatArray = 8;
+    int indexFloatVariableArray = 11;
+    int indexConstantTable = 12;
+
+    String[] tableNames = {
+      "int", // 0
+      "int arrays", // 1
+      "set", // 2
+      "set arrays", // 3
+      "IntVar", // 4
+      "IntVar Arrays", // 5
+      "SetVar", // 6
+      "SetVar arrays", // 7
+      "float arrays", // 8
+      "float", // 9
+      "FloatVar", // 10
+      "FloatVar arrays", // 11
+      "Constant table", // 12
+      "Alias table" // 13
+    };
+
+    StringBuilder s = new StringBuilder();
+    for (int i = 0; i < dictionary.length; i++) {
+      if (i == indexIntArray) {
+        appendIntArrayTable(s, dictionary[i], tableNames[i]);
+      } else if (i == indexFloatArray) {
+        appendFloatArrayTable(s, dictionary[i], tableNames[i]);
+      } else if (i == indexSetArray) {
+        appendSetArrayTable(s, dictionary[i], tableNames[i]);
+      } else if (i == indexVariableArray
+          || i == indexFloatVariableArray
+          || i == indexSetVariableArray) {
+        appendVariableArrayTable(s, dictionary[i], tableNames[i]);
+      } else if (i == indexConstantTable) {
+        appendConstantTable(s, dictionary[i], tableNames[i]);
+      } else {
+        s.append(tableNames[i]).append(" (").append(dictionary[i].size()).append(")\n");
+        s.append(dictionary[i]).append("\n");
+      }
+    }
+
+    s.append("Output variables = ").append(outputVariables).append("\n");
+    s.append("Output arrays = [");
+    for (OutputArrayAnnotation a : outputArray) {
+      s.append(a);
+      s.append(", ");
+    }
+    s.append("]\n");
+    s.append("Search int variables = ").append(defaultSearchVariables).append("\n");
+    s.append("Search int variable arrays = [");
+    for (Var[] a : defaultSearchArrays) {
+      s.append(Arrays.asList(a));
+      s.append(", ");
+    }
+    s.append("]\n");
+    s.append("Search float variables = ").append(defaultSearchFloatVariables).append("\n");
+    s.append("Search float variables arrays = [");
+    for (Var[] a : defaultSearchFloatArrays) {
+      s.append(Arrays.asList(a));
+      s.append(", ");
+    }
+    s.append("]\n");
+    s.append("Search set variables = ").append(defaultSearchSetVariables).append("\n");
+    s.append("Search set arrays = [");
+    for (Var[] a : defaultSearchSetArrays) {
+      s.append(Arrays.asList(a));
+      s.append(", ");
+    }
+    s.append("]\n");
+    return s.toString();
+  }
+
+  @SuppressWarnings("unchecked")
+  private void appendIntArrayTable(StringBuilder s, Map map, String tableName) {
+    s.append(tableName).append("\n");
+    s.append("{");
+    Set<String> keys = map.keySet();
+    for (String k : keys) {
+      int[] a = (int[]) map.get(k);
+      s.append(k).append("=[");
+      for (int j = 0; j < a.length; j++) {
+        s.append(a[j]);
+        if (j < a.length - 1) {
+          s.append(", ");
+        }
+      }
+      s.append("], ");
+    }
+    s.append("}\n");
+  }
+
+  @SuppressWarnings("unchecked")
+  private void appendFloatArrayTable(StringBuilder s, Map map, String tableName) {
+    s.append(tableName).append("\n");
+    s.append("{");
+    Set<String> keys = map.keySet();
+    for (String k : keys) {
+      double[] a = (double[]) map.get(k);
+      s.append(k).append("=[");
+      for (int j = 0; j < a.length; j++) {
+        s.append(a[j]);
+        if (j < a.length - 1) {
+          s.append(", ");
+        }
+      }
+      s.append("], ");
+    }
+    s.append("}\n");
+  }
+
+  @SuppressWarnings("unchecked")
+  private void appendSetArrayTable(StringBuilder s, Map map, String tableName) {
+    s.append(tableName).append("\n");
+    s.append("{");
+    Set<String> keys = map.keySet();
+    for (String k : keys) {
+      s.append(k).append("=");
+      IntDomain[] a = (IntDomain[]) map.get(k);
+      s.append(Arrays.asList(a));
+      s.append(", ");
+    }
+    s.append("}\n");
+  }
+
+  @SuppressWarnings("unchecked")
+  private void appendVariableArrayTable(StringBuilder s, Map map, String tableName) {
+    s.append(tableName).append("\n");
+    s.append("{");
+    Set<String> keys = map.keySet();
+    for (String k : keys) {
+      Var[] a = (Var[]) map.get(k);
+      s.append(k).append("=");
+      s.append(Arrays.asList(a));
+      s.append(", ");
+    }
+    s.append("}\n");
+  }
+
+  @SuppressWarnings("unchecked")
+  private void appendConstantTable(StringBuilder s, Map map, String tableName) {
+    s.append(tableName).append("\n");
+    s.append("{");
+    Set<Integer> keys = map.keySet();
+    for (Integer k : keys) {
+      Var a = (Var) map.get(k);
+      s.append(a);
+      s.append(", ");
+    }
+    s.append("}\n");
+  }
+}

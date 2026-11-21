@@ -1,0 +1,38 @@
+#!/bin/bash
+# Makes jacop.aot, the JVM's ahead-of-time cache for fzn-jacop (Java 25 or later). It solves the
+# FlatZinc models in aot-training/ (or the .fzn files given as arguments) in one training JVM, which
+# records the classes and method profiles they use. fzn-jacop then starts from the cache, which
+# saves about 0.2 s on every run. Run it again after replacing the jar or changing the JDK.
+set -e
+cd "$(dirname "$0")"
+JACOP_JAR="jacop-all-${project.version}.jar"
+
+# The classpath must be the one fzn-jacop builds, or the JVM rejects the cache
+CLASSPATH="$JACOP_JAR"
+for jar in lib/*.jar; do
+  [ -f "$jar" ] && CLASSPATH="$CLASSPATH${CLASSPATH:+:}$jar"
+done
+
+sep=':'; [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || -n "${WINDIR:-}" ]] && sep=';'
+if [[ "$sep" == ';' ]]; then
+  CLASSPATH=$(echo "$CLASSPATH" | tr ':' ';')
+fi
+
+if [ $# -gt 0 ]; then
+  MODELS=("$@")
+else
+  MODELS=(aot-training/*.fzn)
+fi
+
+# each model with its own search, with free search and with lazy clause generation
+RUNS=()
+for fzn in "${MODELS[@]}"; do
+  RUNS+=(-t 3000 "$fzn" -- -t 3000 -f "$fzn" -- -t 3000 --lcg -f "$fzn" --)
+done
+
+# written under another name first, so that a fzn-jacop started meanwhile never reads half a cache
+rm -f jacop.aot.tmp
+java -XX:+UseSerialGC -Xmx12G -Xss100M -XX:AOTCacheOutput=jacop.aot.tmp -cp "$CLASSPATH" \
+  org.jacop.fz.AotTraining "${RUNS[@]}" > /dev/null
+mv -f jacop.aot.tmp jacop.aot
+echo "Wrote $(pwd)/jacop.aot"

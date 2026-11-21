@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["int_lin_eq", "jacop_networkflow"],
+  "constraintFamilies": ["linear", "networkflow"],
+  "domains": []
+}

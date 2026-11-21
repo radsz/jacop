@@ -1,0 +1,293 @@
+/*
+ * SurvoPuzzle.java This file is part of JaCoP.
+ *
+ * <p>JaCoP is a Java Constraint Programming solver.
+ *
+ * <p>Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ *
+ * <p>This program is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU Affero General Public License as published by the Free Software Foundation, either version 3
+ * of the License, or (at your option) any later version.
+ *
+ * <p>This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Affero General Public License for more details.
+ *
+ * <p>Notwithstanding any other provision of this License, the copyright owners of this work
+ * supplement the terms of this License with terms prohibiting misrepresentation of the origin of
+ * this work and requiring that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license terms is in accordance with
+ * Section 7 of GNU Affero General Public License version 3.
+ *
+ * <p>You should have received a copy of the GNU Affero General Public License along with this
+ * program. If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.examples.fd;
+
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import org.jacop.constraints.Alldiff;
+import org.jacop.constraints.SumInt;
+import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XeqY;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+
+/**
+ * It solves Survo puzzle.
+ *
+ * <p><a href="http://en.wikipedia.org/wiki/Survo_Puzzle">...</a> """ Survo puzzle is a kind of
+ * logic puzzle presented (in April 2006) and studied by Seppo Mustonen. The name of the puzzle is
+ * associated to Mustonen's Survo system which is a general environment for statistical computing
+ * and related areas.
+ *
+ * <p>In a Survo puzzle the task is to fill an m * n table by integers 1,2,...,m*n so that each of
+ * these numbers appears only once and their row and column sums are equal to integers given on the
+ * bottom and the right side of the table. Often some of the integers are given readily in the table
+ * in order to guarantee uniqueness of the solution and/or for making the task easier. """
+ *
+ * <p>See also <a href="http://www.survo.fi/english/index.html">...</a> <a
+ * href="http://www.survo.fi/puzzles/index.html">...</a>
+ *
+ * <p>References: - Mustonen, S. (2006b). "On certain cross sum puzzles" <a
+ * href="http://www.survo.fi/papers/puzzles.pdf">...</a> - Mustonen, S. (2007b). "Enumeration of
+ * uniquely solvable open Survo puzzles." <a
+ * href="http://www.survo.fi/papers/enum_survo_puzzles.pdf">...</a> - Kimmo Vehkalahti: "Some
+ * comments on magic squares and Survo puzzles" <a
+ * href="http://www.helsinki.fi/~kvehkala/Kimmo_Vehkalahti_Windsor.pdf">...</a>
+ *
+ * @author Hakan Kjellerstrand and Radoslaw Szymanek
+ * @version 5.0
+ */
+@Slf4j
+public class SurvoPuzzle extends ExampleFd {
+
+  int r; // number of rows
+  int c; // number of column
+  int[] rowsums; // row sums
+  int[] colsums; // col sums
+  int[][] matrix; // the clues matrix
+
+  IntVar[][] x; // the solution
+  IntVar[] xArr; // x as an array, for alldifferent
+
+  /**
+   * It prints a matrix of variables. All variables must be grounded.
+   *
+   * @param matrix matrix containing the grounded variables.
+   * @param rows number of elements in the first dimension.
+   * @param cols number of elements in the second dimension.
+   */
+  public static void printMatrix(IntVar[][] matrix, int rows, int cols) {
+
+    for (int i = 0; i < rows; i++) {
+      for (int j = 0; j < cols; j++) {
+        IO.print(matrix[i][j].value() + " ");
+      }
+      log.info("");
+    }
+  }
+
+  /**
+   * It executes the program to solve the specified SurvoPuzzle.
+   *
+   * @param args the first argument specifies the filename containing the puzzle to be solved.
+   */
+  static void main(String[] args) {
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
+    String filename = "";
+    if (args.length == 1) {
+      filename = args[0];
+      log.info("Using file " + filename);
+    }
+
+    SurvoPuzzle m = new SurvoPuzzle();
+    if (!filename.isEmpty()) {
+      m.readFile(filename);
+    }
+
+    m.model();
+
+    long t1;
+    long t2;
+    t1 = System.currentTimeMillis();
+
+    boolean result = m.searchWithMaxRegret();
+
+    if (result) {
+      int numSolutions = m.searchLabel.getSolutionListener().solutionsNo();
+      log.info("Number of solutions: " + numSolutions);
+      printMatrix(m.x, m.r, m.c);
+    }
+
+    t2 = System.currentTimeMillis();
+
+    log.info("\n\t*** Execution time = " + (t2 - t1) + " ms");
+  } // end main
+
+  /** Model(). */
+  @Override
+  public void model() {
+
+    store = new Store();
+
+    if (matrix == null) {
+
+      log.info("Using the default problem.");
+
+      /* Default problem:
+       *
+       * http://www.survo.fi/puzzles/280708.txt, the third puzzle
+       * Survo puzzle 128/2008 (1700) #364-35846
+       */
+      int rTmp = 3;
+      int cTmp = 6;
+      int[] rowsumsTmp = {30, 86, 55};
+      int[] colsumsTmp = {22, 11, 42, 32, 27, 37};
+      int[][] matrixTmp = {{0, 0, 0, 0, 0, 0}, {0, 0, 18, 0, 0, 0}, {0, 0, 0, 0, 0, 0}};
+
+      r = rTmp;
+      c = cTmp;
+      rowsums = rowsumsTmp;
+      colsums = colsumsTmp;
+      matrix = matrixTmp;
+    }
+
+    // initiate structures and variables
+    x = new IntVar[r][c];
+    xArr = new IntVar[r * c];
+    for (int i = 0; i < r; i++) {
+      for (int j = 0; j < c; j++) {
+        x[i][j] = new IntVar(store, "x_" + i + "_" + j, 1, r * c);
+        if (matrix[i][j] > 0) {
+          store.impose(new XeqC(x[i][j], matrix[i][j]));
+        }
+        xArr[c * i + j] = new IntVar(store, "xa_" + i + "_" + j, 1, r * c);
+        store.impose(new XeqY(xArr[c * i + j], x[i][j]));
+      }
+    }
+
+    // row sums
+    for (int i = 0; i < r; i++) {
+      IntVar rowSum = new IntVar(store, "r_" + i, 1, r * c * r * c);
+      store.impose(new SumInt(x[i], "==", rowSum));
+      store.impose(new XeqC(rowSum, rowsums[i]));
+    }
+
+    // column sums
+    for (int j = 0; j < c; j++) {
+      List<IntVar> cols = new ArrayList<>();
+      for (int i = 0; i < r; i++) {
+        cols.add(x[i][j]);
+      }
+      IntVar columnSum = new IntVar(store, "c_" + j, 1, r * c * r * c);
+      store.impose(new SumInt(cols, "==", columnSum));
+      store.impose(new XeqC(columnSum, colsums[j]));
+    }
+
+    // Alldifferent on the array version.
+    store.impose(new Alldiff(xArr));
+
+    vars = new ArrayList<>();
+
+    vars.addAll(Arrays.asList(xArr));
+  }
+
+  /**
+   * ReadFile().
+   *
+   * <p>Reads a Survo puzzle in the following format
+   *
+   * <p>% From <a href="http://www.survo.fi/puzzles/280708.txt">...</a> % Survo puzzle 128/2008
+   * (1700) #364-35846 A B C D E F 1 * * * * * * 30 2 * * 18 * * * 86 3 * * * * * * 55 22 11 42 32
+   * 27 37
+   *
+   * @param file the filename containing the problem description.
+   */
+  public void readFile(String file) {
+
+    log.info("readFile(" + file + ")");
+
+    try (BufferedReader inr =
+        new BufferedReader(
+            new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
+      List<List<Integer>> matrixI = readSurvoLines(inr);
+      if (!matrixI.isEmpty()) {
+        buildMatrixAndSums(matrixI);
+      }
+    } catch (IOException e) {
+      log.info("{}", e);
+    }
+  }
+
+  private List<List<Integer>> readSurvoLines(BufferedReader inr) throws IOException {
+    String str;
+    int lineCount = 0;
+    List<List<Integer>> matrixI = new ArrayList<>();
+    while ((str = inr.readLine()) != null && !str.isEmpty()) {
+      str = str.trim();
+      if (str.startsWith("#") || str.startsWith("%")) {
+        continue;
+      }
+      str = str.replace("_", "");
+      String[] row = str.split("\\s+");
+      log.info(str);
+      if (lineCount == 0) {
+        parseHeaderRow(row);
+      } else {
+        parseDataRow(row, matrixI);
+      }
+      lineCount++;
+    }
+    return matrixI;
+  }
+
+  private void parseHeaderRow(String[] row) {
+    c = row.length;
+    colsums = new int[c];
+  }
+
+  private void parseDataRow(String[] row, List<List<Integer>> matrixI) {
+    if (row.length == c) {
+      colsums = new int[row.length];
+      for (int j = 0; j < row.length; j++) {
+        colsums[j] = Integer.parseInt(row[j]);
+      }
+      log.info("");
+    } else {
+      List<Integer> thisRow = parseRowValues(row);
+      matrixI.add(thisRow);
+    }
+  }
+
+  private List<Integer> parseRowValues(String[] row) {
+    List<Integer> thisRow = new ArrayList<>();
+    for (String s : row) {
+      thisRow.add("*".equals(s) ? 0 : Integer.parseInt(s));
+    }
+    return thisRow;
+  }
+
+  private void buildMatrixAndSums(List<List<Integer>> matrixI) {
+    r = matrixI.size();
+    rowsums = new int[r];
+    matrix = new int[r][c];
+    for (int i = 0; i < r; i++) {
+      List<Integer> thisRow = matrixI.get(i);
+      for (int j = 1; j < c + 1; j++) {
+        matrix[i][j - 1] = thisRow.get(j);
+      }
+      rowsums[i] = thisRow.get(c + 1);
+    }
+  } // end readFile
+} // end class

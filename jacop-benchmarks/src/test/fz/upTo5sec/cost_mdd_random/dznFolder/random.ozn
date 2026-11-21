@@ -1,0 +1,5 @@
+output ["x = ",showDzn(x),";\n","c = ",showDzn(c),";\n"];
+int: K = 5;
+array [1..K] of int: c;
+int: n = 15;
+array [1..n] of int: x;

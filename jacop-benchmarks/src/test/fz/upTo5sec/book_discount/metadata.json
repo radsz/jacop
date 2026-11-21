@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["float_lin_eq", "float_times", "int2float", "int_lin_eq"],
+  "constraintFamilies": ["arithmetic", "float", "linear"],
+  "domains": []
+}

@@ -1,0 +1,22 @@
+
+predicate jacop_alldiff(array [int] of var int: x);
+predicate jacop_increasing(array [int] of var int: x);
+array [1..2] of int: X_INTRODUCED_25_ = [1,-1];
+array [1..9] of int: X_INTRODUCED_27_ = [1,1,1,1,1,1,1,1,1];
+var 1..81: X_INTRODUCED_16_;
+var 1..81: X_INTRODUCED_17_;
+var 1..81: X_INTRODUCED_18_;
+var 1..81: X_INTRODUCED_19_;
+var 1..81: X_INTRODUCED_20_;
+var 1..81: X_INTRODUCED_21_;
+var 1..81: X_INTRODUCED_22_;
+var 1..81: X_INTRODUCED_23_;
+var 1..81: X_INTRODUCED_24_;
+var 9..729: z:: is_defined_var;
+array [1..9] of var int: x:: output_array([1..9]) = [X_INTRODUCED_16_,X_INTRODUCED_17_,X_INTRODUCED_18_,X_INTRODUCED_19_,X_INTRODUCED_20_,X_INTRODUCED_21_,X_INTRODUCED_22_,X_INTRODUCED_23_,X_INTRODUCED_24_];
+constraint jacop_alldiff(x);
+constraint jacop_increasing(x);
+constraint int_lin_eq(X_INTRODUCED_25_,[X_INTRODUCED_24_,X_INTRODUCED_16_],8);
+constraint int_lin_eq(X_INTRODUCED_27_,[X_INTRODUCED_16_,X_INTRODUCED_17_,X_INTRODUCED_18_,X_INTRODUCED_19_,X_INTRODUCED_20_,X_INTRODUCED_21_,X_INTRODUCED_22_,X_INTRODUCED_23_,X_INTRODUCED_24_],369);
+constraint int_lin_eq([1,1,1,1,1,1,1,1,1,-1],[X_INTRODUCED_16_,X_INTRODUCED_17_,X_INTRODUCED_18_,X_INTRODUCED_19_,X_INTRODUCED_20_,X_INTRODUCED_21_,X_INTRODUCED_22_,X_INTRODUCED_23_,X_INTRODUCED_24_,z],0):: defines_var(z);
+solve :: int_search(x,first_fail,indomain_min,complete) satisfy;

@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["bool2int", "int_eq_reif", "int_lin_eq", "int_ne_reif", "int_times", "jacop_bin_packing", "jacop_count", "jacop_maximum", "jacop_networkflow"],
+  "constraintFamilies": ["arithmetic", "binpacking", "boolean", "comparison", "counting", "linear", "minmax", "networkflow"],
+  "domains": []
+}

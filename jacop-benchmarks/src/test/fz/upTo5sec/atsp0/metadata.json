@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["int_lin_eq", "jacop_array_var_int_element_nonshifted", "jacop_circuit_offset"],
+  "constraintFamilies": ["circuit", "linear"],
+  "domains": []
+}

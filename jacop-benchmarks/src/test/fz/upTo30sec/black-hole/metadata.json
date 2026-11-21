@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["int_lin_le", "jacop_assignment", "jacop_table_int"],
+  "constraintFamilies": ["assignment", "linear", "table"],
+  "domains": []
+}

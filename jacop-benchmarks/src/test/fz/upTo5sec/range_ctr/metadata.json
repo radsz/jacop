@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["int_lin_le", "int_max", "int_min"],
+  "constraintFamilies": ["arithmetic", "linear"],
+  "domains": []
+}

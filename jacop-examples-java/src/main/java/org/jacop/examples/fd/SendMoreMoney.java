@@ -1,0 +1,317 @@
+/*
+ * SendMoreMoney.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.examples.fd;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import lombok.extern.slf4j.Slf4j;
+import org.jacop.constraints.Alldiff;
+import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.XmulCeqZ;
+import org.jacop.constraints.XneqC;
+import org.jacop.constraints.XneqY;
+import org.jacop.constraints.XplusYeqZ;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleSelect;
+import org.jacop.search.SmallestDomain;
+
+/**
+ * It is a simple arithmetic logic puzzle, where SEND+MORE=MONEY.
+ *
+ * <p>Find for the equation on the left what digits are represented by the letters different letters
+ * represent different digits
+ *
+ * <p>SEND 9567 +MORE ======={@literal >}+1085 MONEY 10652
+ *
+ * @author Radoslaw Szymanek
+ * @version 5.0
+ */
+@Slf4j
+public class SendMoreMoney extends ExampleFd {
+
+  /*
+   * This creates a standard model using simple basic constraints.
+   */
+
+  /**
+   * It executes the program to solve this simple logic puzzle.
+   *
+   * @param args no arguments used.
+   */
+  static void main(String[] args) {
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
+    SendMoreMoney exampleBasic = new SendMoreMoney();
+
+    exampleBasic.modelBasic();
+
+    if (exampleBasic.search()) {
+      log.info("Solution found.");
+    }
+
+    SendMoreMoney exampleGlobal = new SendMoreMoney();
+
+    exampleGlobal.model();
+
+    if (exampleGlobal.search()) {
+      log.info("Solution found.");
+    }
+  }
+
+  /**
+   * 1. Every CP program consists of two parts. The first one is a model and the second one is the
+   * specification of the search.
+   *
+   * <p>The model consists of variables and constraints.
+   */
+  public void modelBasic() {
+
+    vars = new ArrayList<>();
+
+    store = new Store();
+
+    // Creating an array for FDVs
+    IntVar[] letters = new IntVar[8];
+
+    // Creating FDV (finite domain variables)
+    // with indexes for accessing
+    final int iS = 0;
+    final int iE = 1;
+    final int iN = 2;
+    final int iD = 3;
+    final int iM = 4;
+    final int iO = 5;
+    final int iR = 6;
+    final int iY = 7;
+
+    letters[iS] = new IntVar(store, "S", 0, 9);
+    letters[iE] = new IntVar(store, "E", 0, 9);
+    letters[iN] = new IntVar(store, "N", 0, 9);
+    letters[iD] = new IntVar(store, "D", 0, 9);
+    letters[iM] = new IntVar(store, "M", 0, 9);
+    letters[iO] = new IntVar(store, "O", 0, 9);
+    letters[iR] = new IntVar(store, "R", 0, 9);
+    letters[iY] = new IntVar(store, "Y", 0, 9);
+
+    vars.addAll(Arrays.asList(letters));
+
+    // Imposing inequalities constraints between letters
+    // This nested loop imposes inequality constraint
+    // for all pairs of letters
+    // Since there are 8 different letters this will create
+    // 0+1+2+3+4+5+6+7 = 28 inequality constraints
+
+    for (int i = 0; i < letters.length; i++) {
+      for (int j = i - 1; j >= 0; j--) {
+        store.impose(new XneqY(letters[j], letters[i]));
+      }
+    }
+
+    // Each letter is SEND number has a different value
+    // which depends on the position of this letter
+    // SEND = 1000 * S + 100 * E + N * 10 + D * 1
+    IntVar[] numbersSend = new IntVar[4];
+    final IntVar valueSend = new IntVar(store, "SEND", 0, 9999);
+
+    // Creates FDV for each position in SEND with
+    // appropriate domain, they all start with zero
+    // since a letter could be zero and the position
+    // value is also zero
+    numbersSend[0] = new IntVar(store, "v(SinSEND)", 0, 9000);
+    numbersSend[1] = new IntVar(store, "v(EinSEND)", 0, 900);
+    numbersSend[2] = new IntVar(store, "v(NinSEND)", 0, 90);
+    numbersSend[3] = new IntVar(store, "v(DinSEND)", 0, 9);
+
+    // Creates and imposes constraints which enforce
+    // relationship between letter and value of its position
+    // in the number SEND
+    store.impose(new XmulCeqZ(letters[iS], 1000, numbersSend[0]));
+    store.impose(new XmulCeqZ(letters[iE], 100, numbersSend[1]));
+    store.impose(new XmulCeqZ(letters[iN], 10, numbersSend[2]));
+    store.impose(new XmulCeqZ(letters[iD], 1, numbersSend[3]));
+
+    // Succesively adds position to get value of the number SEND
+    IntVar valueSeInSend = new IntVar(store, "v(SEinSEND)", 0, 9900);
+    IntVar valueNdInSend = new IntVar(store, "v(NDinSEND)", 0, 99);
+
+    store.impose(new XplusYeqZ(numbersSend[0], numbersSend[1], valueSeInSend));
+    store.impose(new XplusYeqZ(numbersSend[2], numbersSend[3], valueNdInSend));
+    store.impose(new XplusYeqZ(valueSeInSend, valueNdInSend, valueSend));
+
+    // Each letter in MORE number has a different value
+    // which depends on the position of this letter
+    // MORE = 1000 * M + 100 * O + R * 10 + E * 1
+    IntVar[] numbersMore = new IntVar[4];
+    final IntVar valueMore = new IntVar(store, "MORE", 0, 9999);
+
+    // Creates FDV for each position in MORE with
+    // appropriate domain, they all start with zero
+    // since a letter could be zero and the position
+    // value is also zero
+    numbersMore[0] = new IntVar(store, "v(MinMORE)", 0, 9000);
+    numbersMore[1] = new IntVar(store, "v(OinMORE)", 0, 900);
+    numbersMore[2] = new IntVar(store, "v(RinMORE)", 0, 90);
+    numbersMore[3] = new IntVar(store, "v(EinMORE)", 0, 9);
+
+    // Creates and imposes constraints which enforce
+    // relationship between letter and value of its position
+    // in the number MORE
+    store.impose(new XmulCeqZ(letters[iM], 1000, numbersMore[0]));
+    store.impose(new XmulCeqZ(letters[iO], 100, numbersMore[1]));
+    store.impose(new XmulCeqZ(letters[iR], 10, numbersMore[2]));
+    store.impose(new XmulCeqZ(letters[iE], 1, numbersMore[3]));
+
+    // Successively adds position to get value of the number MORE
+    IntVar valueMoInMore = new IntVar(store, "v(MOinMORE)", 0, 9900);
+    IntVar valueReInMore = new IntVar(store, "v(REinMORE)", 0, 99);
+
+    store.impose(new XplusYeqZ(numbersMore[0], numbersMore[1], valueMoInMore));
+    store.impose(new XplusYeqZ(numbersMore[2], numbersMore[3], valueReInMore));
+    store.impose(new XplusYeqZ(valueMoInMore, valueReInMore, valueMore));
+
+    // Each letter in MONEY number has a different value
+    // which depends on the position of this letter
+    // MONEY = 10000 * M + 1000 * O + N * 100 + E * 10 + Y * 1
+    IntVar[] numbersMoney = new IntVar[5];
+    final IntVar valueMoney = new IntVar(store, "MONEY", 0, 99999);
+
+    // Creates FDV for each position in MONEY with
+    // appropriate domain, they all start with zero
+    // since a letter could be zero and the position
+    // value is also zero
+    numbersMoney[0] = new IntVar(store, "v(MinMONEY)", 0, 90000);
+    numbersMoney[1] = new IntVar(store, "v(OinMONEY)", 0, 9000);
+    numbersMoney[2] = new IntVar(store, "v(NinMONEY)", 0, 900);
+    numbersMoney[3] = new IntVar(store, "v(EinMONEY)", 0, 90);
+    numbersMoney[4] = new IntVar(store, "v(YinMONEY)", 0, 9);
+
+    store.impose(new XmulCeqZ(letters[iM], 10000, numbersMoney[0]));
+    store.impose(new XmulCeqZ(letters[iO], 1000, numbersMoney[1]));
+    store.impose(new XmulCeqZ(letters[iN], 100, numbersMoney[2]));
+    store.impose(new XmulCeqZ(letters[iE], 10, numbersMoney[3]));
+    store.impose(new XmulCeqZ(letters[iY], 1, numbersMoney[4]));
+
+    // Successively adds position to get value of the number MONEY
+    IntVar valueMoInMoney = new IntVar(store, "v(MOinMONEY)", 0, 99000);
+    IntVar valueNeInMoney = new IntVar(store, "v(NEinMONEY)", 0, 990);
+    IntVar valueMoneInMoney = new IntVar(store, "v(MONEinMONEY)", 0, 99990);
+
+    store.impose(new XplusYeqZ(numbersMoney[0], numbersMoney[1], valueMoInMoney));
+    store.impose(new XplusYeqZ(numbersMoney[2], numbersMoney[3], valueNeInMoney));
+    store.impose(new XplusYeqZ(valueMoInMoney, valueNeInMoney, valueMoneInMoney));
+    store.impose(new XplusYeqZ(valueMoneInMoney, numbersMoney[4], valueMoney));
+
+    // Main equation of the problem SEND + MORE = MONEY
+    store.impose(new XplusYeqZ(valueSend, valueMore, valueMoney));
+
+    // Since S is the first digit of SEND
+    // and M is the first digit of MORE or MONEY
+    // both letters can not be equal to zero
+    store.impose(new XneqC(letters[iS], 0));
+    store.impose(new XneqC(letters[iM], 0));
+  }
+
+  /** This creates a standard search, which looks for a single solution. */
+  @Override
+  public boolean search() {
+
+    SelectChoicePoint<IntVar> select =
+        new SimpleSelect<>(
+            vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMin<>());
+
+    searchLabel = new DepthFirstSearch<>();
+
+    return searchLabel.labeling(store, select);
+  }
+
+  /**
+   * Builds the global constraint model (Alldiff + LinearInt). Subclasses may call this and then run
+   * custom search (e.g. TraceGenerator).
+   */
+  protected void buildModel() {
+
+    vars = new ArrayList<>();
+    store = new Store();
+
+    IntVar s = new IntVar(store, "S", 0, 9);
+    IntVar e = new IntVar(store, "E", 0, 9);
+    IntVar n = new IntVar(store, "N", 0, 9);
+    IntVar d = new IntVar(store, "D", 0, 9);
+    IntVar m = new IntVar(store, "M", 0, 9);
+    IntVar o = new IntVar(store, "O", 0, 9);
+    IntVar r = new IntVar(store, "R", 0, 9);
+    IntVar y = new IntVar(store, "Y", 0, 9);
+
+    IntVar valueSend = new IntVar(store, "v(SEND)", 0, 9999);
+    IntVar valueMore = new IntVar(store, "v(MORE)", 0, 9999);
+    IntVar valueMoney = new IntVar(store, "v(MONEY)", 0, 99999);
+
+    IntVar[] digits = {s, e, n, d, m, o, r, y};
+    IntVar[] send = {s, e, n, d};
+    IntVar[] more = {m, o, r, e};
+    IntVar[] money = {m, o, n, e, y};
+
+    vars.addAll(Arrays.asList(digits));
+
+    store.impose(new Alldiff(digits));
+
+    int[] weights5 = {10000, 1000, 100, 10, 1};
+    int[] weights4 = {1000, 100, 10, 1};
+
+    store.impose(new LinearInt(send, weights4, "==", valueSend));
+    store.impose(new LinearInt(more, weights4, "==", valueMore));
+    store.impose(new LinearInt(money, weights5, "==", valueMoney));
+
+    store.impose(new XplusYeqZ(valueSend, valueMore, valueMoney));
+
+    int[] weightsImplied = {1000, 91, 10, 1, -9000, -900, -90};
+    IntVar[] varsImplied = {s, e, r, d, m, o, n};
+    store.impose(new LinearInt(varsImplied, weightsImplied, "==", y));
+
+    store.impose(new XneqC(s, 0));
+    store.impose(new XneqC(m, 0));
+  }
+
+  /**
+   * 1. Every CP program consists of two parts. The first one is a model and the second one is the
+   * specification of the search. This creates a model which uses global constraints to provide
+   * consize modeling. The model consists of variables and constraints.
+   */
+  @Override
+  public void model() {
+    buildModel();
+  }
+}

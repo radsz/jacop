@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["int_eq", "int_eq_reif", "int_lin_le", "jacop_count"],
+  "constraintFamilies": ["comparison", "counting", "linear"],
+  "domains": []
+}

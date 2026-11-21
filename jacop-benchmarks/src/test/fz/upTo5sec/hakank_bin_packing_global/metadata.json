@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["int_lin_le", "jacop_bin_packing_capacity"],
+  "constraintFamilies": ["binpacking", "linear"],
+  "domains": []
+}

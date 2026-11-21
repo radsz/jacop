@@ -1,0 +1,4 @@
+van = {1, 2, 4, 6, 8, 9, 10, 13, 14};
+served = array1d(1..12, [true, false, true, false, true, true, false, false, true, true, false, false]);
+----------
+==========

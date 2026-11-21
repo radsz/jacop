@@ -1,0 +1,259 @@
+/*
+ * NoGoodsCollector.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.search;
+
+import java.util.ArrayList;
+import java.util.List;
+import org.jacop.constraints.NoGood;
+import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+
+/**
+ * NoGoodCollector collects no-goods from search when timeout has occurred. As time-out is executed
+ * the search will exit from deeper search levels and no-goods collector will collect neccessary
+ * information to create no-goods when finally exiting the search. The no-goods will be immmediately
+ * imposed when collector is informed about exiting the search.
+ *
+ * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @version 5.0
+ */
+public class NoGoodsCollector<T extends IntVar>
+    implements ExitChildListener<T>, TimeOutListener, ExitListener {
+
+  /** It specifies if the timeout has occurred and search is being terminated. */
+  public boolean timeOut;
+
+  List<List<T>> noGoodsVariables;
+  List<List<Integer>> noGoodsValues;
+  ExitChildListener<T>[] exitChildListeners;
+
+  TimeOutListener[] timeOutListeners;
+
+  ExitListener[] exitListeners;
+
+  /** It is executed right after time out is determined. */
+  public void executedAtTimeOut(int noSolutions) {
+
+    if (noSolutions == 0) {
+      timeOut = true;
+      noGoodsVariables = new ArrayList<>();
+      noGoodsValues = new ArrayList<>();
+    }
+
+    if (timeOutListeners != null) {
+      for (TimeOutListener timeOutListener : timeOutListeners) {
+        timeOutListener.executedAtTimeOut(noSolutions);
+      }
+    }
+  }
+
+  /**
+   * It is executed after exiting left child. Status specifies if the solution is found or not. The
+   * return parameter specifies if the search should continue according to its course or be forced
+   * to exit the parent node of the left child.
+   */
+  public boolean leftChild(T v, int value, boolean status) {
+
+    if (timeOut) {
+      return handleLeftChildOnTimeOut(v, value, status);
+    }
+
+    if (exitChildListeners == null) {
+      return true;
+    }
+    return delegateLeftChildToListeners(v, value, status);
+  }
+
+  /**
+   * Handles exiting the left child when using constraint-based choices.
+   *
+   * @param choice the primitive constraint used as the left branch choice.
+   * @param status true if a solution was found, false otherwise.
+   * @return true if search should continue, false if it should exit.
+   */
+  public boolean leftChild(PrimitiveConstraint choice, boolean status) {
+    if (exitChildListeners == null) {
+      return true;
+    } else {
+      boolean code = false;
+      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
+        code |= exitChildListener.leftChild(choice, status);
+      }
+      return code;
+    }
+  }
+
+  private boolean handleLeftChildOnTimeOut(T v, int value, boolean status) {
+    for (List<T> noGood : noGoodsVariables) {
+      noGood.add(v);
+    }
+    for (List<Integer> noGood : noGoodsValues) {
+      noGood.add(value);
+    }
+    notifyExitChildListenersLeft(v, value, status);
+    return false;
+  }
+
+  private boolean delegateLeftChildToListeners(T v, int value, boolean status) {
+    boolean code = false;
+    for (ExitChildListener<T> exitChildListener : exitChildListeners) {
+      code |= exitChildListener.leftChild(v, value, status);
+    }
+    return code;
+  }
+
+  private void notifyExitChildListenersLeft(T v, int value, boolean status) {
+
+    if (exitChildListeners == null) {
+      return;
+    }
+    for (ExitChildListener<T> exitChildListener : exitChildListeners) {
+      exitChildListener.leftChild(v, value, status);
+    }
+  }
+
+  /**
+   * Handles exiting the right child, collecting no-good information during timeout.
+   *
+   * @param v the variable of the right branch choice.
+   * @param value the value of the right branch choice.
+   * @param status true if a solution was found, false otherwise.
+   */
+  public void rightChild(T v, int value, boolean status) {
+
+    if (timeOut) {
+      List<T> newNoGoodVar = new ArrayList<>();
+      newNoGoodVar.add(v);
+      List<Integer> newNoGoodVal = new ArrayList<>();
+      newNoGoodVal.add(value);
+
+      noGoodsVariables.add(newNoGoodVar);
+      noGoodsValues.add(newNoGoodVal);
+    }
+
+    if (exitChildListeners != null) {
+      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
+        exitChildListener.rightChild(v, value, status);
+      }
+    }
+  }
+
+  /**
+   * Handles exiting the right child when using constraint-based choices.
+   *
+   * @param choice the primitive constraint used as the right branch choice.
+   * @param status true if a solution was found, false otherwise.
+   */
+  public void rightChild(PrimitiveConstraint choice, boolean status) {
+    if (exitChildListeners != null) {
+      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
+        exitChildListener.rightChild(choice, status);
+      }
+    }
+  }
+
+  /**
+   * Executed when exiting the search, imposing collected no-goods if a timeout occurred.
+   *
+   * @param store the constraint store in which no-goods are imposed.
+   * @param solutionsNo the number of solutions found during search.
+   */
+  public void executedAtExit(Store store, int solutionsNo) {
+
+    if (timeOut && solutionsNo == 0) {
+      for (int i = 0; i < noGoodsVariables.size(); i++) {
+        store.impose(new NoGood(noGoodsVariables.get(i), noGoodsValues.get(i)));
+      }
+    }
+
+    if (exitListeners != null) {
+      for (int i = 0; i < exitChildListeners.length; i++) {
+        exitListeners[i].executedAtExit(store, solutionsNo);
+      }
+    }
+  }
+
+  public void setChildrenListeners(ExitChildListener<T>[] children) {
+    exitChildListeners = children;
+  }
+
+  public void setChildrenListeners(ExitListener[] children) {
+
+    exitListeners = children;
+  }
+
+  public void setChildrenListeners(TimeOutListener[] children) {
+
+    timeOutListeners = children;
+  }
+
+  /**
+   * Sets a single timeout listener as the child listener.
+   *
+   * @param child the timeout listener to set.
+   */
+  public void setChildrenListeners(TimeOutListener child) {
+    timeOutListeners = new TimeOutListener[1];
+    timeOutListeners[0] = child;
+  }
+
+  /**
+   * Sets a single exit listener as the child listener.
+   *
+   * @param child the exit listener to set.
+   */
+  public void setChildrenListeners(ExitListener child) {
+    exitListeners = new ExitListener[1];
+    exitListeners[0] = child;
+  }
+
+  /**
+   * Sets a single exit child listener as the child listener.
+   *
+   * @param child the exit child listener to set.
+   */
+  @SuppressWarnings("unchecked")
+  public void setChildrenListeners(ExitChildListener<T> child) {
+    exitChildListeners = new ExitChildListener[1];
+    exitChildListeners[0] = child;
+  }
+
+  @Override
+  public String toString() {
+
+    if (noGoodsVariables != null) {
+      return noGoodsVariables + noGoodsValues.toString();
+    } else {
+      return "[]";
+    }
+  }
+}

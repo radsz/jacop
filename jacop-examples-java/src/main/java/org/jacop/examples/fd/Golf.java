@@ -1,0 +1,212 @@
+/*
+ * Golf.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.examples.fd;
+
+import java.util.ArrayList;
+import lombok.extern.slf4j.Slf4j;
+import org.jacop.constraints.Alldifferent;
+import org.jacop.constraints.And;
+import org.jacop.constraints.Element;
+import org.jacop.constraints.Or;
+import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XltC;
+import org.jacop.constraints.XltY;
+import org.jacop.constraints.XneqC;
+import org.jacop.constraints.XneqY;
+import org.jacop.constraints.XplusCeqZ;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+
+/**
+ * A simple logic puzzle about golf players.
+ *
+ * <p>"A Round of Golf"
+ *
+ * <p>When the Sunny Hills Country Club golf course isn't in use by club members, of course, it's
+ * open to the club's employees. Recently, Jack and three other workers at the golf course got
+ * together on their day off to play a round of eighteen holes of golf. Afterward, all four,
+ * including Mr. Green, went to the clubhouse to total their scorecards. Each man works at a
+ * different job (one is a short-order cook), and each shot a different score in the game. No one
+ * scored below 70 or above 85 strokes. From the clues below, can you discover each man's full name,
+ * job and golf score?
+ *
+ * <p>1. Bill, who is not the maintenance man, plays golf often and had the lowest score of the
+ * foursome. 2. Mr. Clubb, who isn't Paul, hit several balls into the woods and scored ten strokes
+ * more than the pro-shop clerk. 3. In some order, Frank and the caddy scored four and seven more
+ * strokes than Mr. Sands. 4. Mr. Carter thought his score of 78 was one of his better games, even
+ * though Frank's score was lower. 5. None of the four scored exactly 81 strokes.
+ *
+ * <p>Solution Bill Sands Cook 71 Jack Clubb Maint 85 Paul Carter Caddy 78 Frank Green Clerk 75
+ *
+ * @author Mariusz Czarnojan, Krystian Burka, and Radoslaw Szymanek
+ * @version 5.0
+ */
+@Slf4j
+public class Golf extends ExampleFd {
+
+  /**
+   * It executes a simple program to solve this logic puzzle.
+   *
+   * @param args no arguments is used.
+   */
+  static void main(String[] args) {
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
+    Golf example = new Golf();
+
+    example.model();
+
+    if (example.search()) {
+      log.info("Solution(s) found");
+    }
+  }
+
+  @Override
+  public void model() {
+
+    store = new Store();
+    vars = new ArrayList<>();
+
+    log.info("Program to solve Golf problem ");
+
+    // First names of golf players.
+    String[] fnNames = {"Bill", "Paul", "Frank", "Jack"};
+    // Creation of indexes for ease of referring.
+    final int iBill = 0;
+    final int iPaul = 1;
+    final int iFrank = 2;
+    final int iJack = 3;
+
+    // Last names of golf players.
+    String[] lnNames = {"Clubb", "Carter", "Sands", "Green"};
+    // Creation of indexes for ease of referring.
+    final int /* iGreen = 0, */ iClubb = 1;
+    final int iCarter = 2;
+    final int iSands = 3;
+
+    // Jobs of the golf players.
+    String[] jobsNames = {"Maint", "Caddy", "Clerk", "Cook"};
+    // Creation of indexes for ease of referring.
+    final int iMaint = 0;
+    final int iCaddy = 1;
+    final int iClerk = 2; /*, iCook = 3 */
+
+    // FDV's arrays
+    IntVar[] fn = new IntVar[4];
+    IntVar[] ln = new IntVar[4];
+    IntVar[] jobs = new IntVar[4];
+
+    // Creating all FDVs.
+    for (int i = 0; i < 4; i++) {
+      // Domains are given through use of the function addDom.
+      // Value 81 is not included due to clue no. 5.
+      // Bounds 70 and 85 are derived from the problem description.
+      fn[i] = new IntVar(store, fnNames[i]);
+      fn[i].addDom(70, 80);
+      fn[i].addDom(82, 85);
+
+      ln[i] = new IntVar(store, lnNames[i]);
+      ln[i].addDom(70, 80);
+      ln[i].addDom(82, 85);
+
+      jobs[i] = new IntVar(store, jobsNames[i]);
+      jobs[i].addDom(70, 80);
+      jobs[i].addDom(82, 85);
+
+      vars.add(fn[i]);
+      vars.add(ln[i]);
+      vars.add(jobs[i]);
+    }
+
+    // Each player (firstname, lastname, job) has a different score.
+    store.impose(new Alldifferent(fn));
+    store.impose(new Alldifferent(ln));
+    store.impose(new Alldifferent(jobs));
+
+    // 1. Bill, who is not the maintenance man, plays golf often and had the
+    // lowest score of the foursome.
+
+    store.impose(new XneqY(fn[iBill], jobs[iMaint]));
+    store.impose(new XltY(fn[iBill], fn[iPaul]));
+    store.impose(new XltY(fn[iBill], fn[iFrank]));
+    store.impose(new XltY(fn[iBill], fn[iJack]));
+
+    // 2. Mr. Clubb, who isn't Paul, hit several balls into the woods and
+    // scored ten strokes
+    // more than the pro-shop clerk.
+
+    store.impose(new XneqY(ln[iClubb], fn[iPaul]));
+    store.impose(new XplusCeqZ(jobs[iClerk], 10, ln[iClubb]));
+
+    // 3. In some order, Frank and the caddy scored four and seven more
+    // strokes than Mr. Sands.
+    PrimitiveConstraint[] c1 = {
+      new XplusCeqZ(ln[iSands], 4, fn[iFrank]), new XplusCeqZ(ln[iSands], 7, jobs[iCaddy])
+    };
+    PrimitiveConstraint[] c2 = {
+      new XplusCeqZ(ln[iSands], 7, fn[iFrank]), new XplusCeqZ(ln[iSands], 4, jobs[iCaddy])
+    };
+
+    store.impose(new Or(new And(c1), new And(c2)));
+
+    // 4. Mr. Carter thought his score of 78 was one of his better games,
+    // even though Frank's score was lower.
+
+    store.impose(new XeqC(ln[iCarter], 78));
+    store.impose(new XltY(fn[iFrank], ln[iCarter]));
+    store.impose(new XltC(fn[iFrank], 78));
+
+    // 5. None of the four scored exactly 81 strokes.
+    // It is redundant as these unary constraints have been already taken
+    // into account during
+    // domain creation process.
+    store.impose(new XneqC(fn[iBill], 81));
+    store.impose(new XneqC(fn[iPaul], 81));
+    store.impose(new XneqC(fn[iFrank], 81));
+    store.impose(new XneqC(fn[iJack], 81));
+    store.impose(new XneqY(fn[iPaul], ln[iClubb]));
+
+    // Every ith variable in Ln must have a coresponding variable in Fn.
+    // Every ith variable in Jobs must have a coresponding variable in Fn.
+    // Important as size of the domain variables is larger than the number
+    // of variables
+    // and Alldifferent is not sufficient.
+    for (int i = 0; i < 4; i++) {
+      IntVar el1 = new IntVar(store, "i" + i + "Ln", 1, 4);
+      IntVar el2 = new IntVar(store, "i" + i + "Jobs", 1, 4);
+
+      store.impose(Element.choose(el1, ln, fn[i]));
+      store.impose(Element.choose(el2, jobs, fn[i]));
+    }
+  }
+}
