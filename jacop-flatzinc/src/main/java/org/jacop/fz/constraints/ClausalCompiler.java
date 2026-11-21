@@ -85,6 +85,15 @@ import org.jacop.fz.SimpleNode;
  */
 public final class ClausalCompiler {
 
+  private static final String ALLDIFF = "jacop_alldiff";
+  private static final String ALLDISTINCT = "jacop_alldistinct";
+  private static final String COUNT_VALUES = "jacop_count_values";
+  private static final String AMONG = "jacop_among";
+  private static final String INCREASING = "jacop_increasing";
+  private static final String SHORT_TABLE_INT = "jacop_short_table_int";
+  private static final String TABLE_INT = "jacop_table_int";
+  private static final String NEGATIVE_TABLE_INT = "jacop_negative_table_int";
+
   /** The constraints the compiler encodes. */
   static final Set<String> SUPPORTED =
       Set.of(
@@ -121,19 +130,19 @@ public final class ClausalCompiler {
           "bool_xor",
           "bool_eq_reif",
           "bool_ne_reif",
-          "jacop_alldiff",
-          "jacop_alldistinct",
-          "jacop_count_values",
-          "jacop_among",
-          "jacop_increasing",
+          ALLDIFF,
+          ALLDISTINCT,
+          COUNT_VALUES,
+          AMONG,
+          INCREASING,
           "jacop_strictly_increasing",
           "jacop_maximum",
           "jacop_minimum",
           "jacop_lex_chain_lesseq_int",
           "jacop_value_precede_chain_int",
-          "jacop_short_table_int",
-          "jacop_table_int",
-          "jacop_negative_table_int",
+          SHORT_TABLE_INT,
+          TABLE_INT,
+          NEGATIVE_TABLE_INT,
           "jacop_regular_set");
 
   /** Values a domain may have for its literals to be enumerated at all. */
@@ -665,13 +674,13 @@ public final class ClausalCompiler {
   /** The constraints whose variables are only compared with values, through direct literals. */
   private static final Set<String> VALUE_ONLY =
       Set.of(
-          "jacop_table_int",
-          "jacop_short_table_int",
-          "jacop_negative_table_int",
-          "jacop_alldiff",
-          "jacop_alldistinct",
-          "jacop_count_values",
-          "jacop_among");
+          TABLE_INT,
+          SHORT_TABLE_INT,
+          NEGATIVE_TABLE_INT,
+          ALLDIFF,
+          ALLDISTINCT,
+          COUNT_VALUES,
+          AMONG);
 
   private void orderedVariables(List<ASTConstElem> items) {
     for (ASTConstElem item : items) {
@@ -682,17 +691,11 @@ public final class ClausalCompiler {
       }
       if (!VALUE_ONLY.contains(name)) {
         for (int i = 0; i < item.jjtGetNumChildren(); i++) {
-          IntVar[] vs = argumentVars(item, i);
-          if (vs != null) {
-            ordered.addAll(Arrays.asList(vs));
-          }
+          ordered.addAll(Arrays.asList(argumentVars(item, i)));
         }
-      } else if (name.equals("jacop_count_values") || name.equals("jacop_among")) {
+      } else if (name.equals(COUNT_VALUES) || name.equals(AMONG)) {
         // the counts are compared by order
-        IntVar[] vs = argumentVars(item, 2);
-        if (vs != null) {
-          ordered.addAll(Arrays.asList(vs));
-        }
+        ordered.addAll(Arrays.asList(argumentVars(item, 2)));
       }
     }
   }
@@ -714,12 +717,13 @@ public final class ClausalCompiler {
       if (v != null && s.getType() == 2) {
         return new IntVar[] {v};
       }
-      return support.dictionary.getVariableArray(s.getIdent());
+      IntVar[] array = support.dictionary.getVariableArray(s.getIdent());
+      return array != null ? array : new IntVar[0];
     }
     if (child.getId() == JJTARRAYLITERAL_ID && isVarArray(child)) {
       return support.getVarArray(child);
     }
-    return null;
+    return new IntVar[0];
   }
 
   private void checkDomains(List<ASTConstElem> items) {
@@ -771,21 +775,16 @@ public final class ClausalCompiler {
   private void compile(ASTConstElem n) {
     switch (n.getName()) {
       case "int_times" -> times(var(n, 0), var(n, 1), var(n, 2));
-      case "int_lin_eq" -> linear(ints(n, 0), vars(n, 1), Op.EQ, integer(n, 2), 0, false);
-      case "int_lin_le" -> linear(ints(n, 0), vars(n, 1), Op.LE, integer(n, 2), 0, false);
-      case "int_lin_ne" -> linear(ints(n, 0), vars(n, 1), Op.NE, integer(n, 2), 0, false);
-      case "int_lin_eq_reif" ->
-          linear(ints(n, 0), vars(n, 1), Op.EQ, integer(n, 2), lit(var(n, 3)), false);
-      case "int_lin_le_reif" ->
-          linear(ints(n, 0), vars(n, 1), Op.LE, integer(n, 2), lit(var(n, 3)), false);
-      case "int_lin_ne_reif" ->
-          linear(ints(n, 0), vars(n, 1), Op.NE, integer(n, 2), lit(var(n, 3)), false);
-      case "int_lin_eq_imp" ->
-          linear(ints(n, 0), vars(n, 1), Op.EQ, integer(n, 2), lit(var(n, 3)), true);
-      case "int_lin_le_imp" ->
-          linear(ints(n, 0), vars(n, 1), Op.LE, integer(n, 2), lit(var(n, 3)), true);
-      case "int_lin_ne_imp" ->
-          linear(ints(n, 0), vars(n, 1), Op.NE, integer(n, 2), lit(var(n, 3)), true);
+      case "int_lin_eq",
+          "int_lin_le",
+          "int_lin_ne",
+          "int_lin_eq_reif",
+          "int_lin_le_reif",
+          "int_lin_ne_reif",
+          "int_lin_eq_imp",
+          "int_lin_le_imp",
+          "int_lin_ne_imp" ->
+          linear(n);
       case "int_eq", "int_ne", "int_le", "int_lt" -> binary(n, 0, false);
       case "int_eq_reif", "int_ne_reif", "int_le_reif", "int_lt_reif" ->
           binary(n, lit(var(n, 2)), false);
@@ -828,8 +827,8 @@ public final class ClausalCompiler {
       case "bool_xor", "bool_ne_reif" ->
           equivalent(-lit(var(n, 2)), equalLit(lit(var(n, 0)), lit(var(n, 1))));
       case "bool_eq_reif" -> equivalent(lit(var(n, 2)), equalLit(lit(var(n, 0)), lit(var(n, 1))));
-      case "jacop_alldiff", "jacop_alldistinct" -> alldiff(vars(n, 0));
-      case "jacop_count_values" -> {
+      case ALLDIFF, ALLDISTINCT -> alldiff(vars(n, 0));
+      case COUNT_VALUES -> {
         IntVar[] xs = vars(n, 0);
         int[] cover = ints(n, 1);
         IntVar[] counts = vars(n, 2);
@@ -841,7 +840,7 @@ public final class ClausalCompiler {
           countEq(l, enc(counts[j]));
         }
       }
-      case "jacop_among" -> {
+      case AMONG -> {
         IntVar[] xs = vars(n, 0);
         int[] s = set(n, 1);
         int[] l = new int[xs.length];
@@ -857,9 +856,9 @@ public final class ClausalCompiler {
         }
         countEq(l, enc(var(n, 2)));
       }
-      case "jacop_increasing", "jacop_strictly_increasing" -> {
+      case INCREASING, "jacop_strictly_increasing" -> {
         IntVar[] xs = vars(n, 0);
-        int gap = n.getName().equals("jacop_increasing") ? 0 : -1;
+        int gap = n.getName().equals(INCREASING) ? 0 : -1;
         for (int i = 0; i + 1 < xs.length; i++) {
           linear(new int[] {1, -1}, new IntVar[] {xs[i], xs[i + 1]}, Op.LE, gap, 0, false);
         }
@@ -880,9 +879,9 @@ public final class ClausalCompiler {
         }
       }
       case "jacop_value_precede_chain_int" -> precede(ints(n, 0), vars(n, 1));
-      case "jacop_short_table_int" -> table(vars(n, 0), ints(n, 1), integer(n, 2), true);
-      case "jacop_table_int" -> table(vars(n, 0), ints(n, 1), 0, false);
-      case "jacop_negative_table_int" -> {
+      case SHORT_TABLE_INT -> table(vars(n, 0), ints(n, 1), integer(n, 2), true);
+      case TABLE_INT -> table(vars(n, 0), ints(n, 1), 0, false);
+      case NEGATIVE_TABLE_INT -> {
         IntVar[] xs = vars(n, 0);
         int[] t = ints(n, 1);
         int k = xs.length;
@@ -1327,6 +1326,20 @@ public final class ClausalCompiler {
     }
     int p = op == Op.NE ? -relation(c, t, Op.EQ, k) : relation(c, t, op, k);
     link(p, r, imp);
+  }
+
+  // int_lin_{eq,le,ne}[_reif|_imp](a, x, k[, r])
+  private void linear(ASTConstElem n) {
+    String name = n.getName();
+    Op op =
+        switch (name.substring(8, 10)) {
+          case "eq" -> Op.EQ;
+          case "le" -> Op.LE;
+          default -> Op.NE;
+        };
+    boolean plain = name.length() == 10;
+    int r = plain ? 0 : lit(var(n, 3));
+    linear(ints(n, 0), vars(n, 1), op, integer(n, 2), r, name.endsWith("_imp"));
   }
 
   private static long lo(long a, Enc e) {

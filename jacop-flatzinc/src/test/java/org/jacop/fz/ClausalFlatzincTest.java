@@ -239,9 +239,13 @@ class ClausalFlatzincTest {
   @Test
   void regularOverMoreThanThreeValuesIsNotCompiled() throws IOException {
     String small =
-        "var 1..3: x0 :: output_var;\nvar 1..3: x1 :: output_var;\n"
-            + "constraint jacop_regular_set([x0,x1],2,1..3,[2,2,2,2,2,2],1,{2},1);\n"
-            + "constraint int_ne(x0,x1);\nsolve satisfy;\n";
+        """
+        var 1..3: x0 :: output_var;
+        var 1..3: x1 :: output_var;
+        constraint jacop_regular_set([x0,x1],2,1..3,[2,2,2,2,2,2],1,{2},1);
+        constraint int_ne(x0,x1);
+        solve satisfy;
+        """;
     assertTrue(run(small, true).contains("clausalModel=true"), small);
     String wide = small.replace("1..3", "1..4").replace("[2,2,2,2,2,2]", "[2,2,2,2,2,2,2,2]");
     String out = run(wide, true);
