@@ -6473,4 +6473,89 @@ class FlatzincFrontEndTest {
       release.countDown();
     }
   }
+
+  // options whose time-out passes after a given number of checks, once armed: a phase that looks at
+  // the clock is stopped at a point that does not depend on the speed of the machine
+  private static final class CheckCountingOptions extends Options {
+    boolean armed;
+    long checks;
+    long passAfter = Long.MAX_VALUE;
+
+    CheckCountingOptions(String[] args) {
+      super(args);
+    }
+
+    @Override
+    public boolean timeOutPassed() {
+      if (!armed) {
+        return false;
+      }
+      checks++;
+      return checks > passAfter;
+    }
+  }
+
+  // the parsed items of a model, as Constraints reads them before any constraint is posted
+  private static SimpleNode parsedItems(Parser parser) throws ParseException {
+    parser.pred_decl_items();
+    parser.var_decl_items();
+    parser.constraint_items();
+    SimpleNode tree = new SimpleNode(ParserTreeConstants.JJTMODEL);
+    Node constraints = parser.jjtree.popNode();
+    tree.jjtAddChild(parser.jjtree.popNode(), 0);
+    tree.jjtAddChild(constraints, 1);
+    return tree;
+  }
+
+  @Test
+  void cliqueSearchOfTheAlldifferentDetectorStopsAtTheTimeOut() throws IOException, ParseException {
+    // the time-out was checked while the constraints were scanned, not in the search for cliques
+    // of disequalities that follows (4.5 s on hidato_table)
+    StringBuilder model = new StringBuilder();
+    int n = 8;
+    for (int i = 0; i < n; i++) {
+      model.append("var 0..9: x").append(i).append(";\n");
+    }
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        model.append("constraint int_ne(x").append(i).append(", x").append(j).append(");\n");
+      }
+    }
+    model.append("solve satisfy;\n");
+    Path fzn = tmp.resolve("cliques.fzn");
+    Files.writeString(fzn, model.toString(), StandardCharsets.UTF_8);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+    try (PrintStream capture = new PrintStream(out, true, StandardCharsets.UTF_8)) {
+      System.setOut(capture);
+      for (boolean stop : new boolean[] {false, true}) {
+        CheckCountingOptions opt =
+            new CheckCountingOptions(new String[] {"-t", "60000", fzn.toString()});
+        try (java.io.FileInputStream input = new java.io.FileInputStream(fzn.toFile())) {
+          Parser parser = new Parser(input);
+          parser.setOptions(opt);
+          parser.cc.setOptions(opt);
+          SimpleNode tree = parsedItems(parser);
+          Support support = parser.cc.support;
+          opt.armed = true;
+          // the scan of the constraints checks once per constraint
+          int scanChecks = n * (n - 1) / 2;
+          if (stop) {
+            opt.passAfter = scanChecks;
+          }
+          AlldifferentDetector detector = new AlldifferentDetector(support);
+          if (stop) {
+            // the time-out passes after the scan, in the clique search
+            assertThrows(ModelTimeOut.class, () -> detector.detect(tree));
+          } else {
+            detector.detect(tree);
+            assertEquals(n * (n - 1) / 2, detector.replaced().size());
+            assertTrue(opt.checks > scanChecks, opt.checks + " checks");
+          }
+        }
+      }
+    } finally {
+      System.setOut(originalOut);
+    }
+  }
 }
