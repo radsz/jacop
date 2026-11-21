@@ -373,4 +373,24 @@ class DominanceNogoodsTest {
     search.getSolutionListener().recordSolutions(false);
     search.labeling(store, new SimpleSelect<>(vars, null, new IndomainRandom<>(seed)));
   }
+
+  @Test
+  void theSearchForNogoodsStopsAtTheDeadlineOfTheRun() {
+    // the search had its own budget of 1 s but did not look at the time-out of the run
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 0, 1);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar p = new IntVar(store, "p", 0, 9);
+    store.impose(new LinearInt(new IntVar[] {a, b}, new int[] {3, 3}, "<=", 3));
+    store.impose(new LinearInt(new IntVar[] {a, b, p}, new int[] {5, 4, -1}, "==", 0));
+    assertThat(store.consistency()).isTrue();
+    DominanceNogoods late = new DominanceNogoods(store, p, false);
+    late.setDeadline(System.nanoTime() - 1);
+    DominanceNogoods.Outcome o = late.run();
+    assertThat(o.nogoods()).isZero();
+    assertThat(o.complete()).isFalse();
+    // b = 1 and a = 0 stays
+    b.domain.in(store.level, b, 1, 1);
+    assertThat(store.consistency()).isTrue();
+  }
 }

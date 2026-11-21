@@ -667,8 +667,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return;
     }
     long start = timer.getCpuTime();
-    DominanceNogoods.Outcome o =
-        new DominanceNogoods(store, objective, k == 1).run(sat.collectedClauses());
+    DominanceNogoods dominance = new DominanceNogoods(store, objective, k == 1);
+    if (options.getTimeOut() > 0) {
+      dominance.setDeadline(System.nanoTime() + options.getRemainingTimeOut() * 1_000_000L);
+    }
+    DominanceNogoods.Outcome o = dominance.run(sat.collectedClauses());
     boolean ok = store.consistency();
     if (options.searchStatistics()) {
       IO.println(
