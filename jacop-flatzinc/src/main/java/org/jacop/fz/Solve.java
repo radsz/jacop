@@ -5473,6 +5473,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.sat().decisions
             + "\n%%%mzn-stat: lcgCompletedModels="
             + lcg.completedModels
+            + "\n%%%mzn-stat: lcgCompletionDecisions="
+            + lcg.completionDecisions
             + "\n%%%mzn-stat: lcgSatPropagations="
             + lcg.sat().propagations
             + "\n%%%mzn-stat: lcgExplanations="

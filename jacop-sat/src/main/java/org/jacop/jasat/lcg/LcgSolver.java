@@ -7186,6 +7186,7 @@ public final class LcgSolver implements ExternalPropagator {
     completed = false;
     if (completionTested > level) {
       completionTested = -1;
+      completionBlocker = -1;
     }
     pushed = Math.min(pushed, trail.size());
     numImplied = 0;
@@ -8788,6 +8789,16 @@ public final class LcgSolver implements ExternalPropagator {
       if (completedByAnnotation()) {
         return 0; // modelComplete: the solver offers the assignment as it is
       }
+      if (completionBlocker >= 0 && !vars[completionBlocker].singleton()) {
+        completionDecisions++;
+        // the value of the best solution, as the solver's saved phases would take, else the least
+        IntVar x = vars[completionBlocker];
+        int v =
+            phase != null && x.domain.contains(phase[completionBlocker])
+                ? phase[completionBlocker]
+                : x.min();
+        return assignLit(completionBlocker, v);
+      }
     }
     if (activityBranching) {
       if (activityGuide != null && !freeSearch && annotation != null) {
@@ -8806,6 +8817,18 @@ public final class LcgSolver implements ExternalPropagator {
   private int completionTested = -1;
   // completedByAnnotation found a model: the unfixed variables take their minimum in checkModel
   private boolean completed;
+  // the variable that stopped the last test of completedByAnnotation (a variable of the solver with
+  // a constraint that is not entailed), which the next decision fixes, or -1; the test then goes
+  // on from completionResume, the store index of that variable, at the next decision level
+  private int completionBlocker = -1;
+  private int completionResume;
+  // the blockers decided on the current branch since its first test; past COMPLETION_BLOCKERS the
+  // test stops for the branch, which the solver's own branching then completes
+  private int completionBlocks;
+  private static final int COMPLETION_BLOCKERS = 32;
+
+  /** The decisions that fixed a variable that stopped completedByAnnotation. */
+  public long completionDecisions;
 
   /** The models that completedByAnnotation offered without deciding the variables left. */
   public long completedModels;
@@ -8837,8 +8860,23 @@ public final class LcgSolver implements ExternalPropagator {
    * the solver). Without the test the activity branching decided those variables one decision level
    * at a time: on a_card_trick_1 (first_fail, satisfaction), 1,014 decisions on 0/1 variables whose
    * constraints all became clauses, after 29 decisions of the annotation, where the search without
-   * learning stops after its annotation (37 nodes). Tested once on each branch after the annotation
-   * ends; not with a proof, whose solution must give every variable.
+   * learning stops after its annotation (37 nodes). Not with a proof, whose solution must give
+   * every variable.
+   *
+   * <p>The linear relaxation does not count: its rows are combinations of constraints of the model,
+   * which hold once those are entailed. A variable of the solver with a constraint that is not
+   * entailed stops the test, and the next decision fixes it at its minimum, the value it would take
+   * in the model; the test then goes on from that variable at the next decision level, since a
+   * variable that passed stays fixed or free of constraints that are not entailed as the domains
+   * narrow. On ship-schedule 6Ships (fixed search) the LP and a product {@code x * 1 = z} of two
+   * variables left after the annotation kept every one of 588 solutions from being taken, so the
+   * search decided 444 other free variables one decision level at a time for each (267,279 of the
+   * 272,286 decisions). After 32 such decisions on a branch the test stops for the branch, and the
+   * solver's own branching (saved phases) decides the rest, as it does when a variable that the
+   * solver does not hold or a printed variable is unfixed: on roster chicroster_dataset_large_20
+   * the blockers never ran out and fixing each at its minimum, 2.4 million decisions, replaced the
+   * saved phases of the best solution (98 -> 99 at 240 s). So the blockers are decided only while
+   * they pay: after 256 of them, at most 64 for each model they completed (5.6 on 6Ships).
    */
   private static boolean allFixed(Collection<? extends Var> variables) {
     for (Var v : variables) {
@@ -8855,16 +8893,22 @@ public final class LcgSolver implements ExternalPropagator {
         || proof != null
         || lns != null
         || objective >= 0 && !vars[objective].singleton()
-        || completionTested >= 0 && completionTested <= level) {
+        || completionTested >= 0 && completionTested <= level && completionBlocker < 0) {
+      completionBlocker = -1;
       return false;
     }
+    int from = completionBlocker >= 0 ? completionResume : 0;
+    completionBlocker = -1;
+    if (from == 0) {
+      completionBlocks = 0;
+    }
     completionTested = level;
-    if (!allFixed(mustBeFixed)) {
+    if (from == 0 && !allFixed(mustBeFixed)) {
       // a printed variable need not be one of the store's variables (the Boolean b of
       // bool2int(b, i) is printed while the store holds only i), so it is tested here
       return false;
     }
-    for (int k = 0; k < store.size(); k++) {
+    for (int k = from; k < store.size(); k++) {
       Var v = store.vars[k];
       if (v == null || v.singleton()) {
         continue;
@@ -8873,7 +8917,12 @@ public final class LcgSolver implements ExternalPropagator {
         return false;
       }
       for (Constraint c : v.dom().constraints()) {
-        if (!c.isEntailed()) {
+        if (!c.isEntailed() && !(c instanceof LinearRelaxation)) {
+          if (++completionBlocks <= COMPLETION_BLOCKERS
+              && (completionDecisions < 256 || completionDecisions <= 64 * completedModels)) {
+            completionBlocker = idOf(x);
+            completionResume = k;
+          }
           return false;
         }
       }
