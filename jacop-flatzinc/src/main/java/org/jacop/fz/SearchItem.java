@@ -958,7 +958,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
           System.err.println(
               WARNING_VAR_HEURISTIC_PREFIX + varSelectionHeuristic + WARNING_VAR_HEURISTIC_SUFFIX);
 
-          yield null;
+          yield new ComparatorsVar<>(null);
         }
       };
     }

@@ -6861,4 +6861,20 @@ class FlatzincFrontEndTest {
       assertTrue(out.contains("=========="), ann + "\n" + out);
     }
   }
+
+  @Test
+  void unknownVariableSelectionIsInputOrder() throws IOException {
+    // the warning said input_order was used, and the search threw a NullPointerException
+    String[] r =
+        run(
+            "var 1..3: x :: output_var;\n"
+                + "var 1..3: y :: output_var;\n"
+                + "constraint int_lt(x, y);\n"
+                + "solve :: int_search([x, y], no_such_heuristic, indomain_min, complete) satisfy;\n",
+            "-a");
+    assertTrue(r[1].contains("no_such_heuristic"), r[1]);
+    assertEquals(
+        "x = 1;\ny = 2;\n----------\nx = 1;\ny = 3;\n----------\nx = 2;\ny = 3;\n----------\n==========\n",
+        r[0]);
+  }
 }
