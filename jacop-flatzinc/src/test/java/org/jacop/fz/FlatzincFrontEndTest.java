@@ -6949,4 +6949,41 @@ class FlatzincFrontEndTest {
     String out = run(model, "--lcg", "on", "--restart", "luby", "--lp", "off")[0];
     assertEquals("=====UNSATISFIABLE=====\n", out);
   }
+
+  @Test
+  void variablesNamedLikeGeneratedOnesKeepTheirConstraints() throws IOException {
+    // the closed cardinality creates counters named counter0 and counter1, which hid the model's
+    // own counter0 and counter1 from the store's constraints: the components missed the link
+    // counter0 + counter1 <= 3, fixed counter0 = 2 with its own component and refuted the model
+    String model =
+        """
+        var 1..2: a :: output_var;
+        var 1..2: counter0 :: output_var;
+        var 1..2: counter1 :: output_var;
+        var 1..2: p1;
+        var 1..2: p2;
+        var 1..2: p3;
+        var bool: r;
+        var bool: s12;
+        var bool: s13;
+        var bool: s23;
+        var 1..2: y1;
+        var 1..2: y2;
+        constraint int_ne(a, counter0);
+        constraint int_lin_le([1,1],[counter0,counter1],3);
+        constraint int_eq_reif(counter1, 1, r);
+        constraint int_ne_reif(p1, p2, s12);
+        constraint int_ne_reif(p1, p3, s13);
+        constraint int_ne_reif(p2, p3, s23);
+        constraint bool_clause([s12],[r]);
+        constraint bool_clause([s13],[r]);
+        constraint bool_clause([s23],[r]);
+        constraint jacop_global_cardinality_low_up_closed([y1,y2],[1,2],[0,0],[2,2]);
+        solve satisfy;
+        """;
+    // r = 1 puts three pigeons p1..p3 into two holes, so counter1 = 2, counter0 = 1 and a = 2
+    String out = run(model)[0];
+    assertEquals("a = 2;\ncounter0 = 1;\ncounter1 = 2;\n----------\n", out);
+    assertEquals(1, solveAll(model).size());
+  }
 }
