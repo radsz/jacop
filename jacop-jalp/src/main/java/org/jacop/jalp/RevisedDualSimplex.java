@@ -355,6 +355,11 @@ public final class RevisedDualSimplex {
   private boolean feasibility;
 
   private long totalPivots;
+
+  // the number of this instance in the trace (org.jacop.jalp.trace), 0 without one
+  private final int traceSolve = Trace.OUT == null ? 0 : Trace.nextSolve();
+  // the next dual solve starts from a postsolved basis: its start goes to the trace
+  private boolean traceStart;
   private long factorizations;
   private long ops;
 
@@ -500,6 +505,7 @@ public final class RevisedDualSimplex {
     exact = o.exact;
     cleaning = o.cleaning;
     dualPending = o.dualPending;
+    traceStart = o.traceStart;
     // copy() postsolves an open reduced solve first, so the copy has none
     reducedLp = null;
     reducedBy = null;
@@ -1109,6 +1115,10 @@ public final class RevisedDualSimplex {
       placeNonbasic();
     }
     updateBeta();
+    if (Trace.OUT != null && traceStart) {
+      traceStart = false;
+      traceStart();
+    }
     for (int iter = 0; iter < limit; iter++) {
       ops += 3L * m;
       int r = leavingRow();
@@ -1230,6 +1240,9 @@ public final class RevisedDualSimplex {
       upper[p] = !toLower;
       at[p] = bound;
       totalPivots++;
+      if (Trace.OUT != null) {
+        Trace.pivot(traceSolve, totalPivots, feasibility ? 1 : 2, q, p, r, theta, thetaD, fromRow);
+      }
       if (outsideValid) {
         for (int k = 0; k < alphaLen; k++) {
           noteRow(alphaIdx[k]);
@@ -2742,6 +2755,9 @@ public final class RevisedDualSimplex {
         new Presolve(n, rowIdx, rowVal, colIdx, colVal, colLen, cost, trueCost, boundLo, boundHi);
     boolean reduced = p.run();
     presolveReductions = p.counts();
+    if (Trace.OUT != null) {
+      p.trace();
+    }
     ops += p.ops();
     if (PRESOLVE_TRACE) {
       System.err.println(
@@ -2954,6 +2970,27 @@ public final class RevisedDualSimplex {
     outsideValid = false;
     presolvedRows = mr;
     presolvedColumns = nr;
+    traceStart = true;
+  }
+
+  // the trace of the start from a postsolved basis: each nonbasic column at an artificial bound
+  // (A solve column reducedCost atUpper) and each basic column outside its bounds (B solve column
+  // value lower upper)
+  private void traceStart() {
+    for (int j = 0; j < cols; j++) {
+      if (row[j] < 0 && isArtificial(j, upper[j])) {
+        Trace.OUT.printf(java.util.Locale.ROOT, "A %d %d %.6g %b%n", traceSolve, j, d[j], upper[j]);
+      }
+    }
+    for (int r = 0; r < m; r++) {
+      int j = basis[r];
+      double v = beta[r];
+      double tol = 1e-7 * (1 + Math.abs(v));
+      if (v < lo[j] - tol || v > hi[j] + tol) {
+        Trace.OUT.printf(
+            java.util.Locale.ROOT, "B %d %d %.6g %.6g %.6g%n", traceSolve, j, v, lo[j], hi[j]);
+      }
+    }
   }
 
   // the order in which the crash gives away a slack row, by the kind of the slack (crashKind)
@@ -3125,6 +3162,9 @@ public final class RevisedDualSimplex {
    * weights not known yet are computed exactly.
    */
   private void factorize() {
+    if (Trace.OUT != null) {
+      Trace.factor(traceSolve, totalPivots, "-");
+    }
     outsideValid = false;
     int[][] ci = new int[m][];
     double[][] cv = new double[m][];
@@ -3482,6 +3522,9 @@ public final class RevisedDualSimplex {
       upper[p] = leavesAtUpper;
       at[p] = leavesAtUpper ? hi[p] : lo[p];
       totalPivots++;
+      if (Trace.OUT != null) {
+        Trace.pivot(traceSolve, totalPivots, 3, q, p, r, 0, 0, 0);
+      }
       if (reset || devex[p] > DEVEX_RESET) {
         Arrays.fill(devex, 0, cols, 1);
       }
