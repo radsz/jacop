@@ -1127,11 +1127,14 @@ public class Store {
    * @return an id unused in this store.
    */
   public String freshVariableId(String id) {
-    String fresh = id;
-    while (variablesHashMap.containsKey(fresh)) {
-      fresh += "'";
+    if (!variablesHashMap.containsKey(id)) {
+      return id;
     }
-    return fresh;
+    StringBuilder fresh = new StringBuilder(id).append('\'');
+    while (variablesHashMap.containsKey(fresh.toString())) {
+      fresh.append('\'');
+    }
+    return fresh.toString();
   }
 
   /**

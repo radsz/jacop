@@ -323,8 +323,12 @@ class PortfolioOneParseTest {
     Path unassigned = tmp.resolve("unassigned.fzn");
     Files.writeString(
         unassigned,
-        "array [1..2] of var 1..3: x :: output_array([1..2]);\nvar 1..3: m :: output_var;\n"
-            + "constraint jacop_maximum(x, m);\nsolve minimize m;\n",
+        """
+        array [1..2] of var 1..3: x :: output_array([1..2]);
+        var 1..3: m :: output_var;
+        constraint jacop_maximum(x, m);
+        solve minimize m;
+        """,
         StandardCharsets.UTF_8);
     String[] exception = status("-p", "3", unassigned.toString());
     assertEquals("1", exception[0]);

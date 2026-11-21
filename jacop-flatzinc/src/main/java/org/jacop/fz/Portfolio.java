@@ -289,8 +289,7 @@ final class Portfolio {
     PrintStream out = System.out;
     long start = System.currentTimeMillis();
     watchdog =
-        Thread.ofPlatform()
-            .daemon()
+        Thread.ofVirtual()
             .name("jacop-portfolio-time-limit")
             .unstarted(
                 () -> {
@@ -298,6 +297,7 @@ final class Portfolio {
                     Thread.sleep(delayMillis);
                   } catch (InterruptedException _) {
                     // cancelled: the run ended on its own
+                    Thread.currentThread().interrupt();
                     return;
                   }
                   timeLimit(out, start, halt);
@@ -906,23 +906,6 @@ final class Portfolio {
     out.flush();
   }
 
-  private void ended(boolean ran, boolean searchComplete) {
-    synchronized (lock) {
-      running--;
-      if (ran) {
-        accepted++;
-      }
-      if (searchComplete && !finished) {
-        complete = true;
-        finished = true;
-      }
-      if (restorePending && running == 0) {
-        restoreStdout();
-      }
-      lock.notifyAll();
-    }
-  }
-
   /** One thread of the portfolio, as seen by the model it solves. */
   final class Worker {
 
@@ -965,6 +948,23 @@ final class Portfolio {
         CAPTURE.remove();
         ended = true;
         ended(ran, ran && !stopped && capture.complete);
+      }
+    }
+
+    private void ended(boolean ran, boolean searchComplete) {
+      synchronized (lock) {
+        running--;
+        if (ran) {
+          accepted++;
+        }
+        if (searchComplete && !finished) {
+          complete = true;
+          finished = true;
+        }
+        if (restorePending && running == 0) {
+          restoreStdout();
+        }
+        lock.notifyAll();
       }
     }
 

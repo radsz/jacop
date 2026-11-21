@@ -7031,13 +7031,16 @@ class FlatzincFrontEndTest {
     pb.redirectOutput(log.toFile());
     // a writer that never writes nor closes the pipe: the run can open the model, and reading it
     // waits for good, as for a large model on a slow disk
+    CountDownLatch testOver = new CountDownLatch(1);
     Thread writer =
         new Thread(
             () -> {
-              try (OutputStream w = Files.newOutputStream(fifo)) {
-                Thread.sleep(120_000);
-              } catch (IOException | InterruptedException _) {
+              try (OutputStream _ = Files.newOutputStream(fifo)) {
+                testOver.await();
+              } catch (IOException _) {
                 // the test is over
+              } catch (InterruptedException _) {
+                Thread.currentThread().interrupt();
               }
             });
     writer.setDaemon(true);
@@ -7048,7 +7051,7 @@ class FlatzincFrontEndTest {
       p.destroyForcibly();
       p.waitFor(10, TimeUnit.SECONDS);
     }
-    writer.interrupt();
+    testOver.countDown();
     String out = Files.readString(log, StandardCharsets.UTF_8);
     assertTrue(ended, "still reading 60 s after -t 500: " + out);
     assertEquals(0, p.exitValue(), out);
@@ -7189,10 +7192,12 @@ class FlatzincFrontEndTest {
     // MiniZinc may write a search over no variable or a sequence of no search; seq_search([]),
     // priority_search over [] and set_search or float_search over [] threw an exception
     String model =
-        "var 1..3: x :: output_var;\n"
-            + "var 1..3: y :: output_var;\n"
-            + "constraint int_lt(x, y);\n"
-            + "solve :: %s satisfy;\n";
+        """
+        var 1..3: x :: output_var;
+        var 1..3: y :: output_var;
+        constraint int_lt(x, y);
+        solve :: %s satisfy;
+        """;
     for (String ann :
         new String[] {
           "seq_search([])",
@@ -7214,10 +7219,12 @@ class FlatzincFrontEndTest {
     // the warning said input_order was used, and the search threw a NullPointerException
     String[] r =
         run(
-            "var 1..3: x :: output_var;\n"
-                + "var 1..3: y :: output_var;\n"
-                + "constraint int_lt(x, y);\n"
-                + "solve :: int_search([x, y], no_such_heuristic, indomain_min, complete) satisfy;\n",
+            """
+            var 1..3: x :: output_var;
+            var 1..3: y :: output_var;
+            constraint int_lt(x, y);
+            solve :: int_search([x, y], no_such_heuristic, indomain_min, complete) satisfy;
+            """,
             "-a");
     assertTrue(r[1].contains("no_such_heuristic"), r[1]);
     assertEquals(
@@ -7232,22 +7239,39 @@ class FlatzincFrontEndTest {
     // solution with a variable not fixed ("Variable is not grounded in the solution")
     String order =
         run(
-            "var 1..2: x :: output_var;\n"
-                + "var 1..2: y :: output_var;\n"
-                + "solve :: seq_search([seq_search([int_search([x], input_order, indomain_min,"
-                + " complete), int_search([y], input_order, indomain_max, complete)])]) satisfy;\n",
+            """
+            var 1..2: x :: output_var;
+            var 1..2: y :: output_var;
+            solve :: seq_search([seq_search([int_search([x], input_order, indomain_min, \
+            complete), int_search([y], input_order, indomain_max, complete)])]) satisfy;
+            """,
             "-a")[0];
     assertEquals(
-        "x = 1;\ny = 2;\n----------\nx = 1;\ny = 1;\n----------\n"
-            + "x = 2;\ny = 2;\n----------\nx = 2;\ny = 1;\n----------\n==========\n",
+        """
+        x = 1;
+        y = 2;
+        ----------
+        x = 1;
+        y = 1;
+        ----------
+        x = 2;
+        y = 2;
+        ----------
+        x = 2;
+        y = 1;
+        ----------
+        ==========
+        """,
         order);
     String out =
         run(
-            "var 1..3: a :: output_var;\n"
-                + "var 1..2: k :: output_var;\n"
-                + "var -20..20: w :: output_var;\n"
-                + "solve :: seq_search([seq_search([int_search([w], input_order, indomain_min,"
-                + " complete), int_search([k,w,a], random, indomain_min, complete)])]) satisfy;\n",
+            """
+            var 1..3: a :: output_var;
+            var 1..2: k :: output_var;
+            var -20..20: w :: output_var;
+            solve :: seq_search([seq_search([int_search([w], input_order, indomain_min, \
+            complete), int_search([k,w,a], random, indomain_min, complete)])]) satisfy;
+            """,
             "-a")[0];
     assertEquals(41 * 2 * 3, out.split("----------", -1).length - 1, out);
     assertTrue(out.endsWith("==========\n"), out);
