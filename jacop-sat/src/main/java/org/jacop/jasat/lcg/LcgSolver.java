@@ -5366,6 +5366,34 @@ public final class LcgSolver implements ExternalPropagator {
     literalRunsSolved = Math.max(1, solved);
   }
 
+  // conflicts without a solution after which free search drops the annotation's runs, 0 for never
+  private long annotationDrop;
+  private boolean annotationDropped;
+
+  /**
+   * Makes free search with an annotation drop the annotation's runs when this many conflicts found
+   * no solution: from then on {@link Branching#ALTERNATE} takes turns of the literals and of
+   * activity branching only, as without an annotation. The runs of a fixed order that fails to
+   * reach a solution also hold back the other turns: on amaze2 (first_fail on the path successors,
+   * indomain_min) the literal runs of the rotation spent 417,000 conflicts in 300 s without a
+   * solution, while the same rotation without the annotation finds one after about 200,000
+   * conflicts in all.
+   *
+   * @param conflicts the conflicts without a solution, 0 for never
+   */
+  public void setAnnotationDrop(long conflicts) {
+    annotationDrop = conflicts;
+  }
+
+  /**
+   * Tells whether free search dropped the annotation's runs (see {@link #setAnnotationDrop}).
+   *
+   * @return true once they were dropped
+   */
+  public boolean annotationDropped() {
+    return annotationDropped;
+  }
+
   /**
    * Sets how decisions are made outside the runs of the annotation. Set it before solving.
    *
@@ -7466,7 +7494,20 @@ public final class LcgSolver implements ExternalPropagator {
     if (keepImprovingRun && improved) {
       return; // the run that improved the best solution goes on in the same way
     }
-    if (branching == Branching.ALTERNATE && annotation != null && freeSearch) {
+    if (annotationDrop > 0
+        && !annotationDropped
+        && best == null
+        && freeSearch
+        && annotation != null
+        && branching == Branching.ALTERNATE
+        && sat.conflicts >= annotationDrop) {
+      annotationDropped = true;
+    }
+    if (annotationDropped) {
+      // the literals and the activity in turn
+      annotationRun = false;
+      activityBranching = !activityBranching;
+    } else if (branching == Branching.ALTERNATE && annotation != null && freeSearch) {
       // the annotation, the literals and the activity in turn, with the activity completing the
       // annotation's runs
       runs++;

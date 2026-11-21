@@ -3387,6 +3387,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       lcg.setLiteralRuns(
           Integer.parseInt(options.freeConfig("lcg-literal-runs", "1")),
           Integer.parseInt(options.freeConfig("lcg-literal-runs-solved", "6")));
+      // no solution after 50,000 conflicts: the turns of the annotation give way to the literals
+      // and
+      // activity branching (CHANGELOG 489). amaze2 2012-07-04, 06-29 and 03-08 found no solution in
+      // 300 s on some seeds and are solved in 28 to 125 s; 28 instances where no solution comes
+      // early, 240 s, two seeds: solved 25 -> 29, total time 8,486 -> 7,416 s
+      lcg.setAnnotationDrop(Long.parseLong(options.freeConfig("lcg-annotation-drop", "50000")));
       if (!LcgSolver.CHAIN_LIMIT_SET) {
         // short bound-literal chains (CHANGELOG 311): multi-agent-graph-coverage proofs about 2x
         // faster, two paired 600 s rounds 6/0 and 4/2 families better/worse with one more proof;
@@ -5702,6 +5708,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.represolveEntailed
             + "\n%%%mzn-stat: lcgAnnotationDecisions="
             + lcg.annotationDecisions
+            + "\n%%%mzn-stat: lcgAnnotationDropped="
+            + (lcg.annotationDropped() ? 1 : 0)
             + "\n%%%mzn-stat: lcgGuideDecisions="
             + lcg.guideDecisions
             + "\n%%%mzn-stat: lcgSearchDecisions="
