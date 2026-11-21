@@ -6905,4 +6905,48 @@ class FlatzincFrontEndTest {
     assertEquals(41 * 2 * 3, out.split("----------", -1).length - 1, out);
     assertTrue(out.endsWith("==========\n"), out);
   }
+
+  @Test
+  void onRestartWithRestartsKeepsTheClausesOfLcg() throws IOException {
+    // on_restart with restarts searches without learning, but the clauses collected for LCG were
+    // never posted in the store: the at most one of a, b, c was ignored
+    String model =
+        """
+        var 1..5: st :: output_var;
+        var bool: a :: output_var;
+        var bool: b :: output_var;
+        var bool: c :: output_var;
+        constraint jacop_on_restart_status(st);
+        constraint bool_clause([],[a,b]);
+        constraint bool_clause([],[b,c]);
+        constraint bool_clause([],[a,c]);
+        solve :: bool_search([a,b,c], input_order, indomain_max, complete) satisfy;
+        """;
+    for (String[] options :
+        new String[][] {
+          {"--lcg", "on", "--restart", "luby", "--lp", "off"},
+          {"--lcg", "on", "-f", "--restart", "luby", "--lp", "off"}
+        }) {
+      String out = run(model, options)[0];
+      assertTrue(out.contains("a = true;\nb = false;\nc = false;\n----------\n"), out);
+    }
+  }
+
+  @Test
+  void onRestartWithRestartsFailsOnAClauseFalseAtTheRoot() throws IOException {
+    // the table fixes a and b before the clauses of a = b are posted for the restart search: its
+    // first run failed at the root, the next runs forgot it and printed a = false, b = true
+    String model =
+        """
+        var 1..5: st :: output_var;
+        var bool: a :: output_var;
+        var bool: b :: output_var;
+        constraint jacop_on_restart_status(st);
+        constraint bool_eq(a,b);
+        constraint jacop_table_bool([a,b],[false,true]);
+        solve :: bool_search([a,b], input_order, indomain_max, complete) satisfy;
+        """;
+    String out = run(model, "--lcg", "on", "--restart", "luby", "--lp", "off")[0];
+    assertEquals("=====UNSATISFIABLE=====\n", out);
+  }
 }

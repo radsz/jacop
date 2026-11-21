@@ -2645,6 +2645,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         // free search runs the built-ins at the root of its own runs, which the annotation's
         // restarts limit
         boolean freeRuns = restartCalculator != null && useFreeSearchEngine(costVar);
+        if (restartCalculator != null && options.lcg()) {
+          // the runs search without learning: the clauses kept for the LCG solver go to the store
+          if (dictionary.rootTrail != null) {
+            dictionary.rootTrail.detach();
+            dictionary.rootTrail = null;
+          }
+          postCollectedClauses();
+          // a clause false at the root fails here: a restart search would forget the failure of
+          // its first run and search again
+          if (!store.consistency()) {
+            return false;
+          }
+        }
         if (!startOnRestart(freeRuns)) {
           return false;
         }
