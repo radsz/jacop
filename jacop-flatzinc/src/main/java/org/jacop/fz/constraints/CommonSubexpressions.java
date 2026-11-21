@@ -593,8 +593,13 @@ public class CommonSubexpressions implements ParserTreeConstants {
     IntVar[] vars;
     if (e.getType() == 2) {
       // an identifier: a variable or an array of variables
-      IntVar[] a = support.dictionary.getDeclaredVariableArray(e.getIdent());
-      vars = a != null ? a : identVariable(e);
+      IntVar v = support.dictionary.getVariable(e);
+      if (v != null) {
+        vars = new IntVar[] {v};
+      } else {
+        IntVar[] a = support.dictionary.getDeclaredVariableArray(e.getIdent());
+        vars = a != null ? a : new IntVar[0];
+      }
     } else if (e.getType() == 3
         && support.dictionary.getDeclaredVariableArray(e.getIdent()) != null) {
       // an element of an array of integer variables; float and set arrays are not merged
@@ -607,10 +612,5 @@ public class CommonSubexpressions implements ParserTreeConstants {
         occurrences.computeIfAbsent(v, x -> new HashSet<>()).add(id);
       }
     }
-  }
-
-  private IntVar[] identVariable(ASTScalarFlatExpr e) {
-    IntVar v = support.dictionary.getVariable(e.getIdent());
-    return v == null ? new IntVar[0] : new IntVar[] {v};
   }
 }
