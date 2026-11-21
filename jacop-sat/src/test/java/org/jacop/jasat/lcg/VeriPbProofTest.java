@@ -642,6 +642,34 @@ class VeriPbProofTest {
     assertThat(checker.conclusion).isEqualTo("BOUNDS INF INF");
   }
 
+  // random tasks under Cumulative with its default rules and a capacity to minimise: some reasons
+  // of time-table edge finding and disjunctive reasoning were no rup steps for the proof's load
+  // lines (RupChecker rejected 10 of 400 such seeds, this one in 0.2 s; VeriPB rectangle-packing
+  // rpp21 and rpp30 and pillars-and-planks p-d12), so a proof turns those two rules off
+  @Test
+  void timeTableEnergyRulesAreOffUnderProof() {
+    Random random = new Random(5276);
+    int n = 8 + random.nextInt(7);
+    int horizon = 10 + random.nextInt(8);
+    Store store = new Store();
+    IntVar[] s = new IntVar[n];
+    IntVar[] dur = new IntVar[n];
+    IntVar[] res = new IntVar[n];
+    IntVar cap = new IntVar(store, "cap", 1, 8);
+    for (int i = 0; i < n; i++) {
+      int d = 1 + random.nextInt(6);
+      int r = 1 + random.nextInt(4);
+      s[i] = new IntVar(store, "s" + i, 0, horizon);
+      dur[i] = new IntVar(store, "d" + i, d, d);
+      res[i] = new IntVar(store, "r" + i, r, r);
+      store.impose(new LinearInt(new IntVar[] {s[i]}, new int[] {1}, "<=", horizon + 1 - d));
+    }
+    store.impose(new Cumulative(s, dur, res, cap));
+    LcgSolver lcg = withProof(store);
+    assertThat(lcg.minimize(cap)).isEqualTo(CdclSolver.SAT);
+    assertThat(new RupChecker().check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+  }
+
   // random fixed tasks under Cumulative (edge finding and energy rules): every reason is a rup
   // step once its overloaded window is summed, and the optimum is the brute-force one
   @Test

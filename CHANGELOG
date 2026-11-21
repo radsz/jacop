@@ -8717,7 +8717,22 @@ Version 5.0 (unreleased)
    fome12 111 -> 60 s, sgpf5y6 62 -> 30 s.
    -Dorg.jacop.jalp.presolveAggregate=false turns it off.
 
-488. Float optimisation. Free search (-f) splits the float variables of the
+488. The FlatZinc front end skips a model rewriting pass when the model has
+   none of the constraints it rewrites (cyclic distance, min of sums,
+   product of sums, weighted completion, giant tour, table variable
+   elimination, index function, index disjunction, numbered path, partial
+   copy, set union): one scan of the constraint names instead of a pass
+   over the model each. The pair cliques and the distance of the linear
+   relaxation use primitive hash sets and arrays instead of boxed maps,
+   and affine folding builds its occurrence map only when it has a
+   definition. On 29 MaxSAT Evaluation 2021 models with the slowest
+   set-up, the set-up at 600 s takes 1,083 s instead of 2,239 s in all
+   (protein p1 315 -> 44 s, ar-2 108 -> 65 s), and two rna-alignment
+   models now find a solution. Wide-quick set at 240 s: the same 46
+   instances solved, total time 4,007 -> 3,987 s.
+   -Dorg.jacop.fz.detectorGates=false runs every pass as before.
+
+489. Float optimisation. Free search (-f) splits the float variables of the
    model before the ones MiniZinc introduced for intermediate results
    (var_is_introduced, is_defined_var), largest domain first in each group
    (-Dorg.jacop.fz.floatDecisionFirst=false splits by largest domain over
@@ -8734,7 +8749,7 @@ Version 5.0 (unreleased)
    total time 0.88; the 22 linear float optimisation models 16 -> 18
    proved, total time 0.66 default, 0.61 -f.
 
-489. A reified MiniZinc count with a variable value (count_eq_reif, and
+490. A reified MiniZinc count with a variable value (count_eq_reif, and
    b -> count(x, y) = c, which MiniZinc posts through it) is decomposed in
    JaCoP's MiniZinc library into the literals x[i] = y and a reified sum,
    instead of Reified(CountVar). MiniZinc shares the literal of two
@@ -8747,7 +8762,7 @@ Version 5.0 (unreleased)
    (2012 amaze 2012-03-08 now proved in 181 s), --lcg off 1,405 -> 1,261 s;
    at 600 s default 1,050 -> 906 s and -f 261 -> 220 s.
 
-490. Free search (-f) on optimisation problems can alternate LCG and free
+491. Free search (-f) on optimisation problems can alternate LCG and free
    search without learning in slices instead of handing over for good
    (--free-config lcg-cop-slices=1, off by default), as jacop #888 does for
    satisfaction problems. When LCG gives way as slow with a solution, free
