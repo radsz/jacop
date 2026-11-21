@@ -3474,6 +3474,25 @@ public final class LcgSolver implements ExternalPropagator {
    * @return false when probing proved that the constraints have no solution
    */
   public boolean probeRoot(long budgetNanos) {
+    // the failures of probes are not the search's: counted, they would steer dom/wdeg, afc and
+    // activity to the probed values. On XCSP 2022 BlockedQueens-56-1860437025 (661 failed probes
+    // in 0.8 s) free search found no solution in 600 s on three seeds; without them 8-31 s
+    boolean weights = store.variableWeightManagement;
+    boolean afc = store.afcManagement();
+    boolean activity = store.activityManagement();
+    store.variableWeightManagement = false;
+    store.afcManagement(false);
+    store.activityManagement(false);
+    try {
+      return probeRootUncounted(budgetNanos);
+    } finally {
+      store.variableWeightManagement = weights;
+      store.afcManagement(afc);
+      store.activityManagement(activity);
+    }
+  }
+
+  private boolean probeRootUncounted(long budgetNanos) {
     long start = sat.now();
     long end = budgetNanos >= Long.MAX_VALUE - start ? Long.MAX_VALUE : start + budgetNanos;
     end = Math.min(end, sat.deadline());

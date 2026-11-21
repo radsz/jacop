@@ -5845,6 +5845,9 @@ Version 5.0 (unreleased)
    of 27,966; the other 12 Cargo instances end the same. Placing in every
    run lost Cargo-07's proof and Cargo-10's best solution. None of the 14
    wide-set models with diffn is affected: all have a search annotation.
+   A satisfaction model, where until the first solution is every run,
+   does not place by default (XCSP 2023 SquarePackingSuite-23 and -27
+   found no solution in 600 s with it, 146 s and 20-60 s without).
 
 337. Symmetry breaking in the FlatZinc front end breaks the conditional
    symmetry of interchangeable values in a sequence ordered by
@@ -6287,7 +6290,9 @@ Version 5.0 (unreleased)
    of 2,866 s in all and solve 52 instead of 51 (work-task-variation
    seed-8); easy instances where probing finds nothing are up to a few
    seconds slower, as the literals it makes move the search. Model
-   search does not probe by default.
+   search does not probe by default. The failed probes do not count in
+   the weights of dom/wdeg, afc or activity (counted, they kept XCSP 2022
+   BlockedQueens-56 from a solution in 600 s, 11-31 s without).
 
 348. A solve of the linear relaxation in search that stops at its pivot or
    work limit now bounds the objective by its dual multipliers. They are
@@ -6642,7 +6647,10 @@ Version 5.0 (unreleased)
    order changes, 6 are better and 6 worse at 600 s; on wide-quick under
    -f (240 s) 2 groups are better and 1 worse (proof time noise).
    -Dorg.jacop.fz.definedLast=always keeps the order after the first
-   solution, false restores the old order.
+   solution, false restores the old order. The Boolean of a half
+   reification (int_lin_ne_imp and the other *_imp constraints) is not
+   counted as defined, as the constraint does not fix it: XCSP 2023
+   WordDesign1 words-065/075/085 had no solution in 600 s, now 24-64 s.
 
 370. The FlatZinc front end posts the aggregated flow of a regular
    constraint whose sequence is counted by cardinality constraints, one

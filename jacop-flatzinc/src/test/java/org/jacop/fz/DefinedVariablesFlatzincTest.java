@@ -73,6 +73,29 @@ class DefinedVariablesFlatzincTest {
     assertThat(tables.definedVariables).contains(c);
   }
 
+  // XCSP 2023 WordDesign1: b -> x != y is int_lin_ne_imp with defines_var(b), yet x != y leaves b
+  // free; free search must not put b after the letters (Solve.definedLast)
+  @Test
+  void theBooleanOfAHalfReificationIsOnlyHalfDefined() throws IOException {
+    Path model = dir.resolve("imp.fzn");
+    Files.writeString(
+        model,
+        """
+        var 0..3: x :: output_var;
+        var 0..3: y :: output_var;
+        var bool: b :: is_defined_var :: output_var;
+        var bool: r :: is_defined_var :: output_var;
+        constraint int_lin_ne_imp([1,-1], [x,y], 0, b) :: defines_var(b);
+        constraint int_lin_ne_reif([1,-1], [x,y], 1, r) :: defines_var(r);
+        solve satisfy;
+        """);
+    Tables tables = load(model);
+    Var b = tables.getVariable("b");
+    Var r = tables.getVariable("r");
+    assertThat(tables.definedVariables).contains(b, r);
+    assertThat(tables.halfDefinedVariables).containsExactly(b);
+  }
+
   // XCSP 2026 BACPj (500 courses, 100 periods) has no defines_var annotations: free search
   // branched on the loads and found no solution in 240 s, on the bins it finds one in 9 s
   @Test
