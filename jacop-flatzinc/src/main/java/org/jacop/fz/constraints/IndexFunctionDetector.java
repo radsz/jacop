@@ -175,7 +175,10 @@ public class IndexFunctionDetector implements ParserTreeConstants {
 
   private final Map<IntVar, Integer> occurrences = new IdentityHashMap<>();
 
-  private final Map<String, IntVar> conditions = new HashMap<>();
+  // the 0/1 variable of each comparison, keyed by its operator, right-hand side and terms; the
+  // terms
+  // are compared by variable identity, never by a hash code that two variables may share
+  private final Map<List<Object>, IntVar> conditions = new HashMap<>();
 
   private int unfolded;
 
@@ -471,12 +474,11 @@ public class IndexFunctionDetector implements ParserTreeConstants {
     IntVar[] vs = terms.keySet().toArray(new IntVar[0]);
     int[] ws = new int[vs.length];
     int i = 0;
-    StringBuilder key = new StringBuilder(c.op()).append(':').append(rhs);
-    for (Map.Entry<IntVar, Long> t : terms.entrySet()) {
-      ws[i++] = (int) (long) t.getValue();
-      key.append(':').append(System.identityHashCode(t.getKey())).append('*').append(t.getValue());
+    for (long w : terms.values()) {
+      ws[i++] = (int) w;
     }
-    IntVar l = conditions.get(key.toString());
+    List<Object> key = List.of(c.op(), rhs, Map.copyOf(terms));
+    IntVar l = conditions.get(key);
     if (l == null && dryRun) {
       return OPEN;
     }
@@ -489,7 +491,7 @@ public class IndexFunctionDetector implements ParserTreeConstants {
             default -> "!=";
           };
       support.pose(new Reified(new LinearInt(vs, ws, rel, (int) rhs), l));
-      conditions.put(key.toString(), l);
+      conditions.put(key, l);
     }
     return l;
   }
