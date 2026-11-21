@@ -12356,4 +12356,41 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     assertThat(noOfAllSolutions(store, v)).isEqualTo(expected);
   }
+
+  private static LinearBool watchedLinearBool(Store store, IntVar[] b) {
+    for (int k = 0; k < b.length; k++) {
+      b[k] = new IntVar(store, "b" + k, k == 2 ? 1 : 0, 1);
+    }
+    LinearBool linear = new LinearBool(b, new int[] {-5, -4, 4, -3, 2, 1}, "==", -3);
+    linear.setWatchMinLength(0);
+    return linear;
+  }
+
+  /**
+   * A watched LinearBool removed at the root and imposed again (LcgSolver encodes a counter, then
+   * release and lend impose it again) registered its watches a second time: every false literal
+   * took its weight off the slack twice, and the sum failed with b0 = b3 = 1 although b0 = b2 = b3
+   * = b5 = 1 with b1 = b4 = 0 has the sum -3.
+   */
+  @Test
+  void watchedLinearBoolImposedAgainCountsEachLiteralOnce() {
+    for (int level = 0; level < 2; level++) {
+      Store store = new Store();
+      IntVar[] b = new IntVar[6];
+      LinearBool linear = watchedLinearBool(store, b);
+      store.impose(linear);
+      assertThat(linear.isWatched()).isTrue();
+      assertThat(store.consistency()).isTrue();
+      linear.removeConstraint();
+      store.setLevel(level);
+      store.clearEntailed(linear);
+      store.impose(linear);
+      store.setLevel(level + 1);
+      b[0].domain.in(level + 1, b[0], 1, 1);
+      store.setLevel(level + 2);
+      b[3].domain.in(level + 2, b[3], 1, 1);
+      assertThat(store.consistency()).as("imposed again at level " + level).isTrue();
+      assertThat(noOfAllSolutions(store, b)).as("imposed again at level " + level).isEqualTo(1);
+    }
+  }
 }
