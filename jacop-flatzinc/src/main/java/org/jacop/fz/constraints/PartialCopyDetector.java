@@ -66,6 +66,7 @@ import org.jacop.fz.SimpleNode;
  * @version 5.0
  */
 public class PartialCopyDetector implements ParserTreeConstants {
+  private static final Set<String> KINDS = Set.of("int_eq_imp");
 
   private final Support support;
 
@@ -110,6 +111,10 @@ public class PartialCopyDetector implements ParserTreeConstants {
    * @return the constraint nodes of the merged copies, which must not be posted.
    */
   public Set<SimpleNode> detect(SimpleNode astTree) {
+    // a copy is defined by half-reified equalities
+    if (!support.hasConstraint(astTree, KINDS)) {
+      return new HashSet<>();
+    }
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {
@@ -241,16 +246,17 @@ public class PartialCopyDetector implements ParserTreeConstants {
     }
     ASTScalarFlatExpr e = (ASTScalarFlatExpr) arg;
     if (e.getType() == 2) {
-      IntVar[] array = support.dictionary.getDeclaredVariableArray(e.getIdent());
-      if (array != null) {
-        for (IntVar v : array) {
-          occurrences.merge(v, 1, Integer::sum);
-        }
-        return;
-      }
-      IntVar v = support.dictionary.getVariable(e.getIdent());
+      // a name is of a variable or of an array; the variable is kept by the identifier
+      IntVar v = support.dictionary.getVariable(e);
       if (v != null) {
         occurrences.merge(v, 1, Integer::sum);
+        return;
+      }
+      IntVar[] array = support.dictionary.getDeclaredVariableArray(e.getIdent());
+      if (array != null) {
+        for (IntVar x : array) {
+          occurrences.merge(x, 1, Integer::sum);
+        }
       }
     } else if (e.getType() == 3
         && support.dictionary.getDeclaredVariableArray(e.getIdent()) != null) {

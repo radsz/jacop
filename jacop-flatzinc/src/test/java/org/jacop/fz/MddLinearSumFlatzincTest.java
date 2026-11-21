@@ -179,6 +179,23 @@ class MddLinearSumFlatzincTest {
     assertEquals(solutions(run(cut, "false", "-a")), solutions(kept));
   }
 
+  @Test
+  void aDiagramWithAShortPathToTheTerminalIsNoSum() throws IOException {
+    // x0 = 0 goes to the terminal at once, x0 = 1 then x1 = -1 ends there too: every potential is 0
+    // and the two paths match the two tuples of x0 + x1 = 0, but the short path is no tuple of the
+    // sum, so the diagram must stay a diagram
+    String fzn =
+        """
+        var 0..1: x0:: output_var;
+        var -1..1: x1:: output_var;
+        constraint jacop_mdd([x0,x1],[1,2],[1,1,2],[{0},{1},{-1}],[0,2,0]);
+        solve satisfy;
+        """;
+    String out = run(fzn, null, "-a", "-debug");
+    assertFalse(out.contains("SumInt"), out);
+    assertEquals(solutions(run(fzn, "false", "-a")), solutions(out));
+  }
+
   /**
    * Two diagrams that share the named arrays of levels, sources and targets and differ in their
    * labels: the second (u = v) took the sum found for the first (x + y = 1).
