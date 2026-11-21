@@ -144,6 +144,11 @@ final class Presolve {
   private static final int AGGREGATE_FILL = Integer.getInteger("org.jacop.jalp.aggregateFill", 16);
   private static final double AGGREGATE_GROWTH = 1.0;
 
+  // whether an aggregated column's bounds may be implied by any of its rows, not only by its
+  // equation (org.jacop.jalp.aggregateAnyRow)
+  private static final boolean AGGREGATE_ANY_ROW =
+      Boolean.parseBoolean(System.getProperty("org.jacop.jalp.aggregateAnyRow", "true"));
+
   // the pivot of an aggregation is at least this share of the largest entry of its equation and of
   // its column
   private static final double AGGREGATE_PIVOT = 0.01;
@@ -1001,6 +1006,17 @@ final class Presolve {
   // whether x_k = (b - rest) / a stays within the bounds of x_k for every value of the rest of row
   // i
   private boolean impliedFree(int i, int k, double a, double b) {
+    impliedBounds(i, k, a, b, b);
+    return (lo[k] == Double.NEGATIVE_INFINITY || impliedLo >= lo[k] - SAME * (1 + Math.abs(lo[k])))
+        && (hi[k] == Double.POSITIVE_INFINITY || impliedHi <= hi[k] + SAME * (1 + Math.abs(hi[k])));
+  }
+
+  // the bounds of x_k that row i, L <= a x_k + rest <= U, implies over the bounds of the rest, in
+  // impliedLo and impliedHi (infinite when the row does not bound x_k on that side)
+  private double impliedLo;
+  private double impliedHi;
+
+  private void impliedBounds(int i, int k, double a, double rowL, double rowU) {
     double min = 0;
     double max = 0;
     int minInf = 0;
@@ -1027,17 +1043,13 @@ final class Presolve {
         max += v * h;
       }
     }
-    double kLo;
-    double kHi;
-    if (a > 0) {
-      kLo = maxInf > 0 ? Double.NEGATIVE_INFINITY : (b - max) / a;
-      kHi = minInf > 0 ? Double.POSITIVE_INFINITY : (b - min) / a;
-    } else {
-      kLo = minInf > 0 ? Double.NEGATIVE_INFINITY : (b - min) / a;
-      kHi = maxInf > 0 ? Double.POSITIVE_INFINITY : (b - max) / a;
-    }
-    return (lo[k] == Double.NEGATIVE_INFINITY || kLo >= lo[k] - SAME * (1 + Math.abs(lo[k])))
-        && (hi[k] == Double.POSITIVE_INFINITY || kHi <= hi[k] + SAME * (1 + Math.abs(hi[k])));
+    // a x_k >= L - max(rest) and a x_k <= U - min(rest)
+    double fromL = maxInf > 0 || rowL == Double.NEGATIVE_INFINITY ? Double.NaN : (rowL - max) / a;
+    double fromU = minInf > 0 || rowU == Double.POSITIVE_INFINITY ? Double.NaN : (rowU - min) / a;
+    double l = a > 0 ? fromL : fromU;
+    double h = a > 0 ? fromU : fromL;
+    impliedLo = Double.isNaN(l) ? Double.NEGATIVE_INFINITY : l;
+    impliedHi = Double.isNaN(h) ? Double.POSITIVE_INFINITY : h;
   }
 
   /**
@@ -1088,7 +1100,7 @@ final class Presolve {
         }
         if ((rowCount[i] - 1) * (colCount[k] - 1) - (rowCount[i] + colCount[k] - 1) > AGGREGATE_FILL
             || !pivotInColumn(k, a)
-            || !impliedFree(i, k, a, rowLo[i])) {
+            || !impliedFree(i, k, a, rowLo[i]) && !(AGGREGATE_ANY_ROW && impliedByRows(k))) {
           continue;
         }
         best = k;
@@ -1100,6 +1112,26 @@ final class Presolve {
       }
     }
     return found;
+  }
+
+  // whether each finite bound of column k is implied by one of its rows over the bounds of the
+  // other columns (the implied free columns of HiGHS's presolve, whose bounds may come from rows
+  // other than the one the column is substituted from; netlib afiro: 11 columns against 2)
+  private boolean impliedByRows(int k) {
+    boolean needLo = lo[k] != Double.NEGATIVE_INFINITY;
+    boolean needHi = hi[k] != Double.POSITIVE_INFINITY;
+    int[] ci = cIdx[k];
+    double[] cv = cVal[k];
+    for (int e = 0; e < cLen[k] && (needLo || needHi); e++) {
+      int r = ci[e];
+      if (!rowAlive[r] || cv[e] == 0) {
+        continue;
+      }
+      impliedBounds(r, k, cv[e], rowLo[r], rowHi[r]);
+      needLo &= impliedLo < lo[k] - SAME * (1 + Math.abs(lo[k]));
+      needHi &= impliedHi > hi[k] + SAME * (1 + Math.abs(hi[k]));
+    }
+    return !needLo && !needHi;
   }
 
   // whether the entry a of column k is at least AGGREGATE_PIVOT of its largest live entry

@@ -129,6 +129,8 @@ public class Tables {
   // the variables of definedVariables named by a half-reified constraint (b -> c, MiniZinc *_imp),
   // which bounds b but does not fix it from the other variables
   final ArrayList<Var> halfDefinedVariables = new ArrayList<>();
+  // whether the solve item carries a search annotation; set before the constraints are posted
+  boolean searchAnnotated;
 
   // float variables declared var_is_introduced or is_defined_var: MiniZinc's intermediate results
   final ArrayList<Var> introducedFloatVariables = new ArrayList<>();
@@ -906,6 +908,7 @@ public class Tables {
     t.unusedVariables.addAll(map.get(unusedVariables));
     t.auxiliaryVariables.addAll(map.get(auxiliaryVariables));
     t.splitSums.addAll(map.get(splitSums));
+    t.searchAnnotated = searchAnnotated;
     t.overlapSetRows = overlapSetRows;
     t.overlapSetRowsDefined.addAll(map.get(overlapSetRowsDefined));
     for (LinearForm f : overlapUnitRows) {
@@ -1507,6 +1510,16 @@ public class Tables {
   public void addHalfDefinedVar(Var v) {
     definedVariables.add(v);
     halfDefinedVariables.add(v);
+  }
+  
+   /**
+   * Tells whether the solve item carries a search annotation. It is known before the constraints
+   * are posted.
+   *
+   * @return true when the model names a search
+   */
+  public boolean isSearchAnnotated() {
+    return searchAnnotated;
   }
 
   /**
