@@ -8717,6 +8717,23 @@ Version 5.0 (unreleased)
    fome12 111 -> 60 s, sgpf5y6 62 -> 30 s.
    -Dorg.jacop.jalp.presolveAggregate=false turns it off.
 
+488. Cheaper propagation of GlobalCardinality, ChannelReif and ChannelImply
+   per call. GlobalCardinality keeps the value list of each variable as a
+   bit set when the values fit in 512 bits: the value graph of the
+   strongly connected component pass is the union of the bit sets of the
+   matched variables, and a value outside a variable's component is found
+   by word tests (Regin, Generalized arc consistency for global
+   cardinality constraint, AAAI 1996, same pruning as before).
+   ChannelReif and ChannelImply record which 0/1 variables changed since
+   the last call and visit only their items, with one pass over all items
+   only when x changed. MiniZinc Challenge warehouses and
+   rotating-workforce (the 20 wide-set instances with GlobalCardinality),
+   600 s: -f total 0.981 (4 of 5 warehouses faster), default 1.000 with the
+   same nodes; 2019 nside to 300k nodes 37 -> 26 s with the same search.
+   The 38 wide-set instances with a channel, 600 s: default total
+   5,390 -> 5,382 s with the same instances proved, -f 4,046 -> 3,924 s
+   with one more proved (valve-network horizon20 in 498 s).
+
 Version 4.11
 =============
 
