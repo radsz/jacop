@@ -1,0 +1,38 @@
+#!/bin/bash
+# Makes fzn-jacop-native, a GraalVM native image of JaCoP's FlatZinc front end. It starts in a few
+# milliseconds and runs compiled code at once, so an easy model takes 0.03-0.1 s instead of the
+# 0.3-0.6 s of the JVM (osolpro benchmarks/native-startup). Needs GraalVM 25 or later with
+# native-image (GRAALVM_HOME, or native-image on the PATH); takes about 2 minutes and 3 GB of memory.
+# Run it again after replacing the jar.
+#
+# NATIVE_MARCH sets the CPU the code is compiled for (default x86-64-v3, any x86 CPU since about
+# 2015; "native" for this machine only, "compatibility" for any x86-64 CPU).
+set -e
+cd "$(dirname "$0")"
+JACOP_JAR="jacop-all-${project.version}.jar"
+
+NATIVE_IMAGE=native-image
+if [ -n "$GRAALVM_HOME" ]; then
+  NATIVE_IMAGE="$GRAALVM_HOME/bin/native-image"
+fi
+
+# only the logging jars: the others in lib/ are for the Scala and test parts of JaCoP
+CLASSPATH="$JACOP_JAR"
+for jar in lib/slf4j-*.jar lib/reload4j-*.jar; do
+  [ -f "$jar" ] && CLASSPATH="$CLASSPATH:$jar"
+done
+
+# the reflection JaCoP uses, from the classes in the jar (org.jacop.fz.NativeMetadata)
+CONFIG=$(mktemp -d)
+trap 'rm -rf "$CONFIG"' EXIT
+JAVA=java
+[ -n "$GRAALVM_HOME" ] && JAVA="$GRAALVM_HOME/bin/java"
+"$JAVA" -cp "$CLASSPATH" org.jacop.fz.NativeMetadata "$JACOP_JAR" "$CONFIG/reachability-metadata.json"
+
+# --install-exit-handlers: SIGTERM (the MiniZinc time-out) runs the shutdown hooks that print the
+# best solution, as in the JVM
+"$NATIVE_IMAGE" -cp "$CLASSPATH" -H:ConfigurationFileDirectories="$CONFIG" \
+  --gc=serial --install-exit-handlers -march="${NATIVE_MARCH:-x86-64-v3}" \
+  --no-fallback -o fzn-jacop-native.tmp org.jacop.fz.NativeMain
+mv -f fzn-jacop-native.tmp fzn-jacop-native
+echo "Wrote $(pwd)/fzn-jacop-native"

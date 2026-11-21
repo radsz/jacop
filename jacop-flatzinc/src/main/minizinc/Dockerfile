@@ -24,7 +24,23 @@ RUN mvn -B -Pall -DskipTests -Dspotless.skip=true package \
   && cp -r jacop-flatzinc/src/main/minizinc/org/jacop/minizinc/. /dist/mzn-lib/ \
   && cp -r jacop-all/src/main/aot-training /dist/aot-training
 
-# Java 25 runtime.
+# Native image of the FlatZinc front end (GraalVM Community 25, GPLv2 with the Classpath
+# Exception): it starts in milliseconds and runs compiled code at once, where the JVM needs 0.1-0.5 s
+# before JaCoP runs at speed. On the 62 instances of wide-quick at 240 s it takes the same instances
+# with 0.32x (-f) and 0.35x (default) the time on those both solve, at the price of 0-60 % fewer
+# failures per second on long runs (osolpro benchmarks/native-startup). x86-64-v3 is any x86 CPU
+# since about 2015.
+
+FROM ghcr.io/graalvm/native-image-community:25 AS native
+
+COPY --from=build /dist /dist
+RUN cd /dist \
+  && java -cp "jacop.jar:lib/*" org.jacop.fz.NativeMetadata jacop.jar /tmp/ni/reachability-metadata.json \
+  && native-image -cp "jacop.jar:$(ls lib/slf4j-*.jar lib/reload4j-*.jar | tr '\n' ':')" \
+    -H:ConfigurationFileDirectories=/tmp/ni --gc=serial --install-exit-handlers -march=x86-64-v3 \
+    --no-fallback -o /dist/fzn-jacop-native org.jacop.fz.NativeMain
+
+# Java 25 runtime, for JACOP_JVM=1 (fzn-exec then runs the JVM with its ahead-of-time cache).
 
 FROM eclipse-temurin:25-jre AS jre
 
@@ -39,6 +55,7 @@ COPY --from=jre /opt/java/openjdk /opt/java/openjdk
 COPY --from=build /dist/jacop.jar /jacop/jacop.jar
 COPY --from=build /dist/lib /jacop/lib
 COPY --from=build /dist/mzn-lib/ /entry_data/mzn-lib/
+COPY --from=native /dist/fzn-jacop-native /jacop/fzn-jacop-native
 
 # The JVM's ahead-of-time cache (Java 25): one training JVM solves the training models with their
 # own search, free search and LCG free search, and records the classes and method profiles they use.
@@ -58,6 +75,7 @@ RUN --mount=type=bind,from=build,source=/dist/aot-training,target=/aot-training 
   && chmod a+r /jacop/jacop.aot \
   && printf '%s\n' \
     '#!/bin/bash' \
+    'if [ -z "$JACOP_JVM" ]; then exec /jacop/fzn-jacop-native -Xmx10G -cs "$@"; fi' \
     'exec java -server -Xmx10G -Xss100M -XX:+UseTransparentHugePages -XX:AOTCache=/jacop/jacop.aot \' \
     '  -Xlog:disable -Xlog:all=warning:stderr \' \
     '  -cp "/jacop/jacop.jar:/jacop/lib/*" org.jacop.fz.Fz2jacop -cs "$@"' \

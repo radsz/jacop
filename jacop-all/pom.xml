@@ -243,6 +243,10 @@
                                       tofile="${project.build.directory}/fzn-jacop-aot"
                                       overwrite="true"/>
                                 <chmod file="${project.build.directory}/fzn-jacop-aot" perm="ugo+x"/>
+                                <move file="${project.build.directory}/fzn-jacop-native-build.template"
+                                      tofile="${project.build.directory}/fzn-jacop-native-build"
+                                      overwrite="true"/>
+                                <chmod file="${project.build.directory}/fzn-jacop-native-build" perm="ugo+x"/>
                             </target>
                         </configuration>
                     </execution>
@@ -273,6 +277,37 @@
                                         <exec executable="bash" dir="${project.build.directory}"
                                               failonerror="true">
                                             <arg value="./fzn-jacop-aot"/>
+                                        </exec>
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <!-- mvn -Pnative -DskipTests install: also makes target/fzn-jacop-native, a GraalVM native
+             image of the FlatZinc front end that starts in milliseconds (needs bash and GraalVM 25
+             with native-image, as GRAALVM_HOME or on the PATH; about 2 minutes) -->
+        <profile>
+            <id>native</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>make-native-image</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <exec executable="bash" dir="${project.build.directory}"
+                                              failonerror="true">
+                                            <arg value="./fzn-jacop-native-build"/>
                                         </exec>
                                     </target>
                                 </configuration>
