@@ -213,6 +213,12 @@ public class Constraints implements ParserTreeConstants {
       // float variables, and a model built for LCG (clauses, split sums, no views) and then solved
       // by search is not the model solved without --lcg
       options.dropLcg("the model has float variables");
+    } else if (manySolutions && options.lcgEnumerates()) {
+      // LCG enumerates the solutions with blocking clauses over the output variables (see
+      // LcgSolver.setEnumeration); the reformulations that lose solutions are off, as without LCG
+      if (options.debug()) {
+        FzConsole.println("% many solutions: enumerated by LCG");
+      }
     } else if (options.getAll() && satisfaction(astTree)) {
       options.dropLcg("all solutions are not supported");
     } else if (manySolutions) {

@@ -1534,6 +1534,27 @@ public final class CdclSolver {
     trail[trailSize++] = lit;
   }
 
+  /**
+   * Returns the decisions of the current assignment: the literals assigned without a reason above
+   * the root, in the order of the trail.
+   *
+   * @return the decision literals, in DIMACS form
+   */
+  public int[] decisionLiterals() {
+    int[] out = new int[decisionLevel];
+    int n = 0;
+    for (int k = decisionLevel == 0 ? trailSize : trailLim[0]; k < trailSize; k++) {
+      int lit = trail[k];
+      if (varReason(lit >> 1) == NO_REASON && litLevel(lit) > 0) {
+        if (n == out.length) {
+          out = Arrays.copyOf(out, 2 * n + 1);
+        }
+        out[n++] = toDimacs(lit);
+      }
+    }
+    return Arrays.copyOf(out, n);
+  }
+
   /** The decision level of variable v (meaningful while v is assigned). */
   private int varLevel(int v) {
     return vdata[v << 2 | LEVEL];

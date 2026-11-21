@@ -4130,9 +4130,14 @@ class FlatzincFrontEndTest {
 
   @Test
   void lcgFreeSearchReturnsToClausesAfterEachPruningOnSatisfactionModels() throws IOException {
+    // lazy clause generation is under test: the model is not compiled to clauses
+    ClausalOff.run(this::lcgFreeSearchReturnsToClausesAfterEachPruningOnSatisfactionModelsBody);
+  }
+
+  private void lcgFreeSearchReturnsToClausesAfterEachPruningOnSatisfactionModelsBody()
+      throws IOException {
     // the full fixpoint of the store (#317) paid on optimisation models but not on satisfaction
-    // models: nonogram non_fast_3 took 39 to 57 s instead of 4 to 6 s; four values, so the model
-    // is not compiled to clauses (org.jacop.fz.clausal.maxDomain)
+    // models: nonogram non_fast_3 took 39 to 57 s instead of 4 to 6 s
     String model =
         """
         var 1..4: x :: output_var;
@@ -4909,7 +4914,8 @@ class FlatzincFrontEndTest {
   }
 
   @Test
-  void defaultLcgIsLeftOutForFloatModelsAndAllSolutionsOfSatisfactionProblems() throws IOException {
+  void defaultLcgIsLeftOutForFloatModelsAndEnumeratesAllSolutionsOfSatisfactionProblems()
+      throws IOException {
     // LCG on by default must not change how a model it cannot solve is solved: no "--lcg ignored"
     // message, and the Boolean constraints are not turned into clauses
     String floats =
@@ -4936,8 +4942,11 @@ class FlatzincFrontEndTest {
       out = run(sat, "-a");
       assertFalse(out[0].contains("--lcg ignored"), out[0]);
       assertEquals(2, out[0].split("----------", -1).length - 1, out[0]);
-      // asked for, LCG is still reported as ignored
-      assertTrue(run(sat, "-a", "--lcg")[0].contains("--lcg ignored"));
+      // asked for, LCG enumerates the solutions with blocking clauses
+      out = run(sat, "-a", "--lcg");
+      assertFalse(out[0].contains("--lcg ignored"), out[0]);
+      assertEquals(2, out[0].split("----------", -1).length - 1, out[0]);
+      assertTrue(out[0].contains("=========="), out[0]);
     } finally {
       restoreProperty("jacop.lcg", lcg);
     }
