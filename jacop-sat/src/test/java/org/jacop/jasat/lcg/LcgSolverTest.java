@@ -6742,6 +6742,60 @@ class LcgSolverTest {
    * search with the degrees kept by Routes.
    */
   /**
+   * A layered graph whose described edges are many but whose clauses are few becomes clauses: the
+   * budget is checked against its counted clauses, not only against the bytes a described edge may
+   * take at most. Six of the 17 regular constraints of pentominoes 04 (MiniZinc Challenge 2020)
+   * were left to cut explanations at 6 GB of heap, 12 nodes per second instead of a solution in 5
+   * s. A graph whose counted clauses do not fit stays a propagator.
+   */
+  @Test
+  void layeredGraphBudgetCountsClauses() {
+    // 50 variables of 100 values, every sequence accepted: 5,051 described edges and nodes, 2 MB
+    // at the bound per edge, but one arc per level and no clause literal to speak of
+    Store store = new Store();
+    IntVar[] x = new IntVar[50];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 99);
+    }
+    Fsm fsm = new Fsm();
+    FsmState any = new FsmState();
+    fsm.allStates.add(any);
+    fsm.initState = any;
+    fsm.finalStates.add(any);
+    any.addTransition(new FsmTransition(new IntervalDomain(0, 99), any));
+    store.impose(new Regular(fsm, x));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setGraphClauseBudget(100_000);
+    assertThat(solver.probeRoot(1_000_000_000L)).isTrue();
+    assertThat(solver.graphConstraintsEncoded).isOne();
+    assertThat(solver.graphConstraintsTooLarge).isZero();
+
+    // no two 1s in a row: node and arc literals, which do not fit in no bytes at all
+    Store tight = new Store();
+    IntVar[] y = new IntVar[50];
+    for (int i = 0; i < y.length; i++) {
+      y[i] = new IntVar(tight, "y" + i, 0, 1);
+    }
+    Fsm pairs = new Fsm();
+    FsmState zero = new FsmState();
+    FsmState one = new FsmState();
+    pairs.allStates.add(zero);
+    pairs.allStates.add(one);
+    pairs.initState = zero;
+    pairs.finalStates.add(zero);
+    pairs.finalStates.add(one);
+    zero.addTransition(new FsmTransition(new IntervalDomain(0, 0), zero));
+    zero.addTransition(new FsmTransition(new IntervalDomain(1, 1), one));
+    one.addTransition(new FsmTransition(new IntervalDomain(0, 0), zero));
+    tight.impose(new Regular(pairs, y));
+    LcgSolver small = new LcgSolver(tight);
+    small.setGraphClauseBudget(0);
+    assertThat(small.probeRoot(1_000_000_000L)).isTrue();
+    assertThat(small.graphConstraintsEncoded).isZero();
+    assertThat(small.graphConstraintsTooLarge).isOne();
+  }
+
+  /**
    * A regular constraint that became clauses propagates again after the solver releases the store,
    * also when the solver was built above the root level, where removing a constraint only marks it
    * as entailed. Root probing with a solver of its own before the linear relaxation lost the
