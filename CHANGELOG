@@ -8695,7 +8695,12 @@ Version 5.0 (unreleased)
    240 s: decided 23 -> 26, total time 7,555 -> 7,089 s, the 23 decided by
    both 355 -> 171 s (search_stress2 06_05 94 -> 0.5 s, amaze 46 -> 2 s,
    fillomino 7x7_0 and cryptanalysis obj16 all solutions found).
-   @RESULTS@
+   With -a -f at 240 s: decided 21 -> 29, total 7,995 -> 6,377 s. The 30
+   instances open at 240 s, at 600 s: decided 0 -> 4, total 18,000 ->
+   16,482 s. Models with millions of solutions print fewer of them: the
+   blocking clauses take memory (slow_convergence 1000 runs out of 4 GB
+   after 244,554 solutions, search without learning prints 4.4 million in
+   600 s) and LCG is slower per solution.
    AllDisjoint and PartitionSet explain their pruning for LCG element by
    element (an element leaving a set is explained by another set holding
    it, an element of the universe joining a set by every other set being
