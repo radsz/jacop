@@ -3728,9 +3728,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @return whether a solution was found
    */
   private boolean alternateUnsolved(Var costVar) {
-    CdclSolver sat = lcg.sat();
-    long end = sat.deadline();
-    long lcgShare = Math.max(1, sat.now() - lcgStart);
+    CdclSolver cdcl = lcg.sat();
+    long end = cdcl.deadline();
+    long lcgShare = Math.max(1, cdcl.now() - lcgStart);
     double cpShare = Double.parseDouble(options.freeConfig("lcg-unsolved-cp-share", "1"));
     long cpMillis = Math.max(1, (long) (cpShare * lcgShare / 1_000_000L));
     unsolvedSlicing = true;
@@ -3749,17 +3749,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             "%%%mzn-stat: lcgUnsolvedSlice="
                 + lcgUnsolvedSlices
                 + ","
-                + sat.conflicts
+                + cdcl.conflicts
                 + ","
                 + cpMillis);
       }
       if (options.debug()) {
         IO.println(
             "%% LCG without a solution after "
-                + sat.conflicts
-                + " conflicts; "
+                + cdcl.conflicts
+                + " conflicts: free search without learning for "
                 + cpMillis
-                + " ms of free search without learning");
+                + " ms");
       }
       int root = store.level;
       store.setLevel(root + 1);
@@ -3776,7 +3776,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         if (numberSolutions > 0 && freeSearchStatus == FreeSearch.Status.SATISFIED && left > 0) {
           // search without learning found the first solution: it keeps the rest of the time, as
           // when LCG gave way for good
-          long virtualLeft = Math.max(1, (end - sat.now()) / 1_000_000L);
+          long virtualLeft = Math.max(1, (end - cdcl.now()) / 1_000_000L);
           freeSearchStatus =
               sliceSearch.resume(
                   System.currentTimeMillis() + left, FreeSearch.VIRTUAL_CLOCK ? virtualLeft : 0);
@@ -3794,7 +3794,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (numberSolutions > 0) {
         return true;
       }
-      if (options.getTimeOut() > 0 && options.getRemainingTimeOut() <= 0 || sat.now() >= end) {
+      if (options.getTimeOut() > 0 && options.getRemainingTimeOut() <= 0 || cdcl.now() >= end) {
         return false;
       }
       lcgShare *= 2;
@@ -3802,16 +3802,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // LCG goes on with its learnt clauses; at the end of its share it gives way again unless it
       // found a solution, and then it keeps the rest of the time
       lcg.unstop();
-      sat.setAlarm(
-          sat.now() + lcgShare,
+      cdcl.setAlarm(
+          cdcl.now() + lcgShare,
           () -> {
             if (!solutionFound) {
               lcg.stop();
             }
           });
       lcgStatus = lcg.minimize((IntVar) costVar);
-      sat.setAlarm(Long.MAX_VALUE, null);
-      if (lcgStatus != CdclSolver.UNKNOWN || numberSolutions > 0 || sat.now() >= end) {
+      cdcl.setAlarm(Long.MAX_VALUE, null);
+      if (lcgStatus != CdclSolver.UNKNOWN || numberSolutions > 0 || cdcl.now() >= end) {
         return numberSolutions > 0;
       }
     }
