@@ -6379,4 +6379,24 @@ class FlatzincFrontEndTest {
       assertEquals(expected, solveAll(model), model);
     }
   }
+
+  @Test
+  void listDomainWithValuesBeyondTheRangeIsNarrowed() throws IOException {
+    // {1, 2000000000} kept 2000000000 beyond JaCoP's range: x + y <= 5 wrapped around and accepted
+    // x = y = 2000000000, and x = 10^9 * y was reported unsatisfiable though x = 2*10^9, y = 2
+    // holds
+    String sum =
+        "var {1,2000000000}: x :: output_var;\n"
+            + "var {1,2000000000}: y :: output_var;\n"
+            + "constraint int_lin_le([1,1],[x,y],5);\n"
+            + "solve satisfy;\n";
+    assertEquals(Set.of("x = 1; y = 1;"), solveAll(sum));
+    String product =
+        "var {2,2000000000}: x :: output_var;\n"
+            + "var -10..10: y :: output_var;\n"
+            + "constraint int_lin_eq([1,-1000000000],[x,y],0);\n"
+            + "solve satisfy;\n";
+    String[] out = run(product);
+    assertFalse(out[0].contains("=====UNSATISFIABLE====="), out[0]);
+  }
 }
