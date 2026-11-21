@@ -6192,12 +6192,14 @@ class LcgSolverTest {
    * 0-1 terms replace the sums of a split objective also when the sums span fewer levels than the
    * terms, up to twice: a long run's root propagation tightens the sums beyond their terms' bounds,
    * and on the sums the cores of xai-mindset2 iris (MaxSAT Evaluation 2024) had 3 assumptions and
-   * reached 49 of 87 in 240 s, while on the terms the optimum is proved in 4 s. Wide terms keep the
-   * sums when they span more.
+   * reached 49 of 87 in 240 s, while on the terms the optimum is proved in 4 s. So do narrow terms
+   * of a few levels each, such as the cells of 1..5 of neighbours (MiniZinc Challenge 2018), whose
+   * cores on the sums raised the bound by one each. Wide terms keep the sums when they span more.
    */
   @Test
   void zeroOneTermsReplaceTighterSums() {
-    for (int width : new int[] {1, 3}) {
+    for (int width : new int[] {1, 3, 12}) {
+      boolean narrow = width <= 8;
       Store store = new Store();
       IntVar[] x = new IntVar[6];
       for (int i = 0; i < x.length; i++) {
@@ -6220,8 +6222,9 @@ class LcgSolverTest {
       assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
       assertThat(solver.value(obj)).isEqualTo(2);
       assertThat(solver.coreSearch().proved).isTrue();
-      assertThat(solver.coreSearch().termCount()).isEqualTo(width == 1 ? 6 : 2);
-      assertThat(solver.coreSearch().termsBySpanRatio).isEqualTo(width == 1);
+      assertThat(solver.coreSearch().termCount()).isEqualTo(narrow ? 6 : 2);
+      assertThat(solver.coreSearch().termsBySpanRatio).isEqualTo(narrow);
+      assertThat(solver.coreSearch().narrowTerms).isEqualTo(width == 3);
     }
   }
 

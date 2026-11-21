@@ -5677,6 +5677,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + lcg.probeRateKeeps
         + "\n%%%mzn-stat: lcgCoreTermsBySpanRatio="
         + core.termsBySpanRatio
+        + "\n%%%mzn-stat: lcgCoreNarrowTerms="
+        + core.narrowTerms
         + "\n%%%mzn-stat: lcgBoundDives="
         + lcg.boundDives
         + "\n%%%mzn-stat: lcgBoundDiveSolutions="
