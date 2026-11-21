@@ -561,8 +561,11 @@ public class LinearRelaxation extends Constraint
   private static final double PROBATION_SHARE =
       Double.parseDouble(System.getProperty("org.jacop.lp.probationShare", "0.6"));
   private static final int PROBATION_START = 16;
-  private static final boolean TRACE_PROBATION = Boolean.getBoolean("org.jacop.lp.probationTrace");
   private long probationSolveNanos;
+
+  /** Statistics: the share of the search time the solves of the optimisation probation took. */
+  public double probationShare = Double.NaN;
+
   private long probationStart;
 
   // the solves at the pivot limit, with no node failed, after which rows on probation are dropped
@@ -3629,19 +3632,10 @@ public class LinearRelaxation extends Constraint
       probationStart = System.nanoTime();
     } else if (searchProbation && calls - extraCall >= OPTIMISATION_PROBATION) {
       searchProbation = false;
-      double share =
+      probationShare =
           (double) (solveNanos - probationSolveNanos)
               / Math.max(1, System.nanoTime() - probationStart);
-      if (TRACE_PROBATION) {
-        System.err.println(
-            "% probation share "
-                + share
-                + " failures "
-                + (failures - extraFailures)
-                + " of "
-                + (calls - extraCall));
-      }
-      if (beforeExtra != null && share >= PROBATION_SHARE && !failingWithExtra()) {
+      if (beforeExtra != null && probationShare >= PROBATION_SHARE && !failingWithExtra()) {
         dropExtraRows();
       }
     }

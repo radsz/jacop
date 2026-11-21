@@ -1006,6 +1006,17 @@ final class Presolve {
   // whether x_k = (b - rest) / a stays within the bounds of x_k for every value of the rest of row
   // i
   private boolean impliedFree(int i, int k, double a, double b) {
+    impliedBounds(i, k, a, b, b);
+    return (lo[k] == Double.NEGATIVE_INFINITY || impliedLo >= lo[k] - SAME * (1 + Math.abs(lo[k])))
+        && (hi[k] == Double.POSITIVE_INFINITY || impliedHi <= hi[k] + SAME * (1 + Math.abs(hi[k])));
+  }
+
+  // the bounds of x_k that row i, L <= a x_k + rest <= U, implies over the bounds of the rest, in
+  // impliedLo and impliedHi (infinite when the row does not bound x_k on that side)
+  private double impliedLo;
+  private double impliedHi;
+
+  private void impliedBounds(int i, int k, double a, double rowL, double rowU) {
     double min = 0;
     double max = 0;
     int minInf = 0;
@@ -1032,17 +1043,13 @@ final class Presolve {
         max += v * h;
       }
     }
-    double kLo;
-    double kHi;
-    if (a > 0) {
-      kLo = maxInf > 0 ? Double.NEGATIVE_INFINITY : (b - max) / a;
-      kHi = minInf > 0 ? Double.POSITIVE_INFINITY : (b - min) / a;
-    } else {
-      kLo = minInf > 0 ? Double.NEGATIVE_INFINITY : (b - min) / a;
-      kHi = maxInf > 0 ? Double.POSITIVE_INFINITY : (b - max) / a;
-    }
-    return (lo[k] == Double.NEGATIVE_INFINITY || kLo >= lo[k] - SAME * (1 + Math.abs(lo[k])))
-        && (hi[k] == Double.POSITIVE_INFINITY || kHi <= hi[k] + SAME * (1 + Math.abs(hi[k])));
+    // a x_k >= L - max(rest) and a x_k <= U - min(rest)
+    double fromL = maxInf > 0 || rowL == Double.NEGATIVE_INFINITY ? Double.NaN : (rowL - max) / a;
+    double fromU = minInf > 0 || rowU == Double.POSITIVE_INFINITY ? Double.NaN : (rowU - min) / a;
+    double l = a > 0 ? fromL : fromU;
+    double h = a > 0 ? fromU : fromL;
+    impliedLo = Double.isNaN(l) ? Double.NEGATIVE_INFINITY : l;
+    impliedHi = Double.isNaN(h) ? Double.POSITIVE_INFINITY : h;
   }
 
   /**
@@ -1117,50 +1124,12 @@ final class Presolve {
     double[] cv = cVal[k];
     for (int e = 0; e < cLen[k] && (needLo || needHi); e++) {
       int r = ci[e];
-      double a = cv[e];
-      if (!rowAlive[r] || a == 0) {
+      if (!rowAlive[r] || cv[e] == 0) {
         continue;
       }
-      double min = 0;
-      double max = 0;
-      int minInf = 0;
-      int maxInf = 0;
-      int[] idx = rIdx[r];
-      double[] val = rVal[r];
-      ops += rLen[r];
-      for (int f = 0; f < rLen[r]; f++) {
-        int j = idx[f];
-        double v = val[f];
-        if (j == k || !colAlive[j] || v == 0) {
-          continue;
-        }
-        double l = v > 0 ? lo[j] : hi[j];
-        double h = v > 0 ? hi[j] : lo[j];
-        if (Double.isInfinite(l)) {
-          minInf++;
-        } else {
-          min += v * l;
-        }
-        if (Double.isInfinite(h)) {
-          maxInf++;
-        } else {
-          max += v * h;
-        }
-      }
-      // L <= a x_k + rest <= U: a x_k >= L - max(rest) and a x_k <= U - min(rest)
-      double fromLo =
-          rowLo[r] == Double.NEGATIVE_INFINITY || maxInf > 0 ? Double.NaN : (rowLo[r] - max) / a;
-      double fromHi =
-          rowHi[r] == Double.POSITIVE_INFINITY || minInf > 0 ? Double.NaN : (rowHi[r] - min) / a;
-      // a > 0: fromLo bounds x_k from below, fromHi from above; a < 0 the other way round
-      double kLo = a > 0 ? fromLo : fromHi;
-      double kHi = a > 0 ? fromHi : fromLo;
-      if (needLo && !Double.isNaN(kLo) && kLo >= lo[k] - SAME * (1 + Math.abs(lo[k]))) {
-        needLo = false;
-      }
-      if (needHi && !Double.isNaN(kHi) && kHi <= hi[k] + SAME * (1 + Math.abs(hi[k]))) {
-        needHi = false;
-      }
+      impliedBounds(r, k, cv[e], rowLo[r], rowHi[r]);
+      needLo &= impliedLo < lo[k] - SAME * (1 + Math.abs(lo[k]));
+      needHi &= impliedHi > hi[k] + SAME * (1 + Math.abs(hi[k]));
     }
     return !needLo && !needHi;
   }

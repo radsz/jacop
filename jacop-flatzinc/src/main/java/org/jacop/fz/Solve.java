@@ -1366,6 +1366,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.extraSparse
             + "\n%%%mzn-stat: lpProbationKept="
             + r.probationKept
+            + "\n%%%mzn-stat: lpProbationShare="
+            + r.probationShare
             + "\n%%%mzn-stat: lpFailingSolves="
             + r.failingSolves
             + "\n%%%mzn-stat: lpPooledExtra="
