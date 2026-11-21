@@ -589,6 +589,83 @@ final class FznModel {
     return result;
   }
 
+  /**
+   * A literal b with only {@code b -> l op 0} (half reification), as MiniZinc posts the literals
+   * that occur only positively in clauses. The full literal is returned when it exists already, and
+   * one on a single variable is always full.
+   *
+   * @param op eq, ne, lt, le, gt or ge
+   * @param l the expression
+   * @return the literal
+   */
+  Lit halfLit(String op, Lin l) {
+    switch (op) {
+      case "gt" -> {
+        l = l.negate();
+        l.c = Bounds.add(l.c, 1);
+        op = "le";
+      }
+      case "lt" -> {
+        l = l.copy();
+        l.c = Bounds.add(l.c, 1);
+        op = "le";
+      }
+      case "ge" -> {
+        l = l.negate();
+        op = "le";
+      }
+      default -> {
+        // eq, ne and le stay
+      }
+    }
+    long lo = l.min();
+    long hi = l.max();
+    boolean always =
+        op.equals("eq") ? lo == 0 && hi == 0 : op.equals("ne") ? lo > 0 || hi < 0 : hi <= 0;
+    boolean never =
+        op.equals("eq") ? lo > 0 || hi < 0 : op.equals("ne") ? lo == 0 && hi == 0 : lo > 0;
+    if (always || never) {
+      return Lit.of(always);
+    }
+    Lin n = normalize(op.equals("ne") ? "eq" : op, l);
+    if (n.n == 1) {
+      return lit(op, l);
+    }
+    Lit full = memo("lit:" + (op.equals("ne") ? "eq" : op) + ":" + n.key());
+    if (full != null) {
+      return op.equals("ne") ? full.not() : full;
+    }
+    String key = "imp:" + op + ":" + n.key();
+    Lit known = memo(key);
+    if (known != null) {
+      return known;
+    }
+    FznVar r = auxBool();
+    r.defined = true;
+    if (n.n == 2 && n.c == 0 && n.a[0] == -n.a[1] && Math.abs(n.a[0]) == 1) {
+      FznVar x = n.a[0] == 1 ? n.v[0] : n.v[1];
+      FznVar y = n.a[0] == 1 ? n.v[1] : n.v[0];
+      constraint("int_" + op + "_imp(" + x.name + "," + y.name + "," + r.name + ")", r);
+    } else {
+      constraint(
+          "int_lin_"
+              + op
+              + "_imp("
+              + coefs(n)
+              + ","
+              + names(n)
+              + ","
+              + Bounds.mul(-1, n.c)
+              + ","
+              + r.name
+              + ")",
+          r);
+    }
+    Lit result = new Lit(r, false);
+    memo(key, result);
+    return result;
+  }
+
   // a * x + c op 0, op eq or le
   private Lit unaryLit(String op, long a, FznVar x, long c) {
     Dom d = x.dom;

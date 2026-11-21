@@ -518,6 +518,43 @@ class XcspReaderTest {
   }
 
   @Test
+  void halfReifiedClauses() throws IOException {
+    // literals only in clauses are half reified; the same comparison is also used fully
+    check(
+        vars(3, 0, 2),
+        "<intension> or(lt(x[0],x[1]),eq(add(x[1],x[2]),3),ne(x[0],x[2])) </intension>"
+            + "<intension> imp(ge(x[0],x[1]),gt(x[2],sub(x[0],x[1]))) </intension>"
+            + "<intension> iff(lt(x[0],x[1]),ne(x[1],x[2])) </intension>",
+        3,
+        0,
+        2,
+        t ->
+            (t[0] < t[1] || t[1] + t[2] == 3 || t[0] != t[2])
+                && (t[0] < t[1] || t[2] > t[0] - t[1])
+                && (t[0] < t[1]) == (t[1] != t[2]));
+  }
+
+  @Test
+  void matrixElement() throws IOException {
+    // a constant matrix (SEDF of XCSP 2025) and one of variables
+    check(
+        vars(3, 0, 3),
+        "<element><matrix> (1,2,3)(2,0,1) </matrix><index> x[0] x[1] </index><value> x[2] </value></element>",
+        3,
+        0,
+        3,
+        t -> t[0] <= 1 && t[1] <= 2 && new int[][] {{1, 2, 3}, {2, 0, 1}}[t[0]][t[1]] == t[2]);
+    check(
+        vars(4, 0, 2),
+        "<element><matrix startRowIndex=\"1\"> (x[2],1)(2,x[3]) </matrix><index> x[0] x[1] </index>"
+            + "<condition> (ge,2) </condition></element>",
+        4,
+        0,
+        2,
+        t -> t[0] >= 1 && t[1] <= 1 && new int[][] {{t[2], 1}, {2, t[3]}}[t[0] - 1][t[1]] >= 2);
+  }
+
+  @Test
   void scheduling() throws IOException {
     check(
         vars(3, 0, 3),

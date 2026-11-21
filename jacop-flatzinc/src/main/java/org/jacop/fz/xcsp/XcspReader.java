@@ -1715,6 +1715,11 @@ public final class XcspReader {
       FznVar j = ec.var(idx.get(1));
       m.restrict(i, Dom.range(startRow, startRow + rows.size() - 1));
       m.restrict(j, Dom.range(startCol, startCol + cols - 1));
+      if (allConstant(flat) && (long) i.dom.size() * j.dom.size() <= TABLE_ELEMENT_LIMIT) {
+        // a constant matrix is a table on (i, j, value), domain consistent as MiniZinc posts it
+        matrixTable(flat, cols, i, startRow, j, startCol, v, cond);
+        return;
+      }
       Lin f = new Lin();
       f.add(i, cols);
       f.add(j, 1);
@@ -1748,6 +1753,62 @@ public final class XcspReader {
     }
     FznVar i = ec.var(items(index.text.toString(), args, rest).get(0));
     elementPost(xs, i, start, v, cond);
+  }
+
+  // the most cells of a constant matrix posted as a table
+  private static final long TABLE_ELEMENT_LIMIT = 1_000_000;
+
+  private void matrixTable(
+      List<Expr> flat,
+      int cols,
+      FznVar i,
+      int startRow,
+      FznVar j,
+      int startCol,
+      Expr v,
+      Condition cond) {
+    long[] vals = constants(flat);
+    FznVar result;
+    if (v != null && v.kind == Expr.Kind.VAR && !v.var.bool) {
+      result = v.var;
+    } else {
+      long lo = Long.MAX_VALUE;
+      long hi = Long.MIN_VALUE;
+      for (long x : vals) {
+        lo = Math.min(lo, x);
+        hi = Math.max(hi, x);
+      }
+      result = m.aux(lo, hi);
+    }
+    int[] cells = new int[(int) (3 * i.dom.size() * j.dom.size())];
+    int n = 0;
+    for (long a : i.dom.values()) {
+      for (long b : j.dom.values()) {
+        long x = vals[(int) ((a - startRow) * cols + (b - startCol))];
+        if (result.dom.contains(x)) {
+          cells[n++] = (int) a;
+          cells[n++] = (int) b;
+          cells[n++] = (int) x;
+        }
+      }
+    }
+    if (n == 0) {
+      m.fail();
+      return;
+    }
+    Table t = Table.of(java.util.Arrays.copyOf(cells, n), n, 3, false);
+    List<Expr> scope = List.of(Expr.of(i), Expr.of(j), Expr.of(result));
+    t = supported(scope, t);
+    if (t == null) {
+      return;
+    }
+    m.constraint("jacop_table_int(" + array(scope) + "," + tableParam(t, 0) + ")");
+    if (v != null && result != v.var) {
+      m.post("eq", ExprCompiler.diff(Lin.of(result), ec.lin(v)));
+    }
+    if (cond != null) {
+      post(result, cond);
+    }
   }
 
   private void elementPost(List<Expr> xs, FznVar i, int start, Expr v, Condition cond) {

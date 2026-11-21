@@ -386,6 +386,36 @@ final class ExprCompiler {
   // ------------------------------------------------------------------ Booleans
 
   /** The literal of a Boolean expression (an integer one is true when not 0). */
+  // the literals of a clause posted at the top level
+  private List<Lit> clauseLits(Expr[] a) {
+    List<Lit> r = new ArrayList<>(a.length);
+    for (Expr x : a) {
+      r.add(clauseLit(x));
+    }
+    return r;
+  }
+
+  /**
+   * The literal of e where it occurs only positively in a clause posted at the top level: an
+   * integer comparison is half reified, as MiniZinc does.
+   */
+  private Lit clauseLit(Expr e) {
+    if (e.kind == Expr.Kind.OP
+        && e.args.length == 2
+        && !isBoolean(e.args[0])
+        && !isBoolean(e.args[1])) {
+      switch (e.op) {
+        case "eq", "ne", "lt", "le", "gt", "ge" -> {
+          return m.halfLit(e.op, diff(lin(e.args[0]), lin(e.args[1])));
+        }
+        default -> {
+          // other operators are fully reified
+        }
+      }
+    }
+    return lit(e);
+  }
+
   Lit lit(Expr e) {
     switch (e.kind) {
       case INT:
@@ -562,7 +592,7 @@ final class ExprCompiler {
         }
         return;
       case "or":
-        m.clause(lits(a));
+        m.clause(clauseLits(a));
         return;
       case "imp":
         {
@@ -570,16 +600,16 @@ final class ExprCompiler {
           Lit c = lit(a[0]).not();
           if (a[1].isOp("and")) {
             for (Expr x : a[1].args) {
-              m.clause(List.of(c, lit(x)));
+              m.clause(List.of(c, clauseLit(x)));
             }
             return;
           }
           List<Lit> lits = new ArrayList<>();
           lits.add(c);
           if (a[1].isOp("or")) {
-            lits.addAll(lits(a[1].args));
+            lits.addAll(clauseLits(a[1].args));
           } else {
-            lits.add(lit(a[1]));
+            lits.add(clauseLit(a[1]));
           }
           m.clause(lits);
           return;
