@@ -136,7 +136,7 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
   private int lastAssignedVariablePosition = -1;
 
   /** Filters the tuples, builds the views and rewrites the tuples as indexes. */
-  private final InitOnce init = new InitOnce();
+  private InitOnce init = new InitOnce();
 
   /**
    * It specifies if there was a backtrack and no yet consistency function execution after
@@ -552,6 +552,8 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
 
     headsOfEliminatedTuples = new TimeStampInt(store, -1);
     tailsOfEliminatedTuples = new TimeStampInt(store, -1);
+    // a second imposition builds its tuple list again, from the tuples of the constructor
+    init = new InitOnce();
 
     nbValuesToBeSupported = new int[list.length];
     validityVariablePositions = new int[list.length];

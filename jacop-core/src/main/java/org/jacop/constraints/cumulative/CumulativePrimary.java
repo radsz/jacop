@@ -116,7 +116,7 @@ class CumulativePrimary extends Constraint implements Copyable<CumulativePrimary
   private int releaseCount;
   private final int[] startExcluded;
   private final int[] activeMap;
-  private final TimeStampInt activePnt;
+  private TimeStampInt activePnt;
 
   /*
    * It creates a cumulative constraint.
@@ -186,6 +186,17 @@ class CumulativePrimary extends Constraint implements Copyable<CumulativePrimary
     setScope(Stream.concat(Arrays.stream(starts), Stream.of(limit)));
 
     activePnt = new TimeStampInt(limit.getStore(), 0);
+  }
+
+  /**
+   * Starts the active tasks again from all tasks at the store's level, for an imposition of the
+   * constraint that holds this one: one made above the root, or the same object imposed again after
+   * that level was removed, would find no value of the time stamp.
+   *
+   * @param store the constraint store.
+   */
+  void resetActiveTasks(Store store) {
+    activePnt = new TimeStampInt(store, 0);
   }
 
   /*
@@ -278,7 +289,9 @@ class CumulativePrimary extends Constraint implements Copyable<CumulativePrimary
     conflict.clear();
     releaseCount = 0;
 
-    // current value of the PROFILE for mandatory parts
+    // current value of the PROFILE for mandatory parts; summed in long, since a few mandatory parts
+    // of large resource use pass an int, and read saturated, which is above any limit
+    long profile = 0;
     int curProfile = 0;
 
     for (int i = 0; i < count; i++) {
@@ -291,7 +304,8 @@ class CumulativePrimary extends Constraint implements Copyable<CumulativePrimary
 
       switch (type) {
         case PROFILE:
-          curProfile += eventValue[seq];
+          profile += eventValue[seq];
+          curProfile = (int) Math.min(profile, Integer.MAX_VALUE);
           if (state[index] != NONE) {
             sweepPruningHandleOwnProfile(index, eventValue[seq] > 0);
           }

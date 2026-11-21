@@ -77,6 +77,9 @@ public abstract class AbstractExtensionalVa extends Constraint
   /** It specifies the tuples given in the constructor. */
   int[][] tuplesFromConstructor;
 
+  /** The tuples a second imposition filters: those valid at the root, or all above it. */
+  int[][] tuplesForNextImposition;
+
   /**
    * Constructs the base extensional constraint with list and tuples.
    *
@@ -116,6 +119,10 @@ public abstract class AbstractExtensionalVa extends Constraint
    * @param store the constraint store
    */
   protected void filterAndIndexTuples(Store store) {
+    if (tuplesFromConstructor == null) {
+      tuplesFromConstructor = tuplesForNextImposition;
+    }
+    int[][] all = tuplesFromConstructor;
     debugLogVariables();
 
     Object[] filterResult = TupleUtils.filterValidTuples(tuplesFromConstructor, list);
@@ -126,6 +133,7 @@ public abstract class AbstractExtensionalVa extends Constraint
     debugLogValidTuples(stillValid, noValid);
 
     tuplesFromConstructor = shrinkToValidTuples(stillValid, noValid);
+    tuplesForNextImposition = store.level == 0 ? tuplesFromConstructor : all;
 
     this.tuples = new int[list.length][][][];
     this.values = new int[list.length][];
