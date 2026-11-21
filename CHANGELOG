@@ -8717,7 +8717,52 @@ Version 5.0 (unreleased)
    fome12 111 -> 60 s, sgpf5y6 62 -> 30 s.
    -Dorg.jacop.jalp.presolveAggregate=false turns it off.
 
-488. Free search (-f) on optimisation problems can alternate LCG and free
+488. The FlatZinc front end skips a model rewriting pass when the model has
+   none of the constraints it rewrites (cyclic distance, min of sums,
+   product of sums, weighted completion, giant tour, table variable
+   elimination, index function, index disjunction, numbered path, partial
+   copy, set union): one scan of the constraint names instead of a pass
+   over the model each. The pair cliques and the distance of the linear
+   relaxation use primitive hash sets and arrays instead of boxed maps,
+   and affine folding builds its occurrence map only when it has a
+   definition. On 29 MaxSAT Evaluation 2021 models with the slowest
+   set-up, the set-up at 600 s takes 1,083 s instead of 2,239 s in all
+   (protein p1 315 -> 44 s, ar-2 108 -> 65 s), and two rna-alignment
+   models now find a solution. Wide-quick set at 240 s: the same 46
+   instances solved, total time 4,007 -> 3,987 s.
+   -Dorg.jacop.fz.detectorGates=false runs every pass as before.
+
+489. Float optimisation. Free search (-f) splits the float variables of the
+   model before the ones MiniZinc introduced for intermediate results
+   (var_is_introduced, is_defined_var), largest domain first in each group
+   (-Dorg.jacop.fz.floatDecisionFirst=false splits by largest domain over
+   all): on hart6 it split the exponentials, declared var float, and found
+   no solution in 300 s. A model whose float constraints are all linear
+   rows of the float relaxation (LinearFloatRelaxation.isLinearModel)
+   bisects the objective from the point of the relaxation from the start,
+   also under its annotated search: transp1 (61 equations, 100
+   inequalities) proved in 77 nodes, before stuck at 199,697.9 against the
+   optimum 199,693.06. The statistics of the float relaxation and of the
+   float dives (floatLp*, floatDive*) are JaCoP's own statistics, printed
+   with -s -v or --search-statistics, no longer with -s alone. Float set
+   (osolpro benchmarks/float-set) at 240 s: float-quick -f 28 -> 31 solved,
+   total time 0.88; the 22 linear float optimisation models 16 -> 18
+   proved, total time 0.66 default, 0.61 -f.
+
+490. A reified MiniZinc count with a variable value (count_eq_reif, and
+   b -> count(x, y) = c, which MiniZinc posts through it) is decomposed in
+   JaCoP's MiniZinc library into the literals x[i] = y and a reified sum,
+   instead of Reified(CountVar). MiniZinc shares the literal of two
+   variables between the counts that compare them, such as the neighbour
+   colours of a grid, and lazy clause generation learns on these literals.
+   Amaze (MiniZinc Challenge 2012, 2014 and 2019) and harmony (2024), the
+   only Challenge models that reach this constraint, 22 instances at 240 s:
+   default (model search) total 695 -> 490 s (2012 amaze 2012-06-29
+   183 -> 10 s, 2014 amaze mod2012-06-22 35 -> 8 s), -f 344 -> 286 s
+   (2012 amaze 2012-03-08 now proved in 181 s), --lcg off 1,405 -> 1,261 s;
+   at 600 s default 1,050 -> 906 s and -f 261 -> 220 s.
+
+491. Free search (-f) on optimisation problems can alternate LCG and free
    search without learning in slices instead of handing over for good
    (--free-config lcg-cop-slices=1, off by default), as jacop #888 does for
    satisfaction problems. When LCG gives way as slow with a solution, free
@@ -8736,7 +8781,7 @@ Version 5.0 (unreleased)
    (4,333 -> 4,637), unit-commitment L12, warehouse olil4. Wide-quick set
    at 240 s: the slices start on 2 of 62 instances.
 
-489. The core-guided phase of free LCG search takes the terms of a split
+492. The core-guided phase of free LCG search takes the terms of a split
    objective sum also when they are narrow (at most 8 levels each, not
    only 0-1) and span up to twice the levels of the block sums. Before,
    such terms lost to the blocks as soon as these spanned fewer levels,
@@ -8748,6 +8793,97 @@ Version 5.0 (unreleased)
    2 other instances of the 240 of the wide set (tc-graph-color k5_05
    15 -> 7 s, league model30-4-6 2.3 -> 3.6 s).
    -Djacop.lcg.coreNarrowSpan=1 restores the 0-1 rule only.
+
+493. JaLP's aggregator also substitutes a column whose bounds are implied
+   by any of its rows, not only by the equation it is substituted from
+   (implied free columns as in HiGHS). On the 687 LPs of the osolpro LP
+   bench the presolved LPs are 1,112,853 -> 244,977 rows and columns larger
+   than HiGHS's in all (pds-20: 27,026 -> 8,778 rows, HiGHS 8,732); at
+   120 s no wrong answer, 2 more solved, total time 6,792 -> 6,631 s,
+   pds-40 to pds-100 35-50 % faster. -Dorg.jacop.jalp.aggregateAnyRow=false
+   turns it off.
+
+494. Rows that the linear relaxation of an optimisation model keeps for the
+   root bound they raise are on probation in search: after 256 solves
+   they are dropped when fewer than 10 % of the solves failed the node and
+   the solves took at least 60 % of the time of the search since the
+   root. 2012 amaze 2012-03-19 with the reified-count decomposition: 650
+   rows raise the root bound 97 -> 104 but save 8 of 8,179 nodes, and
+   the search goes 5.5 -> 2.0 s (fd) and 3.8 -> 1.8 s (-f).
+   -Dorg.jacop.lp.optimisationProbation=0 keeps the rows,
+   -Dorg.jacop.lp.probationShare sets the share of time.
+
+495. In a model without a search annotation, the FlatZinc front end counts
+   the loads of a bin packing (jacop_bin_packing) as defined by it, as if
+   a defines_var annotation named them: free search branches on the bins
+   of the items first (item 369) and LNS relaxes bins only (lns-defined).
+   XCSP translations carry no defines_var annotations; on the balanced
+   academic curriculum of XCSP 2026 (BACPj, objective the sum of squared
+   period loads) free search branched on the loads, filled the periods
+   with small loads and found no solution of 01-20 and 01-40 in 600 s
+   (-f); now the first solution comes in 18 and 282 s, and 01-04, 01-05
+   and 01-06 are proved in 21, 18 and 15 s instead of 25-108, 176-181 and
+   99-258 s. The MiniZinc Challenge models with a bin packing all carry a
+   search annotation and are unchanged: with the loads defined there,
+   gbac under -f got worse at 600 s (6 of 19 objectives worse, 1 better).
+   -Dorg.jacop.fz.binPackingLoadsDefined=false turns it off.
+
+496. Two opt-in strengthenings of the root linear relaxation.
+   -Dorg.jacop.lp.clauseRows=true: the clause rows of lazy clause
+   generation over columns the relaxation already has no longer drop out
+   when the share of further rows is full. They come after every other
+   extra row, and the extra-row trial keeps them only when they make the
+   relaxation infeasible or raise its bound; otherwise it keeps the rows
+   before them. On MiniZinc Challenge 2023 unit-commitment L10 the share
+   left out 2,668 such rows, among them every x + not x = 1 of the
+   commitments: the root relaxation solved as a MIP had the optimum
+   1,633,000 instead of 1,703,450.
+   -Dorg.jacop.lp.vbMir=true: the MIR cuts of the rows also substitute
+   variable bounds x <= a u and x >= a u, u a 0/1 column, for the bounds of
+   x when they are nearer to the LP value (the complemented MIR with
+   variable bounds of H. Marchand and L. A. Wolsey, Aggregation and mixed
+   integer rounding to solve MIPs, Operations Research 49(3), 2001), as the
+   c-MIR separators of SCIP and HiGHS do. The statistic lpVbCuts counts
+   them.
+   With both, the L10 root cut bound goes from 1,622,000 to 1,698,000 (the
+   HiGHS root reaches 1,702,500). 600 s bounds: L10 1,621,135 ->
+   1,698,060 (-f) and 1,621,210 -> 1,696,570 (default), L12 1,348,290 ->
+   1,419,720 (-f), L15 15,857,935 -> 17,442,805 (-f). Both flags on the 41
+   instances whose relaxation they change (39 of the 240 of the wide set
+   plus L10 and L15), 600 s: the same 26 solved in each mode, total time
+   default 0.994 and -f 1.007.
+
+497. The FlatZinc front end rewrites an absolute difference that only
+   excludes values: t = x - y and a = |t|, with t and a used nowhere
+   else, become bounds on x - y and x - y != d for the at most 8 values d
+   (-Dorg.jacop.fz.absoluteDifference.maxHoles) that the domains of t and
+   a exclude inside the range of x - y. The disequalities are read by the
+   all-different detection as stated ones, and a rewrite is made only
+   when all of them end up in all-different constraints (or there are
+   none), so MiniZinc's flattening of abs(q[i] - q[j]) != j - i in
+   n-queens models loses its 2 auxiliary variables and 2 constraints per
+   pair and the diagonals become all-different constraints with offsets.
+   Lone disequalities are not kept: on Rlfap-graph-01 (XCSP 2022, about
+   5 per pair, no clique) they explain worse under lazy clause generation
+   than |t| (optimum proved in 13 s without, not in 240 s with them).
+   CPAI08 at 240 s, solutions checked: queens-100 41 -> 2.5 s, queens-180
+   52 -> 11 s, queens-400 unknown -> 27 s, queens-500 out of memory ->
+   50 s, queensKnights 81-94 -> 6 s. XCSP 2022 BlockedQueens and Rlfap
+   (33 instances, 240 s): total time 3,472 -> 3,253 s, Rlfap-scen-10
+   proved in 44 s; no instance of the wide set fires. Off with
+   -Dorg.jacop.fz.absoluteDifference=false and under --proof.
+
+498. The FlatZinc front end posts a network flow with fixed weights
+   (network_flow, network_flow_cost) as its flow conservation rows and
+   cost row under free search (-f), and as those rows next to NetworkFlow
+   otherwise. NetworkFlow's reduced-cost arc analysis, a shortest path
+   per arc, cost about 80 % of the time on the small networks of the
+   MiniZinc Challenge mapping problem (16 networks of 11 nodes and 36
+   arcs) and pruned too little to pay for it. Mapping and nfc 2015-2022
+   (30 instances, 120 s, two seeds): -f 841 -> 598 s (2018 ring_mp3
+   28-111 -> 7 s), default 945 -> 687 s (2016 mesh3x3_mp3 proved in
+   12-18 s, not in 120 s before). -Dorg.jacop.fz.networkFlow=global
+   restores the old posting; rows and both choose one.
 
 Version 4.11
 =============
