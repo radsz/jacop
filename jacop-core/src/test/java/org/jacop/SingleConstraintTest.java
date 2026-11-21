@@ -180,6 +180,7 @@ import org.jacop.constraints.XmulYeqZSaturated;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
+import org.jacop.constraints.XorSystem;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusClteqZImplied;
@@ -12665,6 +12666,25 @@ class SingleConstraintTest extends TestHelper {
     x[1].domain.in(0, x[1], 2, 2);
     store.clearEntailed(regular);
     store.impose(regular);
+    assertThat(store.consistency()).isFalse();
+  }
+
+  /**
+   * XorSystem imposed above the root and imposed again at the root after that level was removed
+   * kept the state of its first consistency call: its rows were no longer checked, and a row that
+   * cancels out to 0 = 1 (b0 xor b0 = 1) no longer failed, so the search accepted b1 = 1.
+   */
+  @Test
+  void xorSystemImposedAgainBelowItsLevelChecksItsRows() {
+    Store store = new Store();
+    IntVar b0 = new IntVar(store, "b0", 0, 1);
+    IntVar b1 = new IntVar(store, "b1", 0, 1);
+    XorSystem c = new XorSystem(new IntVar[][] {{b0, b0}, {b1}}, new int[] {1, 1});
+    store.setLevel(1);
+    store.impose(c);
+    assertThat(store.consistency()).isFalse();
+    backToRoot(store);
+    store.impose(c);
     assertThat(store.consistency()).isFalse();
   }
 }
