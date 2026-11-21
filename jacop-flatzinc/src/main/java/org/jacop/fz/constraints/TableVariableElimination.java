@@ -81,6 +81,13 @@ import org.jacop.fz.SimpleNode;
  * @version 5.0
  */
 public class TableVariableElimination implements ParserTreeConstants {
+  private static final Set<String> KINDS =
+      Set.of(
+          "jacop_table_int",
+          "jacop_short_table_int",
+          "array_int_element",
+          "array_var_int_element",
+          "jacop_array_var_int_element_nonshifted");
 
   static final int MAX_ROWS = Integer.getInteger("org.jacop.fz.tableElimination.rows", 10_000);
 
@@ -227,6 +234,10 @@ public class TableVariableElimination implements ParserTreeConstants {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
+    // only tables and elements are joined
+    if (!support.hasConstraint(astTree, KINDS)) {
+      return;
+    }
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {

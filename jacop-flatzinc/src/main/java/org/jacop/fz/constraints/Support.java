@@ -813,6 +813,39 @@ public class Support implements ParserTreeConstants {
   }
 
   /**
+   * Tells whether a detector that rewrites only constraints of the given kinds has to read the
+   * model: whether the model has a constraint of one of the kinds. The scan reads only the names of
+   * the constraints, while each pass of a detector over the model looks up the variables of every
+   * constraint: on the 2.3 million clauses of MaxSAT 2021 relational-inference ar-2 each such pass
+   * costs 3-4 s and finds nothing. Like the passes it replaces, it stops with {@link ModelTimeOut}
+   * once the time-out has passed. Property {@code org.jacop.fz.detectorGates=false} reads the model
+   * always.
+   *
+   * @param astTree the root of the parsed model.
+   * @param kinds the names of the constraints the detector can rewrite.
+   * @return true when the model has a constraint of one of the kinds, or the gates are off.
+   * @throws ModelTimeOut when the time-out has passed.
+   */
+  public boolean hasConstraint(SimpleNode astTree, Set<String> kinds) {
+    if ("false".equals(System.getProperty("org.jacop.fz.detectorGates"))) {
+      return true;
+    }
+    for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
+      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
+      if (node.getId() == JJTCONSTRAINTITEMS) {
+        for (int j = 0; j < node.jjtGetNumChildren(); j++) {
+          checkTimeOut();
+          SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
+          if (item instanceof ASTConstElem c && kinds.contains(c.getName())) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
    * Calls the action on every constraint of a parsed model, in the order of the model. It stops
    * with {@link ModelTimeOut} once the time-out has passed: a scan of a model with millions of
    * constraints takes seconds (rcpsp-wet-diverse j90_48_4, 470 MB).
