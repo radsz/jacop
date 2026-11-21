@@ -8717,6 +8717,25 @@ Version 5.0 (unreleased)
    fome12 111 -> 60 s, sgpf5y6 62 -> 30 s.
    -Dorg.jacop.jalp.presolveAggregate=false turns it off.
 
+488. JaLP's aggregator also substitutes a column whose bounds are implied
+   by any of its rows, not only by the equation it is substituted from
+   (implied free columns as in HiGHS). On the 687 LPs of the osolpro LP
+   bench the presolved LPs are 1,112,853 -> 244,977 rows and columns larger
+   than HiGHS's in all (pds-20: 27,026 -> 8,778 rows, HiGHS 8,732); at
+   120 s no wrong answer, 2 more solved, total time 6,792 -> 6,631 s,
+   pds-40 to pds-100 35-50 % faster. -Dorg.jacop.jalp.aggregateAnyRow=false
+   turns it off.
+
+489. Rows that the linear relaxation of an optimisation model keeps for the
+   root bound they raise are on probation in search: after 256 solves
+   they are dropped when fewer than 10 % of the solves failed the node and
+   the solves took at least 60 % of the time of the search since the
+   root. 2012 amaze 2012-03-19 with the reified-count decomposition: 650
+   rows raise the root bound 97 -> 104 but save 8 of 8,179 nodes, and
+   the search goes 5.5 -> 2.0 s (fd) and 3.8 -> 1.8 s (-f).
+   -Dorg.jacop.lp.optimisationProbation=0 keeps the rows,
+   -Dorg.jacop.lp.probationShare sets the share of time.
+
 Version 4.11
 =============
 
