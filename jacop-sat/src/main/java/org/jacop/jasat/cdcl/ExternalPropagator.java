@@ -222,6 +222,16 @@ public interface ExternalPropagator {
   }
 
   /**
+   * Returns whether the last {@link #propagate} that returned 0 stopped at the deadline of the
+   * solver before its fixpoint: the solver then stops with no answer, as at its deadline.
+   *
+   * @return true when the propagation was cut by the deadline
+   */
+  default boolean propagationCut() {
+    return false;
+  }
+
+  /**
    * Returns the reason of a literal returned by {@link #propagate}. The solver asks for it right
    * away when the literal is false (a conflict), and otherwise only when conflict analysis needs
    * it, at any time while the literal stays assigned.

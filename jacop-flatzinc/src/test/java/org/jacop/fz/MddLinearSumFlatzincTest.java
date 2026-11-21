@@ -179,6 +179,30 @@ class MddLinearSumFlatzincTest {
     assertEquals(solutions(run(cut, "false", "-a")), solutions(kept));
   }
 
+  /**
+   * Two diagrams that share the named arrays of levels, sources and targets and differ in their
+   * labels: the second (u = v) took the sum found for the first (x + y = 1).
+   */
+  @Test
+  void diagramsSharingTheirSourcesKeepTheirOwnLabels() throws IOException {
+    String fzn =
+        """
+        array [1..3] of int: L = [1,2,2];
+        array [1..4] of int: F = [1,1,2,3];
+        array [1..4] of int: T = [2,3,0,0];
+        var 0..1: x :: output_var;
+        var 0..1: y :: output_var;
+        var 0..1: u :: output_var;
+        var 0..1: v :: output_var;
+        constraint jacop_mdd([x,y],L,F,[{0},{1},{1},{0}],T);
+        constraint jacop_mdd([u,v],L,F,[{0},{1},{0},{1}],T);
+        solve satisfy;
+        """;
+    Set<String> expected = solutions(run(fzn, "false", "-a"));
+    assertEquals(4, expected.size());
+    assertEquals(expected, solutions(run(fzn, null, "-a")));
+  }
+
   private String run(String model, String property, String... options) throws IOException {
     MddLinearSum.reset();
     Path fzn = tmp.resolve("model.fzn");

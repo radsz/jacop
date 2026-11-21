@@ -8717,7 +8717,26 @@ Version 5.0 (unreleased)
    fome12 111 -> 60 s, sgpf5y6 62 -> 30 s.
    -Dorg.jacop.jalp.presolveAggregate=false turns it off.
 
-488. In a model without a search annotation, the FlatZinc front end counts
+488. Free search (-f) on optimisation problems can alternate LCG and free
+   search without learning in slices instead of handing over for good
+   (--free-config lcg-cop-slices=1, off by default), as jacop #888 does for
+   satisfaction problems. When LCG gives way as slow with a solution, free
+   search without learning runs in a store level the LCG solver lends
+   (LcgSolver.lend) for as long as LCG ran; while a slice improves the best
+   solution another slice follows, and after a slice without a better one
+   LCG goes on under the best cost with its learnt clauses, for twice its
+   earlier time. A turn of LCG that neither raises the bound nor improves
+   the best solution hands the rest of the time to free search. The
+   neighbourhoods of free search start from LCG's best solution and from
+   each better one an LCG turn finds (lcg-cop-hint, on). 26 instances of
+   the wide set and XCSP 2025 where LCG gives way with a solution, 600 s
+   -f: total time 4,609 -> 4,450 s, proved 9 -> 10 (XCSP 2025 Coprime-20,
+   122 s); better cargo challenge16 (129,647 -> 124,041), opd, saeling,
+   stable-goods s-d19; worse ihtc-2024 i09 (4,115 -> 4,355) and i01
+   (4,333 -> 4,637), unit-commitment L12, warehouse olil4. Wide-quick set
+   at 240 s: the slices start on 2 of 62 instances.
+
+489. In a model without a search annotation, the FlatZinc front end counts
    the loads of a bin packing (jacop_bin_packing) as defined by it, as if
    a defines_var annotation named them: free search branches on the bins
    of the items first (item 369) and LNS relaxes bins only (lns-defined).

@@ -269,4 +269,36 @@ class LargeRelaxationTest {
       assertThat(coveringRelaxation(seed, 2).setRows()).as("seed %d", seed).isFalse();
     }
   }
+
+  @Test
+  void rootSolveDoesNotStartAfterTheDeadlineOfTheRun() {
+    // the root solve of the relaxation ran past the time-out of the run (seconds on large models
+    // of the Challenge, inside the constructor of lazy clause generation): with the deadline past
+    // it stops at once, without a bound, as at its own budget
+    for (LinearRelaxation.Simplex simplex :
+        new LinearRelaxation.Simplex[] {
+          LinearRelaxation.Simplex.DENSE, LinearRelaxation.Simplex.SPARSE
+        }) {
+      for (int run = 0; run < 5; run++) {
+        double[] bound = new double[2];
+        for (int late = 0; late < 2; late++) {
+          Model m = new Model(run);
+          LinearRelaxation r = LinearRelaxation.of(m.store, m.cost, false, simplex);
+          assertThat(r).as("%s run %d", simplex, run).isNotNull();
+          if (late == 1) {
+            r.setDeadline(System.nanoTime() - 1);
+          }
+          m.store.impose(r);
+          assertThat(m.store.consistency()).as("%s run %d", simplex, run).isTrue();
+          bound[late] = r.rootBound;
+          // the search is not hurt: the optimum stays
+          assertThat(m.optimum(null))
+              .as("%s run %d", simplex, run)
+              .isEqualTo(new Model(run).optimum(null));
+        }
+        assertThat(bound[0]).as("%s run %d", simplex, run).isNotNaN();
+        assertThat(bound[1]).as("%s run %d", simplex, run).isNaN();
+      }
+    }
+  }
 }
