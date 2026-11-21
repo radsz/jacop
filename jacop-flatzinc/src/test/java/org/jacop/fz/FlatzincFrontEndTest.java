@@ -7401,4 +7401,23 @@ class FlatzincFrontEndTest {
     String out = run(model)[0];
     assertEquals("a = 2;\n_lattice0_0 = 1;\n_lattice0_1 = 2;\n----------\n", out);
   }
+
+  @Test
+  void anObjectiveThatIsNoIdentifierOfTheModelIsAnError() throws IOException {
+    // minimizing an undeclared q was solved as satisfaction (and -a printed every solution, -p 2
+    // no ==========), maximizing it threw a NullPointerException
+    for (String sense : new String[] {"minimize", "maximize"}) {
+      String model = "var 1..3: x :: output_var;\nsolve " + sense + " q;\n";
+      for (String[] options : new String[][] {{}, {"-a"}, {"-p", "2"}}) {
+        String[] out = run(model, options);
+        assertEquals("", out[0], sense + " " + Arrays.toString(options));
+        assertTrue(out[1].contains("%% Error: Symbol \"q\""), out[1]);
+        assertEquals(1, lastStatus);
+      }
+    }
+    // a parameter as objective is still solved
+    assertEquals(
+        "x = 1;\n----------\n==========\n",
+        run("var 1..3: x :: output_var;\nint: c = 2;\nsolve minimize c;\n")[0]);
+  }
 }
