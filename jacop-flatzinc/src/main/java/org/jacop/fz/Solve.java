@@ -4135,16 +4135,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   /**
    * Starts the taste of a fixed satisfaction search: at a share of the time limit (lcg-fixed-at,
    * 0.05; a negative share turns it off) LCG stops and the annotation's depth-first search without
-   * learning runs for as long as LCG did. Both follow the same tree, so the one that got further in
-   * it in the same time explores it faster (see {@link #fixedTreePosition}): the search without
-   * learning goes on to the end when it got lcg-fixed-ratio (4) times further than LCG, otherwise
-   * it stops and LCG goes on. Learning under fixed search backtracks the annotation's decisions
-   * about one level a conflict whatever learning cuts, so the jumps of the satisfaction probe of
-   * free search cannot tell; the position in the tree can, but only for an annotation whose tree
-   * has a fixed order: one int_search or bool_search with input_order and indomain_min or
-   * indomain_max. On costas-array (MiniZinc Challenge 2015) LCG cuts the failures of the search
-   * without learning by about 10 % at a 25th of its nodes per second: n = 16 takes 229 s with LCG
-   * and 9 s without learning.
+   * learning runs for a share of LCG's time (lcg-fixed-share, 0.25). Both walk the same tree in the
+   * same order, so the one further in it (see {@link #fixedTreePosition}) explored it faster: when
+   * the search without learning got further in a quarter of LCG's time than LCG did
+   * (lcg-fixed-ratio, 1, scales LCG's position; negative keeps it always) it goes on to the end,
+   * otherwise it stops and LCG goes on. Only the order of the positions means something: their
+   * sizes are not shares of the work (costas-array 17: 0.00441 and 0.00451 after equal times, while
+   * the search without learning makes 15 times the nodes a second). Learning under fixed search
+   * backtracks the annotation's decisions about one level a conflict whatever it cuts, so the jumps
+   * of the satisfaction probe of free search cannot tell; the position can, but only for an
+   * annotation whose tree has a fixed order: one int_search or bool_search with input_order and
+   * indomain_min or indomain_max. On costas-array (MiniZinc Challenge 2010, 2011 and 2015) LCG cuts
+   * the failures of the search without learning by about 10 % at a 15th of its nodes per second: n
+   * = 16 takes 229 s with LCG and 9 s without learning. On the 37 such instances of costas-array
+   * and the wide set at 600 s: solved 30 to 33, total time 5,383 to 3,875 s; where LCG goes on
+   * (black-hole, solbat, oocsp, nmseq) the taste costs 5 to 13 s.
    *
    * @param solver the LCG solver
    * @return null; the taste runs from an alarm of the solver, in its search

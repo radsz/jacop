@@ -8781,6 +8781,22 @@ Version 5.0 (unreleased)
    (4,333 -> 4,637), unit-commitment L12, warehouse olil4. Wide-quick set
    at 240 s: the slices start on 2 of 62 instances.
 
+492. Fixed search on a satisfaction model tastes the annotation's search
+   without learning once. At 5 % of the time limit (free-config
+   lcg-fixed-at) LCG stops and depth-first search without learning runs
+   for a quarter of LCG's time (lcg-fixed-share); when it got further in
+   the annotation's tree than LCG did (the lexicographic position of the
+   annotation's values in their root order), it goes on to the end,
+   otherwise LCG goes on. Only for one int_search or bool_search with
+   input_order and indomain_min or indomain_max, whose tree both searches
+   walk in the same order. On costas-array (MiniZinc Challenge 2010, 2011,
+   2015) LCG cuts about 10 % of the failures at a 15th of the nodes per
+   second. 37 instances (15 costas-array and the 22 such satisfaction
+   instances of the wide set), 600 s: solved 30 -> 33 (costas-array 17 x2,
+   2010 19), total time 5,383 -> 3,875 s; costas-array 16 and 18 about
+   150-220 s -> 40 s; LCG kept on black-hole, solbat, oocsp and nmseq, which
+   pay the taste (5-13 s).
+
 Version 4.11
 =============
 
