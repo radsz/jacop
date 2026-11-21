@@ -8,7 +8,8 @@ public class ASTScalarFlatExpr extends SimpleNode {
   // type = 0-int; 1=bool; 2-ident 3=array acces; 4=string; 5=float;
   int type = -1;
   int intValue; // keeps int & boolean 0/1 value
-  // the identifier (types 2 and 3), the string (4) or the float (5) as a Double: one field, since
+  // the identifier (types 2 and 3; an Ident for type 2 when parsed), the string (4) or the float
+  // (5) as a Double: one field, since
   // these nodes are the largest part of the parse tree (7.8 million of RoomMate-sr0700, 48 bytes
   // each with a field for each, 40 now)
   private Object text;
@@ -46,11 +47,24 @@ public class ASTScalarFlatExpr extends SimpleNode {
   }
 
   public String getIdent() {
+    if (text instanceof Ident i) {
+      return i.name;
+    }
     return type != 4 && text instanceof String s ? s : null;
   }
 
   public void setIdent(String i) {
     text = i;
+  }
+
+  // the identifier shared by the nodes that name it (see Tables.getVariable(ASTScalarFlatExpr))
+  void setIdent(Ident i) {
+    text = i;
+  }
+
+  // the shared identifier, or null when the node has none
+  Ident ident() {
+    return text instanceof Ident i ? i : null;
   }
 
   public String getString() {

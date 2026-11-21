@@ -71,6 +71,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
+import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -5426,6 +5427,36 @@ class FlatzincFrontEndTest {
     // the words of 4 letters without two consecutive ones, 8 of them, for each of the 3 regulars
     String all = run(m.toString(), "-a")[0];
     assertEquals(8 * 8 * 8, all.split("----------", -1).length - 1, all);
+  }
+
+  @Test
+  void anIdentifierKeepsItsVariableForItsStoreOnly() {
+    // the nodes of a name share an Ident that keeps the variable it was looked up as; the tables of
+    // another store (a portfolio thread, a presolved copy) look the name up again
+    Tables first = new Tables(new Store());
+    IntVar x = new IntVar(first.store, "x", 0, 5);
+    BooleanVar b = new BooleanVar(first.store, "b");
+    first.addVariable("x", x);
+    first.addVariable("b", b);
+    Tables second = new Tables(new Store());
+    IntVar otherX = new IntVar(second.store, "x", 0, 5);
+    second.addVariable("x", otherX);
+    ASTScalarFlatExpr node = new ASTScalarFlatExpr(ParserTreeConstants.JJTSCALARFLATEXPR);
+    node.setType(2);
+    node.setIdent(new Ident("x"));
+    assertEquals("x", node.getIdent());
+    assertSame(x, first.getVariable(node));
+    assertSame(otherX, second.getVariable(node));
+    assertSame(x, first.getVariable(node));
+    // an alias made after the lookup is followed
+    first.addAlias(b, x);
+    assertSame(b, first.getVariable(node));
+    assertSame(b, first.getVariable("x"));
+    assertSame(otherX, second.getVariable(node));
+    ASTScalarFlatExpr unknown = new ASTScalarFlatExpr(ParserTreeConstants.JJTSCALARFLATEXPR);
+    unknown.setType(2);
+    unknown.setIdent(new Ident("y"));
+    assertNull(first.getVariable(unknown));
   }
 
   @Test

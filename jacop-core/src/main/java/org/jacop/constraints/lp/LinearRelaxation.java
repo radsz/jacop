@@ -3407,14 +3407,61 @@ public class LinearRelaxation extends Constraint
       rootBoundsAt = Arrays.copyOf(rootBoundsAt, 2 * rootBoundsSize);
       rootBoundsLevel = Arrays.copyOf(rootBoundsLevel, 2 * rootBoundsSize);
     }
+    // a skipped bound is not recorded, so a later call propagates the bound of its time
+    if (rootReducedSkips > 0) {
+      rootReducedSkips--;
+      rootReducedSkipped++;
+      return;
+    }
     rootBoundsAt[rootBoundsSize] = bound;
     rootBoundsLevel[rootBoundsSize++] = store.level;
+    rootReducedPasses++;
     long pruned = prunings;
-    for (int k = 0; k < rootForms.length; k++) {
-      propagate(store, rootForms[k], rootFacts[k], rootCertificates[k]);
+    boolean useful = true;
+    try {
+      long scanned = 0;
+      for (int k = 0; k < rootForms.length; k++) {
+        propagate(store, rootForms[k], rootFacts[k], rootCertificates[k]);
+        scanned += rootForms[k].vars().length;
+      }
+      // a pruning a pass scans more than ROOT_REDUCED_SCAN columns for counts as none: on a row
+      // of n columns whose bound moves at every decision, one pruning a pass is quadratic. A pass
+      // over fewer than ROOT_REDUCED_MIN_COLUMNS columns is cheap and always counts as useful
+      useful =
+          scanned < ROOT_REDUCED_MIN_COLUMNS || (prunings - pruned) * ROOT_REDUCED_SCAN >= scanned;
+    } finally {
+      // a pass that pruned (almost) nothing doubles the passes skipped before the next one, one
+      // that pruned or failed starts again at every change of the bound
+      rootReducedPeriod = useful ? 1 : Math.min(2 * rootReducedPeriod, ROOT_REDUCED_MAX_PERIOD);
+      rootReducedSkips = rootReducedPeriod - 1;
     }
     rootPrunings += prunings - pruned;
   }
+
+  // the bound of the objective changes not only with the solutions: under assumptions or
+  // decisions on its terms its upper bound falls at every one of them. In the core-guided phase on
+  // Security-CPS test61 (MaxSAT Evaluation 2021: 16,010 soft clauses, 20,347 columns), each call
+  // assumes the softs one by one and every assumption scanned the root forms again, without a
+  // pruning: 0.9 s a core instead of 0.23 s. Passes that prune nothing back off exponentially
+  private static final int ROOT_REDUCED_MAX_PERIOD = 128;
+
+  // the columns a pass may scan for each pruning it makes and still count as useful: units learnt
+  // at the root moved the bound of jacop_lex_less_int over 2 x 20,000 columns maximizing a sum
+  // 60,000 times, 46 s of passes over 40,000 columns
+  private static final int ROOT_REDUCED_SCAN = 64;
+
+  // the columns below which a pass never backs off: accap instance5 (MiniZinc Challenge 2019, 116
+  // columns) made 2 million passes, about a tenth of its time, and their 69 rare prunings found
+  // 114 in 600 s; backed off to 16,000 passes, one pruning and 134
+  private static final int ROOT_REDUCED_MIN_COLUMNS = 1000;
+  private int rootReducedPeriod = 1;
+  private int rootReducedSkips;
+
+  /** The passes of the root reduced costs skipped by their back-off. */
+  public long rootReducedSkipped;
+
+  /** The passes of the root reduced costs made. */
+  public long rootReducedPasses;
 
   // whether the bounds of a column other than the objective are tighter than at the last solve at
   // the root level: with only the bound of the objective changed, a solve again finds the same

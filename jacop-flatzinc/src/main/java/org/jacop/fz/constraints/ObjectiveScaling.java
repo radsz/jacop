@@ -269,7 +269,7 @@ public final class ObjectiveScaling {
       if (array != null) {
         out.addAll(List.of(array));
       } else {
-        IntVar v = dictionary.getVariable(e.getIdent());
+        IntVar v = dictionary.getVariable(e);
         if (v != null) {
           out.add(v);
         }
