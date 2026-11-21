@@ -8717,6 +8717,21 @@ Version 5.0 (unreleased)
    fome12 111 -> 60 s, sgpf5y6 62 -> 30 s.
    -Dorg.jacop.jalp.presolveAggregate=false turns it off.
 
+488. Under LCG, the runs of a model's search annotation take the assignment
+   as a solution in more cases once the annotation has fixed its
+   variables: the linear relaxation no longer counts as an open
+   constraint (its rows are combinations of the model's constraints), and
+   a free variable of a constraint that is not entailed is decided at the
+   best solution's value, after which the test goes on (at most 32 per
+   branch, and only while it completes models). Before, either one kept
+   the solver deciding every free variable left, one decision level each.
+   MiniZinc Challenge 2014 ship-schedule, fixed search: 6Ships 272,286 ->
+   8,321 nodes (3.9 -> 3.6 s), 7Ships 430,734 -> 52,345, 3Ships 69,145 ->
+   1,812. Wide-quick set at 240 s, model search: same 46 solved, total
+   4,074 -> 4,081 s; the 31 wide instances where it acts, 600 s: same 16
+   solved, total 10,552 -> 10,545 s, 4 better / 1 worse objectives.
+   Statistic lcgCompletionDecisions.
+
 Version 4.11
 =============
 
