@@ -3686,9 +3686,12 @@ class GlobalConstraints implements ParserTreeConstants {
     // files compiled with older versions of the library number them from the lowest node in arc.
     int minNode = Math.min(1, Arrays.stream(arc).min().getAsInt());
 
-    if (support.options.proof() != null && Arrays.stream(weight).allMatch(IntVar::singleton)) {
+    String mode = networkFlowMode();
+    if (Arrays.stream(weight).allMatch(IntVar::singleton) && !"global".equals(mode)) {
       networkFlowRows(arc, minNode, flow, weight, balance, cost);
-      return;
+      if ("rows".equals(mode)) {
+        return;
+      }
     }
 
     NetworkBuilder net = new NetworkBuilder();
@@ -3706,6 +3709,32 @@ class GlobalConstraints implements ParserTreeConstants {
     net.setCostVariable(cost);
 
     support.pose(new NetworkFlow(net));
+  }
+
+  /**
+   * How a network flow with fixed weights is posted, by the system property {@code
+   * org.jacop.fz.networkFlow}: {@code global} (only {@link NetworkFlow}), {@code rows} (only the
+   * flow conservation rows and the cost row, as MiniZinc's standard decomposition), {@code both},
+   * or {@code auto} (the default: rows under free search, both otherwise). Under --proof the rows
+   * alone. The arc analysis of NetworkFlow (reduced-cost pruning with a shortest path per arc)
+   * costs more than it prunes on the small networks of the MiniZinc Challenge mapping problem
+   * (sixteen networks of 11 nodes and 36 arcs, about 80 % of the time), and the rows explain better
+   * under lazy clause generation. Mapping and nfc 2015-2022, 30 instances at 120 s, two seeds: free
+   * search 841 s with the global, 712 s with both, 598 s with the rows (2018 ring_mp3 28-111 s to 7
+   * s); default search 945 s, 793 s with the rows, 687 s with both (2016 mesh3x3_mp3 proved in
+   * 12-18 s instead of not in 120 s; the rows alone lose 2021 mesh4x4_2, 6-9 s to 51-53 s).
+   *
+   * @return global, rows or both
+   */
+  private String networkFlowMode() {
+    if (support.options.proof() != null) {
+      return "rows";
+    }
+    String mode = System.getProperty("org.jacop.fz.networkFlow", "auto");
+    if ("auto".equals(mode)) {
+      return support.options.freeSearch() ? "rows" : "both";
+    }
+    return mode;
   }
 
   // --proof: the network flow as its rows, which the OPB model states and a proof derives from:
