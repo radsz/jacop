@@ -8717,7 +8717,20 @@ Version 5.0 (unreleased)
    fome12 111 -> 60 s, sgpf5y6 62 -> 30 s.
    -Dorg.jacop.jalp.presolveAggregate=false turns it off.
 
-488. Free search (-f) on optimisation problems can alternate LCG and free
+488. A reified MiniZinc count with a variable value (count_eq_reif, and
+   b -> count(x, y) = c, which MiniZinc posts through it) is decomposed in
+   JaCoP's MiniZinc library into the literals x[i] = y and a reified sum,
+   instead of Reified(CountVar). MiniZinc shares the literal of two
+   variables between the counts that compare them, such as the neighbour
+   colours of a grid, and lazy clause generation learns on these literals.
+   Amaze (MiniZinc Challenge 2012, 2014 and 2019) and harmony (2024), the
+   only Challenge models that reach this constraint, 22 instances at 240 s:
+   default (model search) total 695 -> 490 s (2012 amaze 2012-06-29
+   183 -> 10 s, 2014 amaze mod2012-06-22 35 -> 8 s), -f 344 -> 286 s
+   (2012 amaze 2012-03-08 now proved in 181 s), --lcg off 1,405 -> 1,261 s;
+   at 600 s default 1,050 -> 906 s and -f 261 -> 220 s.
+
+489. Free search (-f) on optimisation problems can alternate LCG and free
    search without learning in slices instead of handing over for good
    (--free-config lcg-cop-slices=1, off by default), as jacop #888 does for
    satisfaction problems. When LCG gives way as slow with a solution, free
