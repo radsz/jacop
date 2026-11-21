@@ -107,6 +107,7 @@ import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.EqBool;
 import org.jacop.constraints.ExtensionalConflictVa;
+import org.jacop.constraints.ExtensionalSupportStr;
 import org.jacop.constraints.ExtensionalSupportVa;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.IfThen;
@@ -12450,6 +12451,32 @@ class SingleConstraintTest extends TestHelper {
       assertThat(store.consistency()).isTrue();
       assertThat(noOfAllSolutions(store, list)).as("support " + support).isEqualTo(support ? 3 : 6);
     }
+  }
+
+  /**
+   * ExtensionalSupportStr removed at the root and imposed again one level up (LcgSolver.lend) kept
+   * the tuple list of its first imposition with fresh time stamps, and removing that level before a
+   * consistency call threw an ArrayIndexOutOfBoundsException.
+   */
+  @Test
+  void extensionalSupportStrLentAboveTheRootRebuildsItsTuples() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 2);
+    IntVar y = new IntVar(store, "y", 0, 2);
+    IntVar[] list = {x, y};
+    ExtensionalSupportStr c = new ExtensionalSupportStr(list, new int[][] {{0, 0}, {1, 2}, {2, 1}});
+    store.impose(c);
+    assertThat(store.consistency()).isTrue();
+    c.removeConstraint();
+    store.setLevel(1);
+    store.clearEntailed(c);
+    store.impose(c);
+    x.domain.in(1, x, 1, 2);
+    backToRoot(store);
+    store.clearEntailed(c);
+    store.impose(c);
+    assertThat(store.consistency()).isTrue();
+    assertThat(noOfAllSolutions(store, list)).isEqualTo(3);
   }
 
   /**
