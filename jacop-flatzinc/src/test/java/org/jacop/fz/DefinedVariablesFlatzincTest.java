@@ -95,7 +95,7 @@ class DefinedVariablesFlatzincTest {
     assertThat(tables.definedVariables).contains(b, r);
     assertThat(tables.halfDefinedVariables).containsExactly(b);
   }
-      
+
   // XCSP 2026 BACPj (500 courses, 100 periods) has no defines_var annotations: free search
   // branched on the loads and found no solution in 240 s, on the bins it finds one in 9 s
   @Test

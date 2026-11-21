@@ -1511,8 +1511,8 @@ public class Tables {
     definedVariables.add(v);
     halfDefinedVariables.add(v);
   }
-  
-   /**
+
+  /**
    * Tells whether the solve item carries a search annotation. It is known before the constraints
    * are posted.
    *
