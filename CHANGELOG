@@ -8781,7 +8781,23 @@ Version 5.0 (unreleased)
    (4,333 -> 4,637), unit-commitment L12, warehouse olil4. Wide-quick set
    at 240 s: the slices start on 2 of 62 instances.
 
-492. Cheaper propagation of GlobalCardinality, ChannelReif and ChannelImply
+492. Fixed search on a satisfaction model tastes the annotation's search
+   without learning once. At 5 % of the time limit (free-config
+   lcg-fixed-at) LCG stops and depth-first search without learning runs
+   for a quarter of LCG's time (lcg-fixed-share); when it got further in
+   the annotation's tree than LCG did (the lexicographic position of the
+   annotation's values in their root order), it goes on to the end,
+   otherwise LCG goes on. Only for one int_search or bool_search with
+   input_order and indomain_min or indomain_max, whose tree both searches
+   walk in the same order. On costas-array (MiniZinc Challenge 2010, 2011,
+   2015) LCG cuts about 10 % of the failures at a 15th of the nodes per
+   second. 37 instances (15 costas-array and the 22 such satisfaction
+   instances of the wide set), 600 s: solved 30 -> 33 (costas-array 17 x2,
+   2010 19), total time 5,383 -> 3,875 s; costas-array 16 and 18 about
+   150-220 s -> 40 s; LCG kept on black-hole, solbat, oocsp and nmseq, which
+   pay the taste (5-13 s).
+
+493. Cheaper propagation of GlobalCardinality, ChannelReif and ChannelImply
    per call. GlobalCardinality keeps the value list of each variable as a
    bit set when the values fit in 512 bits: the value graph of the
    strongly connected component pass is the union of the bit sets of the
@@ -8798,7 +8814,7 @@ Version 5.0 (unreleased)
    5,390 -> 5,382 s with the same instances proved, -f 4,046 -> 3,924 s
    with one more proved (valve-network horizon20 in 498 s).
 
-493. Under LCG, the runs of a model's search annotation take the assignment
+494. Under LCG, the runs of a model's search annotation take the assignment
    as a solution in more cases once the annotation has fixed its
    variables: the linear relaxation no longer counts as an open
    constraint (its rows are combinations of the model's constraints), and
@@ -8813,7 +8829,7 @@ Version 5.0 (unreleased)
    solved, total 10,552 -> 10,545 s, 4 better / 1 worse objectives.
    Statistic lcgCompletionDecisions.
 
-494. Lazy clause generation enumerates the solutions of satisfaction
+495. Lazy clause generation enumerates the solutions of satisfaction
    problems with -a and -n N (N > 1): every solution adds a blocking clause
    and the search ends, unsatisfiable, once all solutions are printed
    (Chu and Stuckey, Lazy clause generation reengineered, CP 2009; the
@@ -8841,7 +8857,7 @@ Version 5.0 (unreleased)
    without it), and Reified and Not of AinB and AeqB explain entailment
    and disentailment, instead of the generic reason of all set atoms.
 
-495. Under lazy clause generation a regular or MDD constraint whose
+496. Under lazy clause generation a regular or MDD constraint whose
    clauses do not fit in the budget at 400 bytes per described edge and
    node has its literals and clauses counted, and becomes clauses when
    those fit; the budget is charged with the counted bytes. The edges
@@ -8855,7 +8871,7 @@ Version 5.0 (unreleased)
    (MiniZinc Challenge, XCSP 2022-2025, the regular instances of the wide
    set), 600 s, 4 GB: total time 0.59 (fixed search) and 0.79 (-f).
 
-496. The clausal compilation of satisfaction models (entry 468) takes
+497. The clausal compilation of satisfaction models (entry 468) takes
    domains of up to 64 values (was 3). A variable that appears only in
    tables, alldifferent, the lists of counts and sums of three or more
    terms gets direct literals with at-least-one and at-most-one clauses
@@ -8876,7 +8892,7 @@ Version 5.0 (unreleased)
    FRB-45-21-1, FRB-53-24-1, EFPA-4-4-5-11 (UNSAT), EFPA-6-4-4-13,
    Ortholatin-08; lost SocialGolfers-08-04-11 and FRB-45-21-3.
 
-497. New XCSP3 front end org.jacop.fz.xcsp.Xcsp2jacop and launcher
+498. New XCSP3 front end org.jacop.fz.xcsp.Xcsp2jacop and launcher
    xcsp-jacop: it reads an XCSP3-core instance (.xml, .xml.lzma or
    .xml.xz) with the JDK's streaming XML parser, posts it as FlatZinc over
    JaCoP's built-ins, solves it with the FlatZinc front end and all its
@@ -8898,7 +8914,7 @@ Version 5.0 (unreleased)
    passes the XCSP3 SolutionChecker and no answer contradicts the
    competition results.
 
-498. The core-guided phase of free LCG search takes the terms of a split
+499. The core-guided phase of free LCG search takes the terms of a split
    objective sum also when they are narrow (at most 8 levels each, not
    only 0-1) and span up to twice the levels of the block sums. Before,
    such terms lost to the blocks as soon as these spanned fewer levels,
@@ -8911,7 +8927,7 @@ Version 5.0 (unreleased)
    15 -> 7 s, league model30-4-6 2.3 -> 3.6 s).
    -Djacop.lcg.coreNarrowSpan=1 restores the 0-1 rule only.
 
-499. JaLP's aggregator also substitutes a column whose bounds are implied
+500. JaLP's aggregator also substitutes a column whose bounds are implied
    by any of its rows, not only by the equation it is substituted from
    (implied free columns as in HiGHS). On the 687 LPs of the osolpro LP
    bench the presolved LPs are 1,112,853 -> 244,977 rows and columns larger
@@ -8920,7 +8936,7 @@ Version 5.0 (unreleased)
    pds-40 to pds-100 35-50 % faster. -Dorg.jacop.jalp.aggregateAnyRow=false
    turns it off.
 
-500. Rows that the linear relaxation of an optimisation model keeps for the
+501. Rows that the linear relaxation of an optimisation model keeps for the
    root bound they raise are on probation in search: after 256 solves
    they are dropped when fewer than 10 % of the solves failed the node and
    the solves took at least 60 % of the time of the search since the
@@ -8930,7 +8946,7 @@ Version 5.0 (unreleased)
    -Dorg.jacop.lp.optimisationProbation=0 keeps the rows,
    -Dorg.jacop.lp.probationShare sets the share of time.
 
-501. In a model without a search annotation, the FlatZinc front end counts
+502. In a model without a search annotation, the FlatZinc front end counts
    the loads of a bin packing (jacop_bin_packing) as defined by it, as if
    a defines_var annotation named them: free search branches on the bins
    of the items first (item 369) and LNS relaxes bins only (lns-defined).
@@ -8945,7 +8961,7 @@ Version 5.0 (unreleased)
    gbac under -f got worse at 600 s (6 of 19 objectives worse, 1 better).
    -Dorg.jacop.fz.binPackingLoadsDefined=false turns it off.
 
-502. Two opt-in strengthenings of the root linear relaxation.
+503. Two opt-in strengthenings of the root linear relaxation.
    -Dorg.jacop.lp.clauseRows=true: the clause rows of lazy clause
    generation over columns the relaxation already has no longer drop out
    when the share of further rows is full. They come after every other
@@ -8970,7 +8986,7 @@ Version 5.0 (unreleased)
    plus L10 and L15), 600 s: the same 26 solved in each mode, total time
    default 0.994 and -f 1.007.
 
-503. The FlatZinc front end rewrites an absolute difference that only
+504. The FlatZinc front end rewrites an absolute difference that only
    excludes values: t = x - y and a = |t|, with t and a used nowhere
    else, become bounds on x - y and x - y != d for the at most 8 values d
    (-Dorg.jacop.fz.absoluteDifference.maxHoles) that the domains of t and
@@ -8990,7 +9006,7 @@ Version 5.0 (unreleased)
    proved in 44 s; no instance of the wide set fires. Off with
    -Dorg.jacop.fz.absoluteDifference=false and under --proof.
 
-504. The FlatZinc front end posts a network flow with fixed weights
+505. The FlatZinc front end posts a network flow with fixed weights
    (network_flow, network_flow_cost) as its flow conservation rows and
    cost row under free search (-f), and as those rows next to NetworkFlow
    otherwise. NetworkFlow's reduced-cost arc analysis, a shortest path
