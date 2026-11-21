@@ -67,13 +67,6 @@ import org.jacop.fz.SimpleNode;
  * <p>Groups of at least two such elements are merged; the elements stay in the parse tree for the
  * detectors that read it. The system property {@code org.jacop.fz.elementTable=false} turns it off.
  *
- * <p>A group with more value columns than rows stays as elements. There the reason of an element
- * has at most one index atom per row, so the table has no long reasons to shorten, while its
- * explanation tries every column of every candidate tuple: minimal-decision-sets (MiniZinc
- * Challenge 2020) looks up one feature of a 14-row matrix for each of 195 items, and the merged
- * tables took a third of the run (cleve_train5 fixed search 22 s, 14 s as elements, same failures).
- * The system property {@code org.jacop.fz.elementTableWide=true} merges such groups too.
- *
  * @author Radoslaw Szymanek
  * @version 5.0
  */
@@ -82,16 +75,11 @@ public class ElementTableDetector implements ParserTreeConstants {
   /** At most this many rows in one merged table. */
   static final int MAX_ROWS = 1 << 20;
 
-  /** Whether groups with more value columns than rows are merged too. */
-  private static final boolean WIDE = Boolean.getBoolean("org.jacop.fz.elementTableWide");
-
   private final Support support;
 
   private final Set<SimpleNode> replaced = new HashSet<>();
 
   private int tables;
-
-  private int wide;
 
   /** One element: value = array[index - first]. */
   private static final class Element {
@@ -177,15 +165,9 @@ public class ElementTableDetector implements ParserTreeConstants {
         merge(index, group);
       }
     }
-    if (support.options.debug() && tables + wide > 0) {
+    if (support.options.debug() && tables > 0) {
       FzConsole.println(
-          "% element table detector: "
-              + tables
-              + " tables of "
-              + replaced.size()
-              + " elements, "
-              + wide
-              + " groups with more columns than rows kept as elements");
+          "% element table detector: " + tables + " tables of " + replaced.size() + " elements");
     }
   }
 
@@ -266,10 +248,6 @@ public class ElementTableDetector implements ParserTreeConstants {
     }
     if (rows.isEmpty()) {
       throw Store.failException;
-    }
-    if (vars.length - 1 > rows.size() && !WIDE) {
-      wide++;
-      return;
     }
     int[][] tuples = rows.toArray(new int[0][]);
     if (vars.length <= TableCliques.MAX_ARITY) {
