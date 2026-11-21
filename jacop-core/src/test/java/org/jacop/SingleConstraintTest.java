@@ -12635,4 +12635,36 @@ class SingleConstraintTest extends TestHelper {
     }
     assertThat(noOfAllSolutions(store, x, y)).isEqualTo(expected);
   }
+
+  /**
+   * A layered graph constraint imposed again after its removal at the root (LcgSolver.release)
+   * builds a new graph but did not run its first consistency work, which removes the values that
+   * label no edge, so Regular accepted x = (1, 2) for the words 11 and 22.
+   */
+  @Test
+  void regularImposedAgainPrunesItsNewGraph() {
+    Fsm fsm = new Fsm();
+    FsmState[] q = new FsmState[4];
+    for (int i = 0; i < q.length; i++) {
+      q[i] = new FsmState();
+      fsm.allStates.add(q[i]);
+    }
+    fsm.initState = q[0];
+    fsm.finalStates.add(q[3]);
+    q[0].addTransition(new FsmTransition(new IntervalDomain(1, 1), q[1]));
+    q[0].addTransition(new FsmTransition(new IntervalDomain(2, 2), q[2]));
+    q[1].addTransition(new FsmTransition(new IntervalDomain(1, 1), q[3]));
+    q[2].addTransition(new FsmTransition(new IntervalDomain(2, 2), q[3]));
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 1, 2), new IntVar(store, "x1", 1, 2)};
+    Regular regular = new Regular(fsm, x);
+    store.impose(regular);
+    assertThat(store.consistency()).isTrue();
+    regular.removeConstraint();
+    x[0].domain.in(0, x[0], 1, 1);
+    x[1].domain.in(0, x[1], 2, 2);
+    store.clearEntailed(regular);
+    store.impose(regular);
+    assertThat(store.consistency()).isFalse();
+  }
 }
