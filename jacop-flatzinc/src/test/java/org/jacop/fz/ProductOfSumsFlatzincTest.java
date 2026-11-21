@@ -168,6 +168,49 @@ class ProductOfSumsFlatzincTest {
     }
   }
 
+  @Test
+  void outputAliasKeepsItsConjunction() throws IOException {
+    // y0_0 = bool2int(p0_0) is printed as an output variable, in an array or through a variable
+    // declared equal to it
+    for (String output :
+        new String[] {
+          "",
+          "array [1..2] of var int: Y:: output_array([1..2]) = [y0_0,y0_1];\n",
+          "var 0..1: Y:: output_var = y0_0;\n"
+        }) {
+      StringBuilder fzn = new StringBuilder();
+      List<String> terms = new ArrayList<>();
+      for (int i = 0; i < 2; i++) {
+        fzn.append("var bool: a").append(i).append(":: output_var;\n");
+        fzn.append("var bool: b").append(i).append(":: output_var;\n");
+      }
+      for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 2; j++) {
+          String y = "y" + i + "_" + j;
+          fzn.append("var bool: p").append(i).append('_').append(j).append(";\n");
+          fzn.append("var 0..1: ").append(y);
+          fzn.append(output.isEmpty() && i + j == 0 ? ":: output_var;\n" : ";\n");
+          terms.add(y);
+        }
+      }
+      fzn.append("var 0..4: s:: output_var;\n").append(output);
+      for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 2; j++) {
+          String p = "p" + i + "_" + j;
+          fzn.append("constraint array_bool_and([a").append(i).append(",b").append(j);
+          fzn.append("],").append(p).append(");\n");
+          fzn.append("constraint bool2int(").append(p).append(",y").append(i).append('_');
+          fzn.append(j).append(");\n");
+        }
+      }
+      fzn.append("constraint int_lin_eq([1,1,1,1,-1],[").append(String.join(",", terms));
+      fzn.append(",s],0);\nsolve satisfy;\n");
+      String model = fzn.toString();
+      assertEquals(16, solutions(run(model, false, "-a")), model);
+      assertEquals(16, solutions(run(model, true, "-a")), model);
+    }
+  }
+
   private static int solutions(String out) {
     return out.split("----------", -1).length - 1;
   }

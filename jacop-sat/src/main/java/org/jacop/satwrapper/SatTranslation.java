@@ -253,7 +253,10 @@ public class SatTranslation {
    */
   public void generateXor(IntVar[] a, IntVar c) {
 
-    if (a.length == 3) {
+    if (a.length == 0) {
+      // the xor of no variables is false
+      c.domain.in(store.level, c, 0, 0);
+    } else if (a.length == 3) {
       generateXor(a[0], a[1], a[2], c);
     } else if (a.length == 2) {
       generateXor(a[0], a[1], c);

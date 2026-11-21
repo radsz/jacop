@@ -73,6 +73,16 @@ public class Tables {
 
   public final Map<IntVar, IntVar> aliasTable = new LinkedHashMap<>();
 
+  // aliasTable by the store index of the key, for getAlias, whose lookups of aliasTable missed the
+  // cache on large models (a sixth of the set-up of MaxSAT 2021 relational-inference ar-2); the
+  // key is kept too, since a variable of another store may have the same index, and two keys with
+  // one index (of two stores) leave getAlias to aliasTable
+  private IntVar[] aliasKeys = new IntVar[0];
+
+  private IntVar[] aliasValues = new IntVar[0];
+
+  private boolean sharedAliasIndex;
+
   /** Under --proof, the trail of the root propagation, which the proof derives; null otherwise. */
   AtomicTrail rootTrail;
 
@@ -116,6 +126,9 @@ public class Tables {
   final ArrayList<Var[]> defaultSearchSetArrays = new ArrayList<>();
   // variables named by a defines_var annotation of a constraint
   final ArrayList<Var> definedVariables = new ArrayList<>();
+
+  // float variables declared var_is_introduced or is_defined_var: MiniZinc's intermediate results
+  final ArrayList<Var> introducedFloatVariables = new ArrayList<>();
 
   // variables that no constraint uses any more, such as the sums merged into a minimum
   final ArrayList<Var> unusedVariables = new ArrayList<>();
@@ -252,6 +265,26 @@ public class Tables {
   }
 
   /**
+   * Notes that a declared float domain reached beyond JaCoP's float range and was narrowed to it:
+   * the values cut off may hold every solution, or the better ones.
+   */
+  void noteNarrowedFloatDomain() {
+    floatDomainsNarrowed = true;
+  }
+
+  /**
+   * Tells whether a declared float domain was narrowed to JaCoP's float range. A completed search
+   * then proves neither unsatisfiability nor optimality.
+   *
+   * @return true if a declared float domain was narrowed.
+   */
+  public boolean floatDomainsNarrowed() {
+    return floatDomainsNarrowed;
+  }
+
+  private boolean floatDomainsNarrowed;
+
+  /**
    * Notes a variable declared without bounds (var int), created over JaCoP's integer range: its
    * values beyond the range are cut off as for a narrowed declared domain.
    *
@@ -266,6 +299,7 @@ public class Tables {
   private final List<IntVar[]> declaredEqualities = new ArrayList<>();
   private final Set<IntVar> declaredEqual = Collections.newSetFromMap(new IdentityHashMap<>());
   private final IdentityHashMap<IntVar, long[]> boundsBeforeEquality = new IdentityHashMap<>();
+  private final Set<SetVar> declaredEqualSets = Collections.newSetFromMap(new IdentityHashMap<>());
   // the factor the objective was divided by (ObjectiveScaling), and the identifiers of the
   // variables that hold the divided values
   private long objectiveScale = 1;
@@ -304,6 +338,28 @@ public class Tables {
    */
   public boolean isDeclaredEqual(IntVar v) {
     return declaredEqual.contains(v);
+  }
+
+  /**
+   * Notes that the declaration of a set variable makes it equal to another one.
+   *
+   * @param x the declared variable
+   * @param y the variable it is declared equal to
+   */
+  void noteDeclaredEquality(SetVar x, SetVar y) {
+    declaredEqualSets.add(x);
+    declaredEqualSets.add(y);
+  }
+
+  /**
+   * Whether a declaration makes the set variable equal to another one. Such a variable must not be
+   * left without constraints, since the equality posted for the declaration stays on it.
+   *
+   * @param v the set variable
+   * @return true if a declaration makes v equal to another set variable
+   */
+  public boolean isDeclaredEqual(SetVar v) {
+    return declaredEqualSets.contains(v);
   }
 
   /**
@@ -595,7 +651,7 @@ public class Tables {
    *     to lie within the range.
    */
   public boolean failureMayComeFromNarrowing() {
-    if (boundedDomainsClamped()) {
+    if (floatDomainsNarrowed || boundedDomainsClamped()) {
       return true;
     }
     return !clampedDomains.isEmpty()
@@ -717,7 +773,7 @@ public class Tables {
   public void addAlias(IntVar b, IntVar v) {
     IntVar x = aliasTable.get(v);
     if (x == null) {
-      aliasTable.put(v, b);
+      putAlias(v, b);
       aliasTargets.add(b);
     } else {
       System.err.println("%% Double int var alias for bool var");
@@ -733,7 +789,7 @@ public class Tables {
    */
   public void mergeAlias(IntVar to, IntVar from, List<IntVar> aliasesOfFrom) {
     for (IntVar v : aliasesOfFrom) {
-      aliasTable.put(v, to);
+      putAlias(v, to);
     }
     aliasTargets.remove(from);
     if (!aliasesOfFrom.isEmpty()) {
@@ -764,6 +820,21 @@ public class Tables {
     return v != null && aliasTable.containsKey(v);
   }
 
+  private void putAlias(IntVar v, IntVar to) {
+    aliasTable.put(v, to);
+    int i = v.index();
+    if (i >= 0) {
+      if (i >= aliasKeys.length) {
+        int n = Math.max(i + 1, 2 * aliasKeys.length);
+        aliasKeys = Arrays.copyOf(aliasKeys, n);
+        aliasValues = Arrays.copyOf(aliasValues, n);
+      }
+      sharedAliasIndex |= aliasKeys[i] != null && aliasKeys[i] != v;
+      aliasKeys[i] = v;
+      aliasValues[i] = to;
+    }
+  }
+
   /**
    * Returns the alias for a variable, or the variable itself if no alias exists.
    *
@@ -771,6 +842,13 @@ public class Tables {
    * @return the alias variable or the original variable
    */
   public IntVar getAlias(IntVar b) {
+    if (b == null) {
+      return null;
+    }
+    int i = b.index();
+    if (i >= 0 && !sharedAliasIndex) {
+      return i < aliasKeys.length && aliasKeys[i] == b ? aliasValues[i] : b;
+    }
     IntVar v = aliasTable.get(b);
     if (v == null) {
       return b;
@@ -792,7 +870,7 @@ public class Tables {
     mapValues(constantTable, t.constantTable, map);
     mapValues(constantTableBoolean, t.constantTableBoolean, map);
     mapValues(constantFloatTable, t.constantFloatTable, map);
-    aliasTable.forEach((k, v) -> t.aliasTable.put(map.get(k), map.get(v)));
+    aliasTable.forEach((k, v) -> t.putAlias(map.get(k), map.get(v)));
     aliasTargets.forEach(v -> t.aliasTargets.add(map.get(v)));
     t.intTable.putAll(intTable);
     t.floatTable.putAll(floatTable);
@@ -820,6 +898,7 @@ public class Tables {
     defaultSearchFloatArrays.forEach(a -> t.defaultSearchFloatArrays.add(map.get(a)));
     defaultSearchSetArrays.forEach(a -> t.defaultSearchSetArrays.add(map.get(a)));
     t.definedVariables.addAll(map.get(definedVariables));
+    t.introducedFloatVariables.addAll(map.get(introducedFloatVariables));
     t.unusedVariables.addAll(map.get(unusedVariables));
     t.auxiliaryVariables.addAll(map.get(auxiliaryVariables));
     t.splitSums.addAll(map.get(splitSums));
@@ -1164,6 +1243,32 @@ public class Tables {
   }
 
   /**
+   * It returns the variable an identifier node names, as {@link #getVariable(String)} does with its
+   * identifier, reading the variable kept by the identifier while it is of the store of these
+   * tables.
+   *
+   * @param node the node of an identifier.
+   * @return the variable of the identifier, or null when it names no variable.
+   */
+  public IntVar getVariable(ASTScalarFlatExpr node) {
+    Ident ident = node.ident();
+    if (ident == null) {
+      return getVariable(node.getIdent());
+    }
+    IntVar v = ident.variable;
+    // a variable of the store of these tables is the one the name was declared as: variableTable
+    // only grows, and mapTo gives tables over another store
+    if (v == null || v.store != store || store == null) {
+      v = variableTable.get(ident.name);
+      if (v == null) {
+        return null;
+      }
+      ident.variable = v;
+    }
+    return getAlias(v);
+  }
+
+  /**
    * It adds a variable with a given identity to the storage.
    *
    * @param ident the identity of the added variable.
@@ -1387,6 +1492,24 @@ public class Tables {
    */
   public void addDefinedVar(Var v) {
     definedVariables.add(v);
+  }
+
+  /**
+   * Records a float variable that MiniZinc introduced (var_is_introduced or is_defined_var).
+   *
+   * @param v the introduced float variable
+   */
+  public void addIntroducedFloatVar(Var v) {
+    introducedFloatVariables.add(v);
+  }
+
+  /**
+   * Returns the float variables that MiniZinc introduced (var_is_introduced or is_defined_var).
+   *
+   * @return the introduced float variables
+   */
+  public List<Var> introducedFloatVariables() {
+    return introducedFloatVariables;
   }
 
   /**
