@@ -3430,6 +3430,209 @@ class FlatzincFrontEndTest {
     assertEquals(12, withDetection.size(), withDetection.toString());
   }
 
+  /** The n-queens model as MiniZinc flattens abs(q[i] - q[j]) != j - i, with auxiliaries. */
+  private static String flattenedQueens(int n) {
+    StringBuilder fzn = new StringBuilder();
+    fzn.append("array [1..").append(n).append("] of var 1..").append(n);
+    fzn.append(": q :: output_array([1..").append(n).append("]);\n");
+    StringBuilder cs = new StringBuilder();
+    int aux = 0;
+    for (int i = 1; i <= n; i++) {
+      for (int j = i + 1; j <= n; j++) {
+        int c = j - i;
+        String t = "t" + aux;
+        String a = "a" + aux++;
+        fzn.append("var ").append(1 - n).append("..").append(n - 1).append(": ").append(t);
+        fzn.append(" :: var_is_introduced :: is_defined_var;\n");
+        fzn.append("var ").append(domainWithout(0, n - 1, c)).append(": ").append(a);
+        fzn.append(" :: var_is_introduced :: is_defined_var;\n");
+        cs.append("constraint int_lin_ne([1,-1],[q[").append(i).append("],q[").append(j);
+        cs.append("]],0);\n");
+        cs.append("constraint int_lin_eq([1,-1,-1],[q[").append(i).append("],q[").append(j);
+        cs.append("],").append(t).append("],0) :: defines_var(").append(t).append(");\n");
+        cs.append("constraint int_abs(").append(t).append(',').append(a);
+        cs.append(") :: defines_var(").append(a).append(");\n");
+      }
+    }
+    return fzn.append(cs).append("solve satisfy;\n").toString();
+  }
+
+  // lo..hi without v, as a FlatZinc set
+  private static String domainWithout(int lo, int hi, int v) {
+    StringJoiner values = new StringJoiner(",", "{", "}");
+    for (int k = lo; k <= hi; k++) {
+      if (k != v) {
+        values.add(Integer.toString(k));
+      }
+    }
+    return values.toString();
+  }
+
+  @Test
+  void networkFlowModesKeepTheSolutions() throws IOException {
+    // the flow conservation rows, NetworkFlow, or both, with and without free search: the same
+    // flows and costs on random networks
+    Random rnd = new Random(20261121);
+    for (int run = 0; run < 25; run++) {
+      String model = randomNetworkFlow(rnd);
+      Set<String> reference = null;
+      for (String mode : new String[] {"global", "rows", "both", "auto"}) {
+        System.setProperty("org.jacop.fz.networkFlow", mode);
+        try {
+          for (String[] options : new String[][] {{}, {"-f"}}) {
+            Set<String> solutions = new TreeSet<>(solveAllInOrder(model, options));
+            if (reference == null) {
+              reference = solutions;
+            }
+            assertEquals(
+                reference, solutions, mode + " " + Arrays.toString(options) + "\n" + model);
+          }
+        } finally {
+          System.clearProperty("org.jacop.fz.networkFlow");
+        }
+      }
+    }
+  }
+
+  // a network of 3 to 5 nodes and up to 7 arcs with flows 0..2 and fixed weights 0..3, balances
+  // that add up to 0, as jacop_networkflow (nodes numbered from 1)
+  private static String randomNetworkFlow(Random rnd) {
+    int nodes = 3 + rnd.nextInt(3);
+    int arcs = 3 + rnd.nextInt(5);
+    StringBuilder m = new StringBuilder();
+    StringJoiner arc = new StringJoiner(",", "[", "]");
+    StringJoiner flows = new StringJoiner(",", "[", "]");
+    StringJoiner weights = new StringJoiner(",", "[", "]");
+    for (int i = 0; i < arcs; i++) {
+      int from = 1 + rnd.nextInt(nodes);
+      int to = 1 + (from + rnd.nextInt(nodes - 1)) % nodes;
+      arc.add(from + "," + to);
+      m.append("var 0..2: f").append(i).append(" :: output_var;\n");
+      flows.add("f" + i);
+      weights.add(Integer.toString(rnd.nextInt(4)));
+    }
+    int[] balance = new int[nodes];
+    for (int k = 0; k < 2; k++) {
+      int a = rnd.nextInt(nodes);
+      int b = rnd.nextInt(nodes);
+      balance[a]++;
+      balance[b]--;
+    }
+    StringJoiner b = new StringJoiner(",", "[", "]");
+    for (int v : balance) {
+      b.add(Integer.toString(v));
+    }
+    m.append("var 0..100: cost :: output_var;\n");
+    m.append("constraint jacop_networkflow(")
+        .append(arc)
+        .append(",")
+        .append(flows)
+        .append(",")
+        .append(weights)
+        .append(",")
+        .append(b)
+        .append(",cost);\n");
+    m.append("solve satisfy;\n");
+    return m.toString();
+  }
+
+  @Test
+  void absoluteDifferencesOfQueensBecomeDiagonalCliques() throws IOException {
+    // t = q[i] - q[j], a = |t| with a hole at j - i: the rewrite drops t and a, and the diagonals
+    // become all-different cliques with offsets (CPAI08 queens-100: 34 s and 43,168 nodes under
+    // lazy clause generation before, 0.2 s and 88 nodes after)
+    String model = flattenedQueens(7);
+    String debug = run(model, "-debug", "-s")[0];
+    assertTrue(debug.contains("% absolute differences rewritten: 21 of 21,"), debug);
+    assertEquals(3, debug.split("% alldifferent on 7 variables", -1).length - 1, debug);
+    Set<String> rewritten = solveAll(model);
+    System.setProperty("org.jacop.fz.absoluteDifference", "false");
+    try {
+      assertEquals(solveAll(model), rewritten);
+    } finally {
+      System.clearProperty("org.jacop.fz.absoluteDifference");
+    }
+    assertEquals(40, rewritten.size());
+  }
+
+  @Test
+  void absoluteDifferencesOutsideCliquesStay() throws IOException {
+    // three queens: no clique of five, so the two adjacent pairs, whose hole at 1 would become
+    // lone disequalities, keep their auxiliaries; the corner pair excludes only the end of its
+    // range, which becomes two bounds
+    String debug = run(flattenedQueens(3), "-debug", "-s")[0];
+    assertTrue(debug.contains("% absolute differences rewritten: 1 of 3, 0 disequalities"), debug);
+  }
+
+  @Test
+  void absoluteDifferenceRewriteKeepsTheSolutions() throws IOException {
+    // every rewrite is made, also one whose disequalities are in no clique
+    System.setProperty("org.jacop.fz.absoluteDifference", "all");
+    try {
+      randomAbsoluteDifferences();
+    } finally {
+      System.clearProperty("org.jacop.fz.absoluteDifference");
+    }
+  }
+
+  private void randomAbsoluteDifferences() throws IOException {
+    // random x, y with holes, t defined by q * t + p * x - p * y = c in any term order, t and a
+    // with
+    // holes and narrowed bounds: the solutions over x and y are those without the rewrite
+    Random rnd = new Random(20261120);
+    int fired = 0;
+    for (int run = 0; run < 60; run++) {
+      int p = (rnd.nextBoolean() ? 1 : -1) * (1 + rnd.nextInt(2));
+      int q = rnd.nextBoolean() ? p : -p;
+      int c = q * (rnd.nextInt(5) - 2);
+      String[] terms = {"x", "y", "t"};
+      int[] coefficients = {p, -p, q};
+      int r = rnd.nextInt(3);
+      StringBuilder fzn = new StringBuilder();
+      fzn.append("var ").append(randomSet(rnd, 0, 6)).append(": x :: output_var;\n");
+      fzn.append("var ").append(randomSet(rnd, 0, 6)).append(": y :: output_var;\n");
+      fzn.append("var ").append(rnd.nextBoolean() ? "-9..9" : randomSet(rnd, -9, 9));
+      fzn.append(": t :: var_is_introduced;\n");
+      fzn.append("var ")
+          .append(rnd.nextInt(4) == 0 ? "0..9" : randomSet(rnd, 0, 1 + rnd.nextInt(9)));
+      fzn.append(": a :: var_is_introduced;\n");
+      StringJoiner ws = new StringJoiner(",", "[", "]");
+      StringJoiner vs = new StringJoiner(",", "[", "]");
+      for (int k = 0; k < 3; k++) {
+        ws.add(Integer.toString(coefficients[(k + r) % 3]));
+        vs.add(terms[(k + r) % 3]);
+      }
+      fzn.append("constraint int_lin_eq(").append(ws).append(',').append(vs).append(',');
+      fzn.append(c).append(");\n");
+      fzn.append("constraint int_abs(t,a);\nsolve satisfy;\n");
+      String model = fzn.toString();
+      if (run(model, "-debug", "-s")[0].contains("% absolute differences rewritten: 1 of 1,")) {
+        fired++;
+      }
+      Set<String> rewritten = solveAll(model);
+      System.setProperty("org.jacop.fz.absoluteDifference", "false");
+      try {
+        assertEquals(solveAll(model), rewritten, model);
+      } finally {
+        System.setProperty("org.jacop.fz.absoluteDifference", "all");
+      }
+    }
+    assertTrue(fired >= 20, "rewritten in " + fired + " of 60");
+  }
+
+  // a random non-empty subset of lo..hi, as a FlatZinc set
+  private static String randomSet(Random rnd, int lo, int hi) {
+    StringJoiner values = new StringJoiner(",", "{", "}");
+    int added = 0;
+    for (int k = lo; k <= hi; k++) {
+      if (rnd.nextInt(3) > 0 || k == hi && added == 0) {
+        values.add(Integer.toString(k));
+        added++;
+      }
+    }
+    return values.toString();
+  }
+
   /** The pigeon-hole problem as XCSP3 writes it: conflict tables over 0/1, n holes. */
   private static String conflictTableHoles(int pigeons, int n) {
     StringBuilder fzn = new StringBuilder();
@@ -3927,9 +4130,14 @@ class FlatzincFrontEndTest {
 
   @Test
   void lcgFreeSearchReturnsToClausesAfterEachPruningOnSatisfactionModels() throws IOException {
+    // lazy clause generation is under test: the model is not compiled to clauses
+    ClausalOff.run(this::lcgFreeSearchReturnsToClausesAfterEachPruningOnSatisfactionModelsBody);
+  }
+
+  private void lcgFreeSearchReturnsToClausesAfterEachPruningOnSatisfactionModelsBody()
+      throws IOException {
     // the full fixpoint of the store (#317) paid on optimisation models but not on satisfaction
-    // models: nonogram non_fast_3 took 39 to 57 s instead of 4 to 6 s; four values, so the model
-    // is not compiled to clauses (org.jacop.fz.clausal.maxDomain)
+    // models: nonogram non_fast_3 took 39 to 57 s instead of 4 to 6 s
     String model =
         """
         var 1..4: x :: output_var;
@@ -4706,7 +4914,8 @@ class FlatzincFrontEndTest {
   }
 
   @Test
-  void defaultLcgIsLeftOutForFloatModelsAndAllSolutionsOfSatisfactionProblems() throws IOException {
+  void defaultLcgIsLeftOutForFloatModelsAndEnumeratesAllSolutionsOfSatisfactionProblems()
+      throws IOException {
     // LCG on by default must not change how a model it cannot solve is solved: no "--lcg ignored"
     // message, and the Boolean constraints are not turned into clauses
     String floats =
@@ -4733,8 +4942,11 @@ class FlatzincFrontEndTest {
       out = run(sat, "-a");
       assertFalse(out[0].contains("--lcg ignored"), out[0]);
       assertEquals(2, out[0].split("----------", -1).length - 1, out[0]);
-      // asked for, LCG is still reported as ignored
-      assertTrue(run(sat, "-a", "--lcg")[0].contains("--lcg ignored"));
+      // asked for, LCG enumerates the solutions with blocking clauses
+      out = run(sat, "-a", "--lcg");
+      assertFalse(out[0].contains("--lcg ignored"), out[0]);
+      assertEquals(2, out[0].split("----------", -1).length - 1, out[0]);
+      assertTrue(out[0].contains("=========="), out[0]);
     } finally {
       restoreProperty("jacop.lcg", lcg);
     }
