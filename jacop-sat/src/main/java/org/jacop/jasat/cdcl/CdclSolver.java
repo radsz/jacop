@@ -6335,7 +6335,7 @@ public final class CdclSolver {
   }
 
   // per clause reference, bit k set when the clause is in the watch list of its k-th literal
-  private byte[] watchedMarks = new byte[0];
+  private int[] watchedMarks = new int[0];
 
   /**
    * Marks every clause found in the watch list of its first or second literal, in one pass over the
@@ -6343,14 +6343,14 @@ public final class CdclSolver {
    */
   private void markWatched() {
     if (watchedMarks.length < mem.length) {
-      watchedMarks = new byte[mem.length];
+      watchedMarks = new int[mem.length];
     }
     for (int l = 0; l < 2 * numVars; l++) {
       for (int i = 1; i < watches[l][0]; i++) {
         int ref = watchRef(watches[l][i]);
         for (int k = 0; k < 2 && ref + HEADER + k < mem.length; k++) {
           if (mem[ref + HEADER + k] == l) {
-            watchedMarks[ref] |= (byte) (1 << k);
+            watchedMarks[ref] |= 1 << k;
           }
         }
       }
