@@ -9002,6 +9002,48 @@ Version 5.0 (unreleased)
    12-18 s, not in 120 s before). -Dorg.jacop.fz.networkFlow=global
    restores the old posting; rows and both choose one.
 
+505. The FlatZinc front end bounds the cost of a bin packing whose bin loads
+   feed a cost function y = g(load) in a linear row of the objective (the
+   balanced academic curriculum: the squared distance of each period load
+   of a curriculum to its ideal band). The least sum of g over all
+   packings of the items comes from a branch and bound over the items,
+   with bin symmetry classes, and goes into the model as
+   sum(y) = z, z >= minimum, with z in place of the y terms of the row,
+   so that the objective's root bound adds the minima up (the deviation
+   constraint of Schaus, Deville, Dupont and Regin, CPAIOR 2007, and the
+   dispersion constraints of Pesant, INFORMS Journal on Computing 27(4),
+   2015, bound the same sum of a balance cost). The square x * x of a
+   factor of 65 to 512 values now gets the squares as its domain; before,
+   the count of factor pairs went over its limit and left an interval.
+   Wider factors keep the interval: the squares of 1,001 values each made
+   euler_39 search 7 s -> 94 s.
+   MiniZinc Challenge gbac, the 9 reduced instances on which it fires,
+   600 s: -f proved 4 -> 7, total 3,482 -> 1,939 s (2020 UD5 600 -> 80 s,
+   2016 UD10 263 -> 3 s); default search proved 0 -> 4, total 5,401 ->
+   3,705 s, every objective equal or better. The full-size gbac instances
+   are too big for the enumeration (2,000,000 nodes per bin packing) and
+   it does not fire there. -Dorg.jacop.fz.binPackingCost=false turns it
+   off.
+
+506. Lazy clause generation under a fixed search keeps the activity orders
+   of its decisions lazily (VarHeap.setLazy): the bumps, inserts and
+   removals keep only which variables are in the heap, and the heap is
+   rebuilt in linear time when its top is read, which a fixed search does
+   only once the annotation has fixed its variables. A heap whose
+   rebuilds cost more than twice the sifting they saved goes back to the
+   eager order. The search is the same. Wall time for the same work
+   (virtual clock): MiniZinc Challenge sudoku_opt p29 -4.4 %, gfd-schedule
+   n100f7d50m20k10 -2.6 %, wide-quick set default search -0.8 to -1.3 % in
+   three rounds over the 59 of 61 instances with the same search; two
+   search differently, after the annotation, where the order breaks ties
+   of activity otherwise (roster chicroster_dataset_large_20 99 -> 98 in a
+   third less time, hoist PU_2_8_1 +3 %); -f unchanged. -Djacop.jasat.lazyOrder=false and
+   -Djacop.lcg.lazyOrder=false keep the orders eager. -s prints the
+   literals of the learnt clauses as lcgLearntLiterals. LcgSolver also
+   reads the bounds of the root domains, checked for the literal of every
+   atom, from int arrays: the same search, sudoku_opt p29 and
+   gfd-schedule n100 -2.9 % each, wide-quick -f -0.9 %, default -0.2 %.
+
 Version 4.11
 =============
 

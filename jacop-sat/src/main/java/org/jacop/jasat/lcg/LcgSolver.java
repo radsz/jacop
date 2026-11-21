@@ -155,6 +155,11 @@ public final class LcgSolver implements ExternalPropagator {
   // per variable (by trail id): the root domain and the literals created so far (value -> variable)
   private IntVar[] vars = new IntVar[0];
   private IntDomain[] root = new IntDomain[0];
+  // whether the root domain of a variable has values other than 0 and 1, read at every bump
+  private boolean[] wideRoot = new boolean[0];
+  // the bounds of the root domains, read for every atom's literal
+  private int[] rootMin = new int[0];
+  private int[] rootMax = new int[0];
   private final LiteralMap[] ge;
   private final LiteralMap[] eq;
   // the literals of ge linked to their neighbours by binary clauses; the others are transient
@@ -397,6 +402,9 @@ public final class LcgSolver implements ExternalPropagator {
   private final VarHeap wide = new VarHeap();
   // Booleans first unless -Djacop.lcg.booleansFirst=false, which keeps every variable in heap
   private boolean split = !FALSE.equals(System.getProperty("jacop.lcg.booleansFirst"));
+  // a lazy activity order under fixed search, see VarHeap.setLazy
+  private static final boolean LAZY_ORDER =
+      !FALSE.equals(System.getProperty("jacop.lcg.lazyOrder"));
   // whether the runs of activity branching take turns with and without Booleans first
   private boolean booleansFirstTurns;
   // whether the runs of activity branching take those turns only until the first solution, then
@@ -689,18 +697,24 @@ public final class LcgSolver implements ExternalPropagator {
     lateHeap.grow(n, activity);
     late = new boolean[n];
     unused = new boolean[n];
+    wideRoot = new boolean[n];
+    rootMin = new int[n];
+    rootMax = new int[n];
     for (IntVar x : all) {
       int i = trail.id(x);
       vars[i] = x;
       // the trail took the same root domain when it was made: one copy per variable, not two
       IntDomain atTrail = trail.rootDomain(x);
       root[i] = atTrail.eq(x.dom()) ? atTrail : x.dom().cloneLight();
+      rootMin[i] = root[i].min();
+      rootMax[i] = root[i].max();
+      wideRoot[i] = rootMin[i] < 0 || rootMax[i] > 1;
       ge[i] = LiteralMap.NO_LITERALS;
       eq[i] = LiteralMap.NO_LITERALS;
       linked[i] = LiteralMap.NO_LITERALS;
       if (!root[i].singleton()) {
         heapOf(i).insert(i);
-        if (root[i].min() < 0 || root[i].max() > 1) {
+        if (rootMin[i] < 0 || rootMax[i] > 1) {
           wideVariables++;
         } else {
           booleanVariables++;
@@ -2845,7 +2859,7 @@ public final class LcgSolver implements ExternalPropagator {
         continue;
       }
       int value = solution[i];
-      for (int v = root[i].min() + 1; v <= root[i].max(); v++) {
+      for (int v = rootMin[i] + 1; v <= rootMax[i]; v++) {
         lits.add(v <= value ? OpbEncoder.ge(i, v) : "~" + OpbEncoder.ge(i, v));
       }
     }
@@ -2895,7 +2909,7 @@ public final class LcgSolver implements ExternalPropagator {
    */
   private void concludeLowerBound() {
     IntDomain d = proofModelDomains == null ? null : proofModelDomains[objective];
-    long lower = root[objective].min();
+    long lower = rootMin[objective];
     if (coreSearch != null) {
       lower = Math.max(lower, coreSearch.lowerBound);
     }
@@ -2971,7 +2985,7 @@ public final class LcgSolver implements ExternalPropagator {
   private LiteralMap own(LiteralMap[] maps, int i) {
     LiteralMap m = maps[i];
     if (m == LiteralMap.NO_LITERALS) {
-      m = new LiteralMap(root[i].min(), root[i].max());
+      m = new LiteralMap(rootMin[i], rootMax[i]);
       maps[i] = m;
     }
     return m;
@@ -3115,7 +3129,7 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** The literal [x >= v]; 0 stands for a constant, which callers rule out. */
   private int geLit(int i, int v) {
-    if (v <= root[i].min() || v > root[i].max()) {
+    if (v <= rootMin[i] || v > rootMax[i]) {
       throw new IllegalStateException("[" + vars[i].id() + " >= " + v + "] is a constant");
     }
     return geVar(i, v);
@@ -3159,8 +3173,8 @@ public final class LcgSolver implements ExternalPropagator {
   /** Links [x = v] to [x >= v] and [x >= v + 1] by clauses. */
   private void linkEq(int i, int v, int lit) {
     transientLit[lit] = false;
-    boolean atMin = v == root[i].min();
-    boolean atMax = v == root[i].max();
+    boolean atMin = v == rootMin[i];
+    boolean atMax = v == rootMax[i];
     int geV = atMin ? 0 : geVar(i, v);
     int geNext = atMax ? 0 : geVar(i, v + 1);
     if (!atMin) {
@@ -3270,7 +3284,7 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   private int geEntryLit(int i, int v) {
-    if (v <= root[i].min() || v > root[i].max()) {
+    if (v <= rootMin[i] || v > rootMax[i]) {
       throw new IllegalStateException("[" + vars[i].id() + " >= " + v + "] is a constant");
     }
     return geEntryVar(i, v);
@@ -3420,7 +3434,7 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   private boolean isBoolean(int i) {
-    return i >= 0 && i < vars.length && vars[i] != null && root[i].min() == 0 && root[i].max() == 1;
+    return i >= 0 && i < vars.length && vars[i] != null && rootMin[i] == 0 && rootMax[i] == 1;
   }
 
   // whether the store's domains imply an atom already
@@ -4037,12 +4051,12 @@ public final class LcgSolver implements ExternalPropagator {
     sat.setConflictLimit(Math.min(conflictCap, sat.conflicts + BOUND_DIVE_CONFLICTS));
     coreMode = true; // a solution ends the call of the solver without a clause
     try {
-      solve(-geLit(objective, root[objective].min() + 1));
+      solve(-geLit(objective, rootMin[objective] + 1));
     } finally {
       coreMode = false;
       endPhase(deadline);
     }
-    if (best != null && best[objective] <= root[objective].min()) {
+    if (best != null && best[objective] <= rootMin[objective]) {
       boundDiveSolutions++;
       return CdclSolver.SAT;
     }
@@ -4087,8 +4101,8 @@ public final class LcgSolver implements ExternalPropagator {
       if (boundDiveShare > 0
           && coreProbeShare > 0
           && workEnd != Long.MAX_VALUE
-          && coreSearch.lowerBound < root[objective].min()
-          && root[objective].min() < root[objective].max()) {
+          && coreSearch.lowerBound < rootMin[objective]
+          && rootMin[objective] < rootMax[objective]) {
         // the root bound of the objective (from the linear relaxation, say) is above the cores'
         // lower bound: a short search for a solution at that bound goes first, as such a solution
         // is optimal. The cores start below what is already proved: on nfc (Challenge 2022) the
@@ -4125,7 +4139,7 @@ public final class LcgSolver implements ExternalPropagator {
       }
     }
     double share = coreShare;
-    if (CORE_SKIP && workEnd != Long.MAX_VALUE && coreSearch.lowerBound < root[objective].min()) {
+    if (CORE_SKIP && workEnd != Long.MAX_VALUE && coreSearch.lowerBound < rootMin[objective]) {
       // the root bound of the objective (from the linear relaxation, say) is above the cores' lower
       // bound: a trial part of the phase measures how fast the cores raise it, and the rest of the
       // phase runs only if they could reach the root bound at that rate. Below it they prove
@@ -4138,7 +4152,7 @@ public final class LcgSolver implements ExternalPropagator {
         return result;
       }
       share = (1 - CORE_TRIAL) * coreShare / (1 - CORE_TRIAL * coreShare);
-      boolean reach = coreSearch.canReach(root[objective].min(), (long) (share * workLeft()));
+      boolean reach = coreSearch.canReach(rootMin[objective], (long) (share * workLeft()));
       if (!reach) {
         coreSkips++;
         return afterCores();
@@ -4535,7 +4549,7 @@ public final class LcgSolver implements ExternalPropagator {
     int raised = Integer.MIN_VALUE; // the bound the jumps proved, which the root may not show yet
     try {
       while (true) {
-        if (best != null && best[objective] <= root[objective].min()) {
+        if (best != null && best[objective] <= rootMin[objective]) {
           return CdclSolver.SAT;
         }
         if (best == null) {
@@ -5483,6 +5497,12 @@ public final class LcgSolver implements ExternalPropagator {
     if (annotationRun && branching == Branching.ALTERNATE) {
       activityBranching = true;
     }
+    // fixed search reads the activity order only once the annotation has fixed its variables
+    boolean lazy = select != null && !free && LAZY_ORDER;
+    for (VarHeap h : new VarHeap[] {heap, wide, lateHeap}) {
+      h.setLazy(lazy);
+    }
+    sat.setLazyOrder(select != null && !free);
     applyAnnotationChrono();
   }
 
@@ -5557,11 +5577,11 @@ public final class LcgSolver implements ExternalPropagator {
     for (int sign = 1; sign >= -1; sign -= 2) {
       for (IntVar x : sign > 0 ? positive : negative) {
         int i = trail.id(x);
-        if (root[i].min() < 0 || root[i].max() > 1) {
+        if (rootMin[i] < 0 || rootMax[i] > 1) {
           throw new IllegalArgumentException(x + " is not a 0/1 variable");
         }
         if (root[i].singleton()) {
-          if (root[i].min() == (sign > 0 ? 1 : 0)) {
+          if (rootMin[i] == (sign > 0 ? 1 : 0)) {
             return; // satisfied at the root
           }
           continue; // false at the root
@@ -7971,8 +7991,8 @@ public final class LcgSolver implements ExternalPropagator {
         return 0; // a hole inside the interval
       }
     }
-    int min = root[i].min();
-    int max = root[i].max();
+    int min = rootMin[i];
+    int max = rootMax[i];
     if (lo > hi || lo <= min && hi >= max) {
       return 0;
     }
@@ -8074,7 +8094,7 @@ public final class LcgSolver implements ExternalPropagator {
       return;
     }
     int v = s[objective];
-    if (v < root[objective].min() || v > root[objective].max()) {
+    if (v < rootMin[objective] || v > rootMax[objective]) {
       return;
     }
     best = s;
@@ -8087,7 +8107,7 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** Adds the bound of the solution given by {@link #setIncumbent}, as {@link #checkModel} does. */
   private void boundIncumbent() {
-    if (best == null || best[objective] <= root[objective].min()) {
+    if (best == null || best[objective] <= rootMin[objective]) {
       return;
     }
     // the literal first, so that its linking clauses come before the bound
@@ -8225,8 +8245,8 @@ public final class LcgSolver implements ExternalPropagator {
         if (n != null) {
           sharedId[i] = pool.id(n);
           top = Math.max(top, sharedId[i]);
-          publishedMin[i] = root[i].min();
-          publishedMax[i] = root[i].max();
+          publishedMin[i] = rootMin[i];
+          publishedMax[i] = rootMax[i];
         }
       }
     }
@@ -8586,10 +8606,10 @@ public final class LcgSolver implements ExternalPropagator {
       return;
     }
     importedBound = localShared;
-    if (localShared <= root[objective].min()) {
+    if (localShared <= rootMin[objective]) {
       sharedBoundUnreachable = true;
       sat.cancel();
-    } else if (localShared <= root[objective].max()) {
+    } else if (localShared <= rootMax[objective]) {
       // the literal first, so that its linking clauses come before the bound
       int lit = geLit(objective, localShared);
       structural.add(new int[] {-lit}); // objective <= shared - 1
@@ -9403,7 +9423,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (late[i]) {
       return lateHeap;
     }
-    return split && (root[i].min() < 0 || root[i].max() > 1) ? wide : heap;
+    return split && wideRoot[i] ? wide : heap;
   }
 
   // takes the fixed variables off the top of a heap, to be put back on backtracking
@@ -9681,7 +9701,7 @@ public final class LcgSolver implements ExternalPropagator {
       }
     }
     int v = solution[objective];
-    if (v <= root[objective].min()) {
+    if (v <= rootMin[objective]) {
       return true;
     }
     // the literal first, so that its linking clauses come before the bound

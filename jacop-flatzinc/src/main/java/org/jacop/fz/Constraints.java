@@ -56,6 +56,7 @@ import org.jacop.fz.constraints.AlldifferentDetector;
 import org.jacop.fz.constraints.AntichainDetector;
 import org.jacop.fz.constraints.ArgMaxFunctionDetector;
 import org.jacop.fz.constraints.BalanceDetector;
+import org.jacop.fz.constraints.BinPackingCostBound;
 import org.jacop.fz.constraints.CardinalityDetector;
 import org.jacop.fz.constraints.CircuitCostDetector;
 import org.jacop.fz.constraints.ClampedBounds;
@@ -555,6 +556,12 @@ public class Constraints implements ParserTreeConstants {
           dictionary.removeFromDefaultSearch(productOfSums.removed());
           dictionary.unusedVariables.addAll(productOfSums.removed());
         }
+      }
+
+      // the load costs of each bin packing that a linear constraint sums become a variable bounded
+      // by their smallest sum over the bin packing alone; --proof does not encode the bound
+      if (BinPackingCostBound.enabled() && options.proof() == null) {
+        new BinPackingCostBound(support, zeroSumNodes).detect(astTree);
       }
 
       // common sub-sums of linear constraints become variables, not of the rows zero-sum detection
