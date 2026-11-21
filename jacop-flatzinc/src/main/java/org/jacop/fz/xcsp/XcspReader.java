@@ -911,7 +911,7 @@ public final class XcspReader {
   private void post(Lin value, Condition c) {
     if (c.op.equals("in") || c.op.equals("notin")) {
       Expr s = c.operand;
-      Lit l = ec.lit(Expr.op(c.op, Expr.of(m.var(value)), s.kind == Expr.Kind.RANGE ? s : s));
+      Lit l = ec.lit(Expr.op(c.op, Expr.of(m.var(value)), s));
       if (value.isVariable() && (s.kind == Expr.Kind.RANGE || s.isOp("set"))) {
         ec.post(Expr.op(c.op, Expr.of(value.v[0]), s));
         return;
@@ -1603,7 +1603,7 @@ public final class XcspReader {
         long[] hi = new long[v.length];
         for (int i = 0; i < v.length; i++) {
           Expr o = occurs.get(i);
-          lo[i] = o.kind == Expr.Kind.RANGE ? o.value : o.value;
+          lo[i] = o.value;
           hi[i] = o.kind == Expr.Kind.RANGE ? o.value2 : o.value;
         }
         m.constraint(
@@ -1734,8 +1734,8 @@ public final class XcspReader {
       // flat index (i - startRow) * cols + (j - startCol), with each index in its range
       FznVar i = ec.var(idx.get(0));
       FznVar j = ec.var(idx.get(1));
-      m.restrict(i, Dom.range(startRow, startRow + rows.size() - 1));
-      m.restrict(j, Dom.range(startCol, startCol + cols - 1));
+      m.restrict(i, Dom.range(startRow, (long) startRow + rows.size() - 1));
+      m.restrict(j, Dom.range(startCol, (long) startCol + cols - 1));
       if (allConstant(flat) && (long) i.dom.size() * j.dom.size() <= TABLE_ELEMENT_LIMIT) {
         // a constant matrix is a table on (i, j, value), domain consistent as MiniZinc posts it
         matrixTable(flat, cols, i, startRow, j, startCol, v, cond);
@@ -1833,7 +1833,7 @@ public final class XcspReader {
   }
 
   private void elementPost(List<Expr> xs, FznVar i, int start, Expr v, Condition cond) {
-    m.restrict(i, Dom.range(start, start + xs.size() - 1));
+    m.restrict(i, Dom.range(start, (long) start + xs.size() - 1));
     FznVar result;
     if (v != null && v.kind == Expr.Kind.VAR && !v.var.bool) {
       result = v.var;
@@ -1851,7 +1851,7 @@ public final class XcspReader {
     if (allConstant(xs)) {
       // array_int_element is 1-based: the index is shifted
       Lin shifted = Lin.of(i);
-      shifted.c = 1 - start;
+      shifted.c = 1L - start;
       FznVar s = m.var(shifted);
       m.constraint(
           "array_int_element(" + s.name + "," + array(xs) + "," + result.name + ")",
@@ -1891,7 +1891,7 @@ public final class XcspReader {
       // x[i] = 1 iff v = i (x 0/1)
       Expr v = items(value.text.toString(), args, rest).get(0);
       FznVar vv = ec.var(v);
-      m.restrict(vv, Dom.range(sx, sx + x.size() - 1));
+      m.restrict(vv, Dom.range(sx, (long) sx + x.size() - 1));
       List<String> bs = new ArrayList<>();
       for (Expr b : x) {
         bs.add(m.boolAtom(ec.lit(b)));
@@ -1921,16 +1921,16 @@ public final class XcspReader {
     // x[i] = j -> y[j] = i, with x shorter than y
     for (int i = 0; i < x.size(); i++) {
       FznVar xi = ec.var(x.get(i));
-      elementPost(y, xi, sy, Expr.of(i + sx), null);
+      elementPost(y, xi, sy, Expr.of((long) i + sx), null);
     }
   }
 
   private void inverse(List<Expr> x, int sx, List<Expr> y, int sy) {
     for (Expr e : x) {
-      m.restrict(ec.var(e), Dom.range(sy, sy + y.size() - 1));
+      m.restrict(ec.var(e), Dom.range(sy, (long) sy + y.size() - 1));
     }
     for (Expr e : y) {
-      m.restrict(ec.var(e), Dom.range(sx, sx + x.size() - 1));
+      m.restrict(ec.var(e), Dom.range(sx, (long) sx + x.size() - 1));
     }
     m.constraint("jacop_assignment(" + array(x) + "," + array(y) + "," + sx + "," + sy + ")");
   }
@@ -2090,21 +2090,21 @@ public final class XcspReader {
     List<FznVar> vs = new ArrayList<>();
     for (Expr x : xs) {
       FznVar v = ec.var(x);
-      m.restrict(v, Dom.range(start, start + n - 1));
+      m.restrict(v, Dom.range(start, (long) start + n - 1));
       vs.add(v);
     }
     // subcircuit with 1-based successors
     List<String> shifted = new ArrayList<>();
     for (FznVar v : vs) {
       Lin s = Lin.of(v);
-      s.c = 1 - start;
+      s.c = 1L - start;
       shifted.add(m.intAtom(s));
     }
     m.constraint("jacop_subcircuit(" + FznModel.list(shifted) + ")");
     // the number of non-loops: at least 2 (XCSP3 circuit has at least one cycle), or the size
     Lin loops = new Lin();
     for (int i = 0; i < n; i++) {
-      loops.add(m.lin(m.valueLit(vs.get(i), i + start).not()), 1);
+      loops.add(m.lin(m.valueLit(vs.get(i), (long) i + start).not()), 1);
     }
     if (size == null) {
       m.post("ge", ExprCompiler.diff(loops, Lin.constant(2)));
@@ -2450,7 +2450,7 @@ public final class XcspReader {
     }
     if (loads != null) {
       for (Expr x : xs) {
-        m.restrict(ec.var(x), Dom.range(0, loads.size() - 1));
+        m.restrict(ec.var(x), Dom.range(0, loads.size() - 1L));
       }
       m.constraint(
           "jacop_bin_packing(" + array(xs) + "," + array(loads) + "," + ints(sizes) + ",0)");
@@ -2458,7 +2458,7 @@ public final class XcspReader {
     }
     if (limits != null) {
       for (Expr x : xs) {
-        m.restrict(ec.var(x), Dom.range(0, limits.size() - 1));
+        m.restrict(ec.var(x), Dom.range(0, limits.size() - 1L));
       }
       if (allConstant(limits)) {
         m.constraint(

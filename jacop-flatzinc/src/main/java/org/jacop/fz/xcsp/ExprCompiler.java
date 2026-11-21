@@ -202,8 +202,9 @@ final class ExprCompiler {
     };
     long lo = Math.min(Math.min(c[0], c[1]), Math.min(c[2], c[3]));
     long hi = Math.max(Math.max(c[0], c[1]), Math.max(c[2], c[3]));
-    String a1 = ax.compareTo(ay) <= 0 ? ax : ay;
-    String a2 = a1 == ax ? ay : ax;
+    boolean xFirst = ax.compareTo(ay) <= 0;
+    String a1 = xFirst ? ax : ay;
+    String a2 = xFirst ? ay : ax;
     return define("times:" + a1 + "," + a2, "int_times(" + a1 + "," + a2 + ",@R)", lo, hi, target);
   }
 

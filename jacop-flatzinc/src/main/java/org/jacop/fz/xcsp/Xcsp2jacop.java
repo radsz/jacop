@@ -85,6 +85,7 @@ public final class Xcsp2jacop {
                   Thread.sleep(wait);
                 }
               } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 return;
               }
               XcspOutput f = current;
@@ -252,11 +253,27 @@ public final class Xcsp2jacop {
     }
   }
 
+  // the xz program: the property org.jacop.fz.xcsp.xz, else the first of the fixed system paths
+  private static String xz() throws IOException {
+    String given = System.getProperty("org.jacop.fz.xcsp.xz");
+    if (given != null) {
+      return given;
+    }
+    for (String p :
+        new String[] {"/usr/bin/xz", "/bin/xz", "/usr/local/bin/xz", "/opt/homebrew/bin/xz"}) {
+      if (Files.isExecutable(Path.of(p))) {
+        return p;
+      }
+    }
+    throw new IOException(
+        "xz not found in /usr/bin, /bin, /usr/local/bin or /opt/homebrew/bin; set -Dorg.jacop.fz.xcsp.xz");
+  }
+
   // the instance, uncompressed by xz when its name ends with .lzma or .xz
   private static InputStream open(String file) throws IOException {
     if (file.endsWith(".lzma") || file.endsWith(".xz")) {
       Process p =
-          new ProcessBuilder("xz", "-dc", file)
+          new ProcessBuilder(xz(), "-dc", file)
               .redirectError(ProcessBuilder.Redirect.INHERIT)
               .start();
       return new BufferedInputStream(p.getInputStream(), 1 << 16);

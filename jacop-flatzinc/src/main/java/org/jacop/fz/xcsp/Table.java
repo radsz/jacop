@@ -94,7 +94,7 @@ final class Table {
 
   private void push(int v) {
     if (size == cells.length) {
-      cells = Arrays.copyOf(cells, Math.max(16, (int) Math.min(Integer.MAX_VALUE - 8, 2L * size)));
+      cells = Arrays.copyOf(cells, Math.max(16, (int) Math.min(Integer.MAX_VALUE - 8L, 2L * size)));
     }
     cells[size++] = v;
     hash = 31 * hash + v;
