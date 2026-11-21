@@ -385,7 +385,6 @@ final class ExprCompiler {
 
   // ------------------------------------------------------------------ Booleans
 
-  /** The literal of a Boolean expression (an integer one is true when not 0). */
   /**
    * The 0/1 form of e where only e being true matters (a term of a sum bounded below with a
    * positive coefficient): an integer comparison is half reified. Other expressions as {@link
@@ -438,6 +437,7 @@ final class ExprCompiler {
     return lit(e);
   }
 
+  /** The literal of a Boolean expression (an integer one is true when not 0). */
   Lit lit(Expr e) {
     switch (e.kind) {
       case INT:

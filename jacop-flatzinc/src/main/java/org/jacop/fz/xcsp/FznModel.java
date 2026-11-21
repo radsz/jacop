@@ -1054,13 +1054,13 @@ final class FznModel {
     }
   }
 
-  /** Names of output variables, set by the reader. */
   /**
    * True once a domain was cut to JaCoP's integer range [{@link #MIN}, {@link #MAX}]: the model
    * then may have lost solutions, so unsatisfiability and optimality are not proved.
    */
   boolean clipped;
 
+  /** Names of output variables, set by the reader. */
   final java.util.Set<FznVar> outputVars = new java.util.HashSet<>();
 
   private void declare(Writer w, FznVar x) throws IOException {
