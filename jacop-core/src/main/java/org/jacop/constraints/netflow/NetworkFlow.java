@@ -580,7 +580,11 @@ public class NetworkFlow extends Constraint
   public void removeLevelLate(int level) {
 
     if (level <= imposedAt) {
-      // the constraint went with the level of its imposition
+      // the constraint went with the level of its imposition: the changes made at that level go
+      // too, so that the same object imposed again starts from its whole network
+      if (imposedAt != Integer.MAX_VALUE) {
+        network.backtrackAll();
+      }
       imposedAt = Integer.MAX_VALUE;
       return;
     }

@@ -12744,4 +12744,45 @@ class SingleConstraintTest extends TestHelper {
       }
     }
   }
+
+  /**
+   * NetworkFlow imposed above the root ignored the removal of the level of its imposition, so the
+   * arcs its propagation deleted and modified at that level stayed out of the network: imposed
+   * again at the root, a soft all different lost the solutions that used them.
+   */
+  @Test
+  void networkFlowImposedAgainBelowItsLevelStartsFromItsWholeNetwork() {
+    Store store = new Store();
+    IntervalDomain gap = new IntervalDomain(0, 1);
+    gap.unionAdapt(3, 3);
+    IntervalDomain costs = new IntervalDomain(1, 1);
+    costs.unionAdapt(3, 4);
+    costs.unionAdapt(6, 6);
+    IntVar[] x = {
+      new IntVar(store, "x0", gap.cloneLight()),
+      new IntVar(store, "x1", 0, 3),
+      new IntVar(store, "x2", 2, 3),
+      new IntVar(store, "x3", gap.cloneLight())
+    };
+    IntVar cost = new IntVar(store, "cost", costs);
+    List<Constraint> network =
+        new SoftAlldifferent(x, cost, ViolationMeasure.DECOMPOSITION_BASED).decompose(store);
+    store.setLevel(1);
+    for (Constraint c : network) {
+      store.impose(c);
+    }
+    cost.domain.in(1, cost, 6, 6);
+    x[3].domain.in(1, x[3], 1, 3);
+    x[0].domain.in(1, x[0], 1, 1);
+    store.consistency();
+    backToRoot(store);
+    for (Constraint c : network) {
+      store.impose(c);
+    }
+    cost.domain.in(0, cost, 1, 1);
+    x[3].domain.in(0, x[3], 0, 0);
+    assertThat(store.consistency()).isTrue();
+    // x3 = 0 and exactly one pair of equal values
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(15);
+  }
 }

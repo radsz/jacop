@@ -301,6 +301,25 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     }
   }
 
+  /**
+   * Restores every arc deleted or modified since the network was initialized, when the level at
+   * which its constraint was imposed is removed: the time stamps of the sizes have no value below
+   * that level, and the network must be whole for a later imposition of the same constraint.
+   */
+  public void backtrackAll() {
+    lastModifiedArcs.clear();
+    for (int i = deletedArcs.size() - 1; i >= 0; i--) {
+      add(deletedArcs.remove(i));
+    }
+    for (int i = modifiedArcs.size() - 1; i >= 0; i--) {
+      restore(modifiedArcs.remove(i));
+    }
+    for (int i = lateArcs.size() - 1; i >= 0; i--) {
+      lateArcLevels.remove(i);
+      restore(lateArcs.remove(i));
+    }
+  }
+
   // restores an arc that was modified
   private void restore(ArcCompanion companion) {
 
