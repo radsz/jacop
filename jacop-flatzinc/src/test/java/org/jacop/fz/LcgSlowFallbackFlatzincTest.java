@@ -143,11 +143,14 @@ class LcgSlowFallbackFlatzincTest {
   @Test
   void optimumProvedAcrossOptimisationSlices() throws IOException {
     // LCG gives way with a solution at its speed check, free search without learning runs in
-    // slices of a store level the solver lends, and LCG gets the search back under the best cost
+    // slices of a store level the solver lends, and LCG gets the search back under the best cost.
+    // The core-guided phase is off: a core found since the last speed check keeps a slow LCG, and
+    // whether one falls between two checks depends on the timing.
     String out =
         run(
             golomb(),
-            "lcg-slow-rate=1000000000,lcg-slow-at=0.01,lcg-slow-stall=0,maxsat=0,lcg-cop-slices=1");
+            "lcg-slow-rate=1000000000,lcg-slow-at=0.01,lcg-slow-stall=0,maxsat=0,lcg-core=0,"
+                + "lcg-cop-slices=1");
     Matcher slices = Pattern.compile("lcgCopSlices=(\\d+)").matcher(out);
     assertTrue(slices.find(), out);
     assertTrue(Long.parseLong(slices.group(1)) >= 1, out);
