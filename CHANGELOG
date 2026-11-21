@@ -8717,6 +8717,21 @@ Version 5.0 (unreleased)
    fome12 111 -> 60 s, sgpf5y6 62 -> 30 s.
    -Dorg.jacop.jalp.presolveAggregate=false turns it off.
 
+488. The FlatZinc front end skips a model rewriting pass when the model has
+   none of the constraints it rewrites (cyclic distance, min of sums,
+   product of sums, weighted completion, giant tour, table variable
+   elimination, index function, index disjunction, numbered path, partial
+   copy, set union): one scan of the constraint names instead of a pass
+   over the model each. The pair cliques and the distance of the linear
+   relaxation use primitive hash sets and arrays instead of boxed maps,
+   and affine folding builds its occurrence map only when it has a
+   definition. On 29 MaxSAT Evaluation 2021 models with the slowest
+   set-up, the set-up at 600 s takes 1,083 s instead of 2,239 s in all
+   (protein p1 315 -> 44 s, ar-2 108 -> 65 s), and two rna-alignment
+   models now find a solution. Wide-quick set at 240 s: the same 46
+   instances solved, total time 4,007 -> 3,987 s.
+   -Dorg.jacop.fz.detectorGates=false runs every pass as before.
+
 Version 4.11
 =============
 
