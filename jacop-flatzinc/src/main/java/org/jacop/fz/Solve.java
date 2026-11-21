@@ -2279,6 +2279,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       run_single_search(solveKind, kind, onRestartRestarts ? si : null);
       return;
     }
+    if (PRIORITY_SEARCH.equals(searchType) && si.vars().length == 0) {
+      // a priority search over no variable has nothing to search
+      run_single_search(solveKind, kind, null);
+      return;
+    }
     if (INT_SEARCH.equals(searchType)
         || SET_SEARCH.equals(searchType)
         || BOOL_SEARCH.equals(searchType)

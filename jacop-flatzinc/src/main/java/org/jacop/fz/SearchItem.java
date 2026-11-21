@@ -489,6 +489,8 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         }
       }
       return kept;
+    } else if (isEmptyArray(body)) {
+      return new boolean[0];
     } else {
       throw new RuntimeException(
           "Error: Non vector definitionion in seq_search; execution aborted");
@@ -1211,6 +1213,17 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /** Whether an annotation argument is the empty array literal []. */
+  private static boolean isEmptyArray(SimpleNode node) {
+    if (!Objects.equals(((ASTAnnotation) node).getAnnId(), ANN_EXPR)) {
+      return false;
+    }
+    Node m = node.jjtGetChild(0);
+    return m.jjtGetNumChildren() == 1
+        && m.jjtGetChild(0) instanceof ASTArrayLiteral
+        && m.jjtGetChild(0).jjtGetNumChildren() == 0;
+  }
+
   /**
    * Retrieves an array of float variables from a parse tree node.
    *
@@ -1229,6 +1242,8 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         aa[i] = el;
       }
       return aa;
+    } else if (isEmptyArray(node)) {
+      return new FloatVar[0];
     } else if (Objects.equals(((ASTAnnotation) node).getAnnId(), ANN_EXPR)) {
       SimpleNode n = (SimpleNode) node.jjtGetChild(0).jjtGetChild(0);
       if (((ASTScalarFlatExpr) n).getType() == 2) { // ident
@@ -1283,6 +1298,8 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         }
       }
       return aa;
+    } else if (isEmptyArray(node)) {
+      return new SetVar[0];
     } else if (Objects.equals(((ASTAnnotation) node).getAnnId(), ANN_EXPR)) {
       SimpleNode n = (SimpleNode) node.jjtGetChild(0).jjtGetChild(0);
       if (((ASTScalarFlatExpr) n).getType() == 2) { // ident

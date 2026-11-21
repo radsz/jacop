@@ -6836,4 +6836,29 @@ class FlatzincFrontEndTest {
       assertTrue(out.endsWith("z = 8;\n----------\n==========\n"), out);
     }
   }
+
+  @Test
+  void emptySearchArraysSearchNothing() throws IOException {
+    // MiniZinc may write a search over no variable or a sequence of no search; seq_search([]),
+    // priority_search over [] and set_search or float_search over [] threw an exception
+    String model =
+        "var 1..3: x :: output_var;\n"
+            + "var 1..3: y :: output_var;\n"
+            + "constraint int_lt(x, y);\n"
+            + "solve :: %s satisfy;\n";
+    for (String ann :
+        new String[] {
+          "seq_search([])",
+          "seq_search([seq_search([]), int_search([y], input_order, indomain_max, complete)])",
+          "priority_search([], [], input_order, complete)",
+          "set_search([], input_order, indomain_min, complete)",
+          "float_search([], 0.1, input_order, indomain_split, complete)",
+          "seq_search([float_search([], 0.1, input_order, indomain_split, complete),"
+              + " int_search([x, y], input_order, indomain_min, complete)])"
+        }) {
+      String out = run(String.format(model, ann), "-a")[0];
+      assertEquals(3, out.split("----------", -1).length - 1, ann + "\n" + out);
+      assertTrue(out.contains("=========="), ann + "\n" + out);
+    }
+  }
 }
