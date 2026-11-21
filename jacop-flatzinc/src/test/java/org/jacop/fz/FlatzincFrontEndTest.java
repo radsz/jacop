@@ -6631,6 +6631,12 @@ class FlatzincFrontEndTest {
       super(args);
     }
 
+    // every check reads the clock, so the counts do not depend on the sampling of the set-up
+    @Override
+    public int timeOutCheckStride() {
+      return 1;
+    }
+
     @Override
     public boolean timeOutPassed() {
       if (!armed) {
