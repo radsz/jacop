@@ -918,13 +918,16 @@ public class Support implements ParserTreeConstants {
    * @throws ModelTimeOut when it has passed
    */
   void checkTimeOut() {
-    // the clock is read at the first and every 64th call after it, and stays passed once it is: the
+    // the clock is read at the first and every 64th call after it (Options.timeOutCheckStride), and
+    // stays passed once it is: the
     // detectors call this for each constraint they read, 160 million times (2 s) on the 3.9
     // million clauses of MaxSAT 2021 haplotyping-pedigrees
     if (options == null) {
       return;
     }
-    if (timedOut != options && (timeOutChecks++ & 63) == 0 && options.timeOutPassed()) {
+    if (timedOut != options
+        && (timeOutChecks++ & (options.timeOutCheckStride() - 1)) == 0
+        && options.timeOutPassed()) {
       timedOut = options;
     }
     if (timedOut == options) {
