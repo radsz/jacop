@@ -1484,4 +1484,16 @@ class CdclSolverTest {
           cnf);
     }
   }
+
+  @Test
+  void dimacsHeaderOfAnotherFormatIsRejected() {
+    // a WCNF file read as CNF took its weights for literals and answered SATISFIABLE
+    String wcnf = "p wcnf 2 2 10\n10 1 0\n3 -1 0\n";
+    assertThrows(
+        IOException.class,
+        () ->
+            DimacsReader.read(
+                new ByteArrayInputStream(wcnf.getBytes(StandardCharsets.US_ASCII)),
+                new CdclSolver()));
+  }
 }

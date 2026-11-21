@@ -109,6 +109,9 @@ public final class DimacsReader {
             c = next();
           }
           String[] f = header.toString().trim().split("\\s+");
+          if (f.length >= 2 && !f[1].equalsIgnoreCase("cnf")) {
+            throw new IOException("not a CNF header: " + header.toString().trim());
+          }
           if (f.length >= 3) {
             try {
               solver.ensureVars(Integer.parseInt(f[2]));
