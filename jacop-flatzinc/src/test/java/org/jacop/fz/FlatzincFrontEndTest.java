@@ -6412,4 +6412,29 @@ class FlatzincFrontEndTest {
     String[] out = run(model, "-v", "--lcg", "on", "--restart", "luby", "-t", "5000");
     assertTrue(out[0].contains("y = 2;") && out[0].contains("=========="), out[0] + out[1]);
   }
+
+  @Test
+  void objectivePresolveKeepsTheExactlyOneSetDefiningTheObjective() throws IOException {
+    // x + y + z = 1 was read as the definition of the objective x and as an exactly-one set; the
+    // shift by that set gave the equation x = x, which replaced the definition: x = y = z = 0
+    for (String sense : new String[] {"minimize", "maximize"}) {
+      String model =
+          "var 0..1: x :: output_var;\n"
+              + "var 0..1: y :: output_var;\n"
+              + "var 0..1: z :: output_var;\n"
+              + "constraint int_lin_eq([1,1,1],[x,y,z],1);\n"
+              + "solve "
+              + sense
+              + " x;\n";
+      String[] out = run(model);
+      int ones = 0;
+      for (String v : new String[] {"x", "y", "z"}) {
+        if (out[0].contains(v + " = 1;")) {
+          ones++;
+        }
+      }
+      assertEquals(1, ones, out[0] + out[1]);
+      assertTrue(out[0].contains("x = " + (sense.equals("minimize") ? 0 : 1) + ";"), out[0]);
+    }
+  }
 }
