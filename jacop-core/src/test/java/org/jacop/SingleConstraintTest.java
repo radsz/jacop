@@ -121,6 +121,7 @@ import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.InterDistance;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LexChain;
+import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
@@ -12392,5 +12393,35 @@ class SingleConstraintTest extends TestHelper {
       assertThat(store.consistency()).as("imposed again at level " + level).isTrue();
       assertThat(noOfAllSolutions(store, b)).as("imposed again at level " + level).isEqualTo(1);
     }
+  }
+
+  /**
+   * LexOrder imposed again after its removal at the root (LcgSolver.release, with the constraint as
+   * clauses) did not run the work of its first consistency call again, which sets the positions it
+   * compares, and never compared its vectors: 192 solutions for 84.
+   */
+  @Test
+  void lexOrderImposedAgainStartsFromItsFirstConsistency() {
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 3), new IntVar(store, "x1", 1, 3)};
+    IntVar[] y = {new IntVar(store, "y0", 0, 3), new IntVar(store, "y1", 0, 3)};
+    LexOrder lex = new LexOrder(x, y, true);
+    store.impose(lex);
+    assertThat(store.consistency()).isTrue();
+    lex.removeConstraint();
+    store.clearEntailed(lex);
+    store.impose(lex);
+    assertThat(store.consistency()).isTrue();
+    int expected = 0;
+    for (int a = 0; a <= 3; a++) {
+      for (int b = 1; b <= 3; b++) {
+        for (int c = 0; c <= 3; c++) {
+          for (int d = 0; d <= 3; d++) {
+            expected += a < c || a == c && b < d ? 1 : 0;
+          }
+        }
+      }
+    }
+    assertThat(noOfAllSolutions(store, x, y)).isEqualTo(expected);
   }
 }

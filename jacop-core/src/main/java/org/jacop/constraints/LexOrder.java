@@ -100,7 +100,7 @@ public class LexOrder extends Constraint
   boolean satisfied;
 
   /** One-time work of the first consistency call. */
-  final InitOnce init = new InitOnce();
+  InitOnce init = new InitOnce();
 
   /** Positions queued for the next round, in the order they were first queued. */
   private int[] indexQueue;
@@ -183,15 +183,20 @@ public class LexOrder extends Constraint
   public void impose(Store store) {
 
     this.store = store;
+    // a second imposition starts as the first, from its first consistency call
+    init = new InitOnce();
 
     alpha = new TimeStampInt(store, 0);
     beta = new TimeStampInt(store, 0);
 
-    for (int i = 0; i < n; i++) {
-      addPosition(x[i], i);
-    }
-    for (int i = 0; i < n; i++) {
-      addPosition(y[i], i);
+    if (varToIndex.size() == 0) {
+      // the positions of a second imposition are those of the first
+      for (int i = 0; i < n; i++) {
+        addPosition(x[i], i);
+      }
+      for (int i = 0; i < n; i++) {
+        addPosition(y[i], i);
+      }
     }
 
     indexQueue = new int[n];
