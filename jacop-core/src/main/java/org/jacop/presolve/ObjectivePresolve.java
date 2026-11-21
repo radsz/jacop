@@ -139,6 +139,10 @@ public final class ObjectivePresolve implements Rule {
   private final List<Equation> equations = new ArrayList<>();
   private final Map<IntVar, Equation> definitions = new IdentityHashMap<>();
   private final List<IntVar[]> exactlyOnes = new ArrayList<>();
+  // the equation each exactly-one set of exactlyOnes comes from
+  private final Map<IntVar[], Equation> exactlyOneEquations = new IdentityHashMap<>();
+  // the equation defining the objective in the current reformulation, which the caller may drop
+  private Equation definition;
   private final Map<IntVar, Map<Integer, IntVar>> encodings = new LinkedHashMap<>();
   private final List<Count> counts = new ArrayList<>();
   private final List<Element> elements = new ArrayList<>();
@@ -234,7 +238,9 @@ public final class ObjectivePresolve implements Rule {
         unit = coefs[i] == rhs && vars[i].min() >= 0 && vars[i].max() <= 1;
       }
       if (unit) {
-        exactlyOnes.add(vars.clone());
+        IntVar[] set = vars.clone();
+        exactlyOnes.add(set);
+        exactlyOneEquations.put(set, e);
       }
     }
   }
@@ -473,7 +479,7 @@ public final class ObjectivePresolve implements Rule {
     addCountEquations();
     addElementEquations();
     addOrEquations();
-    Equation definition = objectiveDefinition();
+    definition = objectiveDefinition();
     if (definition == null) {
       return null;
     }
@@ -652,7 +658,7 @@ public final class ObjectivePresolve implements Rule {
     }
     Map<IntVar, List<Integer>> atMostOneOf = new IdentityHashMap<>();
     List<IntVar[]> sets = new ArrayList<>(atMostOnes);
-    sets.addAll(exactlyOnes);
+    sets.addAll(exactlyOnesBesideDefinition());
     for (int g = 0; g < sets.size(); g++) {
       for (IntVar b : sets.get(g)) {
         List<Integer> groups = atMostOneOf.computeIfAbsent(b, k -> new ArrayList<>());
@@ -966,9 +972,23 @@ public final class ObjectivePresolve implements Rule {
     return null;
   }
 
+  /**
+   * The explicit exactly-one sets but that of the objective's defining equation: the caller may
+   * replace that equation by the reformulated one, which then must not rest on it.
+   */
+  private List<IntVar[]> exactlyOnesBesideDefinition() {
+    List<IntVar[]> sets = new ArrayList<>();
+    for (IntVar[] set : exactlyOnes) {
+      if (exactlyOneEquations.get(set) != definition) {
+        sets.add(set);
+      }
+    }
+    return sets;
+  }
+
   /** The explicit exactly-one sets, then the value literals of variables encoded on all values. */
   private List<IntVar[]> exactlyOneSets() {
-    List<IntVar[]> sets = new ArrayList<>(exactlyOnes);
+    List<IntVar[]> sets = exactlyOnesBesideDefinition();
     for (Map.Entry<IntVar, Map<Integer, IntVar>> e : encodings.entrySet()) {
       IntVar[] literals = literals(e.getKey(), e.getValue());
       if (literals.length > 0) {
