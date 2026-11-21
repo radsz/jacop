@@ -7420,4 +7420,17 @@ class FlatzincFrontEndTest {
         "x = 1;\n----------\n==========\n",
         run("var 1..3: x :: output_var;\nint: c = 2;\nsolve minimize c;\n")[0]);
   }
+
+  @Test
+  void anUndefinedSymbolIsAnErrorOfTheModel() throws IOException {
+    // an undeclared y threw a RuntimeException out of the run, a stack trace on the command line,
+    // where -p 2 printed a message
+    String model = "var 1..3: x :: output_var;\nconstraint int_le(x, y);\nsolve satisfy;\n";
+    for (String[] options : new String[][] {{}, {"-p", "2"}}) {
+      String[] out = run(model, options);
+      assertEquals("", out[0], Arrays.toString(options));
+      assertTrue(out[1].contains("%% Error: Symbol \"y\""), out[1]);
+      assertEquals(1, lastStatus);
+    }
+  }
 }

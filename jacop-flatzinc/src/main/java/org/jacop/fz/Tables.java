@@ -1010,7 +1010,7 @@ public class Tables {
     if (iVal != null) {
       return iVal;
     } else {
-      throw new RuntimeException(
+      throw new IllegalArgumentException(
           "Symbol \"" + ident + "\" does not have assigned value when refered; execution aborted");
     }
   }
@@ -1046,7 +1046,7 @@ public class Tables {
     if (dVal != null) {
       return dVal;
     } else {
-      throw new RuntimeException(
+      throw new IllegalArgumentException(
           "Symbol \"" + ident + "\" does not have assigned value when refered; execution aborted");
     }
   }
