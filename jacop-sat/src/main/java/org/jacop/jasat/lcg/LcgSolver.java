@@ -154,6 +154,8 @@ public final class LcgSolver implements ExternalPropagator {
   // per variable (by trail id): the root domain and the literals created so far (value -> variable)
   private IntVar[] vars = new IntVar[0];
   private IntDomain[] root = new IntDomain[0];
+  // whether the root domain of a variable has values other than 0 and 1, read at every bump
+  private boolean[] wideRoot = new boolean[0];
   private final LiteralMap[] ge;
   private final LiteralMap[] eq;
   // the literals of ge linked to their neighbours by binary clauses; the others are transient
@@ -393,6 +395,9 @@ public final class LcgSolver implements ExternalPropagator {
   private final VarHeap wide = new VarHeap();
   // Booleans first unless -Djacop.lcg.booleansFirst=false, which keeps every variable in heap
   private boolean split = !FALSE.equals(System.getProperty("jacop.lcg.booleansFirst"));
+  // a lazy activity order under fixed search, see VarHeap.setLazy
+  private static final boolean LAZY_ORDER =
+      !FALSE.equals(System.getProperty("jacop.lcg.lazyOrder"));
   // whether the runs of activity branching take turns with and without Booleans first
   private boolean booleansFirstTurns;
   // whether the runs of activity branching take those turns only until the first solution, then
@@ -685,12 +690,14 @@ public final class LcgSolver implements ExternalPropagator {
     lateHeap.grow(n, activity);
     late = new boolean[n];
     unused = new boolean[n];
+    wideRoot = new boolean[n];
     for (IntVar x : all) {
       int i = trail.id(x);
       vars[i] = x;
       // the trail took the same root domain when it was made: one copy per variable, not two
       IntDomain atTrail = trail.rootDomain(x);
       root[i] = atTrail.eq(x.dom()) ? atTrail : x.dom().cloneLight();
+      wideRoot[i] = root[i].min() < 0 || root[i].max() > 1;
       ge[i] = LiteralMap.NO_LITERALS;
       eq[i] = LiteralMap.NO_LITERALS;
       linked[i] = LiteralMap.NO_LITERALS;
@@ -5471,6 +5478,12 @@ public final class LcgSolver implements ExternalPropagator {
     if (annotationRun && branching == Branching.ALTERNATE) {
       activityBranching = true;
     }
+    // fixed search reads the activity order only once the annotation has fixed its variables
+    boolean lazy = select != null && !free && LAZY_ORDER;
+    for (VarHeap h : new VarHeap[] {heap, wide, lateHeap}) {
+      h.setLazy(lazy);
+    }
+    sat.setLazyOrder(select != null && !free);
     applyAnnotationChrono();
   }
 
@@ -9111,7 +9124,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (late[i]) {
       return lateHeap;
     }
-    return split && (root[i].min() < 0 || root[i].max() > 1) ? wide : heap;
+    return split && wideRoot[i] ? wide : heap;
   }
 
   // takes the fixed variables off the top of a heap, to be put back on backtracking

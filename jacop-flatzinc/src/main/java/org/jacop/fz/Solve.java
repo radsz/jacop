@@ -5682,6 +5682,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.sat().backjumpLevels
             + "\n%%%mzn-stat: lcgLbdSum="
             + lcg.sat().lbdSum()
+            + "\n%%%mzn-stat: lcgLearntLiterals="
+            + lcg.sat().learntLiterals
             + "\n%%%mzn-stat: lcgSatDecisions="
             + lcg.sat().decisions
             + "\n%%%mzn-stat: lcgCompletedModels="

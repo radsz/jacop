@@ -271,6 +271,9 @@ public final class CdclSolver {
   private long lubyLimit;
   // conflicts of one unit of the Luby sequence in stable mode
   private static final long LUBY_UNIT = Long.getLong("jacop.jasat.lubyUnit", 512L);
+  // a lazy activity order while an external propagator decides, see VarHeap.setLazy
+  private static final boolean LAZY_ORDER =
+      !"false".equals(System.getProperty("jacop.jasat.lazyOrder"));
   private final int[] lbdQueue = new int[50];
   private int lbdQueueSize;
   private int lbdQueueHead;
@@ -3744,6 +3747,18 @@ public final class CdclSolver {
     backtrack(0);
     external = propagator;
     notified = 0;
+  }
+
+  /**
+   * Sets whether the activity order of the decisions is lazy (see {@link VarHeap#setLazy}), for an
+   * external propagator that makes almost every decision, as lazy clause generation under a fixed
+   * search does: the order is then read only when the propagator has no decision. The system
+   * property {@code jacop.jasat.lazyOrder=false} keeps it eager. Off by default.
+   *
+   * @param lazy true for the lazy order
+   */
+  public void setLazyOrder(boolean lazy) {
+    order.setLazy(lazy && LAZY_ORDER);
   }
 
   /**

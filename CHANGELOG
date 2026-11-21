@@ -8757,6 +8757,22 @@ Version 5.0 (unreleased)
    it does not fire there. -Dorg.jacop.fz.binPackingCost=false turns it
    off.
 
+490. Lazy clause generation under a fixed search keeps the activity orders
+   of its decisions lazily (VarHeap.setLazy): the bumps, inserts and
+   removals keep only which variables are in the heap, and the heap is
+   rebuilt in linear time when its top is read, which a fixed search does
+   only once the annotation has fixed its variables. A heap whose
+   rebuilds cost more than twice the sifting they saved goes back to the
+   eager order. The search is the same. Wall time for the same work
+   (virtual clock): MiniZinc Challenge sudoku_opt p29 -4.4 %, gfd-schedule
+   n100f7d50m20k10 -2.6 %, wide-quick set default search -0.8 to -1.3 % in
+   three rounds over the 59 of 61 instances with the same search; two
+   search differently, after the annotation, where the order breaks ties
+   of activity otherwise (roster chicroster_dataset_large_20 99 -> 98 in a
+   third less time, hoist PU_2_8_1 +3 %); -f unchanged. -Djacop.jasat.lazyOrder=false and
+   -Djacop.lcg.lazyOrder=false keep the orders eager. -s prints the
+   literals of the learnt clauses as lcgLearntLiterals.
+
 Version 4.11
 =============
 
