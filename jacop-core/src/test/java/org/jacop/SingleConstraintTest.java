@@ -214,6 +214,7 @@ import org.jacop.constraints.lp.TreeCuts;
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.regular.CostRegular;
+import org.jacop.constraints.regular.MultiCostRegular;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.BinaryBitTable;
 import org.jacop.constraints.table.HybridTable;
@@ -12568,6 +12569,40 @@ class SingleConstraintTest extends TestHelper {
       store.impose(c);
       assertThat(store.consistency()).as("kind " + kind).isTrue();
       assertThat(noOfAllSolutions(store, s)).as("kind " + kind).isEqualTo(expected);
+    }
+  }
+
+  /**
+   * CostRegular and MultiCostRegular imposed again after their removal at the root (LcgSolver
+   * release and lend) built a new graph but kept the flag that its paths were computed, so the
+   * first consistency call read paths of zero cost and failed with x2 = 1 although x = (1, 0, 1, 0)
+   * costs 1 + 2 + 2 + 0 = 5.
+   */
+  @Test
+  void costRegularImposedAgainComputesItsPaths() {
+    int[][][] costs = {{{2, 1, 2}}, {{2, 2, 0}}, {{0, 2, 0}}, {{-1, 0, 0}}};
+    int[][] transition = {{0, 0, -1}};
+    for (boolean multi : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[4];
+      for (int i = 0; i < 4; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 2);
+      }
+      IntVar cost = new IntVar(store, "cost", -4, 8);
+      Constraint c =
+          multi
+              ? new MultiCostRegular(
+                  x, transition, 0, 0, new int[] {0}, new int[][][][] {costs}, new IntVar[] {cost})
+              : new CostRegular(x, transition, 0, 0, new int[] {0}, costs, cost);
+      store.impose(c);
+      assertThat(store.consistency()).isTrue();
+      c.removeConstraint();
+      x[2].domain.in(0, x[2], 1, 1);
+      store.clearEntailed(c);
+      store.impose(c);
+      assertThat(store.consistency()).as("multi " + multi).isTrue();
+      // x2 = 1 and the others in {0, 1}: 8 sequences, each with a cost between -4 and 8
+      assertThat(noOfAllSolutions(store, x)).as("multi " + multi).isEqualTo(8);
     }
   }
 
