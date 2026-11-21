@@ -190,9 +190,11 @@ import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.binpacking.VectorBinpacking;
 import org.jacop.constraints.cumulative.Cumulative;
+import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
+import org.jacop.constraints.cumulative.MultiCumulative;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.diffn.DiffnK;
 import org.jacop.constraints.diffn.Nooverlap;
@@ -12505,6 +12507,68 @@ class SingleConstraintTest extends TestHelper {
     store.impose(c);
     assertThat(store.consistency()).isTrue();
     assertThat(sum.min()).isEqualTo(2);
+  }
+
+  private static IntVar[] unaryStarts(Store store) {
+    return new IntVar[] {
+      new IntVar(store, "s0", 0, 3), new IntVar(store, "s1", 0, 3), new IntVar(store, "s2", 0, 3)
+    };
+  }
+
+  private static IntVar[] ones(Store store, int n) {
+    IntVar[] v = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      v[i] = new IntVar(store, "one" + i, 1, 1);
+    }
+    return v;
+  }
+
+  /**
+   * The cumulative constraints kept a time stamp made in the constructor (CumulativeBasic with
+   * constant tasks, MultiCumulative) or at the first consistency call (CumulativeUnary): imposed
+   * above the root and imposed again after that level was removed, as LcgSolver.lend does each
+   * slice, they read a time stamp with no value and threw an ArrayIndexOutOfBoundsException.
+   */
+  @Test
+  void cumulativeImposedAgainBelowItsLevelStartsFromAllTasks() {
+    Store reference = new Store();
+    IntVar[] r = unaryStarts(reference);
+    reference.impose(
+        new Cumulative(
+            r,
+            new IntVar[] {
+              new IntVar(reference, "d0", 1, 1),
+              new IntVar(reference, "d1", 1, 1),
+              new IntVar(reference, "d2", 2, 2)
+            },
+            ones(reference, 3),
+            new IntVar(reference, "limit", 1, 1)));
+    int expected = noOfAllSolutions(reference, r);
+    assertThat(expected).isPositive();
+    for (int kind = 0; kind < 3; kind++) {
+      Store store = new Store();
+      IntVar[] s = unaryStarts(store);
+      IntVar[] d = {
+        new IntVar(store, "d0", 1, 1), new IntVar(store, "d1", 1, 1), new IntVar(store, "d2", 2, 2)
+      };
+      IntVar limit = new IntVar(store, "limit", 1, 1);
+      store.setLevel(1);
+      Constraint c =
+          switch (kind) {
+            case 0 -> new CumulativeUnary(s, d, ones(store, 3), limit, true);
+            case 1 -> new CumulativeBasic(s, d, ones(store, 3), limit);
+            default ->
+                new MultiCumulative(
+                    s, new int[] {1, 1, 2}, new int[][] {{1, 1, 1}}, new IntVar[] {limit});
+          };
+      store.impose(c);
+      s[2].domain.in(1, s[2], 0, 1);
+      assertThat(store.consistency()).isTrue();
+      backToRoot(store);
+      store.impose(c);
+      assertThat(store.consistency()).as("kind " + kind).isTrue();
+      assertThat(noOfAllSolutions(store, s)).as("kind " + kind).isEqualTo(expected);
+    }
   }
 
   /**

@@ -116,7 +116,7 @@ class CumulativePrimary extends Constraint implements Copyable<CumulativePrimary
   private int releaseCount;
   private final int[] startExcluded;
   private final int[] activeMap;
-  private final TimeStampInt activePnt;
+  private TimeStampInt activePnt;
 
   /*
    * It creates a cumulative constraint.
@@ -186,6 +186,17 @@ class CumulativePrimary extends Constraint implements Copyable<CumulativePrimary
     setScope(Stream.concat(Arrays.stream(starts), Stream.of(limit)));
 
     activePnt = new TimeStampInt(limit.getStore(), 0);
+  }
+
+  /**
+   * Starts the active tasks again from all tasks at the store's level, for an imposition of the
+   * constraint that holds this one: one made above the root, or the same object imposed again after
+   * that level was removed, would find no value of the time stamp.
+   *
+   * @param store the constraint store.
+   */
+  void resetActiveTasks(Store store) {
+    activePnt = new TimeStampInt(store, 0);
   }
 
   /*
