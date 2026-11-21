@@ -4698,6 +4698,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (best - 1 < cost.max()) {
         cost.domain.inMax(store.level, cost, best - 1);
       }
+      // the solutions printed before count: the search may find no better one
+      executeNonRestartSearch(fixedLabel, fixedSelect, costVar, fixedSolveType);
+      return true;
     }
     return executeNonRestartSearch(fixedLabel, fixedSelect, costVar, fixedSolveType);
   }
@@ -4726,7 +4729,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   /**
    * Runs the annotation's depth-first search without learning before LCG fixed search on an
-   * optimisation model, for the share fixed-first of the time (default 0.02; 0 = off). LCG then
+   * optimisation model, for the share fixed-first of the time (default 0.005; 0 = off). LCG then
    * looks only for solutions better than the best one it printed, and gets as much time to find one
    * as it took ({@link #fixedFirstCheck}); when it finds none, it gives way to the annotation's
    * search without learning, which goes on from the root under the best cost. Both searches take
@@ -4746,7 +4749,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private boolean fixedSearchFirst(
       DepthFirstSearch<T> label, SelectChoicePoint<T> select, Var costVar, String solveType) {
-    double share = Double.parseDouble(options.freeConfig("fixed-first", "0.02"));
+    double share = Double.parseDouble(options.freeConfig("fixed-first", "0.005"));
     if (share <= 0
         || options.freeSearch()
         || options.getTimeOut() <= 0
