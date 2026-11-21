@@ -192,6 +192,9 @@ public class CumulativeBasic extends Constraint
     if (taskNormal.length == 0) {
       return;
     }
+    if (cumulativeForConstants != null) {
+      cumulativeForConstants.resetActiveTasks(store);
+    }
     super.impose(store);
   }
 
