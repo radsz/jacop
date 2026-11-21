@@ -309,4 +309,65 @@ class PortfolioOneParseTest {
   private static int count(String out, String line) {
     return (int) out.lines().filter(line::equals).count();
   }
+
+  @Test
+  void aModelEveryThreadRejectsEndsAsInOneThread() throws IOException {
+    // the portfolio printed =====UNKNOWN=====, the error once per thread and exit status 0, where
+    // one thread prints the error alone and ends with exit status 1
+    Path unsupported = tmp.resolve("unsupported.fzn");
+    Files.writeString(
+        unsupported,
+        "var 1..3: x :: output_var;\nconstraint no_such_constraint(x, x);\nsolve minimize x;\n",
+        StandardCharsets.UTF_8);
+    // an exception the front end does not handle, in every thread
+    Path unassigned = tmp.resolve("unassigned.fzn");
+    Files.writeString(
+        unassigned,
+        "array [1..2] of var 1..3: x :: output_array([1..2]);\nvar 1..3: m :: output_var;\n"
+            + "constraint jacop_maximum(x, m);\nsolve minimize m;\n",
+        StandardCharsets.UTF_8);
+    String[] exception = status("-p", "3", unassigned.toString());
+    assertEquals("1", exception[0]);
+    assertEquals(1, exception[2].lines().filter(l -> l.contains("stopped")).count(), exception[2]);
+    Path broken = tmp.resolve("broken.fzn");
+    Files.writeString(
+        broken,
+        "var 1..3: x :: output_var;\nconstraint int_le(x;\nsolve minimize x;\n",
+        StandardCharsets.UTF_8);
+    for (Path fzn : new Path[] {unsupported, broken}) {
+      String[] one = status(fzn.toString());
+      assertEquals("1", one[0]);
+      for (String p : new String[] {"2", "4"}) {
+        String[] portfolio = status("-p", p, fzn.toString());
+        assertEquals(Arrays.asList(one), Arrays.asList(portfolio), "-p " + p);
+      }
+    }
+  }
+
+  // the exit status, stdout and the error lines of a run in this JVM
+  private static String[] status(String... args) {
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    ByteArrayOutputStream errors = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+    PrintStream originalErr = System.err;
+    int status;
+    try (PrintStream o = new PrintStream(out, true, StandardCharsets.UTF_8);
+        PrintStream e = new PrintStream(errors, true, StandardCharsets.UTF_8)) {
+      System.setOut(o);
+      System.setErr(e);
+      status = new Fz2jacop().callMain(args);
+    } finally {
+      System.setOut(originalOut);
+      System.setErr(originalErr);
+    }
+    String err =
+        String.join(
+            "\n",
+            errors
+                .toString(StandardCharsets.UTF_8)
+                .lines()
+                .filter(l -> l.startsWith("%%"))
+                .toList());
+    return new String[] {Integer.toString(status), out.toString(StandardCharsets.UTF_8), err};
+  }
 }

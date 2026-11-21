@@ -45,6 +45,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 import java.util.function.ObjIntConsumer;
@@ -197,10 +198,17 @@ final class Portfolio {
   private boolean maximisation;
   private int solutions;
   private int running;
+  // the threads that read and solved the model, or showed it unsatisfiable (exit status 0)
+  private int accepted;
   private boolean finished;
   private boolean complete;
   // the answer has been printed, by run() or at shutdown
   private boolean printed;
+  // every thread rejected the model (an error in it, or one JaCoP does not support): the run ends
+  // as one thread does, with no status and exit status 1
+  private boolean rejected;
+  // the error lines the threads printed, each printed once for all of them
+  private final Set<String> errors = ConcurrentHashMap.newKeySet();
   // the factor the threads divided the objective by (ObjectiveScaling)
   private long objectiveScale = 1;
 
@@ -246,6 +254,18 @@ final class Portfolio {
       return "all solutions are asked for";
     }
     return null;
+  }
+
+  /**
+   * Whether an error line should be printed: outside a portfolio always, in a thread of a portfolio
+   * only when no thread of it printed the same line, since every thread reads the same model and
+   * reports the same error in it.
+   *
+   * @param line the line
+   * @return true to print it
+   */
+  static boolean firstReport(String line) {
+    return !(CAPTURE.get() instanceof StatusCapture c) || c.errors == null || c.errors.add(line);
   }
 
   private static boolean isSatisfaction(String model) {
@@ -365,7 +385,9 @@ final class Portfolio {
       out.print(workerStatistics());
       out.flush();
     }
-    return 0;
+    synchronized (lock) {
+      return rejected ? 1 : 0;
+    }
   }
 
   /**
@@ -471,25 +493,10 @@ final class Portfolio {
         return;
       }
       printed = true;
-      if (bestSolution != null) {
-        if (!options.getAll()) {
-          s.append(bestSolution);
-        }
-        if (complete && optimisation) {
-          if (gap != null) {
-            gap.optimal(); // a thread proved the best solution optimal
-          }
-          s.append(SEARCH_COMPLETE).append('\n');
-        } else if (timedOut) {
-          s.append("%% =====TIME-OUT=====\n");
-        }
-      } else if (complete) {
-        s.append(UNSATISFIABLE).append('\n');
-      } else {
-        s.append("=====UNKNOWN=====\n");
-        if (timedOut) {
-          s.append("%% =====TIME-OUT=====\n");
-        }
+      rejected = running == 0 && accepted == 0 && bestSolution == null;
+      // each thread reported its error: a rejected model has no status, as in one thread
+      if (!rejected) {
+        status(s, timedOut);
       }
       if (options.getStatistics()) {
         if (options.searchStatistics()) {
@@ -539,6 +546,30 @@ final class Portfolio {
     }
     out.print(s);
     out.flush();
+  }
+
+  // the best solution (without -a) and the final status, as one thread prints them
+  private void status(StringBuilder s, boolean timedOut) {
+    if (bestSolution != null) {
+      if (!options.getAll()) {
+        s.append(bestSolution);
+      }
+      if (complete && optimisation) {
+        if (gap != null) {
+          gap.optimal(); // a thread proved the best solution optimal
+        }
+        s.append(SEARCH_COMPLETE).append('\n');
+      } else if (timedOut) {
+        s.append("%% =====TIME-OUT=====\n");
+      }
+    } else if (complete) {
+      s.append(UNSATISFIABLE).append('\n');
+    } else {
+      s.append("=====UNKNOWN=====\n");
+      if (timedOut) {
+        s.append("%% =====TIME-OUT=====\n");
+      }
+    }
   }
 
   // the cost variable is the negated objective under maximisation, and it may hold the objective
@@ -807,9 +838,12 @@ final class Portfolio {
     out.flush();
   }
 
-  private void ended(boolean searchComplete) {
+  private void ended(boolean ran, boolean searchComplete) {
     synchronized (lock) {
       running--;
+      if (ran) {
+        accepted++;
+      }
       if (searchComplete && !finished) {
         complete = true;
         finished = true;
@@ -839,6 +873,7 @@ final class Portfolio {
     }
 
     private void run(String file, SimpleNode model) {
+      capture.errors = errors;
       CAPTURE.set(capture);
       boolean ran = false;
       try {
@@ -854,11 +889,14 @@ final class Portfolio {
           }
         }
       } catch (IOException | RuntimeException e) {
-        FzConsole.printlnErr("%% portfolio thread " + name + " stopped: " + e);
+        // the same error in every thread is reported by the first
+        if (firstReport(e.toString())) {
+          FzConsole.printlnErr("%% portfolio thread " + name + " stopped: " + e);
+        }
       } finally {
         CAPTURE.remove();
         ended = true;
-        ended(ran && !stopped && capture.complete);
+        ended(ran, ran && !stopped && capture.complete);
       }
     }
 
@@ -1094,6 +1132,8 @@ final class Portfolio {
     private final StringBuilder line = new StringBuilder();
     private final Map<String, String> statistics = new HashMap<>();
     volatile boolean complete;
+    // the error lines of all threads of the portfolio
+    Set<String> errors;
 
     @Override
     public void write(int b) {
