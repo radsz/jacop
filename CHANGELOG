@@ -8733,8 +8733,8 @@ Version 5.0 (unreleased)
    instances, one per family and track) and the 38 instances the pycsp3
    translation cannot handle, 600 s, against pycsp3 + MiniZinc 2.9.4 on
    the same jar: 140 against 127 proved (130 against 127 on the quick
-   set), total time 16,562 -> 17,924 s on the quick set with 600 s for an
-   unproved instance (native first); better objective on 9 open instances,
+   set), total time 16,562 s against 17,924 s on the quick set with 600 s
+   for an unproved instance; better objective on 9 open instances,
    worse on 3. All 2,250 instances of 2022-2026 at 10 s: every solution
    passes the XCSP3 SolutionChecker and no answer contradicts the
    competition results.
