@@ -6877,4 +6877,32 @@ class FlatzincFrontEndTest {
         "x = 1;\ny = 2;\n----------\nx = 1;\ny = 3;\n----------\nx = 2;\ny = 3;\n----------\n==========\n",
         r[0]);
   }
+
+  @Test
+  void nestedSequenceSearchFollowsItsFirstSearch() throws IOException {
+    // the master of seq_search([seq_search([a, b])]) was labelled with the selection of b: the
+    // search branched on y before x, and a random selection shared by both searches printed a
+    // solution with a variable not fixed ("Variable is not grounded in the solution")
+    String order =
+        run(
+            "var 1..2: x :: output_var;\n"
+                + "var 1..2: y :: output_var;\n"
+                + "solve :: seq_search([seq_search([int_search([x], input_order, indomain_min,"
+                + " complete), int_search([y], input_order, indomain_max, complete)])]) satisfy;\n",
+            "-a")[0];
+    assertEquals(
+        "x = 1;\ny = 2;\n----------\nx = 1;\ny = 1;\n----------\n"
+            + "x = 2;\ny = 2;\n----------\nx = 2;\ny = 1;\n----------\n==========\n",
+        order);
+    String out =
+        run(
+            "var 1..3: a :: output_var;\n"
+                + "var 1..2: k :: output_var;\n"
+                + "var -20..20: w :: output_var;\n"
+                + "solve :: seq_search([seq_search([int_search([w], input_order, indomain_min,"
+                + " complete), int_search([k,w,a], random, indomain_min, complete)])]) satisfy;\n",
+            "-a")[0];
+    assertEquals(41 * 2 * 3, out.split("----------", -1).length - 1, out);
+    assertTrue(out.endsWith("==========\n"), out);
+  }
 }

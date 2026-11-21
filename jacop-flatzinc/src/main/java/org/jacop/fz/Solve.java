@@ -9311,14 +9311,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   private DepthFirstSearch<T> subSearchSeq(SearchItem<T> si, DepthFirstSearch<T> lastSearch) {
     DepthFirstSearch<T> label = null;
+    SelectChoicePoint<T> firstSelect = null;
     for (int i = 0; i < si.getSearchItems().size(); i++) {
       DepthFirstSearch<T> label_seq = sub_search(si.getSearchItems().get(i), lastSearch, false);
       if (i == 0) {
         label = label_seq;
+        firstSelect = variableSelection;
       } else {
         lastSearch.addChildSearch(label_seq);
       }
       lastSearch = getLastSearch(label_seq);
+    }
+    // the selection of the first search, which a caller labelling the returned search with
+    // variableSelection (run_sequence_search) must use, not the one of the last search
+    if (label != null) {
+      variableSelection = firstSelect;
     }
     return label;
   }
