@@ -624,9 +624,9 @@ public final class ConstraintFncs {
     gc.gen_jacop_diff2_strict(n);
   }
 
-  // under LCG fixed search, a diffn of at most this many rectangles is posted as the pairwise
-  // disjunctions of the MiniZinc library instead of Diffn (0 = never)
-  private static final int DIFFN_PAIRS = Integer.getInteger("org.jacop.fz.diffnPairs", 30);
+  // under LCG fixed search, a diffn of at most this many rectangles (org.jacop.fz.diffnPairs) is
+  // posted as the pairwise disjunctions of the MiniZinc library instead of Diffn (0 = never)
+  private static final int DIFFN_PAIRS = 30;
 
   /**
    * Posts a diffn of few rectangles under LCG fixed search as the decomposition of the MiniZinc
@@ -642,7 +642,8 @@ public final class ConstraintFncs {
    * @return true if the decomposition was posted
    */
   private boolean diffnByPairs(SimpleNode n) {
-    if (DIFFN_PAIRS <= 0
+    int most = Integer.getInteger("org.jacop.fz.diffnPairs", DIFFN_PAIRS);
+    if (most <= 0
         || !support.options.lcg()
         || support.options.freeSearch()
         || support.options.proof() != null) {
@@ -657,7 +658,7 @@ public final class ConstraintFncs {
       support.getVarArray((SimpleNode) n.jjtGetChild(3))
     };
     int count = origin[0].length;
-    if (count < 2 || count > DIFFN_PAIRS) {
+    if (count < 2 || count > most) {
       return false;
     }
     // origin[d][a] + length[d][a] - origin[d][b] <= 0 for each pair and way, unless decided

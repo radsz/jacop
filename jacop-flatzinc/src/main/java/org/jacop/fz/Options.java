@@ -224,6 +224,11 @@ public class Options {
                 annotation: when branch and bound under the annotation has no solution after
                 fixed-core-delay of the time, default 0.15, the core-guided phase of -f runs for
                 this share of the time; default 0 = off, as it does not follow the annotation),
+                fixed-first=<share> (with --lcg, without -f, an objective and an annotation
+                without restarts: the annotation's search without learning runs first for this
+                share of the time, default 0.005; 0 = off; LCG then gets fixed-first-lcg times
+                as long, default 3, at least fixed-first-lcg-min ms, default 1000, to find a
+                better solution, or gives way to the search without learning),
                 fixed-completion=output|activity (with --lcg, without -f, for a model with a
                 search annotation: output (default) decides the output variables the annotation
                 leaves open in input order, lower half first, as fixed search without --lcg does;

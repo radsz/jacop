@@ -4862,7 +4862,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         Math.max(
             (long)
                 (Double.parseDouble(options.freeConfig("fixed-first-lcg", "3")) * fixedFirstMillis),
-            1000L);
+            Long.parseLong(options.freeConfig("fixed-first-lcg-min", "1000")));
     int firstCost = fixedFirstCost;
     fixedFirstOutcome = 2;
     return Thread.ofVirtual()
