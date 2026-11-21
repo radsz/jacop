@@ -52,28 +52,47 @@ import org.jacop.fz.SimpleNode;
  * Soh, Banbara and Tamura, "Proposal and Evaluation of Hybrid Encoding of CSP to SAT Integrating
  * Order and Log Encodings", IJAIT 2017).
  *
- * <p>Each integer variable gets order literals {@code [x >= d]} for the values of its domain but
- * the first, chained, and direct literals {@code [x = d]} defined from them (Tamura, Taga, Kitagawa
- * and Banbara, "Compiling finite linear CSP into SAT", Constraints 14, 2009). Products get support
- * clauses over direct literals, once the value sets of products of products are narrowed by
- * multiplying the value sets of their factors. Sums of one or two terms become order-encoding
- * clauses; longer sums become a multi-valued decision diagram over their partial sums whose nodes
- * are literals defined both ways (Abio, Nieuwenhuis, Oliveras, Rodriguez-Carbonell and
- * Mayer-Eichberger, "A New Look at BDDs for Pseudo-Boolean Constraints", JAIR 45, 2012); a sum
- * whose diagram would be too large becomes binary adders (the log encoding of Picat-SAT).
- * All-different, counts, regular, tables, lex chains and value precedence get their usual clausal
- * definitions, so an unsatisfiability proof of the CNF is one of the model.
+ * <p>An integer variable that a constraint compares by order (a sum of one or two terms, a product,
+ * a comparison, a count, lex, max, min, increasing) gets order literals {@code [x >= d]} for the
+ * values of its domain but the first, chained, and direct literals {@code [x = d]} defined from
+ * them (Tamura, Taga, Kitagawa and Banbara, "Compiling finite linear CSP into SAT", Constraints 14,
+ * 2009). A variable that appears only in tables, all-different, the lists of counts and sums of
+ * three or more terms gets direct literals only, with at-least-one and pairwise at-most-one clauses
+ * (the direct encoding, de Kleer 1989; Walsh, "SAT v CSP", CP 2000), so the SAT solver does not
+ * branch on order literals no constraint reads. Binary tables get the support encoding (Kasif 1990;
+ * Gent, "Arc Consistency in SAT", ECAI 2002), on which unit propagation keeps arc consistency;
+ * other tables get one selector literal per tuple. Products get support clauses over direct
+ * literals, once the value sets of products of products are narrowed by multiplying the value sets
+ * of their factors. Sums of one or two terms become order-encoding clauses; longer sums become a
+ * multi-valued decision diagram over their partial sums whose nodes are literals defined both ways
+ * (Abio, Nieuwenhuis, Oliveras, Rodriguez-Carbonell and Mayer-Eichberger, "A New Look at BDDs for
+ * Pseudo-Boolean Constraints", JAIR 45, 2012); a sum whose diagram would be too large becomes
+ * binary adders (the log encoding of Picat-SAT). All-different, counts, regular, tables, lex chains
+ * and value precedence get their usual clausal definitions, so an unsatisfiability proof of the CNF
+ * is one of the model.
  *
- * <p>The compiler takes a model only when each constraint is of a kind it compiles and each integer
- * variable has at most {@code org.jacop.fz.clausal.maxDomain} values (default 3: the {-1, 0, 1}
- * models of fast matrix multiplication and Hadamard sequences, where lazy clause generation is far
- * behind CaDiCaL and JaSAT on the CNF). The system property {@code org.jacop.fz.clausal=false}
- * turns the compilation off.
+ * <p>The compiler takes a model only when each constraint is of a kind it compiles, each integer
+ * variable has at most {@code org.jacop.fz.clausal.maxDomain} values (default 64), the variables of
+ * regular constraints at most {@code org.jacop.fz.clausal.regularDomain} values (default 3: lazy
+ * clause generation is faster on RotatingWorkforce2 and NurseRostering), and the CNF has at most
+ * {@code org.jacop.fz.clausal.maxClauses} clauses (default 2,000,000: CarSequencing, Primes and the
+ * large Crosswords are faster with lazy clause generation). {@code
+ * org.jacop.fz.clausal.direct=false} gives every variable order literals. The system property
+ * {@code org.jacop.fz.clausal=false} turns the compilation off.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
  */
 public final class ClausalCompiler {
+
+  private static final String ALLDIFF = "jacop_alldiff";
+  private static final String ALLDISTINCT = "jacop_alldistinct";
+  private static final String COUNT_VALUES = "jacop_count_values";
+  private static final String AMONG = "jacop_among";
+  private static final String INCREASING = "jacop_increasing";
+  private static final String SHORT_TABLE_INT = "jacop_short_table_int";
+  private static final String TABLE_INT = "jacop_table_int";
+  private static final String NEGATIVE_TABLE_INT = "jacop_negative_table_int";
 
   /** The constraints the compiler encodes. */
   static final Set<String> SUPPORTED =
@@ -111,18 +130,19 @@ public final class ClausalCompiler {
           "bool_xor",
           "bool_eq_reif",
           "bool_ne_reif",
-          "jacop_alldiff",
-          "jacop_alldistinct",
-          "jacop_count_values",
-          "jacop_among",
-          "jacop_increasing",
+          ALLDIFF,
+          ALLDISTINCT,
+          COUNT_VALUES,
+          AMONG,
+          INCREASING,
+          "jacop_strictly_increasing",
           "jacop_maximum",
           "jacop_minimum",
           "jacop_lex_chain_lesseq_int",
           "jacop_value_precede_chain_int",
-          "jacop_short_table_int",
-          "jacop_table_int",
-          "jacop_negative_table_int",
+          SHORT_TABLE_INT,
+          TABLE_INT,
+          NEGATIVE_TABLE_INT,
           "jacop_regular_set");
 
   /** Values a domain may have for its literals to be enumerated at all. */
@@ -141,10 +161,42 @@ public final class ClausalCompiler {
    * Returns the largest domain a variable of a compiled model may have, the property {@code
    * org.jacop.fz.clausal.maxDomain}.
    *
-   * @return the number of values, 3 by default
+   * @return the number of values, 64 by default
    */
   public static int maxDomain() {
-    return Integer.getInteger("org.jacop.fz.clausal.maxDomain", 3);
+    return Integer.getInteger("org.jacop.fz.clausal.maxDomain", 64);
+  }
+
+  /**
+   * Returns the largest domain a variable of a regular constraint of a compiled model may have, the
+   * property {@code org.jacop.fz.clausal.regularDomain}.
+   *
+   * @return the number of values, 3 by default
+   */
+  static int regularDomain() {
+    return Integer.getInteger("org.jacop.fz.clausal.regularDomain", 3);
+  }
+
+  /**
+   * Returns whether variables that only appear in value constraints (tables, alldifferent, the
+   * counted lists of count and among) get direct literals without order literals, the property
+   * {@code org.jacop.fz.clausal.direct}.
+   *
+   * @return true unless the property is false
+   */
+  static boolean direct() {
+    return Boolean.parseBoolean(System.getProperty("org.jacop.fz.clausal.direct", "true"));
+  }
+
+  /**
+   * Returns the largest number of clauses of a compiled model, the property {@code
+   * org.jacop.fz.clausal.maxClauses}: larger CNFs (CarSequencing, Primes, big Crosswords) are
+   * solved faster by the CP side.
+   *
+   * @return the number of clauses, 2,000,000 by default
+   */
+  static long maxClauses() {
+    return Long.getLong("org.jacop.fz.clausal.maxClauses", 2_000_000L);
   }
 
   private static long maxLiterals() {
@@ -166,7 +218,12 @@ public final class ClausalCompiler {
 
   private final Support support;
   private final int maxDomain;
+  private final int regularDomain;
+  private final boolean direct;
+  // variables that need order literals; the others are encoded with direct literals only
+  private final Set<IntVar> ordered = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
   private final long maxLits;
+  private final long maxClauses;
   private final int mddNodes;
 
   // the clauses, each followed by a 0
@@ -193,7 +250,10 @@ public final class ClausalCompiler {
   private ClausalCompiler(Support support) {
     this.support = support;
     this.maxDomain = maxDomain();
+    this.regularDomain = regularDomain();
+    this.direct = direct();
     this.maxLits = maxLiterals();
+    this.maxClauses = maxClauses();
     this.mddNodes = mddLimit();
     add(T);
   }
@@ -209,22 +269,26 @@ public final class ClausalCompiler {
   public static ClausalModel compile(Support support, SimpleNode astTree) {
     long start = System.nanoTime();
     List<ASTConstElem> items = new ArrayList<>();
-    boolean[] supported = {true};
+    String[] unsupported = {null};
     support.forEachConstraint(
         astTree,
         node -> {
-          if (!SUPPORTED.contains(node.getName())) {
-            supported[0] = false;
+          if (unsupported[0] == null && !SUPPORTED.contains(node.getName())) {
+            unsupported[0] = node.getName();
           }
           items.add(node);
         });
-    if (!supported[0] || items.isEmpty()) {
+    if (unsupported[0] != null || items.isEmpty()) {
+      if (support.options.debug()) {
+        FzConsole.println("% clausal compilation: not taken, constraint " + unsupported[0]);
+      }
       return null;
     }
     ClausalCompiler c = new ClausalCompiler(support);
     try {
       c.narrowProducts(items);
       c.checkDomains(items);
+      c.orderedVariables(items);
       if (!c.arithmetic) {
         throw new NotCompiled("0/1 variables only");
       }
@@ -297,7 +361,9 @@ public final class ClausalCompiler {
     }
     buf[size + k] = 0;
     size += k + 1;
-    clauses++;
+    if (++clauses > maxClauses) {
+      throw new NotCompiled("more than " + maxClauses + " clauses");
+    }
   }
 
   private void add(List<Integer> c) {
@@ -424,6 +490,9 @@ public final class ClausalCompiler {
     }
 
     int ge(int v) {
+      if (ge == null) {
+        throw new NotCompiled("order literal of a direct variable");
+      }
       if (v <= vals[0]) {
         return T;
       }
@@ -479,6 +548,21 @@ public final class ClausalCompiler {
       d = new int[] {0};
     }
     int n = d.length;
+    if (direct && n > 2 && !ordered.contains(x)) {
+      int[] eq = new int[n];
+      for (int i = 0; i < n; i++) {
+        eq[i] = newVar();
+      }
+      add(eq);
+      for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+          add(-eq[i], -eq[j]);
+        }
+      }
+      e = new Enc(d, null, eq);
+      enc.put(x, e);
+      return e;
+    }
     int[] ge = new int[n];
     ge[0] = T;
     for (int i = 1; i < n; i++) {
@@ -587,6 +671,61 @@ public final class ClausalCompiler {
     }
   }
 
+  /** The constraints whose variables are only compared with values, through direct literals. */
+  private static final Set<String> VALUE_ONLY =
+      Set.of(
+          TABLE_INT,
+          SHORT_TABLE_INT,
+          NEGATIVE_TABLE_INT,
+          ALLDIFF,
+          ALLDISTINCT,
+          COUNT_VALUES,
+          AMONG);
+
+  private void orderedVariables(List<ASTConstElem> items) {
+    for (ASTConstElem item : items) {
+      String name = item.getName();
+      if (name.startsWith("int_lin_") && longSum(item)) {
+        // a sum of three or more terms is a diagram or adders over direct literals
+        continue;
+      }
+      if (!VALUE_ONLY.contains(name)) {
+        for (int i = 0; i < item.jjtGetNumChildren(); i++) {
+          ordered.addAll(Arrays.asList(argumentVars(item, i)));
+        }
+      } else if (name.equals(COUNT_VALUES) || name.equals(AMONG)) {
+        // the counts are compared by order
+        ordered.addAll(Arrays.asList(argumentVars(item, 2)));
+      }
+    }
+  }
+
+  private boolean longSum(ASTConstElem item) {
+    int[] a = ints(item, 0);
+    IntVar[] xs = vars(item, 1);
+    int terms = 0;
+    for (int i = 0; i < xs.length; i++) {
+      terms += a[i] != 0 && !xs[i].singleton() ? 1 : 0;
+    }
+    return terms >= 3;
+  }
+
+  private IntVar[] argumentVars(ASTConstElem item, int i) {
+    SimpleNode child = (SimpleNode) item.jjtGetChild(i);
+    if (child instanceof ASTScalarFlatExpr s && (s.getType() == 2 || s.getType() == 3)) {
+      IntVar v = support.dictionary.getVariable(s.getIdent());
+      if (v != null && s.getType() == 2) {
+        return new IntVar[] {v};
+      }
+      IntVar[] array = support.dictionary.getVariableArray(s.getIdent());
+      return array != null ? array : new IntVar[0];
+    }
+    if (child.getId() == JJTARRAYLITERAL_ID && isVarArray(child)) {
+      return support.getVarArray(child);
+    }
+    return new IntVar[0];
+  }
+
   private void checkDomains(List<ASTConstElem> items) {
     for (ASTConstElem item : items) {
       for (int i = 0; i < item.jjtGetNumChildren(); i++) {
@@ -636,21 +775,16 @@ public final class ClausalCompiler {
   private void compile(ASTConstElem n) {
     switch (n.getName()) {
       case "int_times" -> times(var(n, 0), var(n, 1), var(n, 2));
-      case "int_lin_eq" -> linear(ints(n, 0), vars(n, 1), Op.EQ, integer(n, 2), 0, false);
-      case "int_lin_le" -> linear(ints(n, 0), vars(n, 1), Op.LE, integer(n, 2), 0, false);
-      case "int_lin_ne" -> linear(ints(n, 0), vars(n, 1), Op.NE, integer(n, 2), 0, false);
-      case "int_lin_eq_reif" ->
-          linear(ints(n, 0), vars(n, 1), Op.EQ, integer(n, 2), lit(var(n, 3)), false);
-      case "int_lin_le_reif" ->
-          linear(ints(n, 0), vars(n, 1), Op.LE, integer(n, 2), lit(var(n, 3)), false);
-      case "int_lin_ne_reif" ->
-          linear(ints(n, 0), vars(n, 1), Op.NE, integer(n, 2), lit(var(n, 3)), false);
-      case "int_lin_eq_imp" ->
-          linear(ints(n, 0), vars(n, 1), Op.EQ, integer(n, 2), lit(var(n, 3)), true);
-      case "int_lin_le_imp" ->
-          linear(ints(n, 0), vars(n, 1), Op.LE, integer(n, 2), lit(var(n, 3)), true);
-      case "int_lin_ne_imp" ->
-          linear(ints(n, 0), vars(n, 1), Op.NE, integer(n, 2), lit(var(n, 3)), true);
+      case "int_lin_eq",
+          "int_lin_le",
+          "int_lin_ne",
+          "int_lin_eq_reif",
+          "int_lin_le_reif",
+          "int_lin_ne_reif",
+          "int_lin_eq_imp",
+          "int_lin_le_imp",
+          "int_lin_ne_imp" ->
+          linear(n);
       case "int_eq", "int_ne", "int_le", "int_lt" -> binary(n, 0, false);
       case "int_eq_reif", "int_ne_reif", "int_le_reif", "int_lt_reif" ->
           binary(n, lit(var(n, 2)), false);
@@ -693,8 +827,8 @@ public final class ClausalCompiler {
       case "bool_xor", "bool_ne_reif" ->
           equivalent(-lit(var(n, 2)), equalLit(lit(var(n, 0)), lit(var(n, 1))));
       case "bool_eq_reif" -> equivalent(lit(var(n, 2)), equalLit(lit(var(n, 0)), lit(var(n, 1))));
-      case "jacop_alldiff", "jacop_alldistinct" -> alldiff(vars(n, 0));
-      case "jacop_count_values" -> {
+      case ALLDIFF, ALLDISTINCT -> alldiff(vars(n, 0));
+      case COUNT_VALUES -> {
         IntVar[] xs = vars(n, 0);
         int[] cover = ints(n, 1);
         IntVar[] counts = vars(n, 2);
@@ -706,7 +840,7 @@ public final class ClausalCompiler {
           countEq(l, enc(counts[j]));
         }
       }
-      case "jacop_among" -> {
+      case AMONG -> {
         IntVar[] xs = vars(n, 0);
         int[] s = set(n, 1);
         int[] l = new int[xs.length];
@@ -722,10 +856,11 @@ public final class ClausalCompiler {
         }
         countEq(l, enc(var(n, 2)));
       }
-      case "jacop_increasing" -> {
+      case INCREASING, "jacop_strictly_increasing" -> {
         IntVar[] xs = vars(n, 0);
+        int gap = n.getName().equals(INCREASING) ? 0 : -1;
         for (int i = 0; i + 1 < xs.length; i++) {
-          linear(new int[] {1, -1}, new IntVar[] {xs[i], xs[i + 1]}, Op.LE, 0, 0, false);
+          linear(new int[] {1, -1}, new IntVar[] {xs[i], xs[i + 1]}, Op.LE, gap, 0, false);
         }
       }
       case "jacop_maximum", "jacop_minimum" -> extremum(n);
@@ -745,9 +880,9 @@ public final class ClausalCompiler {
         }
       }
       case "jacop_value_precede_chain_int" -> precede(ints(n, 0), vars(n, 1));
-      case "jacop_short_table_int" -> table(vars(n, 0), ints(n, 1), integer(n, 2), true);
-      case "jacop_table_int" -> table(vars(n, 0), ints(n, 1), 0, false);
-      case "jacop_negative_table_int" -> {
+      case SHORT_TABLE_INT -> table(vars(n, 0), ints(n, 1), integer(n, 2), true);
+      case TABLE_INT -> table(vars(n, 0), ints(n, 1), 0, false);
+      case NEGATIVE_TABLE_INT -> {
         IntVar[] xs = vars(n, 0);
         int[] t = ints(n, 1);
         int k = xs.length;
@@ -992,6 +1127,10 @@ public final class ClausalCompiler {
     for (int i = 0; i < k; i++) {
       e[i] = enc(xs[i]);
     }
+    if (k == 2 && !shortTable) {
+      binaryTable(e, t);
+      return;
+    }
     List<Integer> sel = new ArrayList<>();
     Map<Long, List<Integer>> sup = new HashMap<>();
     List<List<Integer>> starOf = new ArrayList<>();
@@ -1031,6 +1170,33 @@ public final class ClausalCompiler {
     }
   }
 
+  /**
+   * The support encoding of a binary table (Kasif 1990; Gent, ECAI 2002): a value of one column
+   * implies one of its supports in the other, so unit propagation keeps arc consistency.
+   */
+  private void binaryTable(Enc[] e, int[] t) {
+    for (int side = 0; side < 2; side++) {
+      Enc a = e[side];
+      Enc b = e[1 - side];
+      Map<Integer, TreeSet<Integer>> sup = new HashMap<>();
+      for (int r = 0; r + 2 <= t.length; r += 2) {
+        int va = t[r + side];
+        int vb = t[r + 1 - side];
+        if (a.has(va) && b.has(vb)) {
+          sup.computeIfAbsent(va, z -> new TreeSet<>()).add(vb);
+        }
+      }
+      for (int v : a.vals) {
+        List<Integer> c = new ArrayList<>();
+        c.add(-a.eq(v));
+        for (int w : sup.getOrDefault(v, new TreeSet<>())) {
+          c.add(b.eq(w));
+        }
+        add(c);
+      }
+    }
+  }
+
   private void regular(ASTConstElem n) {
     IntVar[] xs = vars(n, 0);
     int q = integer(n, 1);
@@ -1042,6 +1208,11 @@ public final class ClausalCompiler {
     Enc[] e = new Enc[xs.length];
     for (int i = 0; i < xs.length; i++) {
       e[i] = enc(xs[i]);
+      if (e[i].size() > regularDomain) {
+        // the CP side handles automata over larger alphabets better (RotatingWorkforce2,
+        // NurseRostering)
+        throw new NotCompiled("regular over " + e[i].size() + " values");
+      }
     }
     int len = xs.length;
     // good[i][state]: the state at position i reaches a final state
@@ -1158,6 +1329,20 @@ public final class ClausalCompiler {
     }
     int p = op == Op.NE ? -relation(c, t, Op.EQ, k) : relation(c, t, op, k);
     link(p, r, imp);
+  }
+
+  // int_lin_{eq,le,ne}[_reif|_imp](a, x, k[, r])
+  private void linear(ASTConstElem n) {
+    String name = n.getName();
+    Op op =
+        switch (name.substring(8, 10)) {
+          case "eq" -> Op.EQ;
+          case "le" -> Op.LE;
+          default -> Op.NE;
+        };
+    boolean plain = name.length() == 10;
+    int r = plain ? 0 : lit(var(n, 3));
+    linear(ints(n, 0), vars(n, 1), op, integer(n, 2), r, name.endsWith("_imp"));
   }
 
   private static long lo(long a, Enc e) {
