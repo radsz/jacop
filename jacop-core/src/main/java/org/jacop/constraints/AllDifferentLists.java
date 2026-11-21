@@ -207,6 +207,14 @@ public class AllDifferentLists extends Constraint
 
   @Override
   public void impose(Store store) {
+    // a second imposition starts from no row, as the first
+    fixedRows.clear();
+    openRows.clear();
+    undoKeys.clear();
+    undoLevels.clear();
+    undoRows.clear();
+    dirtyCount = 0;
+    started = false;
     inFixed = new boolean[m];
     inOpen = new boolean[m];
     dirty = new int[m];

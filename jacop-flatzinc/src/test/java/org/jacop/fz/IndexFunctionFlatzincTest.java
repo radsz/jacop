@@ -251,4 +251,27 @@ class IndexFunctionFlatzincTest {
     }
     return buffer.toString(StandardCharsets.UTF_8);
   }
+
+  /**
+   * A variable repeated in an unfolded comparison merges its weights: 2000000000 + 2000000000 does
+   * not fit an int, and the cast made the comparison 4000000000 * x <= 0 hold for x = 1.
+   */
+  @Test
+  void repeatedVariableWithLargeWeightsKeepsItsComparison() throws IOException {
+    String model =
+        """
+        var 1..2: p :: output_var;
+        var 0..1: x :: output_var;
+        var 0..5: d;
+        var bool: b1;
+        var bool: b2;
+        constraint array_int_element(p, [0, 5], d);
+        constraint int_lin_le_imp([2000000000, 2000000000, 1], [x, x, d], 5, b1);
+        constraint int_le_imp(d, 0, b2);
+        constraint bool_clause([b1, b2], []);
+        solve satisfy;
+        """;
+    assertEquals(3, solutions(run(model, false, "-a")));
+    assertEquals(3, solutions(run(model, true, "-a")));
+  }
 }
