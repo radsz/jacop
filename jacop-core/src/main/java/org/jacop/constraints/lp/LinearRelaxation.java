@@ -557,6 +557,32 @@ public class LinearRelaxation extends Constraint
       Integer.getInteger("org.jacop.lp.satisfactionProbation", 64);
   private boolean probation;
 
+  // the extra rows of an optimisation model kept for the root bound they raise, though the bound
+  // without them already cuts the objective, are on probation in search too: after this many
+  // solves they are dropped unless at least FAIL_RATE of the solves since then failed the node. A
+  // bound a few units higher at the root seldom fails a node, and every solve pays for the rows
+  // (2012 amaze 2012-03-19 under LCG: 650 extra rows raise the root bound 97 -> 104, the LP fails
+  // 6 % of its solves and saves 8 of 8,179 nodes, and its solves take 4.5 s of a 4.1 s search
+  // that takes 0.6 s without them); 0 keeps them
+  private static final int OPTIMISATION_PROBATION =
+      Integer.getInteger("org.jacop.lp.optimisationProbation", 256);
+  private boolean searchProbation;
+  // the share of the time of the search that the solves of the probation must take for their rows
+  // to be dropped: rows that cost little stay (multiple-constant-multiplication XU07_28: 7 % of the
+  // solves fail, the LP takes a quarter of the time, and without the rows the search takes 160 s
+  // instead of 2.5 s; sdn-chain d28n600-6: 8 % fail, 46 % of the time, 7 s with the rows and 200 s
+  // without; 2012 amaze 2012-03-19: 8 % fail, 70-80 % of the time, 4.2 s with them and 1.2 s
+  // without); the share is measured from the PROBATION_START-th solve after the root
+  private static final double PROBATION_SHARE =
+      Double.parseDouble(System.getProperty("org.jacop.lp.probationShare", "0.6"));
+  private static final int PROBATION_START = 16;
+  private long probationSolveNanos;
+
+  /** Statistics: the share of the search time the solves of the optimisation probation took. */
+  public double probationShare = Double.NaN;
+
+  private long probationStart;
+
   // the solves at the pivot limit, with no node failed, after which rows on probation are dropped
   private static final int PROBATION_LIMITS =
       Integer.getInteger("org.jacop.lp.probationLimits", 16);
@@ -3757,6 +3783,18 @@ public class LinearRelaxation extends Constraint
         dropExtraRows();
       }
     }
+    if (searchProbation && calls - extraCall == PROBATION_START) {
+      probationSolveNanos = solveNanos;
+      probationStart = System.nanoTime();
+    } else if (searchProbation && calls - extraCall >= OPTIMISATION_PROBATION) {
+      searchProbation = false;
+      probationShare =
+          (double) (solveNanos - probationSolveNanos)
+              / Math.max(1, System.nanoTime() - probationStart);
+      if (beforeExtra != null && probationShare >= PROBATION_SHARE && !failingWithExtra()) {
+        dropExtraRows();
+      }
+    }
     calls++;
     boolean jump = calls > 1 && lastSolveLevel - store.level >= BASIS_JUMP;
     long pivotsBefore = lp.pivots();
@@ -6663,6 +6701,12 @@ public class LinearRelaxation extends Constraint
       lp = full;
       allRowsInSimplex(m + k);
       extraCarry = carriesBound(status, before, m, keptStatus);
+      searchProbation =
+          OPTIMISATION_PROBATION > 0
+              && objective != null
+              && !probation
+              && !keepEncodings
+              && trees.isEmpty();
       extraSparse = trialSparse;
       trialSparse = false;
       if (keptStatus == LpSolver.OPTIMAL) {
@@ -7429,6 +7473,7 @@ public class LinearRelaxation extends Constraint
     c.keepExtra = !keptExtraForms.isEmpty();
     c.keepEncodings = keepEncodings;
     c.extraCarry = extraCarry;
+    c.searchProbation = searchProbation;
     c.refutation = refutation;
     for (CapacityCuts cc : capacity) {
       c.capacity.add(cc.copy(map));

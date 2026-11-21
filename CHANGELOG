@@ -8781,7 +8781,26 @@ Version 5.0 (unreleased)
    (4,333 -> 4,637), unit-commitment L12, warehouse olil4. Wide-quick set
    at 240 s: the slices start on 2 of 62 instances.
 
-492. In a model without a search annotation, the FlatZinc front end counts
+492. JaLP's aggregator also substitutes a column whose bounds are implied
+   by any of its rows, not only by the equation it is substituted from
+   (implied free columns as in HiGHS). On the 687 LPs of the osolpro LP
+   bench the presolved LPs are 1,112,853 -> 244,977 rows and columns larger
+   than HiGHS's in all (pds-20: 27,026 -> 8,778 rows, HiGHS 8,732); at
+   120 s no wrong answer, 2 more solved, total time 6,792 -> 6,631 s,
+   pds-40 to pds-100 35-50 % faster. -Dorg.jacop.jalp.aggregateAnyRow=false
+   turns it off.
+
+493. Rows that the linear relaxation of an optimisation model keeps for the
+   root bound they raise are on probation in search: after 256 solves
+   they are dropped when fewer than 10 % of the solves failed the node and
+   the solves took at least 60 % of the time of the search since the
+   root. 2012 amaze 2012-03-19 with the reified-count decomposition: 650
+   rows raise the root bound 97 -> 104 but save 8 of 8,179 nodes, and
+   the search goes 5.5 -> 2.0 s (fd) and 3.8 -> 1.8 s (-f).
+   -Dorg.jacop.lp.optimisationProbation=0 keeps the rows,
+   -Dorg.jacop.lp.probationShare sets the share of time.
+
+494. In a model without a search annotation, the FlatZinc front end counts
    the loads of a bin packing (jacop_bin_packing) as defined by it, as if
    a defines_var annotation named them: free search branches on the bins
    of the items first (item 369) and LNS relaxes bins only (lns-defined).
@@ -8796,7 +8815,7 @@ Version 5.0 (unreleased)
    gbac under -f got worse at 600 s (6 of 19 objectives worse, 1 better).
    -Dorg.jacop.fz.binPackingLoadsDefined=false turns it off.
 
-493. Two opt-in strengthenings of the root linear relaxation.
+495. Two opt-in strengthenings of the root linear relaxation.
    -Dorg.jacop.lp.clauseRows=true: the clause rows of lazy clause
    generation over columns the relaxation already has no longer drop out
    when the share of further rows is full. They come after every other
@@ -8821,7 +8840,7 @@ Version 5.0 (unreleased)
    plus L10 and L15), 600 s: the same 26 solved in each mode, total time
    default 0.994 and -f 1.007.
 
-494. The FlatZinc front end rewrites an absolute difference that only
+496. The FlatZinc front end rewrites an absolute difference that only
    excludes values: t = x - y and a = |t|, with t and a used nowhere
    else, become bounds on x - y and x - y != d for the at most 8 values d
    (-Dorg.jacop.fz.absoluteDifference.maxHoles) that the domains of t and
@@ -8841,7 +8860,7 @@ Version 5.0 (unreleased)
    proved in 44 s; no instance of the wide set fires. Off with
    -Dorg.jacop.fz.absoluteDifference=false and under --proof.
 
-495. The FlatZinc front end posts a network flow with fixed weights
+497. The FlatZinc front end posts a network flow with fixed weights
    (network_flow, network_flow_cost) as its flow conservation rows and
    cost row under free search (-f), and as those rows next to NetworkFlow
    otherwise. NetworkFlow's reduced-cost arc analysis, a shortest path
