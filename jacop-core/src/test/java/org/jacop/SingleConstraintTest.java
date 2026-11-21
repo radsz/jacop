@@ -13058,4 +13058,16 @@ class SingleConstraintTest extends TestHelper {
     assertThat(ls.solve()).isEqualTo(LocalSearch.Status.SATISFIED);
     assertThat(ls.getSolution(x)).containsExactly(1, 1, 0);
   }
+
+  // A BooleanVar over 0..2 was refused only under jacop.asserts.enabled; without it the store took
+  // b = 2, which the Boolean constraints do not expect.
+  @Test
+  void booleanVariableRefusesValuesOutsideZeroOne() {
+    Store store = new Store();
+    assertThatThrownBy(() -> new BooleanVar(store, "b", 0, 2))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new BooleanVar(store, -1, 0))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThat(new BooleanVar(store, "c", 1, 1).value()).isEqualTo(1);
+  }
 }
