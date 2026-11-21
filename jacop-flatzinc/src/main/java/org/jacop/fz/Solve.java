@@ -583,6 +583,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (opt.getRemainingTimeOut() > 0) {
       budget = Math.min(budget, opt.getRemainingTimeOut() / 20);
     }
+    if (CdclSolver.VIRTUAL_CLOCK) {
+      // under the virtual clock runs repeat exactly, so only the work bound ends the search: a
+      // wall-time budget on a loaded machine dropped all 54 generators of oocsp_racks_030_mii8_cc
+      // and made the nightly guard report 3.7 times the search work
+      budget = 3_600_000L;
+    }
     long start = timer.getCpuTime();
     symmetry = new SymmetryBreaking(store, dictionary);
     SymmetryBreaking.Outcome o =
