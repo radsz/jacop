@@ -104,6 +104,28 @@ class ZeroOneParityTest {
     assertEquals(Integer.valueOf(1), solve(evenColouring(false)));
   }
 
+  // a xor b xor c = 1 written as the four clauses that exclude its even points, and r = not a
+  // (as a soft literal of a MaxSAT model is the negation of an output): a tree of two rows, which
+  // unit propagation already solves, so no system is posted (security-witness of the MaxSAT
+  // Evaluation 2021 had 63,636 such pairs, each a system visited at every backtrack)
+  @Test
+  void negationNextToClauseXorPostsNoSystem() throws IOException {
+    String model =
+        "var bool: a;\nvar bool: b;\nvar bool: c;\nvar bool: r;\n"
+            + "var 0..1: v :: output_var;\n"
+            + "constraint bool_clause([a, b, c], []);\n"
+            + "constraint bool_clause([a], [b, c]);\n"
+            + "constraint bool_clause([b], [a, c]);\n"
+            + "constraint bool_clause([c], [a, b]);\n"
+            + "constraint bool_not(a, r);\n"
+            + "constraint bool2int(r, v);\n"
+            + "solve minimize v;\n";
+    String out = run(model, "-debug", "--search-statistics");
+    assertTrue(out.contains("%%%mzn-stat: xorAcyclicSystems=1"), out);
+    assertTrue(!out.contains("% XorSystem: "), out);
+    assertTrue(out.contains("v = 0;"), out);
+  }
+
   @Test
   void opposedInequalitiesAreEquations() throws IOException {
     String out = run(evenColouring(true), "-debug");

@@ -356,7 +356,7 @@ public class Support implements ParserTreeConstants {
       int val = node.getInt();
       return dictionary.getConstant(val);
     } else if (node.getType() == 2) { // ident
-      IntVar int_boolVar = dictionary.getVariable(node.getIdent());
+      IntVar int_boolVar = dictionary.getVariable(node);
       if (int_boolVar == null) {
         int bInt = dictionary.getInt(node.getIdent());
         return dictionary.getConstant(bInt); // new IntVar(store, bInt, bInt);
@@ -795,7 +795,7 @@ public class Support implements ParserTreeConstants {
 
     ASTScalarFlatExpr e = (ASTScalarFlatExpr) node.jjtGetChild(0);
     if (e != null) {
-      return dictionary.getVariable(e.getIdent());
+      return dictionary.getVariable(e);
     } else {
       throw new IllegalArgumentException(
           "Wrong variable identified in \"defines_var\" annotation" + node);
@@ -873,10 +873,24 @@ public class Support implements ParserTreeConstants {
    * @throws ModelTimeOut when it has passed
    */
   void checkTimeOut() {
-    if (options != null && options.timeOutPassed()) {
+    // the clock is read at the first and every 64th call after it, and stays passed once it is: the
+    // detectors call this for each constraint they read, 160 million times (2 s) on the 3.9
+    // million clauses of MaxSAT 2021 haplotyping-pedigrees
+    if (options == null) {
+      return;
+    }
+    if (timedOut != options && (timeOutChecks++ & 63) == 0 && options.timeOutPassed()) {
+      timedOut = options;
+    }
+    if (timedOut == options) {
       throw new ModelTimeOut();
     }
   }
+
+  // the calls of checkTimeOut, and the options whose time-out one found passed
+  private int timeOutChecks;
+
+  private Options timedOut;
 
   /** Posts the conflict cliques of the bin packing constraints over the same bins. */
   public void detectBinPackingCliques() {

@@ -1065,6 +1065,18 @@ public class Options {
   }
 
   /**
+   * Tells whether a search stopped by a limit of its own (a node budget) before the time-out may go
+   * on: no time-out is set, or more than a millisecond of it is left. A run without a time-out has
+   * no remaining time ({@link #getRemainingTimeOut()} is 0), so a node budget must not be read as
+   * the time-out there.
+   *
+   * @return true if the search may go on
+   */
+  public boolean timeLeft() {
+    return timeOut <= 0 || getRemainingTimeOut() > 1;
+  }
+
+  /**
    * It checks whether the time-out has passed.
    *
    * @return true if a time-out was set and it has passed.

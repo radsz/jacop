@@ -650,14 +650,15 @@ public class IndexDisjunctionDetector implements ParserTreeConstants {
     }
     ASTScalarFlatExpr e = (ASTScalarFlatExpr) arg;
     if (e.getType() == 2) {
+      // a name is of a variable or of an array; the variable is kept by the identifier
+      IntVar v = support.dictionary.getVariable(e);
+      if (v != null) {
+        out.add(v);
+        return;
+      }
       IntVar[] array = support.dictionary.getDeclaredVariableArray(e.getIdent());
       if (array != null) {
         Collections.addAll(out, array);
-        return;
-      }
-      IntVar v = support.dictionary.getVariable(e.getIdent());
-      if (v != null) {
-        out.add(v);
       }
     } else if (e.getType() == 3
         && support.dictionary.getDeclaredVariableArray(e.getIdent()) != null) {
