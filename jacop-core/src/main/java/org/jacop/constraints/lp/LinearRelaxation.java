@@ -246,6 +246,9 @@ public class LinearRelaxation extends Constraint
   // whether the clause rows over columns already in the relaxation that are past the share of the
   // further rows are tried after them (fitsSimplex, addExtraRows)
   static final boolean CLAUSE_ROWS = Boolean.getBoolean("org.jacop.lp.clauseRows");
+  // whether every further row over columns already in the relaxation that is past the share goes
+  // to that tail, not the clause rows alone (fitsSimplex)
+  static boolean columnRowsOn = Boolean.getBoolean("org.jacop.lp.columnRows");
   // whether the MIR cuts of the rows also substitute variable bounds x <= a u, x >= a u
   // (MirCut.ofVariableBounds)
   static boolean vbMirOn = Boolean.getBoolean("org.jacop.lp.vbMir");
@@ -1725,7 +1728,7 @@ public class LinearRelaxation extends Constraint
                 + first
                 + (bySparse && leading.isEmpty() ? encoded : 0)
             : Long.MAX_VALUE;
-    List<LinearForm> tail = CLAUSE_ROWS ? new ArrayList<>() : null;
+    List<LinearForm> tail = CLAUSE_ROWS || columnRowsOn ? new ArrayList<>() : null;
     if (!fitsSimplex(localForms, candidates, simplex, auto, share, own, further, tail)
         && objective != null) {
       // not all fit: after the value encodings, the rows nearest to the objective first, since rows
@@ -1784,7 +1787,7 @@ public class LinearRelaxation extends Constraint
           ahead += near.contains(f) ? 0 : 1;
         }
         long nearShare = Math.max(share, (long) first + near.size() + ahead);
-        List<LinearForm> sparseTail = CLAUSE_ROWS ? new ArrayList<>() : null;
+        List<LinearForm> sparseTail = CLAUSE_ROWS || columnRowsOn ? new ArrayList<>() : null;
         fitsSimplex(localForms, sorted, Simplex.SPARSE, true, nearShare, own, sparse, sparseTail);
         if (localForms.size() + near.size() <= sparseMaxRows
             && containsAll(sparse, near)
@@ -2704,8 +2707,11 @@ public class LinearRelaxation extends Constraint
         // a clause row over columns the relaxation has already adds no column: with
         // org.jacop.lp.clauseRows it goes to the tail, tried after the others (unit commitment
         // L10: 2,668 of them past the share, among them every x + not x = 1 of the commitments,
-        // and without them the relaxation as a MIP has the optimum 1,633,000 instead of 1,703,450)
-        if (tail != null && added == 0 && ClauseSimplification.isClause(f)) {
+        // and without them the relaxation as a MIP has the optimum 1,633,000 instead of 1,703,450);
+        // with org.jacop.lp.columnRows every row over such columns does (MiniZinc Challenge 2017
+        // routing-flexible GCM_0005: the rows of the leg lengths, max and min of the node
+        // coordinates, came past the share and the root bound was 10,509; with them 46,529)
+        if (tail != null && added == 0 && (columnRowsOn || ClauseSimplification.isClause(f))) {
           tail.add(f);
           nonzeros += f.vars().length;
           fitted = false;
