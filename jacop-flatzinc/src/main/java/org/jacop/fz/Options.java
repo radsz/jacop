@@ -464,7 +464,13 @@ public class Options {
     String[] args = splitValues(given);
     int i = 0;
     while (i < args.length - 1) {
-      i = parseOption(args, i);
+      try {
+        i = parseOption(args, i);
+      } catch (NumberFormatException _) {
+        // the value of a numeric option, or the file name after an option without its value
+        throw new IllegalArgumentException(
+            "option " + args[i] + ": " + args[i + 1] + " is not a valid number");
+      }
     }
     fileName = args[args.length - 1];
   }

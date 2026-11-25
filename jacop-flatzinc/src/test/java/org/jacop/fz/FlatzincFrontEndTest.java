@@ -7533,4 +7533,34 @@ class FlatzincFrontEndTest {
     assertTrue(out.strip().contains("==========\n"), out);
     assertEquals(out.indexOf("x = 9;"), out.lastIndexOf("x = 9;"), out);
   }
+
+  @Test
+  void anInvalidOptionValueIsAnErrorOfTheCommandLine() throws IOException {
+    // -t abc and the others threw a NumberFormatException out of the run, a stack trace
+    String model = "var 1..3: x :: output_var;\nsolve satisfy;\n";
+    Map<List<String>, String> options =
+        Map.of(
+            List.of("-t", "abc"),
+            "option -t: abc is not a valid number",
+            List.of("-p", "x"),
+            "option -p: x is not a valid number",
+            List.of("-n", "q"),
+            "option -n: q is not a valid number",
+            List.of("-d", "z"),
+            "option -d: z is not a valid number",
+            List.of("-r", "1.5"),
+            "option -r: 1.5 is not a valid number",
+            List.of("--gap", "x"),
+            "--gap x: not a number",
+            List.of("-p", "2", "--free-config", "portfolio-split=x"),
+            "option --free-config portfolio-split=x: not a number");
+    for (Map.Entry<List<String>, String> o : options.entrySet()) {
+      String[] out = run(model, o.getKey().toArray(new String[0]));
+      assertEquals("", out[0], o.getKey().toString());
+      assertEquals("%% Error: " + o.getValue() + "\n", out[1], o.getKey().toString());
+      assertEquals(1, lastStatus, o.getKey().toString());
+    }
+    String valid = run(model, "-n", "1")[0];
+    assertTrue(valid.startsWith("x = 1;\n----------\n"), valid);
+  }
 }
