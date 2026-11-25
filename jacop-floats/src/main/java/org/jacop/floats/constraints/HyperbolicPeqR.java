@@ -117,6 +117,17 @@ public class HyperbolicPeqR extends Constraint
       r.domain.inMin(store.level, r, 1.0);
     }
 
+    if (p == r) {
+      // sinh(x) - x is increasing and tanh(x) - x decreasing, both 0 at 0: x = 0 is the only
+      // solution, which bound propagation would only approach by about x^3 per pass; cosh(x) > x
+      // for every x
+      if (function == Function.COSH) {
+        throw Store.failException;
+      }
+      p.domain.in(store.level, p, 0.0, 0.0);
+      return;
+    }
+
     do {
       store.propagationHasOccurred = false;
 

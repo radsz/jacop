@@ -61,6 +61,7 @@ import org.jacop.floats.constraints.ElementFloat;
 import org.jacop.floats.constraints.ElementFloatVariable;
 import org.jacop.floats.constraints.EquationSystem;
 import org.jacop.floats.constraints.ExpPeqR;
+import org.jacop.floats.constraints.HyperbolicPeqR;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.LnPeqR;
 import org.jacop.floats.constraints.PdivCeqR;
@@ -914,5 +915,58 @@ class SingleConstraintTest {
     } catch (FailException _) {
       return false;
     }
+  }
+
+  /**
+   * f(x) = x with one variable for both arguments: sin, asin, atan, sinh, tanh (and so asinh and
+   * atanh) have the single solution 0, cosh none, and tan only 0 between its poles at -PI/2 and
+   * PI/2. Propagation shrank the bounds towards 0 by about x^3 per pass, so sinh and tanh did not
+   * return and the others left a search that failed millions of times without reaching 0.
+   */
+  @Test
+  void functionOfItselfKeepsItsExactSolutions() {
+    List<Function<FloatVar, Constraint>> zeroOnly =
+        List.of(
+            x -> new SinPeqR(x, x),
+            x -> new AsinPeqR(x, x),
+            x -> new AtanPeqR(x, x),
+            x -> new HyperbolicPeqR(x, HyperbolicPeqR.Function.SINH, x),
+            x -> new HyperbolicPeqR(x, HyperbolicPeqR.Function.TANH, x));
+    assertTimeoutPreemptively(
+        Duration.ofSeconds(10),
+        () -> {
+          for (Function<FloatVar, Constraint> build : zeroOnly) {
+            Store store = new Store();
+            FloatVar x = new FloatVar(store, "x", -10, 10);
+            Constraint c = build.apply(x);
+            store.impose(c);
+            assertThat(store.consistency()).as("%s", c).isTrue();
+            assertThat(x.min() == 0.0 && x.max() == 0.0).as("%s", c).isTrue();
+
+            Store away = new Store();
+            FloatVar y = new FloatVar(away, "y", 1e-9, 1);
+            away.impose(build.apply(y));
+            assertThat(away.consistency()).as("%s without 0", c).isFalse();
+          }
+
+          Store store = new Store();
+          FloatVar x = new FloatVar(store, "x", -10, 10);
+          store.impose(new HyperbolicPeqR(x, HyperbolicPeqR.Function.COSH, x));
+          assertThat(store.consistency()).as("cosh(x) = x").isFalse();
+
+          store = new Store();
+          x = new FloatVar(store, "x", -1.5, 1.5);
+          store.impose(new TanPeqR(x, x));
+          assertThat(store.consistency()).isTrue();
+          assertThat(x.min() == 0.0 && x.max() == 0.0).as("tan(x) = x: %s", x).isTrue();
+
+          store = new Store();
+          x = new FloatVar(store, "x", 4, 5);
+          store.impose(new TanPeqR(x, x));
+          assertThat(store.consistency()).isTrue();
+          assertThat(x.min() <= 4.4934094579091 && x.max() >= 4.4934094579090)
+              .as("tan(x) = x: %s", x)
+              .isTrue();
+        });
   }
 }

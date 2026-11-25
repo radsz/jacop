@@ -87,6 +87,17 @@ public class TanPeqR extends Constraint implements SatisfiedPresent, Copyable<Ta
 
   void boundConsistency(Store store) {
 
+    if (p == q) {
+      // tan(x) - x is increasing between the poles at -PI/2 and PI/2, so 0 is the only solution
+      // there, which bound propagation would only approach by about x^3 per pass; Math.PI / 2 is
+      // below the real pole, so the open intervals removed hold no other solution
+      double pole = FloatDomain.PI / 2;
+      FloatIntervalDomain outside = new FloatIntervalDomain(FloatDomain.MIN_FLOAT, -pole);
+      outside.unionAdapt(0.0, 0.0);
+      outside.unionAdapt(pole, FloatDomain.MAX_FLOAT);
+      p.domain.in(store.level, p, outside);
+    }
+
     if (p.max() - p.min() >= FloatDomain.PI) {
       return;
     }
