@@ -7593,4 +7593,22 @@ class FlatzincFrontEndTest {
     assertTrue(out.contains("s0 = {0, 300000};"), out);
     assertTrue(out.contains("%%%mzn-stat: symmetryConstraints=0\n"), out);
   }
+
+  @Test
+  void setVariablesThatAreNotOutputAreCompleted() throws IOException {
+    // after the search on the output variables the completion search labelled only the integer and
+    // Boolean variables left: s0 = {-5} with b0 = false was printed, although s1 != {-5} makes s1
+    // empty and so a subset of s2
+    String model =
+        "var set of {-5, 0}: s0 :: output_var;\n"
+            + "var set of -5..-5: s1;\n"
+            + "var set of {-5, 0}: s2;\n"
+            + "var bool: b0 :: output_var;\n"
+            + "constraint set_superset_reif(s2, s1, b0);\n"
+            + "constraint set_ne(s1, s0);\n"
+            + "solve :: set_search([s0], input_order, indomain_min, complete) satisfy;\n";
+    List<String> all = solveAllInOrder(model, "--lcg", "off");
+    assertEquals(7, all.size(), all.toString());
+    assertFalse(all.contains("b0 = false; s0 = -5..-5;"), all.toString());
+  }
 }

@@ -361,6 +361,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   DepthFirstSearch<T>[] finalSearch;
   // labels the variables a search on output variables leaves out
   DepthFirstSearch<T> completionSearch;
+  // labels the integer and Boolean variables it leaves out, after completionSearch labelled the
+  // set variables
+  DepthFirstSearch<T> completionChild;
   // Values for search created from flatzinc
   DepthFirstSearch<T> flatzincDfs;
   SelectChoicePoint<T> flatzincVariableSelection;
@@ -2584,7 +2587,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     DepthFirstSearch<T> parentSearch = null;
     do {
       s.getSolutionListener().recordSolutions(false);
-      s.getSolutionListener().searchAll(s != completionSearch);
+      s.getSolutionListener().searchAll(s != completionSearch && s != completionChild);
 
       if (parentSearch != null) {
         s.getSolutionListener().setParentSolutionListener(parentSearch.getSolutionListener());
@@ -9762,10 +9765,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
-   * Adds a search on the integer and Boolean variables that the search on output variables leaves
-   * out. Propagation alone does not guarantee that they can take values consistent with the output
-   * variables, so a solution is reported only once they do. One assignment is enough: the search
-   * stops at the first one, also when all solutions are requested.
+   * Adds a search on the set, integer and Boolean variables that the search on output variables
+   * leaves out. Propagation alone does not guarantee that they can take values consistent with the
+   * output variables, so a solution is reported only once they do. One assignment is enough: the
+   * search stops at the first one, also when all solutions are requested.
    */
   @SuppressWarnings("unchecked")
   private DepthFirstSearch<T> addCompletionSearch(DepthFirstSearch<T> lastSearch) {
@@ -9773,6 +9776,32 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     allVars.defaultVars();
     LinkedHashSet<IntVar> rest = new LinkedHashSet<>(Arrays.asList(allVars.getIntVars()));
     rest.addAll(Arrays.asList(allVars.getBoolVars()));
+    // the sets whose constraints a reformulation replaced take any value
+    Set<Var> unused = new HashSet<>(dictionary.unusedVariables);
+    SetVar[] sets =
+        Arrays.stream(allVars.getSetVars()).filter(v -> !unused.contains(v)).toArray(SetVar[]::new);
+    DepthFirstSearch<T> first = null;
+    if (sets.length > 0) {
+      // the set variables first, then the others below this search
+      DepthFirstSearch<T> setCompletion = new DepthFirstSearch<>();
+      if (options.debug()) {
+        setCompletion.setConsistencyListener(failStatistics);
+      }
+      setCompletion.setSelectChoicePoint(
+          (SelectChoicePoint<T>) new SimpleSelect<>(sets, null, new IndomainSetMin<>()));
+      setCompletion.setPrintInfo(false);
+      lastSearch.setSolutionListener(new SimpleSolutionListener<>());
+      setCompletion.setSolutionListener(new CostListener<>());
+      lastSearch.addChildSearch(setCompletion);
+      setSearchTimeout(setCompletion);
+      if (rest.isEmpty()) {
+        completionSearch = setCompletion;
+        completionChild = null;
+        return setCompletion;
+      }
+      first = setCompletion;
+      lastSearch = setCompletion;
+    }
     if (rest.isEmpty()) {
       return null;
     }
@@ -9793,8 +9822,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     completion.setSolutionListener(new CostListener<>());
     lastSearch.addChildSearch(completion);
     setSearchTimeout(completion);
-    completionSearch = completion;
-    return completion;
+    if (first == null) {
+      completionSearch = completion;
+      completionChild = null;
+      return completion;
+    }
+    completionSearch = first;
+    completionChild = completion;
+    return first;
   }
 
   private boolean shouldUseDefaultSearchVars(
