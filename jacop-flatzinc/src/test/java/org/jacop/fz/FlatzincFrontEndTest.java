@@ -8051,4 +8051,40 @@ class FlatzincFrontEndTest {
             "var 0..3: c :: output_var;\nconstraint jacop_networkflow([], [], [], [0], c);\n"
                 + "solve satisfy;\n"));
   }
+
+  @Test
+  void aSecondDeclarationOrAnArrayOfAnotherLengthIsAnError() throws IOException {
+    // both x were made and printed, an array of 2 values declared with 3 was printed with 2, an
+    // output_array of 3 or 4 elements was printed for an array of 2
+    Map<String, String> models =
+        Map.of(
+            "var 1..3: x :: output_var;\nvar 4..5: x :: output_var;\n",
+            "Symbol \"x\" is declared more than once",
+            "var 1..3: x;\narray [1..1] of var int: x :: output_array([1..1]) = [x];\n",
+            "Symbol \"x\" is declared more than once",
+            "int: n = 3;\nint: n = 4;\nvar 1..n: x :: output_var;\n",
+            "Symbol \"n\" is declared more than once",
+            "var 1..3: x;\narray [1..3] of var int: a :: output_array([1..3]) = [x, x];\n",
+            "Different size declaration and initialization of variable array a",
+            "var 1..3: x;\narray [1..2] of var int: a :: output_array([1..3]) = [x, x];\n",
+            "Index sets of output_array of a do not have its 2 elements",
+            "var 1..3: x;\narray [1..2] of var int: a :: output_array([1..2, 1..2]) = [x, x];\n",
+            "Index sets of output_array of a do not have its 2 elements");
+    for (Map.Entry<String, String> m : models.entrySet()) {
+      String model = m.getKey() + "solve satisfy;\n";
+      for (String[] options : new String[][] {{}, {"-p", "2"}, {"--presolve", "on"}}) {
+        String[] out = run(model, options);
+        String what = m.getKey() + Arrays.toString(options);
+        assertEquals("", out[0], what);
+        assertTrue(out[1].contains("%% Error: " + m.getValue()), what + out[1]);
+        assertEquals(1, lastStatus, what);
+      }
+    }
+    // a two-dimensional output of all its elements is still printed
+    assertEquals(
+        "a = array2d(1..2, 1..1, [1, 1]);\n----------\n",
+        run(
+            "var 1..3: x;\narray [1..2] of var int: a :: output_array([1..2, 1..1]) = [x, x];\n"
+                + "solve satisfy;\n")[0]);
+  }
 }
