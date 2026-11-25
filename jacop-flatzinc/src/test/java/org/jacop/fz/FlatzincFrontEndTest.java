@@ -7611,4 +7611,33 @@ class FlatzincFrontEndTest {
     assertEquals(7, all.size(), all.toString());
     assertFalse(all.contains("b0 = false; s0 = -5..-5;"), all.toString());
   }
+
+  @Test
+  void floatObjectiveImprovesFromSolutionToSolution() throws IOException {
+    // with precision 0.01 the objective of a solution is an interval up to 0.01 wide, printed as
+    // its middle; each next solution had only to raise its minimum by one float, so the printed
+    // objective went down: 5.8786, 5.8775, 5.8757
+    String model =
+        "var -1000.0..1000.0: x :: output_var;\n"
+            + "var -10.0..10.0: y :: output_var;\n"
+            + "var -2..2: i :: output_var;\n"
+            + "var -1000.0..1000.0: fi;\n"
+            + "var -1.0e9..1.0e9: obj :: output_var;\n"
+            + "constraint int2float(i, fi);\n"
+            + "constraint float_lin_le([2.63,2.76,-2.14],[x,y,fi],6.07);\n"
+            + "constraint float_lin_le([1.75,0.9,-2.71],[x,y,fi],-3.27);\n"
+            + "constraint float_lin_eq([-1.09,2.77,0.86],[x,y,fi],6.16);\n"
+            + "constraint float_lin_eq([0.53,-2.22,-0.49,-1.0],[x,y,fi,obj],0.0);\n"
+            + "solve :: float_search([x,y],0.01,input_order,indomain_split,complete)"
+            + " maximize obj;\n";
+    List<String> all = solveAllInOrder(model, "--lcg", "off");
+    double last = Double.NEGATIVE_INFINITY;
+    for (String solution : all) {
+      Matcher m = Pattern.compile("obj = ([-0-9.Ee]+);").matcher(solution);
+      assertTrue(m.find(), solution);
+      double obj = Double.parseDouble(m.group(1));
+      assertTrue(obj > last, all.toString());
+      last = obj;
+    }
+  }
 }
