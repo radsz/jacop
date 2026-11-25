@@ -73,6 +73,66 @@ class DefinedVariablesFlatzincTest {
     assertThat(tables.definedVariables).contains(c);
   }
 
+  // XCSP 2023 WordDesign1: b -> x != y is int_lin_ne_imp with defines_var(b), yet x != y leaves b
+  // free; free search must not put b after the letters (Solve.definedLast)
+  @Test
+  void theBooleanOfAHalfReificationIsOnlyHalfDefined() throws IOException {
+    Path model = dir.resolve("imp.fzn");
+    Files.writeString(
+        model,
+        """
+        var 0..3: x :: output_var;
+        var 0..3: y :: output_var;
+        var bool: b :: is_defined_var :: output_var;
+        var bool: r :: is_defined_var :: output_var;
+        constraint int_lin_ne_imp([1,-1], [x,y], 0, b) :: defines_var(b);
+        constraint int_lin_ne_reif([1,-1], [x,y], 1, r) :: defines_var(r);
+        solve satisfy;
+        """);
+    Tables tables = load(model);
+    Var b = tables.getVariable("b");
+    Var r = tables.getVariable("r");
+    assertThat(tables.definedVariables).contains(b, r);
+    assertThat(tables.halfDefinedVariables).containsExactly(b);
+  }
+
+  // XCSP 2026 BACPj (500 courses, 100 periods) has no defines_var annotations: free search
+  // branched on the loads and found no solution in 240 s, on the bins it finds one in 9 s
+  @Test
+  void theLoadsOfABinPackingAreDefinedByIt() throws IOException {
+    Path model = dir.resolve("loads.fzn");
+    Files.writeString(
+        model,
+        """
+        predicate jacop_bin_packing(array [int] of var int: bin, array [int] of var int: cap,
+            array [int] of int: w, int: min_bin);
+        var 1..2: x1 :: output_var;
+        var 1..2: x2 :: output_var;
+        var 1..2: x3 :: output_var;
+        var 0..9: l1 :: output_var;
+        var 0..9: l2 :: output_var;
+        constraint jacop_bin_packing([x1, x2, x3], [l1, l2], [2, 3, 4], 1);
+        solve minimize l1;
+        """);
+    Tables tables = load(model);
+    assertThat(tables.definedVariables)
+        .contains(tables.getVariable("l1"), tables.getVariable("l2"))
+        .doesNotContain(tables.getVariable("x1"), tables.getVariable("x2"));
+
+    // a search annotation names what to branch on: the loads stay as they are
+    Path annotated = dir.resolve("loads-annotated.fzn");
+    Files.writeString(
+        annotated,
+        Files.readString(model)
+            .replace(
+                "solve minimize l1;",
+                "solve :: int_search([x1, x2, x3], input_order, indomain_min, complete)"
+                    + " minimize l1;"));
+    Tables withAnnotation = load(annotated);
+    assertThat(withAnnotation.definedVariables)
+        .doesNotContain(withAnnotation.getVariable("l1"), withAnnotation.getVariable("l2"));
+  }
+
   private static Tables load(Path model) {
     PrintStream out = System.out;
     try (PrintStream quiet = new PrintStream(OutputStream.nullOutputStream())) {

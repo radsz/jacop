@@ -47,6 +47,12 @@ public final class VarHeap {
   private int size;
   private int[] index = initialIndex();
   private double[] activity;
+  // lazy order: the operations keep only the membership, and the order is rebuilt when the top is
+  // read; for a heap whose top is rarely read, as the SAT solver's own under lazy clause generation
+  private boolean lazy;
+  private boolean dirty;
+  private long skipped;
+  private long rebuilt;
 
   private static int[] initialIndex() {
     int[] index = new int[16];
@@ -102,6 +108,11 @@ public final class VarHeap {
     }
     index[v] = size;
     heap[size++] = v;
+    if (lazy) {
+      dirty = true;
+      skipped++;
+      return;
+    }
     up(index[v]);
   }
 
@@ -112,6 +123,11 @@ public final class VarHeap {
    */
   public void increased(int v) {
     if (index[v] >= 0) {
+      if (lazy) {
+        dirty = true;
+        skipped++;
+        return;
+      }
       up(index[v]);
     }
   }
@@ -131,6 +147,11 @@ public final class VarHeap {
     if (i < size) {
       heap[i] = last;
       index[last] = i;
+      if (lazy) {
+        dirty = true;
+        skipped++;
+        return;
+      }
       up(i);
       down(index[last]);
     }
@@ -142,6 +163,7 @@ public final class VarHeap {
    * @return the variable; the heap must not be empty
    */
   public int max() {
+    order();
     return heap[0];
   }
 
@@ -151,6 +173,7 @@ public final class VarHeap {
    * @return the variable; the heap must not be empty
    */
   public int removeMax() {
+    order();
     int v = heap[0];
     int last = heap[--size];
     index[v] = -1;
@@ -170,6 +193,7 @@ public final class VarHeap {
    * @param n the number of variables
    */
   public void rebuild(int[] vars, int n) {
+    dirty = false;
     for (int i = 0; i < size; i++) {
       index[heap[i]] = -1;
     }
@@ -178,6 +202,44 @@ public final class VarHeap {
       index[vars[i]] = size;
       heap[size++] = vars[i];
     }
+    heapify();
+  }
+
+  /**
+   * Makes the operations keep only which variables are in the heap, and the order be rebuilt the
+   * next time the top is read (Floyd's construction, linear in the size). It suits a heap whose top
+   * is read much less often than activities change. The heap goes back to the usual order for good
+   * once the rebuilding has cost more than twice the sifting it saved, beyond 16 rebuilds of the
+   * whole heap, so the decisions are never slower than with the eager order by more than that.
+   *
+   * @param lazy true for the lazy order
+   */
+  public void setLazy(boolean lazy) {
+    order();
+    this.lazy = lazy;
+  }
+
+  /**
+   * Tells whether the order is lazy, see {@link #setLazy}.
+   *
+   * @return true while the order is lazy
+   */
+  public boolean isLazy() {
+    return lazy;
+  }
+
+  private void order() {
+    if (dirty) {
+      dirty = false;
+      rebuilt += size;
+      heapify();
+      if (rebuilt > 2 * skipped + 16L * index.length) {
+        lazy = false;
+      }
+    }
+  }
+
+  private void heapify() {
     for (int i = size / 2 - 1; i >= 0; i--) {
       down(i);
     }

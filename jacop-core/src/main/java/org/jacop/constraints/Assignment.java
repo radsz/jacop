@@ -343,12 +343,20 @@ public class Assignment extends Constraint
 
   /**
    * Removes the position of v from the variables of the other list indexed by the values pruned
-   * from v, and fixes the one indexed by v once v is fixed. The pruned values outside the index
-   * range of the other list are skipped; when there is none inside it, nothing is done, as when the
-   * pruned values were intersected with that range first.
+   * from v, and fixes the one indexed by v once v is fixed. The pruned values are intersected with
+   * the index range of the other list first; when there is none inside it, nothing is done.
    */
   private static void propagateFromPruned(
       Store store, IntVar v, IntDomain pruned, int position, int shift, IntVar[] other) {
+    int low = shift;
+    int high = shift + other.length - 1;
+    if (pruned.max() < low || pruned.min() > high) {
+      return;
+    }
+    // narrowing an unbounded variable to the index range prunes about 10^9 values
+    if (pruned.min() < low || pruned.max() > high) {
+      pruned = pruned.intersect(low, high);
+    }
     boolean any = false;
     for (ValueEnumeration enumer = pruned.valueEnumeration(); enumer.hasMoreElements(); ) {
       int index = enumer.nextElement() - shift;

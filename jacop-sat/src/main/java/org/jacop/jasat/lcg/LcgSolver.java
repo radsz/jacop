@@ -155,6 +155,11 @@ public final class LcgSolver implements ExternalPropagator {
   // per variable (by trail id): the root domain and the literals created so far (value -> variable)
   private IntVar[] vars = new IntVar[0];
   private IntDomain[] root = new IntDomain[0];
+  // whether the root domain of a variable has values other than 0 and 1, read at every bump
+  private boolean[] wideRoot = new boolean[0];
+  // the bounds of the root domains, read for every atom's literal
+  private int[] rootMin = new int[0];
+  private int[] rootMax = new int[0];
   private final LiteralMap[] ge;
   private final LiteralMap[] eq;
   // the literals of ge linked to their neighbours by binary clauses; the others are transient
@@ -248,6 +253,9 @@ public final class LcgSolver implements ExternalPropagator {
   private int[] propagated = new int[16]; // per DIMACS variable pushed as an atom: its entry
   private int[] solution;
   private Runnable onSolution;
+  // the variables whose values each solution of a satisfaction search excludes, so that the search
+  // goes on to the next solution (see setEnumeration); null: the search stops at the first one
+  private int[] enumerated;
   // takes the objective's bound at the root each time minimize leaves the root with a better one
   private LongConsumer onBound;
   private long lastBound = Long.MIN_VALUE;
@@ -394,6 +402,9 @@ public final class LcgSolver implements ExternalPropagator {
   private final VarHeap wide = new VarHeap();
   // Booleans first unless -Djacop.lcg.booleansFirst=false, which keeps every variable in heap
   private boolean split = !FALSE.equals(System.getProperty("jacop.lcg.booleansFirst"));
+  // a lazy activity order under fixed search, see VarHeap.setLazy
+  private static final boolean LAZY_ORDER =
+      !FALSE.equals(System.getProperty("jacop.lcg.lazyOrder"));
   // whether the runs of activity branching take turns with and without Booleans first
   private boolean booleansFirstTurns;
   // whether the runs of activity branching take those turns only until the first solution, then
@@ -686,18 +697,24 @@ public final class LcgSolver implements ExternalPropagator {
     lateHeap.grow(n, activity);
     late = new boolean[n];
     unused = new boolean[n];
+    wideRoot = new boolean[n];
+    rootMin = new int[n];
+    rootMax = new int[n];
     for (IntVar x : all) {
       int i = trail.id(x);
       vars[i] = x;
       // the trail took the same root domain when it was made: one copy per variable, not two
       IntDomain atTrail = trail.rootDomain(x);
       root[i] = atTrail.eq(x.dom()) ? atTrail : x.dom().cloneLight();
+      rootMin[i] = root[i].min();
+      rootMax[i] = root[i].max();
+      wideRoot[i] = rootMin[i] < 0 || rootMax[i] > 1;
       ge[i] = LiteralMap.NO_LITERALS;
       eq[i] = LiteralMap.NO_LITERALS;
       linked[i] = LiteralMap.NO_LITERALS;
       if (!root[i].singleton()) {
         heapOf(i).insert(i);
-        if (root[i].min() < 0 || root[i].max() > 1) {
+        if (rootMin[i] < 0 || rootMax[i] > 1) {
           wideVariables++;
         } else {
           booleanVariables++;
@@ -2842,7 +2859,7 @@ public final class LcgSolver implements ExternalPropagator {
         continue;
       }
       int value = solution[i];
-      for (int v = root[i].min() + 1; v <= root[i].max(); v++) {
+      for (int v = rootMin[i] + 1; v <= rootMax[i]; v++) {
         lits.add(v <= value ? OpbEncoder.ge(i, v) : "~" + OpbEncoder.ge(i, v));
       }
     }
@@ -2892,7 +2909,7 @@ public final class LcgSolver implements ExternalPropagator {
    */
   private void concludeLowerBound() {
     IntDomain d = proofModelDomains == null ? null : proofModelDomains[objective];
-    long lower = root[objective].min();
+    long lower = rootMin[objective];
     if (coreSearch != null) {
       lower = Math.max(lower, coreSearch.lowerBound);
     }
@@ -2968,7 +2985,7 @@ public final class LcgSolver implements ExternalPropagator {
   private LiteralMap own(LiteralMap[] maps, int i) {
     LiteralMap m = maps[i];
     if (m == LiteralMap.NO_LITERALS) {
-      m = new LiteralMap(root[i].min(), root[i].max());
+      m = new LiteralMap(rootMin[i], rootMax[i]);
       maps[i] = m;
     }
     return m;
@@ -3112,7 +3129,7 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** The literal [x >= v]; 0 stands for a constant, which callers rule out. */
   private int geLit(int i, int v) {
-    if (v <= root[i].min() || v > root[i].max()) {
+    if (v <= rootMin[i] || v > rootMax[i]) {
       throw new IllegalStateException("[" + vars[i].id() + " >= " + v + "] is a constant");
     }
     return geVar(i, v);
@@ -3156,8 +3173,8 @@ public final class LcgSolver implements ExternalPropagator {
   /** Links [x = v] to [x >= v] and [x >= v + 1] by clauses. */
   private void linkEq(int i, int v, int lit) {
     transientLit[lit] = false;
-    boolean atMin = v == root[i].min();
-    boolean atMax = v == root[i].max();
+    boolean atMin = v == rootMin[i];
+    boolean atMax = v == rootMax[i];
     int geV = atMin ? 0 : geVar(i, v);
     int geNext = atMax ? 0 : geVar(i, v + 1);
     if (!atMin) {
@@ -3267,7 +3284,7 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   private int geEntryLit(int i, int v) {
-    if (v <= root[i].min() || v > root[i].max()) {
+    if (v <= rootMin[i] || v > rootMax[i]) {
       throw new IllegalStateException("[" + vars[i].id() + " >= " + v + "] is a constant");
     }
     return geEntryVar(i, v);
@@ -3435,7 +3452,7 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   private boolean isBoolean(int i) {
-    return i >= 0 && i < vars.length && vars[i] != null && root[i].min() == 0 && root[i].max() == 1;
+    return i >= 0 && i < vars.length && vars[i] != null && rootMin[i] == 0 && rootMax[i] == 1;
   }
 
   // whether the store's domains imply an atom already
@@ -3489,6 +3506,25 @@ public final class LcgSolver implements ExternalPropagator {
    * @return false when probing proved that the constraints have no solution
    */
   public boolean probeRoot(long budgetNanos) {
+    // the failures of probes are not the search's: counted, they would steer dom/wdeg, afc and
+    // activity to the probed values. On XCSP 2022 BlockedQueens-56-1860437025 (661 failed probes
+    // in 0.8 s) free search found no solution in 600 s on three seeds; without them 8-31 s
+    boolean weights = store.variableWeightManagement;
+    boolean afc = store.afcManagement();
+    boolean activity = store.activityManagement();
+    store.variableWeightManagement = false;
+    store.afcManagement(false);
+    store.activityManagement(false);
+    try {
+      return probeRootUncounted(budgetNanos);
+    } finally {
+      store.variableWeightManagement = weights;
+      store.afcManagement(afc);
+      store.activityManagement(activity);
+    }
+  }
+
+  private boolean probeRootUncounted(long budgetNanos) {
     long start = sat.now();
     long end = budgetNanos >= Long.MAX_VALUE - start ? Long.MAX_VALUE : start + budgetNanos;
     end = Math.min(end, sat.deadline());
@@ -4052,12 +4088,12 @@ public final class LcgSolver implements ExternalPropagator {
     sat.setConflictLimit(Math.min(conflictCap, sat.conflicts + BOUND_DIVE_CONFLICTS));
     coreMode = true; // a solution ends the call of the solver without a clause
     try {
-      solve(-geLit(objective, root[objective].min() + 1));
+      solve(-geLit(objective, rootMin[objective] + 1));
     } finally {
       coreMode = false;
       endPhase(deadline);
     }
-    if (best != null && best[objective] <= root[objective].min()) {
+    if (best != null && best[objective] <= rootMin[objective]) {
       boundDiveSolutions++;
       return CdclSolver.SAT;
     }
@@ -4102,8 +4138,8 @@ public final class LcgSolver implements ExternalPropagator {
       if (boundDiveShare > 0
           && coreProbeShare > 0
           && workEnd != Long.MAX_VALUE
-          && coreSearch.lowerBound < root[objective].min()
-          && root[objective].min() < root[objective].max()) {
+          && coreSearch.lowerBound < rootMin[objective]
+          && rootMin[objective] < rootMax[objective]) {
         // the root bound of the objective (from the linear relaxation, say) is above the cores'
         // lower bound: a short search for a solution at that bound goes first, as such a solution
         // is optimal. The cores start below what is already proved: on nfc (Challenge 2022) the
@@ -4140,7 +4176,7 @@ public final class LcgSolver implements ExternalPropagator {
       }
     }
     double share = coreShare;
-    if (CORE_SKIP && workEnd != Long.MAX_VALUE && coreSearch.lowerBound < root[objective].min()) {
+    if (CORE_SKIP && workEnd != Long.MAX_VALUE && coreSearch.lowerBound < rootMin[objective]) {
       // the root bound of the objective (from the linear relaxation, say) is above the cores' lower
       // bound: a trial part of the phase measures how fast the cores raise it, and the rest of the
       // phase runs only if they could reach the root bound at that rate. Below it they prove
@@ -4153,7 +4189,7 @@ public final class LcgSolver implements ExternalPropagator {
         return result;
       }
       share = (1 - CORE_TRIAL) * coreShare / (1 - CORE_TRIAL * coreShare);
-      boolean reach = coreSearch.canReach(root[objective].min(), (long) (share * workLeft()));
+      boolean reach = coreSearch.canReach(rootMin[objective], (long) (share * workLeft()));
       if (!reach) {
         coreSkips++;
         return afterCores();
@@ -4550,7 +4586,7 @@ public final class LcgSolver implements ExternalPropagator {
     int raised = Integer.MIN_VALUE; // the bound the jumps proved, which the root may not show yet
     try {
       while (true) {
-        if (best != null && best[objective] <= root[objective].min()) {
+        if (best != null && best[objective] <= rootMin[objective]) {
           return CdclSolver.SAT;
         }
         if (best == null) {
@@ -5498,6 +5534,12 @@ public final class LcgSolver implements ExternalPropagator {
     if (annotationRun && branching == Branching.ALTERNATE) {
       activityBranching = true;
     }
+    // fixed search reads the activity order only once the annotation has fixed its variables
+    boolean lazy = select != null && !free && LAZY_ORDER;
+    for (VarHeap h : new VarHeap[] {heap, wide, lateHeap}) {
+      h.setLazy(lazy);
+    }
+    sat.setLazyOrder(select != null && !free);
     applyAnnotationChrono();
   }
 
@@ -5572,11 +5614,11 @@ public final class LcgSolver implements ExternalPropagator {
     for (int sign = 1; sign >= -1; sign -= 2) {
       for (IntVar x : sign > 0 ? positive : negative) {
         int i = trail.id(x);
-        if (root[i].min() < 0 || root[i].max() > 1) {
+        if (rootMin[i] < 0 || rootMax[i] > 1) {
           throw new IllegalArgumentException(x + " is not a 0/1 variable");
         }
         if (root[i].singleton()) {
-          if (root[i].min() == (sign > 0 ? 1 : 0)) {
+          if (rootMin[i] == (sign > 0 ? 1 : 0)) {
             return; // satisfied at the root
           }
           continue; // false at the root
@@ -5600,6 +5642,9 @@ public final class LcgSolver implements ExternalPropagator {
 
   private boolean graphClauses = GRAPH_CLAUSES;
 
+  // the bytes the clauses of layered graphs may take, or -1 for their share of the heap
+  private long graphClauseBudget = -1;
+
   /**
    * The share of the heap that the clauses of layered graphs may take, {@code
    * jacop.lcg.graphClauses.heapShare}; graphs past it are propagated and explained by cuts.
@@ -5608,10 +5653,24 @@ public final class LcgSolver implements ExternalPropagator {
       Double.parseDouble(System.getProperty("jacop.lcg.graphClauses.heapShare", "0.125"));
 
   // The bytes that a described edge or node of a layered graph takes in the solver once it is
-  // clauses: a literal with its solver arrays and watches, and up to four clauses.
+  // clauses, at most: a literal with its solver arrays and watches, and up to four clauses.
   // MagicSquare-mdd-10
   // (XCSP 2023), 22 diagrams of 201,000 edges and nodes, took about 2 GB.
   private static final long GRAPH_CLAUSE_BYTES = 400;
+
+  // The bytes of the clauses of a graph once they are counted (graphClauseBytes): per new
+  // literal, per clause and per literal of a clause. Most graphs take far less than
+  // GRAPH_CLAUSE_BYTES per edge: the edges between two nodes are one arc, and an arc that is the
+  // only one into its target or out of its source has no literal. The 17 regular constraints of
+  // pentominoes 04 (MiniZinc Challenge 2020) describe 3.6 million edges and nodes and became
+  // 296,000 literals and 1.08 million clauses of 8.5 million literals, 169 MB, not the 1.46 GB
+  // that bound gives, so at 10 GB of heap two of them were left to cut explanations, which took
+  // 95 % of the time: 348 s instead of 5 s.
+  private static final long GRAPH_LITERAL_BYTES = 192;
+
+  private static final long GRAPH_CLAUSE_HEADER_BYTES = 48;
+
+  private static final long GRAPH_CLAUSE_LITERAL_BYTES = 8;
 
   /** Statistics: layered-graph constraints left as propagators because their clauses do not fit. */
   public long graphConstraintsTooLarge;
@@ -5632,11 +5691,120 @@ public final class LcgSolver implements ExternalPropagator {
     graphClauses = on;
   }
 
+  /**
+   * Sets the bytes that the clauses of layered graphs may take in all, in place of {@code
+   * jacop.lcg.graphClauses.heapShare} of the heap, before the solver starts.
+   *
+   * @param bytes the bytes
+   */
+  void setGraphClauseBudget(long bytes) {
+    graphClauseBudget = bytes;
+  }
+
   /** Statistics: layered-graph constraints given to the solver as clauses. */
   public long graphConstraintsEncoded;
 
   /** Statistics: clauses implied by constraints ({@link ImpliedClauses}) given to the solver. */
   public long impliedClauses;
+
+  /**
+   * Whether the clauses of a layered graph fit in the bytes left for them: at once when its
+   * described size times {@link #GRAPH_CLAUSE_BYTES} fits, otherwise by counting its clauses,
+   * unless a graph not larger than this one was counted and did not fit.
+   *
+   * @param g the graph
+   * @param left the bytes left for the clauses of graphs
+   * @param misfit the described size of the smallest graph counted that did not fit
+   * @return true when its clauses fit
+   */
+  private static boolean graphFits(LayeredGraphConstraint g, long left, long misfit) {
+    long size = g.describedSize();
+    if (size <= left / GRAPH_CLAUSE_BYTES) {
+      return true;
+    }
+    if (size >= misfit) {
+      return false;
+    }
+    CountingClauses counted = new CountingClauses(null);
+    counted.limit = left;
+    try {
+      return !g.encodeClauses(counted) || counted.bytes() <= left;
+    } catch (OverBudget _) {
+      return false;
+    }
+  }
+
+  /** Ends the counting of the clauses of a graph once they no longer fit. */
+  private static final class OverBudget extends RuntimeException {
+    private static final long serialVersionUID = 1L;
+
+    OverBudget() {
+      super(null, null, false, false);
+    }
+  }
+
+  /**
+   * Counts the literals and clauses a constraint gives, and passes them on to a model, or with no
+   * model only counts them (its literals then stand for nothing).
+   */
+  private static final class CountingClauses implements ClauseModel {
+    private final ClauseModel model;
+    private long literals;
+    private long clauses;
+    private long clauseLiterals;
+    private int next;
+    // counting only, the bytes past which counting stops
+    private long limit = Long.MAX_VALUE;
+
+    CountingClauses(ClauseModel model) {
+      this.model = model;
+    }
+
+    CountingClauses reset() {
+      literals = 0;
+      clauses = 0;
+      clauseLiterals = 0;
+      return this;
+    }
+
+    // the bytes the counted literals and clauses take in the solver
+    long bytes() {
+      return literals * GRAPH_LITERAL_BYTES
+          + clauses * GRAPH_CLAUSE_HEADER_BYTES
+          + clauseLiterals * GRAPH_CLAUSE_LITERAL_BYTES;
+    }
+
+    @Override
+    public int newLiteral() {
+      literals++;
+      return model != null ? model.newLiteral() : fresh();
+    }
+
+    @Override
+    public int valueLiteral(IntVar x, int v) {
+      // a value's literal exists without the clauses; counting, each use stands for a new one
+      return model != null ? model.valueLiteral(x, v) : fresh();
+    }
+
+    // a literal different from every one given before, away from the constants of the encodings
+    private int fresh() {
+      if (next == Integer.MAX_VALUE / 2) {
+        next = 0;
+      }
+      return ++next;
+    }
+
+    @Override
+    public void clause(int[] literals, int size) {
+      clauses++;
+      clauseLiterals += size;
+      if (model != null) {
+        model.clause(literals, size);
+      } else if (bytes() > limit) {
+        throw new OverBudget();
+      }
+    }
+  }
 
   /**
    * Gives the solver every layered-graph constraint of the store as clauses ({@link
@@ -5648,6 +5816,12 @@ public final class LcgSolver implements ExternalPropagator {
    */
   private void encodeGraphs() {
     if (graphsEncoded) {
+      return;
+    }
+    // past the deadline the constraints stay propagators until a later call, under a later
+    // deadline (the slices of LCG next to free search): reading the constraints of a large model
+    // takes seconds (steelmillslab bench_19_5: 1.4 s past -t 10 s)
+    if (pastDeadline()) {
       return;
     }
     graphsEncoded = true;
@@ -5675,22 +5849,34 @@ public final class LcgSolver implements ExternalPropagator {
           }
         };
     boolean propagatorLeft = false;
-    // the described edges and nodes the clauses of the graphs may take in all
+    // the bytes the clauses of the graphs may take in all, those they take, and the described
+    // size of the smallest graph whose counted clauses did not fit
     long graphBudget =
-        (long) (GRAPH_CLAUSES_HEAP_SHARE * Runtime.getRuntime().maxMemory()) / GRAPH_CLAUSE_BYTES;
-    long graphUnits = 0;
+        graphClauseBudget >= 0
+            ? graphClauseBudget
+            : (long) (GRAPH_CLAUSES_HEAP_SHARE * Runtime.getRuntime().maxMemory());
+    long graphBytes = 0;
+    long graphMisfit = Long.MAX_VALUE;
+    CountingClauses counted = new CountingClauses(model);
     objectiveTerms = objectiveTerms();
     permutationOnly = permutationOnlyVariables();
+    if (pastDeadline()) {
+      graphsEncoded = false;
+      return;
+    }
     for (Constraint c : store.getConstraints()) {
       if (graphClauses
           && c instanceof LayeredGraphConstraint g
-          && graphUnits + g.describedSize() > graphBudget) {
+          && !graphFits(g, graphBudget - graphBytes, graphMisfit)) {
         // too large to be clauses: WordDesign2-words-mdd-025 (XCSP 2023) has 300 diagrams of 2.4
         // million edges and nodes
+        graphMisfit = Math.min(graphMisfit, g.describedSize());
         graphConstraintsTooLarge++;
         propagatorLeft = true;
-      } else if (graphClauses && c instanceof LayeredGraphConstraint g && g.encodeClauses(model)) {
-        graphUnits += g.describedSize();
+      } else if (graphClauses
+          && c instanceof LayeredGraphConstraint g
+          && g.encodeClauses(counted.reset())) {
+        graphBytes += counted.bytes();
         g.removeConstraint();
         encodedGraphs.add(g);
         graphConstraintsEncoded++;
@@ -6193,6 +6379,11 @@ public final class LcgSolver implements ExternalPropagator {
       }
     }
     return true;
+  }
+
+  // whether the deadline of the solver has passed
+  private boolean pastDeadline() {
+    return sat.now() > sat.deadline();
   }
 
   /** The variables whose only constraints are permutations, see {@link #permutationCandidate}. */
@@ -7071,6 +7262,103 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Makes {@link #solve} enumerate the solutions that differ on the given variables, as the search
+   * for all solutions of a satisfaction model does: after each solution, given to the action of
+   * {@link #onSolution}, the solver adds the clause that one of the variables takes another value
+   * and goes on, with its learnt clauses, until it finds no more ({@link CdclSolver#UNSAT}: every
+   * solution was found) or is stopped. Two solutions that differ only on other variables count as
+   * one, so the variables are those whose values the solution callback prints (the output
+   * variables). This is the solution blocking of Chuffed's all-solution search (Chu, Stuckey; "Lazy
+   * clause generation reengineered", CP 2009). Call it before {@link #solve}, at the root.
+   *
+   * @param vars the variables that tell two solutions apart; variables fixed at the root are left
+   *     out
+   * @return false when one of the variables is not fixed and not a variable of the solver (it
+   *     cannot be told apart), true when the enumeration is set
+   */
+  public boolean setEnumeration(Collection<? extends IntVar> vars) {
+    if (objective >= 0 || proof != null) {
+      throw new IllegalStateException("enumeration is for a satisfaction search without a proof");
+    }
+    int[] ids = new int[vars.size()];
+    int n = 0;
+    Set<Integer> seen = new HashSet<>();
+    for (IntVar x : vars) {
+      if (x.singleton()) {
+        continue;
+      }
+      int i = idOf(x);
+      if (i < 0 || unused[i]) {
+        return false;
+      }
+      if (seen.add(i)) {
+        ids[n++] = i;
+      }
+    }
+    enumerated = Arrays.copyOf(ids, n);
+    return true;
+  }
+
+  /** Statistics: the solutions that the enumeration excluded by a clause (see setEnumeration). */
+  public long blockedSolutions;
+
+  // the solutions excluded by the negation of their decisions, all on enumerated variables
+  public long decisionBlocked;
+
+  // whether an index is one of the enumerated variables
+  private boolean[] isEnumerated;
+
+  /**
+   * The clause that excludes the last solution on the enumerated variables. When every decision of
+   * the solver is an atom of an enumerated variable, the decisions imply the whole solution, and
+   * every solution with the same values of the enumerated variables satisfies them: the negation of
+   * the decisions is then the clause, as in Chuffed. It is shorter than one literal per enumerated
+   * variable and watched on the latest decisions, where the clauses over all the enumerated
+   * variables pile up on the watches of the same few literals: balanced brackets (52 printed
+   * variables, 742,900 solutions) printed 4 times fewer solutions a second with them alone.
+   */
+  private int[] blockingClause() {
+    if (isEnumerated == null) {
+      isEnumerated = new boolean[vars.length];
+      for (int i : enumerated) {
+        isEnumerated[i] = true;
+      }
+    }
+    int[] decisions = sat.decisionLiterals();
+    boolean onEnumerated = true;
+    for (int k = 0; k < decisions.length && onEnumerated; k++) {
+      Atom a = atom(decisions[k]);
+      onEnumerated = a != null && a.var < isEnumerated.length && isEnumerated[a.var];
+    }
+    if (onEnumerated) {
+      decisionBlocked++;
+      int[] clause = new int[decisions.length];
+      for (int k = 0; k < decisions.length; k++) {
+        clause[k] = -decisions[k];
+      }
+      return clause;
+    }
+    int[] clause = new int[enumerated.length];
+    int n = 0;
+    for (int i : enumerated) {
+      IntDomain d = root[i];
+      int v = solution[i];
+      if (d.singleton()) {
+        continue;
+      }
+      // x != v as a bound literal at the ends of the root domain, which [x = v] need not exist for
+      if (v == d.min()) {
+        clause[n++] = geLit(i, v + 1);
+      } else if (v == d.max()) {
+        clause[n++] = -geLit(i, v);
+      } else {
+        clause[n++] = -eqVar(i, v);
+      }
+    }
+    return Arrays.copyOf(clause, n);
+  }
+
+  /**
    * Sets the action that takes the bound of the objective that {@link #minimize} has proved: no
    * solution better than the best one has a smaller value of the objective. It is called whenever
    * the search leaves the root with a better bound than before, after the root's propagation, so a
@@ -7270,6 +7558,7 @@ public final class LcgSolver implements ExternalPropagator {
     completed = false;
     if (completionTested > level) {
       completionTested = -1;
+      completionBlocker = -1;
     }
     pushed = Math.min(pushed, trail.size());
     numImplied = 0;
@@ -7754,8 +8043,8 @@ public final class LcgSolver implements ExternalPropagator {
         return 0; // a hole inside the interval
       }
     }
-    int min = root[i].min();
-    int max = root[i].max();
+    int min = rootMin[i];
+    int max = rootMax[i];
     if (lo > hi || lo <= min && hi >= max) {
       return 0;
     }
@@ -7857,7 +8146,7 @@ public final class LcgSolver implements ExternalPropagator {
       return;
     }
     int v = s[objective];
-    if (v < root[objective].min() || v > root[objective].max()) {
+    if (v < rootMin[objective] || v > rootMax[objective]) {
       return;
     }
     best = s;
@@ -7870,7 +8159,7 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** Adds the bound of the solution given by {@link #setIncumbent}, as {@link #checkModel} does. */
   private void boundIncumbent() {
-    if (best == null || best[objective] <= root[objective].min()) {
+    if (best == null || best[objective] <= rootMin[objective]) {
       return;
     }
     // the literal first, so that its linking clauses come before the bound
@@ -8008,8 +8297,8 @@ public final class LcgSolver implements ExternalPropagator {
         if (n != null) {
           sharedId[i] = pool.id(n);
           top = Math.max(top, sharedId[i]);
-          publishedMin[i] = root[i].min();
-          publishedMax[i] = root[i].max();
+          publishedMin[i] = rootMin[i];
+          publishedMax[i] = rootMax[i];
         }
       }
     }
@@ -8369,10 +8658,10 @@ public final class LcgSolver implements ExternalPropagator {
       return;
     }
     importedBound = localShared;
-    if (localShared <= root[objective].min()) {
+    if (localShared <= rootMin[objective]) {
       sharedBoundUnreachable = true;
       sat.cancel();
-    } else if (localShared <= root[objective].max()) {
+    } else if (localShared <= rootMax[objective]) {
       // the literal first, so that its linking clauses come before the bound
       int lit = geLit(objective, localShared);
       structural.add(new int[] {-lit}); // objective <= shared - 1
@@ -8939,6 +9228,16 @@ public final class LcgSolver implements ExternalPropagator {
       if (completedByAnnotation()) {
         return 0; // modelComplete: the solver offers the assignment as it is
       }
+      if (completionBlocker >= 0 && !vars[completionBlocker].singleton()) {
+        completionDecisions++;
+        // the value of the best solution, as the solver's saved phases would take, else the least
+        IntVar x = vars[completionBlocker];
+        int v =
+            phase != null && x.domain.contains(phase[completionBlocker])
+                ? phase[completionBlocker]
+                : x.min();
+        return assignLit(completionBlocker, v);
+      }
     }
     if (activityBranching) {
       if (activityGuide != null && !freeSearch && annotation != null) {
@@ -8957,6 +9256,18 @@ public final class LcgSolver implements ExternalPropagator {
   private int completionTested = -1;
   // completedByAnnotation found a model: the unfixed variables take their minimum in checkModel
   private boolean completed;
+  // the variable that stopped the last test of completedByAnnotation (a variable of the solver with
+  // a constraint that is not entailed), which the next decision fixes, or -1; the test then goes
+  // on from completionResume, the store index of that variable, at the next decision level
+  private int completionBlocker = -1;
+  private int completionResume;
+  // the blockers decided on the current branch since its first test; past COMPLETION_BLOCKERS the
+  // test stops for the branch, which the solver's own branching then completes
+  private int completionBlocks;
+  private static final int COMPLETION_BLOCKERS = 32;
+
+  /** The decisions that fixed a variable that stopped completedByAnnotation. */
+  public long completionDecisions;
 
   /** The models that completedByAnnotation offered without deciding the variables left. */
   public long completedModels;
@@ -8988,8 +9299,23 @@ public final class LcgSolver implements ExternalPropagator {
    * the solver). Without the test the activity branching decided those variables one decision level
    * at a time: on a_card_trick_1 (first_fail, satisfaction), 1,014 decisions on 0/1 variables whose
    * constraints all became clauses, after 29 decisions of the annotation, where the search without
-   * learning stops after its annotation (37 nodes). Tested once on each branch after the annotation
-   * ends; not with a proof, whose solution must give every variable.
+   * learning stops after its annotation (37 nodes). Not with a proof, whose solution must give
+   * every variable.
+   *
+   * <p>The linear relaxation does not count: its rows are combinations of constraints of the model,
+   * which hold once those are entailed. A variable of the solver with a constraint that is not
+   * entailed stops the test, and the next decision fixes it at its minimum, the value it would take
+   * in the model; the test then goes on from that variable at the next decision level, since a
+   * variable that passed stays fixed or free of constraints that are not entailed as the domains
+   * narrow. On ship-schedule 6Ships (fixed search) the LP and a product {@code x * 1 = z} of two
+   * variables left after the annotation kept every one of 588 solutions from being taken, so the
+   * search decided 444 other free variables one decision level at a time for each (267,279 of the
+   * 272,286 decisions). After 32 such decisions on a branch the test stops for the branch, and the
+   * solver's own branching (saved phases) decides the rest, as it does when a variable that the
+   * solver does not hold or a printed variable is unfixed: on roster chicroster_dataset_large_20
+   * the blockers never ran out and fixing each at its minimum, 2.4 million decisions, replaced the
+   * saved phases of the best solution (98 -> 99 at 240 s). So the blockers are decided only while
+   * they pay: after 256 of them, at most 64 for each model they completed (5.6 on 6Ships).
    */
   private static boolean allFixed(Collection<? extends Var> variables) {
     for (Var v : variables) {
@@ -9006,16 +9332,22 @@ public final class LcgSolver implements ExternalPropagator {
         || proof != null
         || lns != null
         || objective >= 0 && !vars[objective].singleton()
-        || completionTested >= 0 && completionTested <= level) {
+        || completionTested >= 0 && completionTested <= level && completionBlocker < 0) {
+      completionBlocker = -1;
       return false;
     }
+    int from = completionBlocker >= 0 ? completionResume : 0;
+    completionBlocker = -1;
+    if (from == 0) {
+      completionBlocks = 0;
+    }
     completionTested = level;
-    if (!allFixed(mustBeFixed)) {
+    if (from == 0 && !allFixed(mustBeFixed)) {
       // a printed variable need not be one of the store's variables (the Boolean b of
       // bool2int(b, i) is printed while the store holds only i), so it is tested here
       return false;
     }
-    for (int k = 0; k < store.size(); k++) {
+    for (int k = from; k < store.size(); k++) {
       Var v = store.vars[k];
       if (v == null || v.singleton()) {
         continue;
@@ -9024,7 +9356,12 @@ public final class LcgSolver implements ExternalPropagator {
         return false;
       }
       for (Constraint c : v.dom().constraints()) {
-        if (!c.isEntailed()) {
+        if (!c.isEntailed() && !(c instanceof LinearRelaxation)) {
+          if (++completionBlocks <= COMPLETION_BLOCKERS
+              && (completionDecisions < 256 || completionDecisions <= 64 * completedModels)) {
+            completionBlocker = idOf(x);
+            completionResume = k;
+          }
           return false;
         }
       }
@@ -9138,7 +9475,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (late[i]) {
       return lateHeap;
     }
-    return split && (root[i].min() < 0 || root[i].max() > 1) ? wide : heap;
+    return split && wideRoot[i] ? wide : heap;
   }
 
   // takes the fixed variables off the top of a heap, to be put back on backtracking
@@ -9379,6 +9716,12 @@ public final class LcgSolver implements ExternalPropagator {
       restartsAfterSolution = false;
       sat.setRestarts(true);
     }
+    if (objective < 0 && enumerated != null) {
+      // the literals first, so that the linking clauses of a new [x = v] come before the clause
+      blockedSolutions++;
+      structural.add(blockingClause());
+      return false;
+    }
     if (objective < 0) {
       return true;
     }
@@ -9410,7 +9753,7 @@ public final class LcgSolver implements ExternalPropagator {
       }
     }
     int v = solution[objective];
-    if (v <= root[objective].min()) {
+    if (v <= rootMin[objective]) {
       return true;
     }
     // the literal first, so that its linking clauses come before the bound

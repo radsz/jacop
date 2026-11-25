@@ -32,7 +32,7 @@ package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import org.jacop.constraints.LinearInt;
@@ -274,14 +274,14 @@ public class KnapsackDetector implements ParserTreeConstants {
 
   private boolean surrogate(Profit profit) {
     // the 0/1 variables of the profit, with duplicates merged
-    // positions by the store index of the variable
-    Map<Integer, Integer> index = new HashMap<>();
+    // positions by the variable itself: Boolean variables have no store index (all -1)
+    Map<IntVar, Integer> index = new IdentityHashMap<>();
     List<IntVar> xs = new ArrayList<>();
     List<Long> ps = new ArrayList<>();
     for (int k = 0; k < profit.x.length; k++) {
-      Integer i = index.get(profit.x[k].index());
+      Integer i = index.get(profit.x[k]);
       if (i == null) {
-        index.put(profit.x[k].index(), xs.size());
+        index.put(profit.x[k], xs.size());
         xs.add(profit.x[k]);
         ps.add((long) profit.a[k]);
       } else {
@@ -315,7 +315,7 @@ public class KnapsackDetector implements ParserTreeConstants {
       long sum = 0;
       int shared = 0;
       for (int k = 0; k < row.x.length; k++) {
-        Integer j = index.get(row.x[k].index());
+        Integer j = index.get(row.x[k]);
         if (j != null) {
           shared += w[j] == 0 ? 1 : 0;
           w[j] += row.a[k];

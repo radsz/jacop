@@ -237,6 +237,10 @@
                                 <move file="${project.build.directory}/jacop.template"
                                       tofile="${project.build.directory}/jacop"
                                       overwrite="true"/>
+                                <move file="${project.build.directory}/xcsp-jacop.template"
+                                      tofile="${project.build.directory}/xcsp-jacop"
+                                      overwrite="true"/>
+                                <chmod file="${project.build.directory}/xcsp-jacop" perm="ugo+x"/>
                                 <chmod file="${project.build.directory}/fzn-jacop" perm="ugo+x"/>
                                 <chmod file="${project.build.directory}/jacop" perm="ugo+x"/>
                                 <move file="${project.build.directory}/fzn-jacop-aot.template"

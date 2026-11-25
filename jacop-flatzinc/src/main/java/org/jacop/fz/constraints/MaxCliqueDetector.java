@@ -123,7 +123,11 @@ public class MaxCliqueDetector implements ParserTreeConstants {
     IntVar[] vertices = scan(astTree);
     if (vertices != null) {
       MaxCliqueBound bound = post(vertices);
-      if (bound != null && others == 0 && linears.size() == 1 && pairs.size() >= vertices.length) {
+      if (bound != null
+          && others == 0
+          && linears.size() == 1
+          && pairs.size() >= vertices.length
+          && pairsOnVertices(vertices)) {
         // maximum clique and nothing else: its default search branches as clique algorithms do
         support.dictionary.maxClique = bound;
       }
@@ -154,7 +158,36 @@ public class MaxCliqueDetector implements ParserTreeConstants {
     return vertices != null
         && others == 0
         && linears.size() == 1
-        && pairs.size() >= vertices.length;
+        && pairs.size() >= vertices.length
+        && pairsOnVertices(vertices);
+  }
+
+  // whether every conflict is between two vertices of the sum, so that the bound holds them all: a
+  // conflict over another variable, such as one declared equal to a vertex, must stay posted
+  private boolean pairsOnVertices(IntVar[] vertices) {
+    Map<IntVar, Integer> index = vertexIndex(vertices);
+    for (IntVar[] p : pairs) {
+      Integer i = vertexOf(index, p[0]);
+      Integer j = vertexOf(index, p[1]);
+      if (i == null || j == null || i.equals(j)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private Map<IntVar, Integer> vertexIndex(IntVar[] vertices) {
+    Map<IntVar, Integer> index = new IdentityHashMap<>();
+    for (int i = 0; i < vertices.length; i++) {
+      index.put(vertices[i], i);
+      index.putIfAbsent(source(vertices[i]), i);
+    }
+    return index;
+  }
+
+  private Integer vertexOf(Map<IntVar, Integer> index, IntVar v) {
+    Integer i = index.get(v);
+    return i != null ? i : index.get(source(v));
   }
 
   /**
@@ -336,25 +369,15 @@ public class MaxCliqueDetector implements ParserTreeConstants {
 
   private MaxCliqueBound post(IntVar[] vertices) {
     int n = vertices.length;
-    Map<IntVar, Integer> index = new IdentityHashMap<>();
-    for (int i = 0; i < n; i++) {
-      index.put(vertices[i], i);
-      index.putIfAbsent(source(vertices[i]), i);
-    }
+    Map<IntVar, Integer> index = vertexIndex(vertices);
     List<List<Integer>> conflicts = new ArrayList<>(n);
     for (int i = 0; i < n; i++) {
       conflicts.add(new ArrayList<>());
     }
     int found = 0;
     for (IntVar[] p : pairs) {
-      Integer i = index.get(p[0]);
-      Integer j = index.get(p[1]);
-      if (i == null) {
-        i = index.get(source(p[0]));
-      }
-      if (j == null) {
-        j = index.get(source(p[1]));
-      }
+      Integer i = vertexOf(index, p[0]);
+      Integer j = vertexOf(index, p[1]);
       if (i != null && j != null && !i.equals(j)) {
         conflicts.get(i).add(j);
         found++;

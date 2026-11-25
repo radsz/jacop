@@ -147,7 +147,7 @@ class GraphConstraints implements ParserTreeConstants {
         int upperBound = (useTargetTypeForBound ? target_type.length : pattern_type.length) - 1;
         matchVars = new IntVar[match.length];
         for (int i = 0; i < match.length; i++) {
-          matchVars[i] = new IntVar(store, "node_" + i, 0, upperBound);
+          matchVars[i] = new IntVar(store, store.freshVariableId("node_" + i), 0, upperBound);
           support.pose(new XplusCeqZ(matchVars[i], indexMin, match[i]));
         }
       }

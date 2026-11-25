@@ -780,7 +780,13 @@ public class Support implements ParserTreeConstants {
           // defined by the constraint that defines the integer: speck-optimisation defines the
           // integer copy of every bit of the state, which left one variable of 12,213 to the
           // neighbourhoods of LNS
-          dictionary.addDefinedVar(v);
+          if (halfReified(constraintWithAnnotations)) {
+            // MiniZinc annotates b of int_lin_ne_imp(a, x, c, b) as defined, but b -> c leaves b
+            // free when c holds
+            dictionary.addHalfDefinedVar(v);
+          } else {
+            dictionary.addDefinedVar(v);
+          }
         }
       } else if ("priority".equals(ann.getAnnId())) {
         SimpleNode child = (SimpleNode) ann.jjtGetChild(0);
@@ -789,6 +795,12 @@ public class Support implements ParserTreeConstants {
         constraintPriority = getAnnInt(expr);
       }
     }
+  }
+
+  private static boolean halfReified(SimpleNode constraintWithAnnotations) {
+    return constraintWithAnnotations.jjtGetChild(0) instanceof ASTConstElem c
+        && c.getName() != null
+        && c.getName().endsWith("_imp");
   }
 
   Var getAnnVar(ASTAnnExpr node) {
@@ -906,13 +918,16 @@ public class Support implements ParserTreeConstants {
    * @throws ModelTimeOut when it has passed
    */
   void checkTimeOut() {
-    // the clock is read at the first and every 64th call after it, and stays passed once it is: the
+    // the clock is read at the first and every 64th call after it (Options.timeOutCheckStride), and
+    // stays passed once it is: the
     // detectors call this for each constraint they read, 160 million times (2 s) on the 3.9
     // million clauses of MaxSAT 2021 haplotyping-pedigrees
     if (options == null) {
       return;
     }
-    if (timedOut != options && (timeOutChecks++ & 63) == 0 && options.timeOutPassed()) {
+    if (timedOut != options
+        && (timeOutChecks++ & (options.timeOutCheckStride() - 1)) == 0
+        && options.timeOutPassed()) {
       timedOut = options;
     }
     if (timedOut == options) {
