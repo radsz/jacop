@@ -1011,4 +1011,24 @@ class SingleConstraintTest {
       FloatDomain.setPrecision(precision);
     }
   }
+
+  /**
+   * The logarithm of the smallest subnormal, -744.44, bounds ln(x) from below: the bound one step
+   * outside x was 0, and ln(x) kept its whole lower range. x^y = exp(y * ln(x)) with x = 4.9e-324
+   * and y in 0.001..0.002 is in 0.22..0.48, but z = x^y &lt;= 0.1 was consistent and FlatZinc
+   * float_pow printed z = 2.9e-12.
+   */
+  @Test
+  void logarithmOfTheSmallestSubnormalIsBounded() {
+    Store store = new Store();
+    FloatVar x = new FloatVar(store, "x", Double.MIN_VALUE, Double.MIN_VALUE);
+    FloatVar y = new FloatVar(store, "y", 0.001, 0.002);
+    FloatVar lnX = new FloatVar(store, "lnX", -1e150, 1e150);
+    FloatVar product = new FloatVar(store, "product", -1e150, 1e150);
+    FloatVar z = new FloatVar(store, "z", 0, 0.1);
+    store.impose(new LnPeqR(x, lnX));
+    store.impose(new PmulQeqR(lnX, y, product));
+    store.impose(new ExpPeqR(product, z));
+    assertThat(store.consistency()).as("%s %s %s", lnX, product, z).isFalse();
+  }
 }
