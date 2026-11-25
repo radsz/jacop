@@ -1446,13 +1446,15 @@ class GlobalConstraints implements ParserTreeConstants {
    * two rectangles that overlap along the fixed axis, the disjunction that they are apart along the
    * other ({@code o_i + l_i <= o_j \/ o_j + l_j <= o_i}, as MiniZinc's decomposition does); {@code
    * unary} posts a unary resource over the other axis for each maximal set of rectangles that
-   * overlap along the fixed axis (the maximal cliques of an interval graph); {@code both} posts
-   * both.
+   * overlap along the fixed axis (the maximal cliques of an interval graph, Gilmore and Hoffman, "A
+   * characterization of comparability graphs and of interval graphs", Canadian Journal of
+   * Mathematics 16, 1964), the default; {@code both} posts both. Rectangles of length 0 along
+   * either axis are kept apart pairwise, as a unary resource lets them sit inside another task.
    *
    * @return the mode
    */
   private static String diffnFixedAxisMode() {
-    return System.getProperty("org.jacop.fz.diffnFixedAxis", "off");
+    return System.getProperty("org.jacop.fz.diffnFixedAxis", "unary");
   }
 
   /**
@@ -1461,8 +1463,9 @@ class GlobalConstraints implements ParserTreeConstants {
    * fixed axis is known, rectangles that do not overlap along it never meet, and the others are
    * exactly the pairs of tasks of a disjunctive scheduling problem along the other axis. Under lazy
    * clause generation the failures of Diffn are explained by the bounds of all rectangles, while
-   * each pair or unary resource explains its own: on accap (MiniZinc Challenge 2019) default search
-   * proves instance 6 (82) in 68-92 s against 110 unproved in 600 s with Diffn.
+   * each pair or unary resource explains its own. On the 15 accap instances of the MiniZinc
+   * Challenge (2019, 2022, 2024), 300 s, unary resources give better objectives with default search
+   * on 10 and worse on 3, and free search proves 11 instead of 9 in 1,449 s instead of 2,443 s.
    *
    * @return false when the constraint is not of this kind or the mode is off (nothing posted)
    */

@@ -9068,6 +9068,26 @@ Version 5.0 (unreleased)
    atom, from int arrays: the same search, sudoku_opt p29 and
    gfd-schedule n100 -2.9 % each, wide-quick -f -0.9 %, default -0.2 %.
 
+507. The FlatZinc front end posts a strict diffn whose rectangles are fixed
+   along one axis (origins and lengths, as the time axis of accap) as unary
+   resources (CumulativeUnary) over the other axis, one for each maximal set
+   of rectangles that overlap along the fixed axis: the maximal cliques of
+   an interval graph, found by a sweep (Gilmore and Hoffman, "A
+   characterization of comparability graphs and of interval graphs",
+   Canadian Journal of Mathematics 16, 1964). Rectangles of length 0 along
+   either axis are kept apart pairwise. Under lazy clause generation a
+   failure of Diffn is explained by the bounds of all its rectangles, about
+   140 atoms on accap, while each unary resource explains its own tasks.
+   MiniZinc Challenge accap (15 instances of 2019, 2022 and 2024), 300 s:
+   default search better objectives on 10, worse on 3 (2019 instance6
+   110 -> 85, optimum 82; Chuffed reaches 91 in 600 s); -f proved 9 -> 11,
+   total 2,443 -> 1,449 s, every proof equal or faster, but instance8 and
+   instance9 end at 3x the objective, where a slow LCG keeps its turn while
+   it improves by 1 at a time. code-generator (15 instances, 240 s):
+   default search one proof gained and one lost, -f neutral.
+   -Dorg.jacop.fz.diffnFixedAxis=off keeps Diffn; pairs posts the pairwise
+   disjunctions of MiniZinc's decomposition instead, both posts both.
+
 Version 4.11
 =============
 
