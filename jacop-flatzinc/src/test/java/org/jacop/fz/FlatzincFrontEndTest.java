@@ -7574,4 +7574,23 @@ class FlatzincFrontEndTest {
             "var 1..3: x :: output_var;\n"
                 + "array [1..0] of var int: b :: output_array([1..0]) = [];\nsolve satisfy;\n")[0]);
   }
+
+  @Test
+  void symmetryBreakingDoesNotChannelSetsWithElementsFarApart() throws IOException {
+    // the channel of a set variable that symmetries move makes one Boolean per value from the
+    // smallest to the largest element of its upper bound: 300,001 here (and out of memory for
+    // {-100000000, 100000000}), so such sets keep a colour of their own
+    String out =
+        run(
+            "var set of {0, 300000}: s0 :: output_var;\n"
+                + "var set of {0, 300000}: s1 :: output_var;\n"
+                + "constraint set_union(s0, s1, {0, 300000});\n"
+                + "solve :: set_search([s0, s1], input_order, indomain_min, complete) satisfy;\n",
+            "-s",
+            "-v",
+            "--symmetry",
+            "on")[0];
+    assertTrue(out.contains("s0 = {0, 300000};"), out);
+    assertTrue(out.contains("%%%mzn-stat: symmetryConstraints=0\n"), out);
+  }
 }
