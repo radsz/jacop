@@ -7563,4 +7563,15 @@ class FlatzincFrontEndTest {
     String valid = run(model, "-n", "1")[0];
     assertTrue(valid.startsWith("x = 1;\n----------\n"), valid);
   }
+
+  @Test
+  void anEmptyOutputArrayIsPrintedUnderAsserts() throws IOException {
+    // output_array([1..0]) of an empty array, which MiniZinc writes, made IntervalDomain(1, 0) and
+    // failed under jacop.asserts.enabled (as the tests run); without it the array was printed
+    assertEquals(
+        "x = 1;\nb = array1d({}, []);\n----------\n",
+        run(
+            "var 1..3: x :: output_var;\n"
+                + "array [1..0] of var int: b :: output_array([1..0]) = [];\nsolve satisfy;\n")[0]);
+  }
 }
