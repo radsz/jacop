@@ -139,7 +139,7 @@ public final class AlldiffChannels implements ParserTreeConstants {
     ASTScalarFlatExpr e = (ASTScalarFlatExpr) node;
     IntVar v = null;
     if (e.getType() == 2) {
-      v = support.dictionary.getVariable(e.getIdent());
+      v = support.dictionary.getVariable(e);
     } else if (e.getType() == 3) {
       IntVar[] a = support.dictionary.getVariableArray(e.getIdent());
       if (a != null && e.getInt() >= 0 && e.getInt() < a.length) {

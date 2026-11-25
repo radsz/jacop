@@ -35,8 +35,12 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Random;
+import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import org.jacop.constraints.AllDifferentLists;
 import org.jacop.constraints.ArgMaxMonotone;
 import org.jacop.constraints.AtLeast;
@@ -58,8 +62,10 @@ import org.jacop.constraints.XmulYeqZSaturated;
 import org.jacop.constraints.Xor;
 import org.jacop.constraints.table.BinaryBitTable;
 import org.jacop.core.FailException;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
@@ -159,6 +165,10 @@ class MutationGapsTest {
           trail.explain(e, reason);
         }
         assertNull(checker.checkReason(e, reason), where + " atom " + trail.atomString(e));
+        if (in.relation != null) {
+          // ExplanationChecker skips a constraint it cannot copy: brute force over the root box
+          assertNull(bruteReason(trail, in, reason, e), where + " atom " + trail.atomString(e));
+        }
       }
       if (!consistent && store.recentlyFailedConstraint == c) {
         EntryList reason = new EntryList();
@@ -166,6 +176,9 @@ class MutationGapsTest {
           failures++;
           failureLiterals += reason.size();
           assertNull(checker.checkFailure(c, reason), where + " failure");
+          if (in.relation != null) {
+            assertNull(bruteReason(trail, in, reason, -1), where + " failure");
+          }
         }
       }
       trail.detach();
@@ -174,7 +187,91 @@ class MutationGapsTest {
     return new Counts(atoms, explained, literals, failures, failureLiterals, calls);
   }
 
-  private record Instance(Store store, Constraint constraint, IntVar[] vars) {}
+  /**
+   * A constraint over fresh variables. The relation, when given, holds for the complete assignments
+   * of vars (in their order) that satisfy the constraint, and the reasons are also checked by brute
+   * force over the root box.
+   */
+  private record Instance(
+      Store store, Constraint constraint, IntVar[] vars, Predicate<int[]> relation) {
+    Instance(Store store, Constraint constraint, IntVar[] vars) {
+      this(store, constraint, vars, null);
+    }
+  }
+
+  /**
+   * Checks by brute force that a reason implies its atom (or, for entry -1, a failure): no
+   * assignment of the root domains of the instance's variables that meets the reason and breaks the
+   * atom satisfies the relation.
+   *
+   * @return null when the reason holds, otherwise a description of a counterexample
+   */
+  private static String bruteReason(AtomicTrail trail, Instance in, EntryList reason, int entry) {
+    IntVar[] all = in.vars;
+    IntDomain[] dom = new IntDomain[all.length];
+    for (int i = 0; i < all.length; i++) {
+      dom[i] = trail.rootDomain(all[i]).cloneLight();
+    }
+    StringBuilder text = new StringBuilder();
+    for (int k = 0; k < reason.size(); k++) {
+      int f = reason.get(k);
+      int i = Arrays.asList(all).indexOf(trail.variable(f));
+      if (i < 0) {
+        return "reason atom on a variable outside the instance: " + trail.atomString(f);
+      }
+      text.append(trail.atomString(f)).append(' ');
+      int v = trail.value(f);
+      int slack = reason.slack(k);
+      dom[i] =
+          switch (trail.kind(f)) {
+            case AtomicTrail.GE -> dom[i].intersect(v - slack, IntDomain.MAX_INT);
+            case AtomicTrail.LE -> dom[i].intersect(IntDomain.MIN_INT, v + slack);
+            default -> dom[i].subtract(v);
+          };
+    }
+    if (entry >= 0) {
+      int i = Arrays.asList(all).indexOf(trail.variable(entry));
+      if (i < 0) {
+        return "atom on a variable outside the instance";
+      }
+      int v = trail.value(entry);
+      dom[i] =
+          switch (trail.kind(entry)) {
+            case AtomicTrail.GE -> dom[i].intersect(IntDomain.MIN_INT, v - 1);
+            case AtomicTrail.LE -> dom[i].intersect(v + 1, IntDomain.MAX_INT);
+            default -> dom[i].intersect(v, v);
+          };
+    }
+    int[][] values = new int[all.length][];
+    for (int i = 0; i < all.length; i++) {
+      if (dom[i].isEmpty()) {
+        return null;
+      }
+      values[i] = new int[dom[i].getSize()];
+      int k = 0;
+      for (ValueEnumeration en = dom[i].valueEnumeration(); en.hasMoreElements(); ) {
+        values[i][k++] = en.nextElement();
+      }
+    }
+    int[] pos = new int[all.length];
+    int[] t = new int[all.length];
+    while (true) {
+      for (int i = 0; i < all.length; i++) {
+        t[i] = values[i][pos[i]];
+      }
+      if (in.relation.test(t)) {
+        return "reason " + text + "does not imply it: " + Arrays.toString(t) + " is a solution";
+      }
+      int i = 0;
+      while (i < all.length && ++pos[i] == values[i].length) {
+        pos[i] = 0;
+        i++;
+      }
+      if (i == all.length) {
+        return null;
+      }
+    }
+  }
 
   /**
    * Explanation-size golden: the atoms explained by the constraint itself, their reason literals,
@@ -541,7 +638,15 @@ class MutationGapsTest {
               for (int t = 0; t < tuples.length; t++) {
                 tuples[t] = new int[] {rnd.nextInt(6) - 1, rnd.nextInt(6) - 1};
               }
-              return new Instance(store, new BinaryBitTable(x[0], x[1], tuples), x);
+              Set<Long> allowed = new HashSet<>();
+              for (int[] t : tuples) {
+                allowed.add(t[0] * 1000L + t[1]);
+              }
+              return new Instance(
+                  store,
+                  new BinaryBitTable(x[0], x[1], tuples),
+                  x,
+                  t -> allowed.contains(t[0] * 1000L + t[1]));
             });
     golden(n, 2044, 203, 665, 56, 1773);
   }
@@ -571,8 +676,33 @@ class MutationGapsTest {
                 }
               }
               IntVar index = new IntVar(store, "i", 0, m + 1);
+              // the position of the first largest value from 0 (offset -1); a value off its table
+              // has
+              // none
+              Predicate<int[]> argMax =
+                  t -> {
+                    int best = -1;
+                    long largest = Long.MIN_VALUE;
+                    for (int k = 0; k < m; k++) {
+                      long value;
+                      if (f[k] == null) {
+                        value = t[k];
+                      } else {
+                        int i = t[k] - first[k];
+                        if (i < 0 || i >= f[k].length) {
+                          return false;
+                        }
+                        value = f[k][i];
+                      }
+                      if (value > largest) {
+                        largest = value;
+                        best = k;
+                      }
+                    }
+                    return t[m] == best;
+                  };
               return new Instance(
-                  store, new ArgMaxMonotone(q, f, first, index, -1), withLast(q, index));
+                  store, new ArgMaxMonotone(q, f, first, index, -1), withLast(q, index), argMax);
             });
     golden(n, 3876, 2270, 53, 137, 4683);
   }

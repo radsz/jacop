@@ -32,7 +32,6 @@ package org.jacop.fz.constraints;
 
 import java.math.BigInteger;
 import java.util.HashMap;
-import java.util.IdentityHashMap;
 import java.util.Map;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -69,7 +68,42 @@ public final class MddLinearSum {
   private MddLinearSum() {}
 
   /** The per diagram result of the structural part of the check, shared by calls on one graph. */
-  private static final Map<int[], Object> STRUCTURE = new IdentityHashMap<>();
+  private static final Map<Diagram, Object> STRUCTURE = new HashMap<>();
+
+  /**
+   * A diagram by the identity of its four arrays. Two diagrams of one model may share a named array
+   * of sources and differ in their labels, so the sources alone do not name a diagram.
+   */
+  private static final class Diagram {
+    private final int[] level;
+    private final int[] from;
+    private final IntDomain[] label;
+    private final int[] to;
+
+    Diagram(int[] level, int[] from, IntDomain[] label, int[] to) {
+      this.level = level;
+      this.from = from;
+      this.label = label;
+      this.to = to;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Diagram d
+          && d.level == level
+          && d.from == from
+          && d.label == label
+          && d.to == to;
+    }
+
+    @Override
+    public int hashCode() {
+      return 31
+              * (31 * (31 * System.identityHashCode(level) + System.identityHashCode(from))
+                  + System.identityHashCode(label))
+          + System.identityHashCode(to);
+    }
+  }
 
   private static final Object NOT_A_SUM = new Object();
 
@@ -104,10 +138,11 @@ public final class MddLinearSum {
    */
   public static synchronized Long sum(
       IntVar[] x, int[] level, int[] from, IntDomain[] label, int[] to) {
-    Object s = STRUCTURE.get(from);
+    Diagram diagram = new Diagram(level, from, label, to);
+    Object s = STRUCTURE.get(diagram);
     if (s == null) {
       s = structure(x.length, level, from, label, to);
-      STRUCTURE.put(from, s);
+      STRUCTURE.put(diagram, s);
     }
     if (s == NOT_A_SUM) {
       return null;
@@ -134,7 +169,8 @@ public final class MddLinearSum {
     if (byLevel == null) {
       return NOT_A_SUM;
     }
-    for (int[] edges : byLevel) {
+    for (int l = 0; l < n; l++) {
+      int[] edges = byLevel[l];
       // per source node, the values already used (determinism)
       Map<Integer, IntDomain> used = new HashMap<>();
       for (int e : edges) {
@@ -156,7 +192,10 @@ public final class MddLinearSum {
         used.put(f, u == null ? d : u.union(d));
         long p = potential[f] + d.min();
         int t = to[e];
-        if (t == 0) {
+        if (t == 0 && l != n - 1) {
+          // a path shorter than the variables: not a tuple of the sum
+          return NOT_A_SUM;
+        } else if (t == 0) {
           if (terminal != null && terminal != p) {
             return NOT_A_SUM;
           }
@@ -212,7 +251,9 @@ public final class MddLinearSum {
           continue;
         }
         int t = to[e];
-        if (t == 0) {
+        if (t == 0 && l != byLevel.length - 1) {
+          return null;
+        } else if (t == 0) {
           terminal = terminal.add(c);
         } else if (level[t - 1] != l + 2) {
           return null;

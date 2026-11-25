@@ -289,6 +289,11 @@ class TableReformulationFlatzincTest {
    */
   @Test
   void compressibleBinaryTablesStayClausesUnderLcg() throws IOException {
+    // lazy clause generation is under test: the model is not compiled to clauses
+    ClausalOff.run(this::compressibleBinaryTablesStayClausesUnderLcgBody);
+  }
+
+  private void compressibleBinaryTablesStayClausesUnderLcgBody() throws IOException {
     StringBuilder pairs = new StringBuilder();
     int count = 0;
     for (int a = 0; a < 16; a++) {

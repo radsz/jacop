@@ -188,6 +188,19 @@ public final class DominanceNogoods {
     this.minimize = minimize;
   }
 
+  // the time-out of the run, as System.nanoTime(): the search for nogoods stops there
+  private long runDeadline = Long.MAX_VALUE;
+
+  /**
+   * Sets when the run ends: the search for nogoods stops there, as at its own time budget, with the
+   * nogoods found so far.
+   *
+   * @param nanoTime the time-out as given by {@link System#nanoTime()}
+   */
+  public void setDeadline(long nanoTime) {
+    runDeadline = nanoTime;
+  }
+
   /**
    * Finds the nogoods and imposes them.
    *
@@ -208,7 +221,7 @@ public final class DominanceNogoods {
     if (objective == null || objective.singleton()) {
       return new Outcome(0, 0, 0, 0, 0, true, "no objective");
     }
-    long deadline = System.nanoTime() + TIME;
+    long deadline = Math.min(System.nanoTime() + TIME, runDeadline);
     List<Var> all = Derivation.variables(store);
     List<Constraint> live = new ArrayList<>();
     for (Constraint c : Derivation.constraints(store, all)) {
