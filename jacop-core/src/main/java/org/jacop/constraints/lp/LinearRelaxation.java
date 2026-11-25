@@ -248,7 +248,9 @@ public class LinearRelaxation extends Constraint
   static final boolean CLAUSE_ROWS = Boolean.getBoolean("org.jacop.lp.clauseRows");
   // whether the MIR cuts of the rows also substitute variable bounds x <= a u, x >= a u
   // (MirCut.ofVariableBounds)
-  static final boolean VB_MIR = Boolean.getBoolean("org.jacop.lp.vbMir");
+  static boolean vbMirOn = Boolean.getBoolean("org.jacop.lp.vbMir");
+  // whether the Gomory rows also get the MIR cuts with variable bounds substituted
+  static boolean vbGomoryOn = Boolean.getBoolean("org.jacop.lp.vbGomory");
   // the variable bounds of the rows, read once at the first cut round
   private MirCut.VariableBounds variableBounds;
   private boolean variableBoundsRead;
@@ -634,7 +636,8 @@ public class LinearRelaxation extends Constraint
   private static final long CUT_EXTRA_NANOS =
       (long) (Double.parseDouble(System.getProperty("org.jacop.lp.cutExtraSeconds", "1")) * 1e9);
   // an extra round must move the bound by this share of what the rounds before it moved it
-  private static final double CUT_PROGRESS = 0.01;
+  private static final double CUT_PROGRESS =
+      Double.parseDouble(System.getProperty("org.jacop.lp.cutProgress", "0.01"));
   private static final int CUTS_PER_ROUND = Integer.getInteger("org.jacop.lp.cutsPerRound", 50);
   private static final int MAX_SOURCES = 100;
 
@@ -4959,7 +4962,7 @@ public class LinearRelaxation extends Constraint
     for (int i = 0; i < original; i++) {
       unitRows[i] = rowAggregate(i);
     }
-    if (VB_MIR && !variableBoundsRead) {
+    if ((vbMirOn || vbGomoryOn) && !variableBoundsRead) {
       variableBoundsRead = true;
       List<int[]> rc = new ArrayList<>();
       List<long[]> rw = new ArrayList<>();
@@ -5391,11 +5394,55 @@ public class LinearRelaxation extends Constraint
           found.add(c);
         }
       }
+      if (vbGomoryOn && variableBounds != null) {
+        for (long[] w : new long[][] {weights, neg}) {
+          try {
+            MirCut v = MirCut.ofVariableBounds(columns, w, 0, xv, xlo, xhi, variableBounds);
+            MirCut c = v == null ? null : overRows(v, n, value, lo, hi);
+            if (c != null) {
+              found.add(c);
+              vbCuts++;
+            }
+          } catch (ArithmeticException _) {
+            // no cut with the variable bounds from this row at this scale
+          }
+        }
+      }
     } catch (ArithmeticException _) {
       // no cut from this row at this scale
       return false;
     }
     return true;
+  }
+
+  // the cut with the slacks of the rows (columns n + i) replaced by their rows
+  private MirCut overRows(MirCut v, int n, double[] value, long[] lo, long[] hi) {
+    long[] cut = new long[n];
+    for (int t = 0; t < v.columns.length; t++) {
+      int c = v.columns[t];
+      if (c < n) {
+        cut[c] = Math.addExact(cut[c], v.weights[t]);
+      } else {
+        int[] cs = rowColumns[c - n];
+        long[] ws = rowWeights[c - n];
+        for (int k = 0; k < cs.length; k++) {
+          cut[cs[k]] = Math.addExact(cut[cs[k]], Math.multiplyExact(v.weights[t], ws[k]));
+        }
+      }
+    }
+    int nz = 0;
+    for (long c : cut) {
+      nz += c != 0 ? 1 : 0;
+    }
+    int[] cc = new int[nz];
+    long[] cw = new long[nz];
+    for (int j = 0, t = 0; j < n; j++) {
+      if (cut[j] != 0) {
+        cc[t] = j;
+        cw[t++] = cut[j];
+      }
+    }
+    return MirCut.finish(cc, cw, v.rhs, value, lo, hi, true);
   }
 
   /**
@@ -6275,7 +6322,7 @@ public class LinearRelaxation extends Constraint
       mir(unitRows[i], value, lo, hi, found);
     }
     labelled(found, unitBefore, "mir");
-    if (variableBounds != null && !coversOnly) {
+    if (vbMirOn && variableBounds != null && !coversOnly) {
       int vbBefore = found.size();
       for (Aggregate row : unitRows) {
         vbMir(row, value, lo, hi, found, variableBounds);
