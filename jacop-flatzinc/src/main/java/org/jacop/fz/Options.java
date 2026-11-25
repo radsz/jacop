@@ -294,6 +294,9 @@ public class Options {
                 lcg-literal-runs=<n>, lcg-literal-runs-solved=<n> (with --lcg and an
                 annotation: runs on literals in each turn of the annotation, the literals and
                 activity branching, before and after a first solution; defaults 1 and 6),
+                lcg-annotation-drop=<n> (with --lcg and an annotation: after n conflicts without a
+                solution the turns of the annotation are dropped and the literals and activity
+                branching take turns; default 50000, 0 never),
                 lcg-chain-limit=<n> (with --lcg: linked bound literals per variable past which
                 short reasons on its new bounds are used once, not kept, so its chain
                 [x >= v] -> [x >= u] stops growing; default 64, a huge value turns it off),

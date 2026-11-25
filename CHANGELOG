@@ -9068,6 +9068,75 @@ Version 5.0 (unreleased)
    atom, from int arrays: the same search, sudoku_opt p29 and
    gfd-schedule n100 -2.9 % each, wide-quick -f -0.9 %, default -0.2 %.
 
+507. The JaLP presolve stuffs singleton columns (G. Gamrath, T. Koch,
+   A. Martin, M. Miltenberger and D. Weninger, "Progress in presolving
+   for mixed integer programming", Mathematical Programming Computation
+   7, 2015): in a row with one side, the column singletons whose cost
+   asks to use up the row are taken from the largest gain per unit of
+   the row; one that fits even with the other columns at their worst
+   moves to its bound, one the better ones already overflow the row with
+   stays at the other. trucking_15 presolves to 87 x 98 like HiGHS (was
+   87 x 600). -Dorg.jacop.jalp.presolveStuffing=false turns it off.
+
+508. The JaLP presolve removes rows that the bounds other rows imply on
+   their columns keep (E. D. Andersen and K. D. Andersen, "Presolving in
+   linear programming", Mathematical Programming 71, 1995, section 3.3,
+   with implied column bounds as HiGHS keeps them). Each row bounds its
+   columns, one step, from the bounds of the others; the bounds of a
+   removed row are not used after it goes, so every removed row is
+   implied by rows that are kept. Column bounds do not change. Over the
+   687 LPs of the osolpro LP bench the presolved sizes above HiGHS's drop
+   from 244,977 to 210,986 rows and columns (with item 507); agg, cont4
+   and rocII-5-11 presolve to HiGHS's size. -Dorg.jacop.jalp.presolveImpliedRows=false
+   turns it off.
+
+509. Free search (-f) with an annotation drops the annotation's runs when
+   50,000 conflicts found no solution: from then on LCG takes turns of
+   the SAT solver's own decisions on literals and of activity branching
+   only, as without an annotation (--free-config lcg-annotation-drop=<n>,
+   0 for never; LcgSolver.setAnnotationDrop; statistic
+   lcgAnnotationDropped). The runs of an annotation that does not lead to
+   a solution also hold back the other turns: on amaze2 2012-07-04
+   (first_fail on the path successors, indomain_min) the literal runs of
+   the rotation spent 417,000 conflicts in 300 s without a solution,
+   while the rotation without the annotation finds one after about
+   200,000 conflicts in all. Two seeds at 240 s: 28 instances where no
+   solution comes early (amaze2, cutstock, 2DBinPacking, bus_scheduling,
+   costas-array, orthorio and the wide set's others), solved 25 -> 29,
+   total time 8,486 -> 7,416 s, cutstock type16 finds 1,146 where it
+   found nothing; the 53 satisfaction instances of the wide set, solved
+   93 -> 94, total time 3,996 -> 3,648 s. The rule fires on 3 of the 240
+   instances of the wide set within 60 s.
+
+510. FlatZinc front end as a GraalVM native image (fzn-jacop-native): it
+   starts in milliseconds and runs compiled code at once, where the JVM,
+   even with its ahead-of-time cache, needs 0.1 s to start and runs JaCoP
+   in its interpreter for the first 0.2-0.5 s. fzn-jacop-native-build (or
+   mvn -Pnative) makes it with native-image; with Oracle GraalVM it is
+   compiled with profile-guided optimization from the aot-training models,
+   which makes long runs as fast as on the JVM. fzn-jacop uses the image
+   when it is newer than the jar (JACOP_JVM=1 runs the JVM), and the
+   MiniZinc Challenge image runs it. org.jacop.fz.NativeMain runs the
+   solver in a thread with a 100 MB stack; org.jacop.fz.NativeMetadata
+   lists the reflection the image needs. MiniZinc Challenge filters
+   fir_1_4: 0.39 s -> 0.05 s; 22 easy Challenge instances of 2012-2016:
+   faster in all 44 runs, 26 under 0.3 s (none before). Wide-quick set at
+   240 s, the same instances solved, total time -f 2,250 -> 2,123 s and
+   default 4,047 -> 3,967 s, 0.26x / 0.28x the time (geometric mean) on
+   the instances both solve; at 600 s two -f proofs past 400 s are lost
+   (celar graph11, whirlpool d29).
+
+511. Root probing and the Diffn area check are cheaper, with the same search.
+   DualFeasibleFunctions keeps a memo of its packing tests, keyed by the
+   container and the set of item sizes: root probing of MiniZinc Challenge
+   2014 rectangle-packing rpp23 made 34,513 tests on 346 distinct sets.
+   LcgSolver writes out equals and hashCode of its probing atoms (with the
+   values of the generated ones, so sets keep their order), and probing
+   stops collecting the consequences of a variable's values once none is
+   common to all. -f wall time on rectangle-packing rpp18-rpp26 -15 to
+   -19 %; at 240 s, Diffn instances proved by both 918 -> 836 s (-f) and
+   188 -> 175 s (default search); wide-quick -f at 600 s total 0.995.
+
 Version 4.11
 =============
 
