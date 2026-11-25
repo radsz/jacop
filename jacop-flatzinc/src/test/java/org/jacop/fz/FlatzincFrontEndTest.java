@@ -7471,4 +7471,28 @@ class FlatzincFrontEndTest {
       assertEquals(7, solveAll(model).size(), value);
     }
   }
+
+  /**
+   * The shutdown hook of a portfolio (a run with -s killed by SIGTERM) prints the answer while the
+   * threads still run: a solution a thread finds after it is not printed under -a, after the
+   * status.
+   */
+  @Test
+  void portfolioPrintsNoSolutionAfterItsAnswerAtShutdown() {
+    Options options = new Options(new String[] {"-p", "2", "-a", "-t", "1000", "m.fzn"});
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    PrintStream out = new PrintStream(buffer, true, StandardCharsets.UTF_8);
+    PrintStream saved = System.out;
+    try {
+      System.setOut(out);
+      Portfolio portfolio = new Portfolio(options);
+      Portfolio.Worker w = portfolio.new Worker("w", List.of());
+      portfolio.printAtShutdown(out, System.currentTimeMillis());
+      w.solution("x = 5;\n----------\n", 5, false, new String[0], new int[0]);
+    } finally {
+      System.setOut(saved);
+    }
+    assertEquals(
+        "=====UNKNOWN=====\n%% =====TIME-OUT=====\n", buffer.toString(StandardCharsets.UTF_8));
+  }
 }
