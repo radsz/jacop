@@ -986,4 +986,29 @@ class SingleConstraintTest {
     assertThat(store.consistency()).isTrue();
     assertThat(first.min() == 9.5 && value.max() == 9.5).as("%s %s", first, value).isTrue();
   }
+
+  /**
+   * A divisor narrower than the precision around 0 is not 0: x / y = z with x = 3e-4, y = 5e-5 and
+   * z = 6 holds, but with precision 1e-3 the domain of y, -2e-4..4e-4, counted as the value 0 and
+   * the division failed (FlatZinc float_div under float_search precision 0.001 claimed
+   * UNSATISFIABLE).
+   */
+  @Test
+  void divisionByASingletonAroundZeroKeepsItsSolutions() {
+    double precision = FloatDomain.precision();
+    FloatDomain.setPrecision(1e-3);
+    try {
+      Store store = new Store();
+      FloatVar x = new FloatVar(store, "x", -1e-4, 5e-4);
+      FloatVar y = new FloatVar(store, "y", -2e-4, 4e-4);
+      FloatVar z = new FloatVar(store, "z", 5, 7);
+      store.impose(new PdivQeqR(x, y, z));
+      assertThat(store.consistency()).isTrue();
+      assertThat(x.dom().contains(3e-4) && y.dom().contains(5e-5) && z.dom().contains(6))
+          .as("%s %s %s", x, y, z)
+          .isTrue();
+    } finally {
+      FloatDomain.setPrecision(precision);
+    }
+  }
 }
