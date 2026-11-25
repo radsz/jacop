@@ -57,6 +57,7 @@ import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
+import org.jacop.constraints.AndBool;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
@@ -2179,6 +2180,93 @@ class LcgSolverTest {
     // about 800 since reasons cite the earliest bound beyond a value (shorter searches)
     assertThat(own).isGreaterThan(500);
     assertThat(own).isGreaterThan(20 * generic);
+  }
+
+  /**
+   * Value precedence over a permutation under a fixed input-order search, in open stacks with the
+   * symmetry of interchangeable products broken (MiniZinc Challenge 2015 wbp_20_20_1 went from
+   * 263,000 conflicts to 5,500): the reason "product a is in no earlier slot" cites {@code s[j] !=
+   * a}, not the bound that removed a when s[j] took another product, so a learnt clause also holds
+   * where s[j] takes a third product. Random instances keep the optimum with and without the value
+   * literals, and the value literals cut the conflicts.
+   */
+  @Test
+  void precedenceReasonsCiteValueLiterals() {
+    long[] conflicts = new long[2];
+    long cited = 0;
+    for (int instance = 0; instance < 6; instance++) {
+      int[] optimum = new int[2];
+      for (int mode = 0; mode < 2; mode++) {
+        Random rnd = new Random(101 + instance);
+        int customers = 10;
+        int products = 12;
+        int[][] orders = new int[customers][products + 1];
+        for (int i = 0; i < customers; i++) {
+          for (int p = 1; p <= products; p++) {
+            orders[i][p] = rnd.nextInt(3) == 0 ? 1 : 0;
+          }
+          orders[i][1 + rnd.nextInt(products)] = 1;
+          // products 2 and 3, and 5 and 6, are interchangeable
+          orders[i][3] = orders[i][2];
+          orders[i][6] = orders[i][5];
+        }
+        Store store = new Store();
+        IntVar[] s = new IntVar[products];
+        for (int t = 0; t < products; t++) {
+          s[t] = new IntVar(store, "s" + t, 1, products);
+        }
+        store.impose(new Alldistinct(s));
+        store.impose(new SeqPrecedeChain(s, new int[] {2, 3}));
+        store.impose(new SeqPrecedeChain(s, new int[] {5, 6}));
+        IntVar[] open = new IntVar[products];
+        IntVar[][] stacks = new IntVar[products][customers];
+        for (int t = 0; t < products; t++) {
+          open[t] = new IntVar(store, "open" + t, 0, customers);
+        }
+        for (int i = 0; i < customers; i++) {
+          int total = Arrays.stream(orders[i]).sum();
+          IntVar before = new IntVar(store, 0, 0);
+          for (int t = 0; t < products; t++) {
+            IntVar d = new IntVar(store, 0, 1);
+            store.impose(
+                new ElementInteger(s[t], Arrays.copyOfRange(orders[i], 1, products + 1), d, 0));
+            IntVar after = new IntVar(store, 0, total);
+            store.impose(new XplusYeqZ(before, d, after));
+            // customer i's stack is open at t: started by t and not finished before t
+            IntVar started = new IntVar(store, 0, 1);
+            IntVar unfinished = new IntVar(store, 0, 1);
+            store.impose(new Reified(new XgteqC(after, 1), started));
+            store.impose(new Reified(new XlteqC(before, total - 1), unfinished));
+            IntVar o = new IntVar(store, 0, 1);
+            store.imposeDecomposition(new AndBool(new IntVar[] {started, unfinished}, o));
+            stacks[t][i] = o;
+            before = after;
+          }
+        }
+        for (int t = 0; t < products; t++) {
+          store.impose(new SumInt(stacks[t], "==", open[t]));
+        }
+        IntVar most = new IntVar(store, "most", 0, customers);
+        store.impose(new Max(open, most));
+        LcgSolver solver = new LcgSolver(store);
+        solver.setChecking(true);
+        solver.setValueLiterals(mode == 0);
+        solver.setAnnotation(new SimpleSelect<>(s, null, new IndomainMin<>()), false);
+        assertThat(solver.minimize(most)).as("instance %d", instance).isEqualTo(CdclSolver.SAT);
+        optimum[mode] = solver.value(most);
+        conflicts[mode] += solver.sat().conflicts;
+        if (mode == 0) {
+          cited += solver.valueLiterals;
+        }
+      }
+      assertThat(optimum[0]).as("instance %d", instance).isEqualTo(optimum[1]);
+    }
+    System.out.printf(
+        "precedence value literals: %d conflicts with, %d without, %d cited%n",
+        conflicts[0], conflicts[1], cited);
+    // 7,584 against 10,864 conflicts
+    assertThat(cited).isPositive();
+    assertThat(conflicts[0]).isLessThan(conflicts[1] * 9 / 10);
   }
 
   /**

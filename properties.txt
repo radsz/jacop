@@ -962,6 +962,11 @@ Explanations:
   propagation allows, and a value excluded by a bound explained by the
   earliest bound beyond it; default true.
 - jacop.lcg.replay: replayed explanations; default true.
+- jacop.lcg.valueLiterals: a reason that needs only a value out of a
+  variable (value precedence: "v is in no earlier variable") cites the
+  literal x != v in place of the bound that removed v, when the solver
+  has it (made on first need), so learnt clauses also hold where the
+  variable takes another value; default true.
 - jacop.lcg.replayGroups: reasons with more groups than this get the
   generic reason; default 256.
 - jacop.lcg.replayShare: the most consistency calls the replays of a

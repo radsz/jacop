@@ -3304,6 +3304,58 @@ public final class LcgSolver implements ExternalPropagator {
     return trail.kind(entry) == AtomicTrail.GE ? geLit(i, v - slack) : -geLit(i, v + slack + 1);
   }
 
+  /**
+   * The literal of {@code x != v} for a bound entry of x that removed v, when the solver has [x =
+   * v] linked to the bounds and false before a solver trail position; otherwise the entry's own
+   * literal. A missing [x = v] is made at the next {@link #externalClause}, so that later reasons
+   * can cite it.
+   *
+   * @param entry the bound entry
+   * @param v the value it removed
+   * @param before the solver trail position of the literal the reason is for
+   */
+  private int valueOutLit(int entry, int v, int before) {
+    if (!citeValues || proof != null) {
+      return atomLit(entry);
+    }
+    int i = trail.id(trail.variable(entry));
+    int d = eq[i].get(v);
+    if (d == LiteralMap.NONE || transientLit[d]) {
+      // made at the next external clause, not while the solver analyses a conflict
+      missingValueLiterals.add((long) i << 32 | (v & 0xffffffffL));
+      return atomLit(entry);
+    }
+    if (sat.value(-d) > 0) {
+      int position = sat.trailPosition(-d);
+      if (position >= 0 && position < before) {
+        valueLiterals++;
+        return -d;
+      }
+    }
+    return atomLit(entry);
+  }
+
+  // whether reasons cite [x != v] for the bound entries explanations mark as one value's removal
+  // (jacop.lcg.valueLiterals, default true)
+  private boolean citeValues = !FALSE.equals(System.getProperty("jacop.lcg.valueLiterals"));
+
+  /**
+   * Sets whether reasons cite {@code x != v} in place of a bound entry that an explanation marks as
+   * the removal of value v ({@link EntryList#addExcludedValue}), when the solver has the literal;
+   * on by default (system property {@code jacop.lcg.valueLiterals}).
+   *
+   * @param on true to cite the value literals
+   */
+  public void setValueLiterals(boolean on) {
+    citeValues = on;
+  }
+
+  /** Reasons' value removals cited as [x != v] in place of a bound. */
+  public long valueLiterals;
+
+  // the [x = v] literals that valueOutLit found missing: (variable index, value)
+  private final Set<Long> missingValueLiterals = new LinkedHashSet<>();
+
   // reasons may cite literals true before this solver trail position (see weakest)
   private int liftBefore = Integer.MAX_VALUE;
 
@@ -8623,6 +8675,16 @@ public final class LcgSolver implements ExternalPropagator {
 
   @Override
   public int[] externalClause() {
+    if (!missingValueLiterals.isEmpty()) {
+      for (long key : missingValueLiterals) {
+        int i = (int) (key >>> 32);
+        int v = (int) key;
+        if (root[i].contains(v)) {
+          eqVar(i, v);
+        }
+      }
+      missingValueLiterals.clear();
+    }
     if (structural.isEmpty()
         && sharedBound != null
         && proof == null
@@ -9173,7 +9235,10 @@ public final class LcgSolver implements ExternalPropagator {
     int[] clause = new int[reason.size() + (extra == 0 ? 1 : 2)];
     clause[0] = lit;
     for (int k = 0; k < reason.size(); k++) {
-      clause[k + 1] = -atomLit(reason.get(k), reason.slack(k));
+      clause[k + 1] =
+          reason.hasExcludedValue(k)
+              ? -valueOutLit(reason.get(k), reason.excludedValue(k), sat.trailPosition(lit))
+              : -atomLit(reason.get(k), reason.slack(k));
     }
     if (extra != 0) {
       clause[clause.length - 1] = -extra;

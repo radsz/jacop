@@ -9068,6 +9068,23 @@ Version 5.0 (unreleased)
    atom, from int arrays: the same search, sudoku_opt p29 and
    gfd-schedule n100 -2.9 % each, wide-quick -f -0.9 %, default -0.2 %.
 
+507. Lazy clause generation: the reasons of the value precedence
+   constraint (SeqPrecedeChain, which index-value symmetry breaking posts
+   for interchangeable values) cite "x != v" for a value v removed from x
+   in place of the bound atom that removed it ([x <= 11] for 12). The
+   bound atom is true only in the branch that tightened the bound, so the
+   learnt clauses did not carry over. The literal [x = v] is cited when it
+   exists and was false before the propagated literal; a missing one is
+   made at the next learnt clause, never during conflict analysis. The
+   rest stays as it was. MiniZinc Challenge 2015 open_stacks with
+   default search: wbp_20_20_1 52 -> 4 s, wbo_10_20_1 16 -> 6 s,
+   wbop_15_30_1 23 -> 17 s; the 38 open_stacks (2009/2011/2015) and wide
+   set instances that post a value precedence, 600 s: default search
+   proved 32 -> 33 (2011 problem_10_20_1 in 382 s), total time -5.9 %;
+   -f the same (+0.1 %). -s prints the cited literals as
+   lcgValueLiterals; -Djacop.lcg.valueLiterals=false cites the bounds
+   again.
+
 Version 4.11
 =============
 
