@@ -294,6 +294,12 @@ public final class PermutationElementSums {
       }
       count.merge(e0.c[(int) i], 1, Integer::sum);
     }
+    if (count.size() <= 2) {
+      // two values: each count is a linear function of the sum, which is posted, and the counts
+      // only slowed the search (MiniZinc Challenge 2011 open-stacks problem_15_15, 0/1 arrays of
+      // the products of each customer, -f: 12,620 -> 21,573 nodes to the same proof)
+      return;
+    }
     if (count.size() > MAX_COUNTED || 2 * count.size() > union.getSize()) {
       // too many values, or most values once (processing times of a flow shop): the counts then
       // add little to the sum and slowed the search (Taillard ta011, ta016)

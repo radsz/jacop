@@ -101,7 +101,7 @@ public abstract class LayeredGraphConstraint extends Constraint
   private int indexOffset;
 
   /** Removes the values that label no edge, and in the first pass checks every level. */
-  private final InitOnce init = new InitOnce();
+  private InitOnce init = new InitOnce();
 
   /** The graph as described, kept for explanations. */
   private LayeredGraphDescription description;
@@ -941,9 +941,38 @@ public abstract class LayeredGraphConstraint extends Constraint
       return size + 1;
     }
 
+    // clauses longer than this are cleared of duplicates by sorting, not pairwise
+    private static final int SORT_FROM = 64;
+
     /** Adds the clause being built, without constants, duplicates and tautologies. */
     private void emit(int size) {
       int n = 0;
+      if (size > SORT_FROM) {
+        for (int k = 0; k < size; k++) {
+          int l = clause[k];
+          if (l == TRUE) {
+            return;
+          }
+          if (l != FALSE) {
+            clause[n++] = l;
+          }
+        }
+        // the clause of a value lists every arc of its level labelled with it, hundreds of
+        // thousands in the diagrams of WordDesign2-words-mdd (XCSP 2023)
+        Arrays.sort(clause, 0, n);
+        int m = 0;
+        for (int k = 0; k < n; k++) {
+          int l = clause[k];
+          if (l < 0 && Arrays.binarySearch(clause, k + 1, n, -l) >= 0) {
+            return;
+          }
+          if (m == 0 || clause[m - 1] != l) {
+            clause[m++] = l;
+          }
+        }
+        model.clause(clause, m);
+        return;
+      }
       for (int k = 0; k < size; k++) {
         int l = clause[k];
         if (l == TRUE) {
@@ -2341,6 +2370,8 @@ public abstract class LayeredGraphConstraint extends Constraint
   @Override
   public void impose(Store store) {
 
+    // a second imposition prunes its new graph to the domains at its first consistency call
+    init = new InitOnce();
     buildLayeredGraph(store);
 
     mapping = Var.positionMapping(list, true, this.getClass());

@@ -40,6 +40,9 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -63,7 +66,8 @@ import org.jacop.set.core.SetVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class AllDisjoint extends Constraint implements SatisfiedPresent, Copyable<AllDisjoint> {
+public class AllDisjoint extends Constraint
+    implements SatisfiedPresent, Copyable<AllDisjoint>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -592,5 +596,31 @@ public class AllDisjoint extends Constraint implements SatisfiedPresent, Copyabl
   @Override
   public AllDisjoint copy(VarMap map) {
     return new AllDisjoint(map.get(s));
+  }
+
+  // whether the sets are distinct variables, which the explanations of the pairwise rule need
+  private Boolean distinct;
+
+  private boolean distinctSets() {
+    if (distinct == null) {
+      distinct = Arrays.stream(s).distinct().count() == n;
+    }
+    return distinct;
+  }
+
+  /**
+   * Explains the pairwise rule under lazy clause generation: an element leaves a set because
+   * another set holds it. The prunings of the cardinalities and of the assignment get the generic
+   * reason.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return distinctSets() && SetExplanation.explainOneOf(trail, entry, s, null, out);
+  }
+
+  /** Explains a failure of the pairwise rule: an element held by two sets. */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return distinctSets() && SetExplanation.explainOneOfFailure(trail, s, null, out);
   }
 }
