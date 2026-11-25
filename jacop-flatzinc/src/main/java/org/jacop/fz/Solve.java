@@ -9515,7 +9515,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (options.getStatistics()) {
       int[] stats = gatherSingleSearchStats();
-      printStatisticsOutput(stats[0], stats[1], stats[2], stats[3]);
+      // the searches below the first one count the solutions of their own and of each other
+      // (with a completion of hidden floats below that of hidden integers, 2 for one solution), so
+      // count the solutions that were reported instead
+      printStatisticsOutput(stats[0], stats[1], stats[2], numberSolutions);
     }
   }
 

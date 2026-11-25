@@ -7659,4 +7659,25 @@ class FlatzincFrontEndTest {
       last = obj;
     }
   }
+
+  @Test
+  void statisticsCountTheSolutionsReportedWithACompletionOfHiddenFloats() throws IOException {
+    // the search on a, the completion of b and the float completion of f, g and h each counted
+    // solutions of their own, and the statistics took the completion's count: solutions=2 for
+    // the one solution a = 0
+    String model =
+        "var 0..1: a :: output_var;\n"
+            + "var -1.0..1.0: f;\n"
+            + "var -1.0..1.0: g;\n"
+            + "var -1.0..1.0: h;\n"
+            + "var bool: b;\n"
+            + "constraint float_lin_eq([1.0, 1.0], [f, g], 0.0);\n"
+            + "constraint float_times(f, g, h);\n"
+            + "constraint int_eq_reif(a, 1, b);\n"
+            + "constraint float_le_reif(0.1, h, b);\n"
+            + "solve :: int_search([a], input_order, indomain_min, complete) satisfy;\n";
+    String out = run(model, "-a", "-s", "--lcg", "off")[0];
+    assertEquals(1, out.lines().filter(l -> l.equals("----------")).count(), out);
+    assertTrue(out.contains("%%%mzn-stat: solutions=1\n"), out);
+  }
 }
