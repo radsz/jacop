@@ -45,7 +45,9 @@ import org.jacop.lcg.EntryList;
  * entry, the value the third variable would need is not an integer or was out of its domain, or the
  * enumerated value itself was. The reason is the bounds of the enumerated variable and the entries
  * that removed the needed values. When z's interval of products already excludes the removed
- * values, the bounds of x and y are the reason.
+ * values, the bounds of x and y are the reason, each lifted to the weakest bound that still
+ * excludes them and cited by the earliest trail atom that reaches it (lifting, as in T. Feydy and
+ * P. J. Stuckey, "Lazy clause generation reengineered", CP 2009).
  *
  * <p>Variables that occur twice are read as independent occurrences, which only weakens what the
  * check proves, so the reasons stay sound.
