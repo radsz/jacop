@@ -102,6 +102,7 @@ final class Presolve {
   static final byte DOMINATED_COLUMN = 8;
   static final byte AGGREGATED_COLUMN = 9;
   static final byte STUFFED_COLUMN = 10;
+  static final byte IMPLIED_ROW = 11;
 
   // entries of parallel rows or columns, and costs of parallel columns, that differ by more than
   // this, relative, from the multiple are not parallel
@@ -131,6 +132,11 @@ final class Presolve {
   // (org.jacop.jalp.presolveStuffing)
   private static final boolean STUFFING_RULE =
       Boolean.parseBoolean(System.getProperty("org.jacop.jalp.presolveStuffing", "true"));
+
+  // whether rows that the bounds other rows imply on their columns keep are removed
+  // (org.jacop.jalp.presolveImpliedRows)
+  private static final boolean IMPLIED_ROWS_RULE =
+      Boolean.parseBoolean(System.getProperty("org.jacop.jalp.presolveImpliedRows", "true"));
 
   // whether inequality rows that a column singleton holds at a bound become equations
   // (org.jacop.jalp.presolveTight)
@@ -415,6 +421,9 @@ final class Presolve {
       if (STUFFING_RULE && !changed) {
         changed = stuffing() > 0;
       }
+      if (IMPLIED_ROWS_RULE && !changed) {
+        changed = impliedRows() > 0;
+      }
       if (AGGREGATE_RULE && !changed) {
         changed = aggregate() > 0;
       }
@@ -666,6 +675,181 @@ final class Presolve {
     }
   }
 
+  // the bounds that single rows imply on the columns, and the rows they come from (-1: none)
+  private double[] implLo;
+  private double[] implHi;
+  private int[] implLoRow;
+  private int[] implHiRow;
+
+  // redundant rows over implied bounds (Andersen and Andersen, section 3.3, with the column bounds
+  // that other rows imply, as HiGHS keeps them): each row bounds its columns from the bounds of its
+  // other columns, one step, and a row whose activity stays within its bounds over the column
+  // bounds
+  // and the bounds other live rows imply goes. A removed row's implied bounds are not used after it
+  // goes, so every removed row is implied by rows that are kept, or removed later and so implied by
+  // kept ones in turn. The column bounds stay as they are, so the postsolve is that of a dropped
+  // row.
+  // The number of rows removed
+  private int impliedRows() {
+    if (implLo == null) {
+      implLo = new double[n];
+      implHi = new double[n];
+      implLoRow = new int[n];
+      implHiRow = new int[n];
+    }
+    Arrays.fill(implLo, Double.NEGATIVE_INFINITY);
+    Arrays.fill(implHi, Double.POSITIVE_INFINITY);
+    Arrays.fill(implLoRow, -1);
+    Arrays.fill(implHiRow, -1);
+    boolean any = false;
+    for (int i = 0; i < m; i++) {
+      if (rowAlive[i] && rowCount[i] >= 2) {
+        any |= implyBounds(i);
+      }
+    }
+    if (!any) {
+      return 0;
+    }
+    int found = 0;
+    for (int i = 0; i < m; i++) {
+      if (rowAlive[i] && rowCount[i] >= 2 && impliedRedundant(i)) {
+        record(IMPLIED_ROW, i, -1);
+        removeRow(i);
+        int[] idx = rIdx[i];
+        for (int e = 0; e < rLen[i]; e++) {
+          int j = idx[e];
+          if (implLoRow[j] == i) {
+            implLoRow[j] = -1;
+            implLo[j] = Double.NEGATIVE_INFINITY;
+          }
+          if (implHiRow[j] == i) {
+            implHiRow[j] = -1;
+            implHi[j] = Double.POSITIVE_INFINITY;
+          }
+        }
+        found++;
+      }
+    }
+    return found;
+  }
+
+  // the bounds row i implies on its columns from the bounds of the others; whether one is tighter
+  // than a column bound
+  private boolean implyBounds(int i) {
+    int[] idx = rIdx[i];
+    double[] val = rVal[i];
+    int len = rLen[i];
+    ops += 2L * len;
+    double min = 0;
+    double max = 0;
+    int minInf = 0;
+    int maxInf = 0;
+    double size = 0;
+    for (int e = 0; e < len; e++) {
+      int j = idx[e];
+      double a = val[e];
+      if (!colAlive[j] || a == 0) {
+        continue;
+      }
+      double l = a > 0 ? lo[j] : hi[j];
+      double h = a > 0 ? hi[j] : lo[j];
+      if (Double.isInfinite(l)) {
+        minInf++;
+      } else {
+        min += a * l;
+        size += Math.abs(a * l);
+      }
+      if (Double.isInfinite(h)) {
+        maxInf++;
+      } else {
+        max += a * h;
+        size += Math.abs(a * h);
+      }
+    }
+    boolean useHi = rowHi[i] != Double.POSITIVE_INFINITY && minInf <= 1;
+    boolean useLo = rowLo[i] != Double.NEGATIVE_INFINITY && maxInf <= 1;
+    if (!useHi && !useLo) {
+      return false;
+    }
+    // a bound is loosened by the rounding error of the sums it comes from
+    double slack =
+        SAME
+            * (1
+                + size
+                + Math.abs(rowLo[i] == Double.NEGATIVE_INFINITY ? 0 : rowLo[i])
+                + Math.abs(rowHi[i] == Double.POSITIVE_INFINITY ? 0 : rowHi[i]));
+    boolean tighter = false;
+    for (int e = 0; e < len; e++) {
+      int j = idx[e];
+      double a = val[e];
+      if (!colAlive[j] || a == 0 || Math.abs(a) < SMALL_ENTRY) {
+        continue;
+      }
+      double l = a > 0 ? lo[j] : hi[j];
+      double h = a > 0 ? hi[j] : lo[j];
+      // a x_j <= rowHi - (the least of the rest), a x_j >= rowLo - (the most of the rest)
+      double up = Double.NaN;
+      double down = Double.NaN;
+      if (useHi && (minInf == 0 || Double.isInfinite(l))) {
+        up = (rowHi[i] - (Double.isInfinite(l) ? min : min - a * l) + slack) / a;
+      }
+      if (useLo && (maxInf == 0 || Double.isInfinite(h))) {
+        down = (rowLo[i] - (Double.isInfinite(h) ? max : max - a * h) - slack) / a;
+      }
+      double newHi = a > 0 ? up : down;
+      double newLo = a > 0 ? down : up;
+      if (!Double.isNaN(newHi) && newHi < implHi[j] && newHi < hi[j]) {
+        implHi[j] = newHi;
+        implHiRow[j] = i;
+        tighter = true;
+      }
+      if (!Double.isNaN(newLo) && newLo > implLo[j] && newLo > lo[j]) {
+        implLo[j] = newLo;
+        implLoRow[j] = i;
+        tighter = true;
+      }
+    }
+    return tighter;
+  }
+
+  // whether the activity of row i stays within its bounds over the column bounds tightened by the
+  // bounds the other rows imply
+  private boolean impliedRedundant(int i) {
+    int[] idx = rIdx[i];
+    double[] val = rVal[i];
+    int len = rLen[i];
+    ops += len;
+    boolean needLo = rowLo[i] != Double.NEGATIVE_INFINITY;
+    boolean needHi = rowHi[i] != Double.POSITIVE_INFINITY;
+    double min = 0;
+    double max = 0;
+    for (int e = 0; e < len; e++) {
+      int j = idx[e];
+      double a = val[e];
+      if (!colAlive[j] || a == 0) {
+        continue;
+      }
+      double cl = implLoRow[j] >= 0 && implLoRow[j] != i ? Math.max(lo[j], implLo[j]) : lo[j];
+      double ch = implHiRow[j] >= 0 && implHiRow[j] != i ? Math.min(hi[j], implHi[j]) : hi[j];
+      double l = a > 0 ? cl : ch;
+      double h = a > 0 ? ch : cl;
+      if (needLo) {
+        if (Double.isInfinite(l)) {
+          return false;
+        }
+        min += a * l;
+      }
+      if (needHi) {
+        if (Double.isInfinite(h)) {
+          return false;
+        }
+        max += a * h;
+      }
+    }
+    return (!needLo || min >= rowLo[i] - SAME * (1 + Math.abs(rowLo[i])))
+        && (!needHi || max <= rowHi[i] + SAME * (1 + Math.abs(rowHi[i])));
+  }
+
   // the stuffed column is removed at value v
   private void stuffed(int j, double v) {
     fixColumn(j, v);
@@ -692,12 +876,12 @@ final class Presolve {
   /**
    * Returns how many reductions of each kind were made: rows dropped, singleton rows, columns
    * fixed, free columns, doubletons, parallel rows, parallel columns, forcing rows, dominated
-   * columns, aggregated columns, stuffed columns.
+   * columns, aggregated columns, stuffed columns, rows redundant over implied bounds.
    *
    * @return the counts
    */
   int[] counts() {
-    int[] c = new int[11];
+    int[] c = new int[12];
     for (int t = 0; t < records; t++) {
       c[kind[t]]++;
     }
@@ -715,7 +899,8 @@ final class Presolve {
     "forcingrow",
     "dominatedcol",
     "aggregatedcol",
-    "stuffedcol"
+    "stuffedcol",
+    "impliedrow"
   };
 
   // writes the reductions to the trace (org.jacop.jalp.trace)
@@ -1915,6 +2100,7 @@ final class Presolve {
           upper[j] = fixedAt[j] == givenHi[j] && givenHi[j] != givenLo[j];
           break;
         case DROP_ROW:
+        case IMPLIED_ROW:
           basic[n + i] = true;
           y[i] = 0;
           break;
