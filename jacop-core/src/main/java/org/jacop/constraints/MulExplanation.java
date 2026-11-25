@@ -31,6 +31,7 @@
 
 package org.jacop.constraints;
 
+import java.util.Arrays;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -66,6 +67,9 @@ final class MulExplanation {
    */
   private static final long WORK_LIMIT = 1 << 16;
 
+  // bounds of the other variables lifted to the weakest that still exclude the removed values
+  private static final boolean LIFT = !"false".equals(System.getProperty("jacop.lcg.mulLift"));
+
   private final AtomicTrail trail;
   private final IntVar x;
   private final IntVar y;
@@ -93,6 +97,12 @@ final class MulExplanation {
     long lo = trail.removedMin(entry);
     long hi = trail.removedMax(entry);
     int mark = out.size();
+    int roles = (v == z ? 1 : 0) | (v == x ? 2 : 0) | (v == y ? 4 : 0);
+    // a new bound whose whole removed range, out to the root bound, the other bounds exclude
+    // needs no earlier bound of its own variable, which would only weaken the clause
+    if (boundsExclude(roles, lo, hi, out)) {
+      return true;
+    }
     int min = trail.minBefore(v, position);
     if (lo < min) {
       trail.addLowerBound(v, position, out);
@@ -106,7 +116,6 @@ final class MulExplanation {
     if (lo > hi) {
       return true;
     }
-    int roles = (v == z ? 1 : 0) | (v == x ? 2 : 0) | (v == y ? 4 : 0);
     // the cheap case: the bounds of the other variables already exclude the removed values
     if (boundsExclude(roles, lo, hi, out)) {
       return true;
@@ -140,11 +149,36 @@ final class MulExplanation {
     // the cheap case: the bounds of two variables exclude every value of the third's bounds
     for (IntVar v : vars) {
       int roles = (v == z ? 1 : 0) | (v == x ? 2 : 0) | (v == y ? 4 : 0);
-      if (boundsExclude(roles, trail.minBefore(v, position), trail.maxBefore(v, position), out)) {
-        addBounds(v, out);
-        return true;
+      IntDomain root = trail.rootDomain(v);
+      int min = trail.minBefore(v, position);
+      int max = trail.maxBefore(v, position);
+      if (!excludedNow(roles, min, max)) {
+        continue;
       }
-      out.truncate(mark);
+      // the bounds of the three variables lifted as far as the others still exclude v's range
+      IntVar[] others = others(roles);
+      int[] b = new int[2 * others.length + 2];
+      for (int i = 0; i < others.length; i++) {
+        b[2 * i] = trail.minBefore(others[i], position);
+        b[2 * i + 1] = trail.maxBefore(others[i], position);
+      }
+      int own = 2 * others.length;
+      b[own] = min;
+      b[own + 1] = max;
+      IntVar[] all = new IntVar[others.length + 1];
+      System.arraycopy(others, 0, all, 0, others.length);
+      all[others.length] = v;
+      for (int k = OWN_FIRST ? own : 0, n = 0; n < b.length; n++, k = (k + 1) % b.length) {
+        IntDomain r = trail.rootDomain(all[k / 2]);
+        liftBound(roles, b, k, k % 2 == 0 ? r.min() : r.max());
+      }
+      for (int k = 0; k < b.length; k++) {
+        IntDomain r = trail.rootDomain(all[k / 2]);
+        if (b[k] != (k % 2 == 0 ? r.min() : r.max())) {
+          trail.addBoundReaching(all[k / 2], position, k % 2 == 0, b[k], out);
+        }
+      }
+      return true;
     }
     // otherwise the shortest of the variables' reasons that no value is supported: the first one
     // found could cite a != atom for every value of a wide product, thousands of atoms on Molnar
@@ -181,6 +215,70 @@ final class MulExplanation {
     return true;
   }
 
+  // order of the greedy lifting of a failure: v's own bounds first, else the others first
+  private static final boolean OWN_FIRST = Boolean.getBoolean("jacop.lcg.mulOwnFirst");
+
+  /**
+   * Weakens b[k] towards its initial value as far as the bounds still exclude v's range, which is
+   * held in the last two entries of b.
+   */
+  private static void liftBound(int roles, int[] b, int k, int initial) {
+    int current = b[k];
+    if (current == initial) {
+      return;
+    }
+    b[k] = initial;
+    if (excludesRange(roles, b)) {
+      return;
+    }
+    if (!LIFT) {
+      b[k] = current;
+      return;
+    }
+    long strong = current;
+    long weak = initial;
+    while (Math.abs(strong - weak) > 1) {
+      long mid = (strong + weak) / 2;
+      b[k] = (int) mid;
+      if (excludesRange(roles, b)) {
+        strong = mid;
+      } else {
+        weak = mid;
+      }
+    }
+    b[k] = (int) strong;
+  }
+
+  private static boolean excludesRange(int roles, int[] b) {
+    int n = b.length - 2;
+    return excludes(roles, Arrays.copyOf(b, n), b[n], b[n + 1]);
+  }
+
+  // whether the bounds of the other variables just before the position exclude [lo, hi]
+  private boolean excludedNow(int roles, long lo, long hi) {
+    IntVar[] vars = others(roles);
+    if (vars == null) {
+      return false;
+    }
+    int[] b = new int[2 * vars.length];
+    for (int i = 0; i < vars.length; i++) {
+      b[2 * i] = trail.minBefore(vars[i], position);
+      b[2 * i + 1] = trail.maxBefore(vars[i], position);
+    }
+    return excludes(roles, b, lo, hi);
+  }
+
+  // the variables whose bounds exclude values of the variable in the given roles, or null
+  private IntVar[] others(int roles) {
+    return switch (roles) {
+      case 1 -> x == y ? new IntVar[] {x} : new IntVar[] {x, y};
+      case 2 -> new IntVar[] {z, y, x};
+      case 4 -> new IntVar[] {z, x, y};
+      case 6 -> new IntVar[] {z};
+      default -> null;
+    };
+  }
+
   /**
    * Whether the bounds of the other variables exclude the removed values [lo, hi] of the variable
    * in the given roles, as the bounds propagation of {@link XmulYeqZ} finds; the reason, those
@@ -189,15 +287,9 @@ final class MulExplanation {
    * removed values stay excluded.
    */
   private boolean boundsExclude(int roles, long lo, long hi, EntryList out) {
-    IntVar[] vars;
-    switch (roles) {
-      case 1 -> vars = x == y ? new IntVar[] {x} : new IntVar[] {x, y};
-      case 2 -> vars = new IntVar[] {z, y, x};
-      case 4 -> vars = new IntVar[] {z, x, y};
-      case 6 -> vars = new IntVar[] {z};
-      default -> {
-        return false;
-      }
+    IntVar[] vars = others(roles);
+    if (vars == null) {
+      return false;
     }
     int[] b = new int[2 * vars.length];
     for (int i = 0; i < vars.length; i++) {
@@ -211,18 +303,37 @@ final class MulExplanation {
       IntDomain root = trail.rootDomain(vars[k / 2]);
       int initial = k % 2 == 0 ? root.min() : root.max();
       int current = b[k];
-      if (current != initial) {
-        b[k] = initial;
-        if (!excludes(roles, b, lo, hi)) {
-          b[k] = current;
+      if (current == initial) {
+        continue;
+      }
+      b[k] = initial;
+      if (excludes(roles, b, lo, hi)) {
+        continue;
+      }
+      if (!LIFT) {
+        b[k] = current;
+        continue;
+      }
+      // the weakest bound between the initial and the current one that still excludes them
+      // (exclusion only grows as a bound tightens): the reason cites the earliest atom reaching it
+      long strong = current;
+      long weak = initial;
+      while (Math.abs(strong - weak) > 1) {
+        long mid = (strong + weak) / 2;
+        b[k] = (int) mid;
+        if (excludes(roles, b, lo, hi)) {
+          strong = mid;
+        } else {
+          weak = mid;
         }
       }
+      b[k] = (int) strong;
     }
     for (int k = 0; k < b.length; k++) {
-      if (k % 2 == 0 && b[k] == trail.minBefore(vars[k / 2], position)) {
-        trail.addLowerBound(vars[k / 2], position, out);
-      } else if (k % 2 == 1 && b[k] == trail.maxBefore(vars[k / 2], position)) {
-        trail.addUpperBound(vars[k / 2], position, out);
+      IntDomain root = trail.rootDomain(vars[k / 2]);
+      int initial = k % 2 == 0 ? root.min() : root.max();
+      if (b[k] != initial) {
+        trail.addBoundReaching(vars[k / 2], position, k % 2 == 0, b[k], out);
       }
     }
     return true;
