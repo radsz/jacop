@@ -45,6 +45,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 import java.util.function.ObjIntConsumer;
@@ -183,6 +184,8 @@ final class Portfolio {
   // stdout while the portfolio runs, given back by the last thread to end if it outlives run()
   private PrintStream dispatch;
   private boolean restorePending;
+  // ends a command-line run that is still going after its time-out
+  private Thread watchdog;
 
   // the objective value (of the minimised cost variable) of the best solution, read by all threads
   private volatile int bestCost = Integer.MAX_VALUE;
@@ -197,10 +200,17 @@ final class Portfolio {
   private boolean maximisation;
   private int solutions;
   private int running;
+  // the threads that read and solved the model, or showed it unsatisfiable (exit status 0)
+  private int accepted;
   private boolean finished;
   private boolean complete;
   // the answer has been printed, by run() or at shutdown
   private boolean printed;
+  // every thread rejected the model (an error in it, or one JaCoP does not support): the run ends
+  // as one thread does, with no status and exit status 1
+  private boolean rejected;
+  // the error lines the threads printed, each printed once for all of them
+  private final Set<String> errors = ConcurrentHashMap.newKeySet();
   // the factor the threads divided the objective by (ObjectiveScaling)
   private long objectiveScale = 1;
 
@@ -248,23 +258,92 @@ final class Portfolio {
     return null;
   }
 
+  /**
+   * Whether an error line should be printed: outside a portfolio always, in a thread of a portfolio
+   * only when no thread of it printed the same line, since every thread reads the same model and
+   * reports the same error in it.
+   *
+   * @param line the line
+   * @return true to print it
+   */
+  static boolean firstReport(String line) {
+    return !(CAPTURE.get() instanceof StatusCapture c) || c.errors == null || c.errors.add(line);
+  }
+
   private static boolean isSatisfaction(String model) {
     int solve = model.lastIndexOf("solve");
     return solve >= 0 && model.indexOf("satisfy", solve) >= 0;
   }
 
   /**
+   * Starts the watchdog of a command-line run: when the run is still going after the given delay,
+   * it prints the answer as at the time-out (the best solution, or {@code =====UNKNOWN=====})
+   * unless it is out already, and runs halt. The portfolio answers at its time-out itself once its
+   * threads have started; the watchdog ends a run that is still reading the model then (a large
+   * file on a slow disk: road_33, 86 MB, answered 1.9 s after -t 2000 from Portfolio.readModel).
+   *
+   * @param delayMillis when to fire, from now
+   * @param halt how to end the run
+   */
+  void startWatchdog(long delayMillis, Runnable halt) {
+    PrintStream out = System.out;
+    long start = System.currentTimeMillis();
+    watchdog =
+        Thread.ofVirtual()
+            .name("jacop-portfolio-time-limit")
+            .unstarted(
+                () -> {
+                  try {
+                    Thread.sleep(delayMillis);
+                  } catch (InterruptedException _) {
+                    // cancelled: the run ended on its own
+                    Thread.currentThread().interrupt();
+                    return;
+                  }
+                  timeLimit(out, start, halt);
+                });
+    watchdog.start();
+  }
+
+  /** Stops the watchdog, if any: the run has ended. */
+  void cancelWatchdog() {
+    if (watchdog != null) {
+      watchdog.interrupt();
+    }
+  }
+
+  /**
+   * What the watchdog does when it fires: prints the answer as at the time-out unless it was
+   * printed already, and then runs halt; it does nothing once the answer is out, since the run then
+   * ends on its own.
+   *
+   * @param out where to print
+   * @param start when the run started, for the solveTime statistic
+   * @param halt how to end the run
+   */
+  void timeLimit(PrintStream out, long start, Runnable halt) {
+    synchronized (lock) {
+      if (printed) {
+        return;
+      }
+      // no solution of a thread is taken from now on
+      finished = true;
+      lock.notifyAll();
+    }
+    if (printResult(out, true, start)) {
+      synchronized (lock) {
+        halt.run();
+      }
+    }
+  }
+
+  /**
    * Solves the model with a portfolio of threads and prints the result as one thread would.
    *
    * @param args the command line arguments
-   * @param options the options given
    * @return the exit status: 0 when the threads ran, 1 when none could solve the model
    */
-  static int solve(String[] args, Options options) {
-    return new Portfolio(options).run(args);
-  }
-
-  private int run(String[] args) {
+  int run(String[] args) {
     stdout = System.out;
     dispatch = new PrintStream(new Dispatch(stdout), true, stdout.charset());
     System.setOut(dispatch);
@@ -294,6 +373,12 @@ final class Portfolio {
     int threads = Math.min(options.threads(), MAX_THREADS);
     boolean satisfaction = isSatisfaction(readModel(options));
     SimpleNode model = "0".equals(options.freeConfig("portfolio-one-parse", "1")) ? null : parse();
+    if (model == null && options.timeOutPassed()) {
+      // the reading stopped at the time-out, and each thread would read the model again only to
+      // stop there too
+      printResult(out, true, start);
+      return 0;
+    }
     // the threads that divide one search tree, in place of the last settings
     int split = Math.min(threads, Integer.parseInt(options.freeConfig("portfolio-split", "0")));
     if (split < 2) {
@@ -356,21 +441,19 @@ final class Portfolio {
         // the JVM is shutting down: the hook finds the answer printed
       }
     }
-    // the threads stop within milliseconds in search, later when stopped while reading the model
-    long joinDeadline = System.currentTimeMillis() + JOIN_MILLIS;
+    List<Thread> threadsToJoin = new ArrayList<>();
     for (Worker w : workers) {
-      try {
-        w.thread.join(Math.max(1, joinDeadline - System.currentTimeMillis()));
-      } catch (InterruptedException _) {
-        Thread.currentThread().interrupt();
-        break;
+      threadsToJoin.add(w.thread);
+    }
+    join(threadsToJoin, timeOutAt);
+    synchronized (lock) {
+      // under the lock, so that the watchdog does not halt the run in the middle of the block
+      if (options.searchStatistics()) {
+        out.print(workerStatistics());
+        out.flush();
       }
+      return rejected ? 1 : 0;
     }
-    if (options.searchStatistics()) {
-      out.print(workerStatistics());
-      out.flush();
-    }
-    return 0;
   }
 
   /**
@@ -398,6 +481,32 @@ final class Portfolio {
       s.append("%%%mzn-stat-end\n");
     }
     return s.toString();
+  }
+
+  /**
+   * Waits for the stopped threads to end after the answer is printed. The threads stop within
+   * milliseconds in search, later when stopped while reading the model; a thread in a start-up
+   * phase that does not look at the time-out is not waited for past it: the threads are daemons,
+   * and the answer is out.
+   *
+   * @param threads the threads
+   * @param timeOutAt when the time-out passes (System.currentTimeMillis()), 0 without one
+   */
+  static void join(List<Thread> threads, long timeOutAt) {
+    long joinDeadline = System.currentTimeMillis() + JOIN_MILLIS;
+    if (timeOutAt > 0) {
+      joinDeadline =
+          Math.min(
+              joinDeadline, Math.max(System.currentTimeMillis(), timeOutAt) + STOP_MARGIN_MILLIS);
+    }
+    for (Thread t : threads) {
+      try {
+        t.join(Math.max(1, joinDeadline - System.currentTimeMillis()));
+      } catch (InterruptedException _) {
+        Thread.currentThread().interrupt();
+        break;
+      }
+    }
   }
 
   /**
@@ -443,32 +552,18 @@ final class Portfolio {
     }
   }
 
-  private void printResult(PrintStream out, boolean timedOut, long start) {
+  // prints the answer unless it was printed already; returns whether it printed it now
+  private boolean printResult(PrintStream out, boolean timedOut, long start) {
     StringBuilder s = new StringBuilder();
     synchronized (lock) {
       if (printed) {
-        return;
+        return false;
       }
       printed = true;
-      if (bestSolution != null) {
-        if (!options.getAll()) {
-          s.append(bestSolution);
-        }
-        if (complete && optimisation) {
-          if (gap != null) {
-            gap.optimal(); // a thread proved the best solution optimal
-          }
-          s.append(SEARCH_COMPLETE).append('\n');
-        } else if (timedOut) {
-          s.append("%% =====TIME-OUT=====\n");
-        }
-      } else if (complete) {
-        s.append(UNSATISFIABLE).append('\n');
-      } else {
-        s.append("=====UNKNOWN=====\n");
-        if (timedOut) {
-          s.append("%% =====TIME-OUT=====\n");
-        }
+      rejected = !workers.isEmpty() && running == 0 && accepted == 0 && bestSolution == null;
+      // each thread reported its error: a rejected model has no status, as in one thread
+      if (!rejected) {
+        status(s, timedOut);
       }
       if (options.getStatistics()) {
         if (options.searchStatistics()) {
@@ -518,6 +613,31 @@ final class Portfolio {
     }
     out.print(s);
     out.flush();
+    return true;
+  }
+
+  // the best solution (without -a) and the final status, as one thread prints them
+  private void status(StringBuilder s, boolean timedOut) {
+    if (bestSolution != null) {
+      if (!options.getAll()) {
+        s.append(bestSolution);
+      }
+      if (complete && optimisation) {
+        if (gap != null) {
+          gap.optimal(); // a thread proved the best solution optimal
+        }
+        s.append(SEARCH_COMPLETE).append('\n');
+      } else if (timedOut) {
+        s.append("%% =====TIME-OUT=====\n");
+      }
+    } else if (complete) {
+      s.append(UNSATISFIABLE).append('\n');
+    } else {
+      s.append("=====UNKNOWN=====\n");
+      if (timedOut) {
+        s.append("%% =====TIME-OUT=====\n");
+      }
+    }
   }
 
   // the cost variable is the negated objective under maximisation, and it may hold the objective
@@ -745,6 +865,11 @@ final class Portfolio {
       if (options.getAll()) {
         stdout.print(text);
         stdout.flush();
+        // -n k: the run ends after k solutions, as in one thread; each thread counted only its own
+        if (solutions >= options.getNumberSolutions()) {
+          finished = true;
+          lock.notifyAll();
+        }
       }
     }
   }
@@ -781,20 +906,6 @@ final class Portfolio {
     out.flush();
   }
 
-  private void ended(boolean searchComplete) {
-    synchronized (lock) {
-      running--;
-      if (searchComplete && !finished) {
-        complete = true;
-        finished = true;
-      }
-      if (restorePending && running == 0) {
-        restoreStdout();
-      }
-      lock.notifyAll();
-    }
-  }
-
   /** One thread of the portfolio, as seen by the model it solves. */
   final class Worker {
 
@@ -813,6 +924,7 @@ final class Portfolio {
     }
 
     private void run(String file, SimpleNode model) {
+      capture.errors = errors;
       CAPTURE.set(capture);
       boolean ran = false;
       try {
@@ -828,11 +940,31 @@ final class Portfolio {
           }
         }
       } catch (IOException | RuntimeException e) {
-        FzConsole.printlnErr("%% portfolio thread " + name + " stopped: " + e);
+        // the same error in every thread is reported by the first
+        if (firstReport(e.toString())) {
+          FzConsole.printlnErr("%% portfolio thread " + name + " stopped: " + e);
+        }
       } finally {
         CAPTURE.remove();
         ended = true;
-        ended(ran && !stopped && capture.complete);
+        ended(ran, ran && !stopped && capture.complete);
+      }
+    }
+
+    private void ended(boolean ran, boolean searchComplete) {
+      synchronized (lock) {
+        running--;
+        if (ran) {
+          accepted++;
+        }
+        if (searchComplete && !finished) {
+          complete = true;
+          finished = true;
+        }
+        if (restorePending && running == 0) {
+          restoreStdout();
+        }
+        lock.notifyAll();
       }
     }
 
@@ -1068,6 +1200,8 @@ final class Portfolio {
     private final StringBuilder line = new StringBuilder();
     private final Map<String, String> statistics = new HashMap<>();
     volatile boolean complete;
+    // the error lines of all threads of the portfolio
+    Set<String> errors;
 
     @Override
     public void write(int b) {

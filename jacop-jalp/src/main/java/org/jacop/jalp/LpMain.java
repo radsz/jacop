@@ -88,7 +88,10 @@ public final class LpMain {
         lp.setExact(true);
         long pivots = 0;
         int status;
-        if (reobjective) {
+        if (emptyColumn(p)) {
+          // the simplex takes a nonbasic column at either bound as feasible
+          status = RevisedDualSimplex.INFEASIBLE;
+        } else if (reobjective) {
           double[] cost = new double[p.columns()];
           lp.setCost(cost);
           status = lp.solve(limit);
@@ -119,6 +122,15 @@ public final class LpMain {
             lp.presolvedColumns());
       }
     }
+  }
+
+  private static boolean emptyColumn(LpProblem p) {
+    for (int j = 0; j < p.columns(); j++) {
+      if (p.colLo[j] > p.colHi[j]) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static double[] negate(double[] c) {

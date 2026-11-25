@@ -48,6 +48,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
+import org.jacop.fz.constraints.AbsoluteDifferenceDetector;
 import org.jacop.fz.constraints.AffineFolding;
 import org.jacop.fz.constraints.AgreementCountDetector;
 import org.jacop.fz.constraints.AlldiffChannels;
@@ -55,6 +56,7 @@ import org.jacop.fz.constraints.AlldifferentDetector;
 import org.jacop.fz.constraints.AntichainDetector;
 import org.jacop.fz.constraints.ArgMaxFunctionDetector;
 import org.jacop.fz.constraints.BalanceDetector;
+import org.jacop.fz.constraints.BinPackingCostBound;
 import org.jacop.fz.constraints.CardinalityDetector;
 import org.jacop.fz.constraints.CircuitCostDetector;
 import org.jacop.fz.constraints.ClampedBounds;
@@ -172,6 +174,7 @@ public class Constraints implements ParserTreeConstants {
 
   void generateAllConstraints(SimpleNode astTree) throws Throwable {
 
+    dictionary.searchAnnotated = searchAnnotated(astTree);
     // an objective declared beyond the integer range is divided by the factor its definition
     // forces on it, instead of being narrowed
     ObjectiveScaling.apply(support, astTree);
@@ -211,6 +214,12 @@ public class Constraints implements ParserTreeConstants {
       // float variables, and a model built for LCG (clauses, split sums, no views) and then solved
       // by search is not the model solved without --lcg
       options.dropLcg("the model has float variables");
+    } else if (manySolutions && options.lcgEnumerates()) {
+      // LCG enumerates the solutions with blocking clauses over the output variables (see
+      // LcgSolver.setEnumeration); the reformulations that lose solutions are off, as without LCG
+      if (options.debug()) {
+        FzConsole.println("% many solutions: enumerated by LCG");
+      }
     } else if (options.getAll() && satisfaction(astTree)) {
       options.dropLcg("all solutions are not supported");
     } else if (manySolutions) {
@@ -313,14 +322,35 @@ public class Constraints implements ParserTreeConstants {
         }
         dictionary.removeAliasFromSearch();
       }
+      // t = x - y and a = |t| used only to exclude values become constraints on x - y, whose
+      // disequalities the all-different detection reads
+      AbsoluteDifferenceDetector absoluteDifferences = null;
+      if (AbsoluteDifferenceDetector.enabled() && options.proof() == null) {
+        absoluteDifferences = new AbsoluteDifferenceDetector(support);
+        absoluteDifferences.detect(astTree, replaced);
+      }
+      Set<SimpleNode> inCliques = Set.of();
       if (AlldifferentDetector.enabled()) {
         AlldifferentDetector alldifferent = new AlldifferentDetector(support);
+        if (absoluteDifferences != null) {
+          absoluteDifferences.feed(alldifferent);
+        }
         alldifferent.detect(astTree);
+        inCliques = alldifferent.replaced();
         if (replaced.isEmpty()) {
           replaced = alldifferent.replaced();
         } else {
           replaced = new HashSet<>(replaced);
           replaced.addAll(alldifferent.replaced());
+        }
+      }
+      if (absoluteDifferences != null) {
+        Set<SimpleNode> rewritten = absoluteDifferences.apply(inCliques);
+        if (!rewritten.isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(rewritten);
+          dictionary.removeFromDefaultSearch(absoluteDifferences.removed());
+          dictionary.unusedVariables.addAll(absoluteDifferences.removed());
         }
       }
 
@@ -526,6 +556,12 @@ public class Constraints implements ParserTreeConstants {
           dictionary.removeFromDefaultSearch(productOfSums.removed());
           dictionary.unusedVariables.addAll(productOfSums.removed());
         }
+      }
+
+      // the load costs of each bin packing that a linear constraint sums become a variable bounded
+      // by their smallest sum over the bin packing alone; --proof does not encode the bound
+      if (BinPackingCostBound.enabled() && options.proof() == null) {
+        new BinPackingCostBound(support, zeroSumNodes).detect(astTree);
       }
 
       // common sub-sums of linear constraints become variables, not of the rows zero-sum detection
@@ -796,9 +832,12 @@ public class Constraints implements ParserTreeConstants {
       // to be sure that all constraints queues are empty and the
       // model is consistent; it can happen that search will not
       // find out inconsistency if all variables are ground
-      if (!store.consistency()) {
-        throw Store.failException;
-      }
+      support.propagateUntilTimeOut(
+          () -> {
+            if (!store.consistency()) {
+              throw Store.failException;
+            }
+          });
     } catch (FailException e) {
       // a constraint failed as it propagated (a domain the translation emptied has no reason)
       if (dictionary.rootTrail != null && store.recentlyFailedConstraint != null) {
@@ -1119,6 +1158,20 @@ public class Constraints implements ParserTreeConstants {
   private boolean hasFloatVariables() {
     for (int i = 0; i < store.size(); i++) {
       if (store.vars[i] instanceof FloatVar) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** Whether the solve item, a child of the model's end, carries a search annotation. */
+  private static boolean searchAnnotated(Node node) {
+    for (int i = node.jjtGetNumChildren() - 1; i >= 0; i--) {
+      Node child = node.jjtGetChild(i);
+      if (child instanceof ASTSolveItem item) {
+        return item.jjtGetNumChildren() > 1;
+      }
+      if (child instanceof ASTModelEnd && searchAnnotated(child)) {
         return true;
       }
     }

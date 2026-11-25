@@ -134,6 +134,29 @@ class LcgCompletionFlatzincTest {
     }
   }
 
+  @Test
+  void variableOfAnOpenConstraintIsFixedAndTheTestGoesOn() throws IOException {
+    // The model of annotationCompletesTheModel with a product y * x0 = z of two variables left
+    // free: after the annotation sets x0 to 1, the product is not entailed while y and z are free,
+    // which stopped completion on the whole branch, so the search decided the b_i one decision
+    // level each again (82 decisions; on ship-schedule 6Ships, 2014, the product and the linear
+    // relaxation made it 267,279 of 272,286 decisions). Now one decision fixes y, which fixes z,
+    // and the test goes on.
+    String model =
+        "var 0..3: y;\nvar 0..9: z;\n"
+            + model()
+                .replace(
+                    "solve ",
+                    "constraint int_times(y,x0,z);\nconstraint int_lin_le([1,1],[y,z],12);\nsolve ");
+    String out = runModel(model, "--lcg", "on", "-s", "--search-statistics");
+    for (int i = 0; i < N; i++) {
+      assertTrue(out.contains("x" + i + " = 1;"), "x" + i + " is not 1:\n" + out);
+    }
+    assertEquals(1, stat(out, "lcgCompletedModels"), out);
+    assertEquals(1, stat(out, "lcgCompletionDecisions"), out);
+    assertTrue(stat(out, "nodes") <= N + 1, "decisions after the annotation:\n" + out);
+  }
+
   private static long stat(String out, String name) {
     Matcher m =
         Pattern.compile("^%%%mzn-stat: " + name + "=(\\d+)$", Pattern.MULTILINE).matcher(out);

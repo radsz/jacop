@@ -103,10 +103,12 @@ public class SetMirror extends Constraint implements SatisfiedPresent, Explainab
     if (mirror == null) {
       mirror = new IntVar[elements.length + 1];
       for (int k = 0; k < elements.length; k++) {
-        mirror[k] = new IntVar(store, set.id() + "_has_" + elements[k], 0, 1);
+        mirror[k] =
+            new IntVar(store, store.freshVariableId(set.id() + "_has_" + elements[k]), 0, 1);
       }
       IntDomain card = d.card();
-      mirror[elements.length] = new IntVar(store, set.id() + "_card", card.min(), card.max());
+      mirror[elements.length] =
+          new IntVar(store, store.freshVariableId(set.id() + "_card"), card.min(), card.max());
     }
     this.mirror = mirror;
     members = Arrays.copyOf(mirror, elements.length);

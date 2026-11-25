@@ -112,6 +112,14 @@ public class Assignment extends Constraint
   /** One-time work of the first consistency call. */
   final InitOnce init = new InitOnce();
 
+  /**
+   * The lowest level of the queued changes. The store may raise its level before consistency
+   * (Store.raiseLevelBeforeConsistency, set by Alldistinct and others when imposed), so changes of
+   * level l can reach the constraint first at level l + 1, where recentDomainPruning does not show
+   * them; the domains are then scanned in full, as by the first consistency.
+   */
+  private int pendingLevel = Integer.MAX_VALUE;
+
   IntervalDomain rangeX;
   IntervalDomain rangeD;
 
@@ -238,6 +246,7 @@ public class Assignment extends Constraint
       isQueued[queued[k]] = false;
     }
     queuedSize = 0;
+    pendingLevel = Integer.MAX_VALUE;
   }
 
   @Override
@@ -245,6 +254,10 @@ public class Assignment extends Constraint
 
     if (init.begin(store)) {
       initRangesAndPropagateInitial(store);
+    } else if (pendingLevel < store.level) {
+      pendingLevel = Integer.MAX_VALUE;
+      propagateInitialFromX(store);
+      propagateInitialFromD(store);
     }
 
     while (queuedSize > 0) {
@@ -262,6 +275,7 @@ public class Assignment extends Constraint
         propagateFromPrunedVariable(store, round[k]);
       }
     }
+    pendingLevel = Integer.MAX_VALUE;
   }
 
   private void initRangesAndPropagateInitial(Store store) {
@@ -329,12 +343,20 @@ public class Assignment extends Constraint
 
   /**
    * Removes the position of v from the variables of the other list indexed by the values pruned
-   * from v, and fixes the one indexed by v once v is fixed. The pruned values outside the index
-   * range of the other list are skipped; when there is none inside it, nothing is done, as when the
-   * pruned values were intersected with that range first.
+   * from v, and fixes the one indexed by v once v is fixed. The pruned values are intersected with
+   * the index range of the other list first; when there is none inside it, nothing is done.
    */
   private static void propagateFromPruned(
       Store store, IntVar v, IntDomain pruned, int position, int shift, IntVar[] other) {
+    int low = shift;
+    int high = shift + other.length - 1;
+    if (pruned.max() < low || pruned.min() > high) {
+      return;
+    }
+    // narrowing an unbounded variable to the index range prunes about 10^9 values
+    if (pruned.min() < low || pruned.max() > high) {
+      pruned = pruned.intersect(low, high);
+    }
     boolean any = false;
     for (ValueEnumeration enumer = pruned.valueEnumeration(); enumer.hasMoreElements(); ) {
       int index = enumer.nextElement() - shift;
@@ -385,6 +407,9 @@ public class Assignment extends Constraint
 
   @Override
   public void queueVariable(int level, Var v) {
+    if (level < pendingLevel) {
+      pendingLevel = level;
+    }
     int slot = slotOf.get(v);
     if (slot != VarIntMap.ABSENT && !isQueued[slot]) {
       isQueued[slot] = true;

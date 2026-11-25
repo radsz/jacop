@@ -1385,6 +1385,83 @@ class CdclSolverTest {
     }
   }
 
+  /**
+   * The lazy order keeps the same members as the eager one through inserts, removals, increased
+   * activities and reads of the top, and reads the same highest activity; once its rebuilds cost
+   * too much it becomes eager again.
+   */
+  @Test
+  void lazyVarHeapReadsTheSameTopAsTheEagerOne() {
+    Random rnd = new Random(7);
+    for (int run = 0; run < 300; run++) {
+      int n = 1 + rnd.nextInt(40);
+      double[] activity = new double[n];
+      VarHeap eager = new VarHeap();
+      VarHeap lazy = new VarHeap();
+      eager.grow(n, activity);
+      lazy.grow(n, activity);
+      lazy.setLazy(true);
+      for (int v = 0; v < n; v++) {
+        activity[v] = rnd.nextInt(10);
+        eager.insert(v);
+        lazy.insert(v);
+      }
+      for (int step = 0; step < 20 * n; step++) {
+        int v = rnd.nextInt(n);
+        switch (rnd.nextInt(5)) {
+          case 0 -> {
+            eager.remove(v);
+            lazy.remove(v);
+          }
+          case 1 -> {
+            eager.insert(v);
+            lazy.insert(v);
+          }
+          case 2 -> {
+            activity[v] += rnd.nextInt(5);
+            eager.increased(v);
+            lazy.increased(v);
+          }
+          case 3 -> {
+            if (!eager.isEmpty()) {
+              assertEquals(activity[eager.max()], activity[lazy.max()], "run " + run);
+            }
+          }
+          default -> {
+            if (!eager.isEmpty()) {
+              int e = eager.removeMax();
+              int l = lazy.removeMax();
+              assertEquals(activity[e], activity[l], "run " + run);
+              // the same member leaves both heaps
+              if (e != l) {
+                eager.remove(l);
+                eager.insert(e);
+              }
+            }
+          }
+        }
+        for (int u = 0; u < n; u++) {
+          assertEquals(eager.contains(u), lazy.contains(u), "run " + run);
+        }
+        assertEquals(eager.isEmpty(), lazy.isEmpty());
+      }
+    }
+    // a heap whose top is read after every change pays a rebuild each time and turns eager
+    double[] activity = new double[1000];
+    VarHeap heap = new VarHeap();
+    heap.grow(activity.length, activity);
+    for (int v = 0; v < activity.length; v++) {
+      heap.insert(v);
+    }
+    heap.setLazy(true);
+    for (int step = 0; step < 100 && heap.isLazy(); step++) {
+      activity[step] += 1;
+      heap.increased(step);
+      heap.max();
+    }
+    assertFalse(heap.isLazy());
+  }
+
   /** Solves with sweeping and probing on or off, checks a model or the DRAT proof. */
   private static CdclSolver solveInprocessing(List<int[]> f, int vars, boolean on)
       throws IOException {
@@ -1464,5 +1541,36 @@ class CdclSolverTest {
     assertTrue(s.isOk());
     assertTrue(s.sweepEquivalences > 0);
     assertEquals(s.modelValue(1), s.modelValue(4));
+  }
+
+  @Test
+  void dimacsLiteralsBeyondIntAreRejected() {
+    // 4294967297 wrapped to the literal 1, which made the formula unsatisfiable with -1
+    for (String cnf :
+        new String[] {
+          "p cnf 1 2\n4294967297 0\n-1 0\n",
+          "p cnf 1 1\n2147483648 0\n",
+          "p cnf 3000000000 1\n1 0\n"
+        }) {
+      assertThrows(
+          IOException.class,
+          () ->
+              DimacsReader.read(
+                  new ByteArrayInputStream(cnf.getBytes(StandardCharsets.US_ASCII)),
+                  new CdclSolver()),
+          cnf);
+    }
+  }
+
+  @Test
+  void dimacsHeaderOfAnotherFormatIsRejected() {
+    // a WCNF file read as CNF took its weights for literals and answered SATISFIABLE
+    String wcnf = "p wcnf 2 2 10\n10 1 0\n3 -1 0\n";
+    assertThrows(
+        IOException.class,
+        () ->
+            DimacsReader.read(
+                new ByteArrayInputStream(wcnf.getBytes(StandardCharsets.US_ASCII)),
+                new CdclSolver()));
   }
 }

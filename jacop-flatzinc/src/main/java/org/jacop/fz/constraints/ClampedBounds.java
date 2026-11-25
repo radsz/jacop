@@ -494,7 +494,7 @@ public final class ClampedBounds {
       if (array != null) {
         out.addAll(Arrays.asList(array));
       } else {
-        IntVar v = support.dictionary.getVariable(e.getIdent());
+        IntVar v = support.dictionary.getVariable(e);
         if (v != null) {
           out.add(v);
         }

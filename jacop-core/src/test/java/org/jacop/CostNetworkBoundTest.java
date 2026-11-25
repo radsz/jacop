@@ -32,6 +32,7 @@ package org.jacop;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Random;
@@ -431,5 +432,22 @@ class CostNetworkBoundTest {
     // an atom is cited about once: one bound atom for the cheaper values beyond a bound, and each
     // fixed neighbour once
     assertTrue(cited <= 1.2 * distinct, "atoms cited " + cited + ", distinct " + distinct);
+  }
+
+  @Test
+  void repeatedVariablesAreRejected() {
+    Store store = new Store();
+    IntVar v = new IntVar(store, "v", 0, 2);
+    IntVar w = new IntVar(store, "w", 0, 1);
+    IntVar z = new IntVar(store, "z", -3, 8);
+    int[][] values = {{0, 1, 2}, {0, 1}, {0, 1, 2}};
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> new CostNetworkBound(z, false, new IntVar[] {v, w, v}, new CostNetwork(values)));
+    int[][] withObjective = {{0, 1, 2}, {0, 1}, {-3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8}};
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            new CostNetworkBound(z, false, new IntVar[] {v, w, z}, new CostNetwork(withObjective)));
   }
 }

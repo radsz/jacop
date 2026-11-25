@@ -33,10 +33,15 @@ package org.jacop.jalp;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Tests {@link MpsReader} on small files that use every section and bound type, in free and fixed
@@ -186,5 +191,34 @@ class MpsReaderTest {
     lp.setExact(true);
     assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
     assertThat(lp.objective()).isCloseTo(-10, Offset.offset(1e-9));
+  }
+
+  @Test
+  void columnWithLowerBoundAboveUpperBoundIsInfeasible(@TempDir Path dir) throws IOException {
+    // UP 5 then LO 6: the column has no value, yet the simplex left it at 6 and answered OPTIMAL 6
+    Path file = dir.resolve("inverted.mps");
+    Files.writeString(
+        file,
+        String.join(
+            "\n",
+            "NAME INV",
+            "ROWS",
+            " N obj",
+            "COLUMNS",
+            " x obj 1",
+            "BOUNDS",
+            " UP b x 5",
+            " LO b x 6",
+            "ENDATA"),
+        StandardCharsets.US_ASCII);
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    PrintStream out = System.out;
+    System.setOut(new PrintStream(buffer, true, StandardCharsets.UTF_8));
+    try {
+      LpMain.main(new String[] {file.toString()});
+    } finally {
+      System.setOut(out);
+    }
+    assertThat(buffer.toString(StandardCharsets.UTF_8)).startsWith("INV INFEASIBLE ");
   }
 }

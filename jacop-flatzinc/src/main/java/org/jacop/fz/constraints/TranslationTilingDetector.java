@@ -236,7 +236,7 @@ public class TranslationTilingDetector {
     BooleanVar[] c = new BooleanVar[n];
     int[] values = new int[n];
     for (int w = 0; w < n; w++) {
-      c[w] = new BooleanVar(store, "tiling" + tilings + "_" + w);
+      c[w] = new BooleanVar(store, store.freshVariableId("tiling" + tilings + "_" + w));
       values[w] = w;
       characteristic.add(c[w]);
     }
