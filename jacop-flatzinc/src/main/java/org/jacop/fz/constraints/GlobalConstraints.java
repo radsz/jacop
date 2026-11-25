@@ -1481,14 +1481,15 @@ class GlobalConstraints implements ParserTreeConstants {
       return false;
     }
     int n = fo.length;
-    if (pairs) {
-      for (int i = 0; i < n; i++) {
-        for (int j = i + 1; j < n; j++) {
-          long si = fo[i].value();
-          long sj = fo[j].value();
-          if (si < sj + fl[j].value() && sj < si + fl[i].value()) {
-            poseApart(o[i], l[i], o[j], l[j]);
-          }
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        long si = fo[i].value();
+        long sj = fo[j].value();
+        // a unary resource lets a task of length 0 sit inside another, a strict diffn does not
+        if (si < sj + fl[j].value()
+            && sj < si + fl[i].value()
+            && (pairs || !inCliques(fl[i], l[i]) || !inCliques(fl[j], l[j]))) {
+          poseApart(o[i], l[i], o[j], l[j]);
         }
       }
     }
@@ -1496,6 +1497,11 @@ class GlobalConstraints implements ParserTreeConstants {
       poseFixedAxisCliques(fo, o, fl, l);
     }
     return true;
+  }
+
+  // the rectangles the unary resources of poseFixedAxisCliques cover: positive lengths on both axes
+  private static boolean inCliques(IntVar fixedLength, IntVar length) {
+    return fixedLength.value() > 0 && length.min() > 0;
   }
 
   // o1 + l1 <= o2 \/ o2 + l2 <= o1, with one Boolean choosing the side
@@ -1512,12 +1518,13 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   // a unary resource over the free axis for each maximal set of positive-length intervals of the
-  // fixed axis sharing a point: the sets of intervals open just before an interval ends
+  // fixed axis sharing a point (the sets open just before an interval ends), over the rectangles
+  // with positive lengths on both axes; diffnFixedAxis keeps the others apart pairwise
   private void poseFixedAxisCliques(IntVar[] fo, IntVar[] o, IntVar[] fl, IntVar[] l) {
     int n = fo.length;
     List<long[]> events = new ArrayList<>();
     for (int i = 0; i < n; i++) {
-      if (fl[i].value() > 0) {
+      if (inCliques(fl[i], l[i])) {
         events.add(new long[] {fo[i].value(), 1, i});
         events.add(new long[] {(long) fo[i].value() + fl[i].value(), 0, i});
       }
