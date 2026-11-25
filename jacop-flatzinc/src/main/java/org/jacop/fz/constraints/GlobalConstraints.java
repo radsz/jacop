@@ -4213,6 +4213,10 @@ class GlobalConstraints implements ParserTreeConstants {
 
     IntVar[] load = new IntVar[capacity.length];
     for (int i = 0; i < load.length; i++) {
+      if (capacity[i] < 0) {
+        // even an empty bin exceeds a negative capacity
+        throw Store.failException;
+      }
       load[i] = new IntVar(store, 0, capacity[i]);
     }
 

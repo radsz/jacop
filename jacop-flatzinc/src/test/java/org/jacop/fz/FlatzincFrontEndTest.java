@@ -8417,4 +8417,17 @@ class FlatzincFrontEndTest {
     assertTrue(out.endsWith("=====UNSATISFIABLE=====\n"), out);
     assertTrue(System.nanoTime() - start < 5_000_000_000L, "among took more than 5 s");
   }
+
+  @Test
+  void aNegativeBinCapacityFails() throws IOException {
+    // the load of a bin with capacity -1 was the empty domain 0..-1, on which Binpacking threw
+    // ArrayIndexOutOfBoundsException ("JaCoP internal error"); even an empty bin exceeds it
+    String out =
+        run(
+            "var 1..2: x :: output_var;\nvar 1..2: y;\n"
+                + "constraint jacop_bin_packing_capacity([x, y], [-1, 4], [1, 2], 1);\n"
+                + "solve satisfy;\n")[0];
+    assertTrue(out.endsWith("=====UNSATISFIABLE=====\n"), out);
+    assertEquals(0, lastStatus);
+  }
 }
