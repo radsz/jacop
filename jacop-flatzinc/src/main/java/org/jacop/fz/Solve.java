@@ -9862,18 +9862,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   @SuppressWarnings("unchecked")
   private DepthFirstSearch<T> addFloatCompletion(
       DepthFirstSearch<T> lastSearch, FloatVar[] floats) {
-    // not under a float objective: splitting a variable it depends on narrows the cost below the
-    // box the search found, so each completed solution improved on the last by a few floats
-    // (ex2_1_1 with its squares not introduced: 1001 solutions and no proof in 30 s)
-    if (floats.length == 0 || costVariable instanceof FloatVar) {
+    if (floats.length == 0) {
       return null;
     }
-    DepthFirstSearch<T> completion = new DepthFirstSearch<>();
+    // under a float objective the split only shows that a solution exists and is undone:
+    // splitting a variable the cost depends on narrowed the cost below the box the search found,
+    // so each completed solution improved on the last by a few floats (ex2_1_1 with its squares
+    // plain variables: 1001 solutions and no proof in 30 s; with the check, the optimum in 61 s,
+    // since it refutes most boxes of x that the search accepts, and 22 s without any completion)
+    DepthFirstSearch<T> completion =
+        costVariable instanceof FloatVar
+            ? new FloatExtensionCheck(floats)
+            : new DepthFirstSearch<>();
     if (options.debug()) {
       completion.setConsistencyListener(failStatistics);
     }
     completion.setSelectChoicePoint(
-        (SelectChoicePoint<T>) new SplitSelectFloat<>(store, floats, null));
+        costVariable instanceof FloatVar
+            ? (SelectChoicePoint<T>) new SimpleSelect<>(new IntVar[0], null, new IndomainMin<>())
+            : (SelectChoicePoint<T>) new SplitSelectFloat<>(store, floats, null));
     completion.setPrintInfo(false);
     lastSearch.setSolutionListener(new SimpleSolutionListener<>());
     completion.setSolutionListener(new CostListener<>());
@@ -9881,6 +9888,48 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     setSearchTimeout(completion);
     floatCompletion = completion;
     return completion;
+  }
+
+  /**
+   * A search over no variables that reports the solution of the searches above it once a split of
+   * the given float variables, at a level of its own and undone after it, shows that they have
+   * values consistent with it. The store and so the cost keep the box of the searches above.
+   */
+  private final class FloatExtensionCheck extends DepthFirstSearch<T> {
+    private final FloatVar[] floats;
+
+    FloatExtensionCheck(FloatVar[] floats) {
+      this.floats = floats;
+    }
+
+    @Override
+    public boolean labeling() {
+      Store s = this.store;
+      int level = s.level;
+      DepthFirstSearch<Var> check = new DepthFirstSearch<>();
+      check.setPrintInfo(false);
+      check.setAssignSolution(false);
+      SimpleSolutionListener<Var> listener = new SimpleSolutionListener<>();
+      listener.searchAll(false);
+      check.setSolutionListener(listener);
+      int to = options.getRemainingTimeOut();
+      if (to > 0) {
+        check.setTimeOutMilliseconds(to);
+      }
+      boolean extended;
+      s.setLevel(level + 1);
+      try {
+        extended = check.labeling(s, new SplitSelectFloat<>(s, floats, null));
+      } finally {
+        s.removeLevel(level + 1);
+        s.setLevel(level);
+      }
+      if (check.timeOutOccured) {
+        timeOutOccured = true;
+        return false;
+      }
+      return extended && super.labeling();
+    }
   }
 
   private boolean shouldUseDefaultSearchVars(

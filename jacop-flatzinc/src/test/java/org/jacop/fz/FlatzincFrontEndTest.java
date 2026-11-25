@@ -7680,4 +7680,25 @@ class FlatzincFrontEndTest {
     assertEquals(1, out.lines().filter(l -> l.equals("----------")).count(), out);
     assertTrue(out.contains("%%%mzn-stat: solutions=1\n"), out);
   }
+
+  @Test
+  void floatVariablesThatAreNotOutputAreCompletedUnderAFloatObjective() throws IOException {
+    // the float completion was left out under a float objective: a = 1 with obj = 1.0 was printed
+    // as the optimum, although a = 1 asks f * g >= 0.1 with g = -f
+    String model =
+        "var 0..1: a :: output_var;\n"
+            + "var -1.0..1.0: f;\n"
+            + "var -1.0..1.0: g;\n"
+            + "var -1.0..1.0: h;\n"
+            + "var 0.0..1.0: obj :: output_var;\n"
+            + "var bool: b;\n"
+            + "constraint int2float(a, obj);\n"
+            + "constraint float_lin_eq([1.0, 1.0], [f, g], 0.0);\n"
+            + "constraint float_times(f, g, h);\n"
+            + "constraint int_eq_reif(a, 1, b);\n"
+            + "constraint float_le_reif(0.1, h, b);\n"
+            + "solve :: int_search([a], input_order, indomain_min, complete) maximize obj;\n";
+    List<String> all = solveAllInOrder(model, "--lcg", "off");
+    assertEquals(List.of("a = 0; obj = 0.0;"), all, all.toString());
+  }
 }
