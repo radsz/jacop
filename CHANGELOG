@@ -9137,6 +9137,36 @@ Version 5.0 (unreleased)
    -19 %; at 240 s, Diffn instances proved by both 918 -> 836 s (-f) and
    188 -> 175 s (default search); wide-quick -f at 600 s total 0.995.
 
+508. The FlatZinc front end bounds the parts of a linear objective that
+   belong to loosely coupled blocks of the model (ObjectiveBlockBound,
+   -Dorg.jacop.fz.blockBound=false turns it off). Constraints and clauses
+   join the variables they share into fragments in the order of their
+   scope size, as in the block detection of Gamrath and Luebbecke (SEA
+   2010); one that would put more than half of the objective's terms
+   together is a linking constraint and is left out. The least cost of
+   each block's terms, found by LCG in a copy of the block, is the
+   Lagrangian relaxation with zero multipliers (Geoffrion 1974), for the
+   travelling tournament problem its independent lower bound (Easton,
+   Nemhauser and Trick, CP 2001). It is posted as cost_b >= least_b with
+   the objective as the sum of the cost_b, only when it raises the
+   objective's lower bound by 5 % of the distance to the upper bound; it
+   takes at most 2 % of the time limit and 5 s. MiniZinc Challenge
+   traveling-tppv circ8 (2014, 2017): the root bound rises from 0 to
+   70-74 and all five are proved at 600 s, fd in 33-111 s and -f in
+   10-60 s, against no proof before (Gecode proves circ8bbal in 536 s).
+   Of 48 instances of the topic and wide sets where blocks are found the
+   bound is posted on 14; on the 8 of them not in traveling-tppv the time
+   is unchanged.
+
+509. The FlatZinc front end posts redundant unary resources with optional
+   tasks for flexible job shops (-Dorg.jacop.fz.optionalUnary=false turns
+   it off): from disjunctions s1 + d1 <= s2 \/ s2 + d2 <= s1 \/ m1 != m2
+   it takes, for every machine v, the tasks that are pairwise
+   conditionally disjoint and posts CumulativeUnary with task t present
+   when m_t = v (unary resources with optional activities, Vilim, Bartak
+   and Cepek, Constraints 2005). MiniZinc Challenge 2014 stochastic-fjsp
+   fjsp-a1-s3 under fd: 452 after 600 s -> optimum 207 proved in 15 s.
+
 Version 4.11
 =============
 
