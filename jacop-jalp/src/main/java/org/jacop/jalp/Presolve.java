@@ -49,9 +49,12 @@ import java.util.TreeMap;
  * its cost, is merged into it, which then stands for their sum), forcing rows (a row whose activity
  * reaches its bound only with every column at one of its bounds fixes them there) and dominated
  * columns (bounds on the duals from the row sides and from column singletons keep the reduced cost
- * of a column away from 0, so it is fixed at the bound its sign asks for). The last two are also in
- * the catalogue of Achterberg, Bixby, Gu, Rothberg and Weninger, "Presolve reductions in mixed
- * integer programming", INFORMS Journal on Computing 32 (2020) 473-506.
+ * of a column away from 0, so it is fixed at the bound its sign asks for), as well as singleton
+ * column stuffing (Gamrath, Koch, Martin, Miltenberger and Weninger, "Progress in presolving for
+ * mixed integer programming", Mathematical Programming Computation 7 (2015) 367-398). The forcing
+ * rows and dominated columns are also in the catalogue of Achterberg, Bixby, Gu, Rothberg and
+ * Weninger, "Presolve reductions in mixed integer programming", INFORMS Journal on Computing 32
+ * (2020) 473-506.
  *
  * <p>The problem is the internal one of the simplex, already scaled: the rows {@code L_i <= a_i x
  * <= U_i} with the slack of row i as column {@code n + i}, and the perturbed costs. The reduced
@@ -98,6 +101,7 @@ final class Presolve {
   static final byte FORCING_ROW = 7;
   static final byte DOMINATED_COLUMN = 8;
   static final byte AGGREGATED_COLUMN = 9;
+  static final byte STUFFED_COLUMN = 10;
 
   // entries of parallel rows or columns, and costs of parallel columns, that differ by more than
   // this, relative, from the multiple are not parallel
@@ -122,6 +126,11 @@ final class Presolve {
   // a reduced cost bound farther than this from 0, relative to the cost, proves a column dominated;
   // above the cost perturbation (about 1e-6 relative), which alone fixes nothing
   private static final double DOMINATED = 1e-5;
+
+  // whether column singletons of an inequality row are fixed by singleton column stuffing
+  // (org.jacop.jalp.presolveStuffing)
+  private static final boolean STUFFING_RULE =
+      Boolean.parseBoolean(System.getProperty("org.jacop.jalp.presolveStuffing", "true"));
 
   // whether inequality rows that a column singleton holds at a bound become equations
   // (org.jacop.jalp.presolveTight)
@@ -403,6 +412,9 @@ final class Presolve {
       if (DOMINATED_RULE && !changed) {
         changed = dominatedColumns() > 0;
       }
+      if (STUFFING_RULE && !changed) {
+        changed = stuffing() > 0;
+      }
       if (AGGREGATE_RULE && !changed) {
         changed = aggregate() > 0;
       }
@@ -515,6 +527,151 @@ final class Presolve {
     kind[records - 1] = DOMINATED_COLUMN;
   }
 
+  // singleton column stuffing (Gamrath, Koch, Martin, Miltenberger and Weninger, "Progress in
+  // presolving for mixed integer programming", Mathematical Programming Computation 7 (2015)
+  // 367-398, section 4.2; HiGHS singletonColStuffing). In a row with one side, written as
+  // a x <= b, a column singleton whose cost asks for the direction that uses up the row (a_j c_j <
+  // 0) is a candidate. The candidates are taken from the largest gain per unit of the row, -c_j /
+  // a_j: one that fits in the row even with the other columns at their worst and the candidates
+  // before it moved all the way is moved all the way; one that the candidates before it, moved all
+  // the way, would push past the row even with the other columns at their best stays where it is.
+  // The number of columns fixed
+  private int stuffing() {
+    int found = 0;
+    for (int i = 0; i < m; i++) {
+      if (!rowAlive[i] || rowCount[i] < 2) {
+        continue;
+      }
+      boolean hasLo = rowLo[i] != Double.NEGATIVE_INFINITY;
+      boolean hasHi = rowHi[i] != Double.POSITIVE_INFINITY;
+      if (hasLo == hasHi) {
+        continue;
+      }
+      found += stuffRow(i, hasHi ? 1 : -1, hasHi ? rowHi[i] : -rowLo[i]);
+    }
+    return found;
+  }
+
+  private int[] stuffCols = new int[16];
+  private double[] stuffKeys = new double[16];
+
+  // stuffing of row i, written as dir * a x <= rhs
+  private int stuffRow(int i, int dir, double rhs) {
+    int[] idx = rIdx[i];
+    double[] val = rVal[i];
+    ops += rLen[i];
+    double sumLo = 0;
+    double sumHi = 0;
+    boolean loFinite = true;
+    boolean hiFinite = true;
+    int count = 0;
+    for (int f = 0; f < rLen[i]; f++) {
+      int j = idx[f];
+      double a = dir * val[f];
+      if (!colAlive[j] || a == 0) {
+        continue;
+      }
+      double l = lo[j];
+      double h = hi[j];
+      double c = wtrue[j];
+      if (colCount[j] == 1 && a * c < 0 && Math.abs(a) >= SMALL_ENTRY) {
+        // a candidate, counted where it uses the least of the row
+        if (a > 0) {
+          h = l;
+        } else {
+          l = h;
+        }
+        if (count == stuffCols.length) {
+          stuffCols = Arrays.copyOf(stuffCols, 2 * count);
+          stuffKeys = Arrays.copyOf(stuffKeys, 2 * count);
+        }
+        stuffCols[count] = f;
+        stuffKeys[count++] = c / a;
+      }
+      double min = a > 0 ? l : h;
+      double max = a > 0 ? h : l;
+      loFinite &= min != Double.NEGATIVE_INFINITY && min != Double.POSITIVE_INFINITY;
+      hiFinite &= max != Double.NEGATIVE_INFINITY && max != Double.POSITIVE_INFINITY;
+      if (!loFinite && !hiFinite) {
+        return 0;
+      }
+      if (loFinite) {
+        sumLo += a * min;
+      }
+      if (hiFinite) {
+        sumHi += a * max;
+      }
+    }
+    if (count == 0) {
+      return 0;
+    }
+    sortStuffing(count);
+    double tol = INFEASIBLE * 0.1;
+    int found = 0;
+    for (int q = 0; q < count; q++) {
+      int f = stuffCols[q];
+      int j = idx[f];
+      double a = dir * val[f];
+      if (lo[j] == Double.NEGATIVE_INFINITY || hi[j] == Double.POSITIVE_INFINITY) {
+        break;
+      }
+      double delta = Math.abs(a) * (hi[j] - lo[j]);
+      // the bound the cost asks for, and the other one
+      double gain = a > 0 ? hi[j] : lo[j];
+      double stay = a > 0 ? lo[j] : hi[j];
+      if (hiFinite && delta <= rhs - sumHi + tol) {
+        stuffed(j, gain);
+        found++;
+      } else if (loFinite && delta <= sumLo - rhs + tol) {
+        stuffed(j, stay);
+        found++;
+      }
+      sumLo += delta;
+      sumHi += delta;
+    }
+    return found;
+  }
+
+  // the first count candidates in stuffCols ordered by stuffKeys, the most negative first
+  private void sortStuffing(int count) {
+    if (count > 32) {
+      Integer[] order = new Integer[count];
+      for (int q = 0; q < count; q++) {
+        order[q] = q;
+      }
+      double[] keys = stuffKeys;
+      Arrays.sort(order, (p, q) -> Double.compare(keys[p], keys[q]));
+      int[] cols = new int[count];
+      double[] sorted = new double[count];
+      for (int q = 0; q < count; q++) {
+        cols[q] = stuffCols[order[q]];
+        sorted[q] = keys[order[q]];
+      }
+      System.arraycopy(cols, 0, stuffCols, 0, count);
+      System.arraycopy(sorted, 0, stuffKeys, 0, count);
+      ops += count * 8L;
+      return;
+    }
+    for (int q = 1; q < count; q++) {
+      int f = stuffCols[q];
+      double key = stuffKeys[q];
+      int r = q - 1;
+      while (r >= 0 && stuffKeys[r] > key) {
+        stuffCols[r + 1] = stuffCols[r];
+        stuffKeys[r + 1] = stuffKeys[r];
+        r--;
+      }
+      stuffCols[r + 1] = f;
+      stuffKeys[r + 1] = key;
+    }
+  }
+
+  // the stuffed column is removed at value v
+  private void stuffed(int j, double v) {
+    fixColumn(j, v);
+    kind[records - 1] = STUFFED_COLUMN;
+  }
+
   /**
    * Returns the work of the presolve, in the units of {@link RevisedDualSimplex#work()}.
    *
@@ -535,12 +692,12 @@ final class Presolve {
   /**
    * Returns how many reductions of each kind were made: rows dropped, singleton rows, columns
    * fixed, free columns, doubletons, parallel rows, parallel columns, forcing rows, dominated
-   * columns, aggregated columns.
+   * columns, aggregated columns, stuffed columns.
    *
    * @return the counts
    */
   int[] counts() {
-    int[] c = new int[10];
+    int[] c = new int[11];
     for (int t = 0; t < records; t++) {
       c[kind[t]]++;
     }
@@ -557,7 +714,8 @@ final class Presolve {
     "parallelcol",
     "forcingrow",
     "dominatedcol",
-    "aggregatedcol"
+    "aggregatedcol",
+    "stuffedcol"
   };
 
   // writes the reductions to the trace (org.jacop.jalp.trace)
@@ -1792,6 +1950,7 @@ final class Presolve {
           y[i] = reducedCost(recNum[3][t], j, recLenA[t], y) / recNum[0][t];
           break;
         case DOMINATED_COLUMN:
+        case STUFFED_COLUMN:
           basic[j] = false;
           value[j] = fixedAt[j];
           upper[j] = fixedAt[j] == givenHi[j] && givenHi[j] != givenLo[j];
