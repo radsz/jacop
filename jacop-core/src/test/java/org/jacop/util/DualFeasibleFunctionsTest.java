@@ -114,6 +114,46 @@ class DualFeasibleFunctionsTest {
   }
 
   @Test
+  void memoAnswersAsAFreshTest() {
+    Random random = new Random(11);
+    DualFeasibleFunctions memo = new DualFeasibleFunctions();
+    int[][] widths = new int[40][];
+    int[][] heights = new int[40][];
+    int[] sides = new int[40];
+    for (int s = 0; s < sides.length; s++) {
+      sides[s] = 4 + random.nextInt(8);
+      int n = 2 + random.nextInt(6);
+      widths[s] = new int[n];
+      heights[s] = new int[n];
+      for (int i = 0; i < n; i++) {
+        widths[s][i] = 1 + random.nextInt(sides[s]);
+        heights[s][i] = 1 + random.nextInt(sides[s]);
+      }
+    }
+    for (int t = 0; t < 2000; t++) {
+      int s = random.nextInt(sides.length);
+      int n = widths[s].length;
+      int[] w = widths[s].clone();
+      int[] h = heights[s].clone();
+      // the same set in another order
+      for (int i = n - 1; i > 0; i--) {
+        int j = random.nextInt(i + 1);
+        int x = w[i];
+        w[i] = w[j];
+        w[j] = x;
+        x = h[i];
+        h[i] = h[j];
+        h[j] = x;
+      }
+      boolean expected = new DualFeasibleFunctions().packingFails(sides[s], sides[s] - 1, w, h, n);
+      assertThat(memo.packingFails(sides[s], sides[s] - 1, w, h, n))
+          .as("trial %d", t)
+          .isEqualTo(expected);
+    }
+    assertThat(memo.memoHits).isPositive();
+  }
+
+  @Test
   void twoSquaresBeyondHalfDoNotFit() {
     DualFeasibleFunctions dff = new DualFeasibleFunctions();
     // area 18 of 25, but neither side fits two 3s
