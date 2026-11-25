@@ -313,6 +313,10 @@ public class Options {
                 portfolio-bisect=<gap> (with -p 2 or more and an objective: the second thread
                 runs lcg-bisect=<gap> and proves lower bounds for the others, in place of the
                 last thread of the default layout; e.g. 0.1; default 0 = off),
+                portfolio-lns=<share> (with -p 2 or more and an objective: a thread of large
+                neighbourhood search, lns-share=<share> and lns-stall=0, after the bound thread
+                and in place of the last thread of the layout; e.g. 10; default 0 = off),
+                portfolio-lns-kind=lcg|cp (that thread runs LCG or plain CP free search, default lcg),
                 lcg-shared-phase=0|1 (with --lcg, -p 2 or more and an objective: 1 lets activity
                 branching prefer the values of a better solution of another thread when it takes
                 up its bound; default 1),

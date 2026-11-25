@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -95,6 +96,24 @@ class PortfolioSettingsTest {
     assertEquals(
         Portfolio.search(List.of("--lcg", "-f"), false),
         Portfolio.search(List.of("--lcg", "on", "-f"), false));
+  }
+
+  @Test
+  void theLnsThreadComesAfterTheBoundThreadOnlyWithAnObjective() {
+    String lcgFree = Portfolio.search(List.of("--lcg", "on", "-f"), false);
+    assertEquals(
+        List.of(Portfolio.LNS_THREAD, "lcg-lits", "ls"),
+        Portfolio.settings(lcgFree, 3, false, 0, 10, true).stream().map(c -> c[0]).toList());
+    assertEquals(
+        List.of(Portfolio.BOUND_THREAD, Portfolio.LNS_THREAD, "lcg-lits"),
+        Portfolio.settings(lcgFree, 3, false, 0.1, 10, true).stream().map(c -> c[0]).toList());
+    assertEquals(
+        List.of("lcg-lits", "ls", "default"),
+        Portfolio.settings(lcgFree, 3, true, 0, 10, true).stream().map(c -> c[0]).toList());
+    assertEquals(
+        List.of("--lcg", "off", "-f", "--free-config", "lns-share=10.0"),
+        Arrays.asList(Portfolio.lnsSetting(10, false)).subList(1, 6));
+    assertEquals("lns-share=10.0,lns-stall=0,lcg-core=0", Portfolio.lnsSetting(10, true)[5]);
   }
 
   @Test

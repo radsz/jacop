@@ -135,6 +135,9 @@ final class Portfolio {
   /** The name of the thread of {@link #boundSetting}. */
   static final String BOUND_THREAD = "lcg-bisect";
 
+  /** The name of the neighbourhood search thread of {@link #lnsSetting}. */
+  static final String LNS_THREAD = "lns";
+
   private static final String SEARCH_COMPLETE = "==========";
 
   /** The value shared for a variable that is not fixed in a solution. */
@@ -403,8 +406,10 @@ final class Portfolio {
     }
     String given = search(options.lcg(), options.freeSearch(), options.freeConfig, satisfaction);
     double bisect = Double.parseDouble(options.freeConfig("portfolio-bisect", "0"));
+    double lns = Double.parseDouble(options.freeConfig("portfolio-lns", "0"));
+    boolean lnsLcg = !"cp".equals(options.freeConfig("portfolio-lns-kind", "lcg"));
     int others = Math.max(0, threads - 1 - split);
-    for (String[] config : settings(given, others, satisfaction, bisect)) {
+    for (String[] config : settings(given, others, satisfaction, bisect, lns, lnsLcg)) {
       List<String> flags = Arrays.asList(config).subList(1, config.length);
       workers.add(new Worker(config[0], arguments(base, flags, true)));
     }
@@ -747,14 +752,55 @@ final class Portfolio {
    * @return the settings
    */
   static List<String[]> settings(String given, int count, boolean satisfaction, double bisect) {
+    return settings(given, count, satisfaction, bisect, 0, true);
+  }
+
+  /**
+   * The settings of the threads after the first, as {@link #settings(String, int, boolean, double)}
+   * gives them, with the neighbourhood search thread of {@link #lnsSetting} after the bound thread
+   * when lns is above 0 and the model has an objective; it takes the place of the last setting.
+   *
+   * @param given the search of the first thread
+   * @param count how many settings at most
+   * @param satisfaction whether the model has no objective
+   * @param bisect the relative gap of the bound thread, 0 for none
+   * @param lns the share of the neighbourhood search thread's time in neighbourhood runs, 0 for no
+   *     such thread
+   * @param lnsLcg whether the neighbourhood search thread runs LCG (true) or plain CP search
+   * @return the settings
+   */
+  static List<String[]> settings(
+      String given, int count, boolean satisfaction, double bisect, double lns, boolean lnsLcg) {
     List<String[]> chosen = settings(given, count, satisfaction);
     if (bisect > 0 && !satisfaction && count > 0) {
       chosen.add(0, boundSetting(bisect));
-      if (chosen.size() > count) {
-        chosen.remove(chosen.size() - 1);
-      }
+    }
+    if (lns > 0 && !satisfaction && count > 0) {
+      chosen.add(bisect > 0 ? 1 : 0, lnsSetting(lns, lnsLcg));
+    }
+    while (chosen.size() > count) {
+      chosen.remove(chosen.size() - 1);
     }
     return chosen;
+  }
+
+  /**
+   * The setting of a thread that spends most of its time improving the portfolio's best solution by
+   * large neighbourhood search (option {@code --free-config portfolio-lns=<share>}, with {@code
+   * portfolio-lns-kind=lcg|cp}): free search whose neighbourhood runs (the adaptive LNS of Solve,
+   * the same kinds as every free search thread) take share times the time of its other runs and
+   * never pause while no better solution comes ({@code lns-stall=0}). CP-SAT gives its last threads
+   * to neighbourhood search in the same way. With LCG it has no core-guided phase, which the thread
+   * with the options given runs already.
+   *
+   * @param share the share of neighbourhood runs, propagations (CP) or time (LCG) per unit of the
+   *     other runs
+   * @param lcg whether the thread runs LCG
+   * @return the setting, its name first
+   */
+  static String[] lnsSetting(double share, boolean lcg) {
+    String config = "lns-share=" + share + (lcg ? ",lns-stall=0,lcg-core=0" : "");
+    return new String[] {LNS_THREAD, "--lcg", lcg ? "on" : "off", "-f", "--free-config", config};
   }
 
   /**
