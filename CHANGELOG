@@ -9068,6 +9068,16 @@ Version 5.0 (unreleased)
    atom, from int arrays: the same search, sudoku_opt p29 and
    gfd-schedule n100 -2.9 % each, wide-quick -f -0.9 %, default -0.2 %.
 
+507. The FlatZinc front end removes int_ne and int_lin_ne constraints that
+   the declared domains already satisfy (disjoint domains, a fixed side
+   outside the other domain, a constant outside the range of the sum)
+   before the detectors run, and IntensionTableDetector looks output
+   variables up in a set. gfd-schedule n180f7d50m30k18 drops 15,040 of
+   its 15,041 disequalities and its set-up takes 3.7 s instead of 4.4 s;
+   on the 20 gfd-schedule Challenge instances and 2 cryptanalysis ones
+   free search totals -19 % at 600 s, fixed search the same. -Dorg.jacop.fz.entailedDisequalities=false
+   keeps them.
+
 Version 4.11
 =============
 
