@@ -158,6 +158,18 @@ public final class ArgumentCheck implements ParserTreeConstants {
         },
         "jacop_networkflow");
 
+    // geost: k dimensions, boxes of k sizes and offsets, objects of k coordinates and a kind, and
+    // shapes made of boxes
+    rule(ArgumentCheck::geost, "jacop_geost");
+    rule(
+        a -> {
+          geost(a);
+          int k = a.intArg(0);
+          a.size(6, k, "l", "one bound per dimension");
+          a.size(7, k, "u", "one bound per dimension");
+        },
+        "jacop_geost_bb");
+
     // automata: states 1..Q, a transition table of Q rows, next states in 0..Q (0 fails)
     rule(a -> a.automaton(a.intArg(2), true), "jacop_regular");
     rule(a -> a.automaton(a.set(2).getSize(), true), "jacop_regular_set");
@@ -201,6 +213,22 @@ public final class ArgumentCheck implements ParserTreeConstants {
           if (rule != null) {
             rule.check(new Arguments(support, name, item));
           }
+        }
+      }
+    }
+  }
+
+  private static void geost(Arguments a) {
+    int k = a.intArg(0);
+    a.sameLength("the sizes and the offsets of the boxes", 1, 2);
+    int boxes = a.parts(1, k, "dimensions", "boxes of " + k + " dimensions");
+    int objects = a.parts(4, k, "dimensions", "objects of " + k + " dimensions");
+    a.size(5, objects, "kind", "one kind per object");
+    IntDomain[] shapes = a.sets(3);
+    if (shapes != null && a.length(1) >= 0) {
+      for (int s = 0; s < shapes.length; s++) {
+        if (shapes[s].isEmpty() || shapes[s].min() < 1 || shapes[s].max() > boxes) {
+          a.fail("the shape " + (s + 1) + " is not a set of boxes 1.." + boxes);
         }
       }
     }
@@ -283,6 +311,15 @@ public final class ArgumentCheck implements ParserTreeConstants {
         fail(n + " elements do not split into " + parts);
       }
       return k == 0 ? 0 : n / k;
+    }
+
+    // the sets of an array argument, null when it is not an array of sets
+    IntDomain[] sets(int i) {
+      try {
+        return support.getSetArray(arg(i));
+      } catch (IllegalArgumentException _) {
+        return null;
+      }
     }
 
     IntDomain set(int i) {

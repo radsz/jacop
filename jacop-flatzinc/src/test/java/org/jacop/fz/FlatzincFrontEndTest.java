@@ -8315,4 +8315,49 @@ class FlatzincFrontEndTest {
         "x = 0;\n----------\n==========\n",
         run(vars + "constraint jacop_networkflow([], [], [], [0], x);\nsolve satisfy;\n", "-a")[0]);
   }
+
+  @Test
+  void geostWithSizesThatDoNotAgreeIsAnErrorOfTheModel() throws IOException {
+    // a negative number of dimensions threw NegativeArraySizeException out of the run, 2^31 - 1
+    // ran out of memory, arrays that do not split into k dimensions, a shape outside the boxes or
+    // a bounding box of the wrong length threw ArrayIndexOutOfBoundsException ("JaCoP internal
+    // error"), and an empty shape NullPointerException
+    String vars =
+        "var 0..3: x :: output_var;\nvar 0..3: y;\nvar 0..3: z;\nvar 0..3: w;\n"
+            + "var 1..2: k1;\nvar 1..2: k2;\n";
+    String objects = "[x, y, z, w], [k1, k2]";
+    String[][] cases = {
+      {
+        "jacop_geost(-1, [1, 1, 2, 1], [0, 0, 0, 0], [{1}, {2}], " + objects + ")",
+        "the number of dimensions is negative"
+      },
+      {
+        "jacop_geost(3, [1, 1, 2, 1], [0, 0, 0, 0], [{1}, {2}], " + objects + ")",
+        "4 elements do not split into boxes of 3 dimensions"
+      },
+      {
+        "jacop_geost(2, [1, 1, 2, 1], [0, 0, 0, 0], [{}, {2}], " + objects + ")",
+        "the shape 1 is not a set of boxes 1..2"
+      },
+      {
+        "jacop_geost(2, [1, 1, 2, 1], [0, 0, 0, 0], [{1}, {3}], " + objects + ")",
+        "the shape 2 is not a set of boxes 1..2"
+      },
+      {
+        "jacop_geost_bb(2, [1, 1, 2, 1], [0, 0, 0, 0], [{1}, {2}], " + objects + ", [0], [4, 4])",
+        "l has 1 elements, not one bound per dimension"
+      }
+    };
+    for (String[] c : cases) {
+      String name = c[0].substring(0, c[0].indexOf('('));
+      assertModelError(vars + "constraint " + c[0] + ";\nsolve satisfy;\n", name + ": " + c[1]);
+    }
+    // no objects: nothing overlaps (Geost threw on it)
+    assertEquals(
+        "x = 0;\n----------\n==========\n",
+        run(
+            "var 0..0: x :: output_var;\n"
+                + "constraint jacop_geost_bb(0, [], [], [], [], [], [], []);\nsolve satisfy;\n",
+            "-a")[0]);
+  }
 }

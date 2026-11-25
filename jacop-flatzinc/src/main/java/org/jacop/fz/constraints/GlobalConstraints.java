@@ -4251,6 +4251,10 @@ class GlobalConstraints implements ParserTreeConstants {
     IntDomain[] shape = support.getSetArray((SimpleNode) node.jjtGetChild(3));
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(4));
     IntVar[] kind = support.getVarArray((SimpleNode) node.jjtGetChild(5));
+    if (kind.length == 0) {
+      // no objects: nothing overlaps or leaves the box
+      return;
+    }
 
     // ---- KK, 2023-06-29
     // geost must not have duplicated variables, neither within nor across x and kind
