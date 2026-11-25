@@ -969,4 +969,21 @@ class SingleConstraintTest {
               .isTrue();
         });
   }
+
+  /**
+   * With the index fixed and the value a singleton interval that is not a point, the list variable
+   * at the index was set to the lower end of the value, outside its domain [9.5, 9.6]: a failure
+   * although 9.5 is in both.
+   */
+  @Test
+  void elementFloatVariableKeepsTheWholeSingletonValue() {
+    Store store = new Store();
+    IntVar index = new IntVar(store, "i", 1, 1);
+    FloatVar first = new FloatVar(store, "f1", 9.5, 9.6);
+    FloatVar second = new FloatVar(store, "f2", 0, 1);
+    FloatVar value = new FloatVar(store, "v", Math.nextDown(9.5), 9.5);
+    store.impose(new ElementFloatVariable(index, new FloatVar[] {first, second}, value));
+    assertThat(store.consistency()).isTrue();
+    assertThat(first.min() == 9.5 && value.max() == 9.5).as("%s %s", first, value).isTrue();
+  }
 }
