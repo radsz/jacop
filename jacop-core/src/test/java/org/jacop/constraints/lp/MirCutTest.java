@@ -382,8 +382,10 @@ class MirCutTest {
     Random rnd = new Random(5);
     boolean wasMir = LinearRelaxation.vbMirOn;
     boolean wasGomory = LinearRelaxation.vbGomoryOn;
+    boolean wasRead = LinearRelaxation.VB_MIR;
     LinearRelaxation.vbMirOn = true;
     LinearRelaxation.vbGomoryOn = true;
+    LinearRelaxation.VB_MIR = true;
     long vbCuts = 0;
     try {
       for (int run = 0; run < 60; run++) {
@@ -417,6 +419,7 @@ class MirCutTest {
     } finally {
       LinearRelaxation.vbMirOn = wasMir;
       LinearRelaxation.vbGomoryOn = wasGomory;
+      LinearRelaxation.VB_MIR = wasRead;
     }
     assertThat(vbCuts).isPositive();
   }

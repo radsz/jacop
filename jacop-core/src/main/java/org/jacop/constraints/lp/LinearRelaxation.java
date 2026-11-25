@@ -251,6 +251,11 @@ public class LinearRelaxation extends Constraint
   static boolean vbMirOn = Boolean.getBoolean("org.jacop.lp.vbMir");
   // whether the Gomory rows also get the MIR cuts with variable bounds substituted
   static boolean vbGomoryOn = Boolean.getBoolean("org.jacop.lp.vbGomory");
+
+  // whether the first cut round reads the variable bounds of the rows (for vbMir or vbGomory)
+  @SuppressWarnings("java:S3008")
+  static boolean VB_MIR = vbMirOn || vbGomoryOn;
+
   // the variable bounds of the rows, read once at the first cut round
   private MirCut.VariableBounds variableBounds;
   private boolean variableBoundsRead;
@@ -4962,7 +4967,7 @@ public class LinearRelaxation extends Constraint
     for (int i = 0; i < original; i++) {
       unitRows[i] = rowAggregate(i);
     }
-    if ((vbMirOn || vbGomoryOn) && !variableBoundsRead) {
+    if (VB_MIR && !variableBoundsRead) {
       variableBoundsRead = true;
       List<int[]> rc = new ArrayList<>();
       List<long[]> rw = new ArrayList<>();
@@ -5294,119 +5299,27 @@ public class LinearRelaxation extends Constraint
   private boolean slackGomory(
       long[] lambda, int basic, double[] value, long[] lo, long[] hi, List<MirCut> found) {
     int n = lp.columns();
-    int m = lambda.length;
-    long[] coef = new long[n];
-    int slacks = 0;
     try {
-      for (int i = 0; i < m; i++) {
-        long l = lambda[i];
-        if (l == 0) {
-          continue;
-        }
-        slacks++;
-        int[] cs = rowColumns[i];
-        long[] ws = rowWeights[i];
-        for (int k = 0; k < cs.length; k++) {
-          coef[cs[k]] = Math.addExact(coef[cs[k]], Math.multiplyExact(l, ws[k]));
-        }
+      SlackRow row = slackRow(lambda, value, lo, hi);
+      if (row == null) {
+        return true;
       }
-      int size = slacks;
-      for (long c : coef) {
-        size += c != 0 ? 1 : 0;
-      }
-      int[] columns = new int[size];
-      long[] weights = new long[size];
-      long[] xlo = Arrays.copyOf(lo, n + m);
-      long[] xhi = Arrays.copyOf(hi, n + m);
-      double[] xv = Arrays.copyOf(value, n + m);
-      int q = 0;
-      for (int j = 0; j < n; j++) {
-        if (coef[j] != 0) {
-          columns[q] = j;
-          weights[q++] = coef[j];
-        }
-      }
-      for (int i = 0; i < m; i++) {
-        if (lambda[i] == 0) {
-          continue;
-        }
-        long least = 0;
-        long most = 0;
-        double v = 0;
-        int[] cs = rowColumns[i];
-        long[] ws = rowWeights[i];
-        for (int k = 0; k < cs.length; k++) {
-          long a = Math.multiplyExact(ws[k], lo[cs[k]]);
-          long b = Math.multiplyExact(ws[k], hi[cs[k]]);
-          least = Math.addExact(least, Math.min(a, b));
-          most = Math.addExact(most, Math.max(a, b));
-          v += ws[k] * value[cs[k]];
-        }
-        xlo[n + i] = hasLo[i] ? Math.max(least, rowLo[i]) : least;
-        xhi[n + i] = hasHi[i] ? Math.min(most, rowHi[i]) : most;
-        if (xlo[n + i] > xhi[n + i]) {
-          return true;
-        }
-        xv[n + i] = v;
-        columns[q] = n + i;
-        weights[q++] = -lambda[i];
-      }
+      int size = row.columns.length;
       long[] neg = new long[size];
       for (int k = 0; k < size; k++) {
-        neg[k] = Math.negateExact(weights[k]);
+        neg[k] = Math.negateExact(row.weights[k]);
       }
-      for (long[] w : new long[][] {weights, neg}) {
-        long[] g = MirCut.raw(columns, w, 0, xv, xlo, xhi, GOMORY_DIVISOR ? coef[basic] : 0);
-        if (g == null) {
-          continue;
-        }
-        // the slacks replaced by their rows: g_s s_i = g_s a_i x
-        long[] cut = new long[n];
-        for (int k = 0; k < size; k++) {
-          if (g[k] == 0) {
-            continue;
-          }
-          int c = columns[k];
-          if (c < n) {
-            cut[c] = Math.addExact(cut[c], g[k]);
-          } else {
-            int[] cs = rowColumns[c - n];
-            long[] ws = rowWeights[c - n];
-            for (int t = 0; t < cs.length; t++) {
-              cut[cs[t]] = Math.addExact(cut[cs[t]], Math.multiplyExact(g[k], ws[t]));
-            }
-          }
-        }
-        int nz = 0;
-        for (long c : cut) {
-          nz += c != 0 ? 1 : 0;
-        }
-        int[] cc = new int[nz];
-        long[] cw = new long[nz];
-        for (int j = 0, t = 0; j < n; j++) {
-          if (cut[j] != 0) {
-            cc[t] = j;
-            cw[t++] = cut[j];
-          }
-        }
-        MirCut c = MirCut.finish(cc, cw, g[size], value, lo, hi, true);
+      for (long[] w : new long[][] {row.weights, neg}) {
+        long[] g =
+            MirCut.raw(
+                row.columns, w, 0, row.xv, row.xlo, row.xhi, GOMORY_DIVISOR ? row.coef[basic] : 0);
+        MirCut c = g == null ? null : overRows(row.columns, g, g[size], n, value, lo, hi);
         if (c != null) {
           found.add(c);
         }
       }
       if (vbGomoryOn && variableBounds != null) {
-        for (long[] w : new long[][] {weights, neg}) {
-          try {
-            MirCut v = MirCut.ofVariableBounds(columns, w, 0, xv, xlo, xhi, variableBounds);
-            MirCut c = v == null ? null : overRows(v, n, value, lo, hi);
-            if (c != null) {
-              found.add(c);
-              vbCuts++;
-            }
-          } catch (ArithmeticException _) {
-            // no cut with the variable bounds from this row at this scale
-          }
-        }
+        vbGomory(row, neg, n, value, lo, hi, found);
       }
     } catch (ArithmeticException _) {
       // no cut from this row at this scale
@@ -5415,34 +5328,141 @@ public class LinearRelaxation extends Constraint
     return true;
   }
 
-  // the cut with the slacks of the rows (columns n + i) replaced by their rows
-  private MirCut overRows(MirCut v, int n, double[] value, long[] lo, long[] hi) {
-    long[] cut = new long[n];
-    for (int t = 0; t < v.columns.length; t++) {
-      int c = v.columns[t];
-      if (c < n) {
-        cut[c] = Math.addExact(cut[c], v.weights[t]);
-      } else {
-        int[] cs = rowColumns[c - n];
-        long[] ws = rowWeights[c - n];
-        for (int k = 0; k < cs.length; k++) {
-          cut[cs[k]] = Math.addExact(cut[cs[k]], Math.multiplyExact(v.weights[t], ws[k]));
+  /**
+   * The integer equality of a row of the basis inverse over the columns and the slacks of the rows
+   * (columns n + i), with the values and bounds of both.
+   *
+   * @param columns the columns and slacks of the equality
+   * @param weights their weights
+   * @param xv the LP values of the columns and slacks
+   * @param xlo the lower bounds of the columns and slacks
+   * @param xhi the upper bounds of the columns and slacks
+   * @param coef the weights of the columns alone
+   */
+  private record SlackRow(
+      int[] columns, long[] weights, double[] xv, long[] xlo, long[] xhi, long[] coef) {}
+
+  // the equality of lambda over the columns and slacks; null when a slack has no value
+  private SlackRow slackRow(long[] lambda, double[] value, long[] lo, long[] hi) {
+    int n = lp.columns();
+    int m = lambda.length;
+    long[] coef = new long[n];
+    int size = 0;
+    for (int i = 0; i < m; i++) {
+      if (lambda[i] != 0) {
+        size++;
+        addRow(coef, lambda[i], i);
+      }
+    }
+    for (long c : coef) {
+      if (c != 0) {
+        size++;
+      }
+    }
+    int[] columns = new int[size];
+    long[] weights = new long[size];
+    long[] xlo = Arrays.copyOf(lo, n + m);
+    long[] xhi = Arrays.copyOf(hi, n + m);
+    double[] xv = Arrays.copyOf(value, n + m);
+    int q = 0;
+    for (int j = 0; j < n; j++) {
+      if (coef[j] != 0) {
+        columns[q] = j;
+        weights[q++] = coef[j];
+      }
+    }
+    for (int i = 0; i < m; i++) {
+      if (lambda[i] == 0) {
+        continue;
+      }
+      if (!slackRange(i, n, value, lo, hi, xv, xlo, xhi)) {
+        return null;
+      }
+      columns[q] = n + i;
+      weights[q++] = -lambda[i];
+    }
+    return new SlackRow(columns, weights, xv, xlo, xhi, coef);
+  }
+
+  // adds l times row i to coef
+  private void addRow(long[] coef, long l, int i) {
+    int[] cs = rowColumns[i];
+    long[] ws = rowWeights[i];
+    for (int k = 0; k < cs.length; k++) {
+      coef[cs[k]] = Math.addExact(coef[cs[k]], Math.multiplyExact(l, ws[k]));
+    }
+  }
+
+  // the value and bounds of the slack of row i (column n + i); false when its interval is empty
+  private boolean slackRange(
+      int i, int n, double[] value, long[] lo, long[] hi, double[] xv, long[] xlo, long[] xhi) {
+    long least = 0;
+    long most = 0;
+    double v = 0;
+    int[] cs = rowColumns[i];
+    long[] ws = rowWeights[i];
+    for (int k = 0; k < cs.length; k++) {
+      long a = Math.multiplyExact(ws[k], lo[cs[k]]);
+      long b = Math.multiplyExact(ws[k], hi[cs[k]]);
+      least = Math.addExact(least, Math.min(a, b));
+      most = Math.addExact(most, Math.max(a, b));
+      v += ws[k] * value[cs[k]];
+    }
+    xlo[n + i] = hasLo[i] ? Math.max(least, rowLo[i]) : least;
+    xhi[n + i] = hasHi[i] ? Math.min(most, rowHi[i]) : most;
+    xv[n + i] = v;
+    return xlo[n + i] <= xhi[n + i];
+  }
+
+  // the MIR cuts of the equality, both ways, with variable bounds substituted
+  // (MirCut.ofVariableBounds)
+  private void vbGomory(
+      SlackRow row, long[] neg, int n, double[] value, long[] lo, long[] hi, List<MirCut> found) {
+    for (long[] w : new long[][] {row.weights, neg}) {
+      try {
+        MirCut v =
+            MirCut.ofVariableBounds(row.columns, w, 0, row.xv, row.xlo, row.xhi, variableBounds);
+        MirCut c = v == null ? null : overRows(v.columns, v.weights, v.rhs, n, value, lo, hi);
+        if (c != null) {
+          found.add(c);
+          vbCuts++;
         }
+      } catch (ArithmeticException _) {
+        // no cut with the variable bounds from this row at this scale
+      }
+    }
+  }
+
+  // the cut sum g_k x_k <= rhs over columns and slacks (columns n + i) with the slacks replaced by
+  // their rows: g_s s_i = g_s a_i x
+  private MirCut overRows(
+      int[] columns, long[] g, long rhs, int n, double[] value, long[] lo, long[] hi) {
+    long[] cut = new long[n];
+    for (int k = 0; k < columns.length; k++) {
+      int c = columns[k];
+      if (c < n) {
+        cut[c] = Math.addExact(cut[c], g[k]);
+      } else if (g[k] != 0) {
+        addRow(cut, g[k], c - n);
       }
     }
     int nz = 0;
     for (long c : cut) {
-      nz += c != 0 ? 1 : 0;
+      if (c != 0) {
+        nz++;
+      }
     }
     int[] cc = new int[nz];
     long[] cw = new long[nz];
-    for (int j = 0, t = 0; j < n; j++) {
+    int t = 0;
+    for (int j = 0; j < n; j++) {
       if (cut[j] != 0) {
         cc[t] = j;
-        cw[t++] = cut[j];
+        cw[t] = cut[j];
+        t++;
       }
     }
-    return MirCut.finish(cc, cw, v.rhs, value, lo, hi, true);
+    return MirCut.finish(cc, cw, rhs, value, lo, hi, true);
   }
 
   /**
