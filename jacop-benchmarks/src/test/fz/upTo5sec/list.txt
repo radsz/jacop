@@ -2788,3 +2788,6 @@ testSimple/test_fzn_arrays
 testSimple/test_fzn_comparison
 rotating-workforce/Example1370
 gcc_domain_matrix/gcc_domain_matrix
+stochastic_fjsp_machines/fjsp_a1_s2
+traveling_tppv_blocks/circ6_5
+traveling_tppv_blocks/circ6_7

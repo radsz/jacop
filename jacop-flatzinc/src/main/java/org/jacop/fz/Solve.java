@@ -205,6 +205,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   final NumberFormat nf = NumberFormat.getInstance(Locale.of("en"));
   public StringBuffer lastSolution;
 
+  // held while the answer of the run is printed, by the search or by the shutdown hook (SIGTERM
+  // with -s), which runs while the search goes on: whichever comes first prints the answer
+  private final Object answerLock = new Object();
+  private boolean answered;
+
   // the model's integer variables by name, whose values a portfolio thread shares with the others
   private String[] sharedNames;
   private IntVar[] sharedVars;
@@ -398,6 +403,40 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     this.store = store;
     this.sat = sat;
     this.nf.setGroupingUsed(false);
+  }
+
+  /**
+   * Rejects a model whose objective names no variable or parameter of the model. Minimizing such an
+   * objective was solved as satisfaction, -a then printed every solution and -p no completion, and
+   * maximizing it failed with a NullPointerException.
+   *
+   * @param astTree the root of the parsed model.
+   * @param table the variables and parameters of the model.
+   * @throws IllegalArgumentException when the objective is an unknown identifier.
+   */
+  public static void checkObjective(SimpleNode astTree, Tables table) {
+    for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
+      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
+      if (node == null || node.getId() != JJTMODELEND) {
+        continue;
+      }
+      SimpleNode item = (SimpleNode) node.jjtGetChild(0);
+      SimpleNode kind = (SimpleNode) item.jjtGetChild(item.jjtGetNumChildren() - 1);
+      if (kind.jjtGetNumChildren() > 0
+          && kind.jjtGetChild(0) instanceof ASTSolveExpr expr
+          && expr.getType() == 0) {
+        String ident = expr.getIdent();
+        if (table.getVariable(ident) == null
+            && table.checkInt(ident) == null
+            && table.getFloatVariable(ident) == null
+            && table.checkFloat(ident) == null) {
+          throw new IllegalArgumentException(
+              "Symbol \""
+                  + ident
+                  + "\" does not have assigned value when refered; execution aborted");
+        }
+      }
+    }
   }
 
   /**
@@ -812,6 +851,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       dictionary.costNetwork = null;
     }
 
+    if (ObjectiveBlockBound.on() && opt.proof() == null) {
+      objectiveBlockBound(node);
+    }
+
     if (opt.lp()) {
       imposeLinearRelaxation(node);
     }
@@ -869,15 +912,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (k == 0 || !(kind.jjtGetChild(0) instanceof ASTSolveExpr expr) || !store.consistency()) {
       return;
     }
-    IntVar objective =
-        switch (expr.getType()) {
-          case 0 -> dictionary.getVariable(expr.getIdent());
-          case 1 -> {
-            IntVar[] a = dictionary.getVariableArray(expr.getIdent());
-            yield a == null ? null : a[expr.getIndex()];
-          }
-          default -> null;
-        };
+    IntVar objective = objectiveVariable(expr);
     if (objective == null) {
       return;
     }
@@ -898,6 +933,36 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   // what the decomposition bound did, for the statistics
   private DecompositionBound.Outcome decomposition;
+
+  // what the objective block bounds did, for the statistics
+  private ObjectiveBlockBound.Outcome blockBound;
+
+  /**
+   * Bounds the parts of a linear objective that belong to loosely coupled blocks of the model by
+   * their least costs, see {@link ObjectiveBlockBound}.
+   *
+   * @param node the solve item.
+   */
+  private void objectiveBlockBound(ASTSolveItem node) {
+    if (!(node.jjtGetChild(node.jjtGetNumChildren() - 1) instanceof ASTSolveKind kind)) {
+      return;
+    }
+    int k = getKind(kind.getKind());
+    if (k == 0 || !(kind.jjtGetChild(0) instanceof ASTSolveExpr expr) || !store.consistency()) {
+      return;
+    }
+    IntVar objective = objectiveVariable(expr);
+    if (objective == null) {
+      return;
+    }
+    List<Var> order = new ArrayList<>();
+    for (int i = 0; i < node.jjtGetNumChildren() - 1; i++) {
+      annotationVariables((SimpleNode) node.jjtGetChild(i), order);
+    }
+    blockBound =
+        ObjectiveBlockBound.run(
+            store, sat.collectedClauses(), objective, k == 2, order, options.getTimeOut());
+  }
 
   // the cost network bound (-Dorg.jacop.fz.costNetwork=true), for the statistics
   private CostNetworkBound costNetworkBound;
@@ -1184,6 +1249,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   /** Prints what the decomposition bound did. */
   private void printDecompositionStatistics() {
+    ObjectiveBlockBound.Outcome b = blockBound;
+    if (b != null && options.searchStatistics()) {
+      IO.println(
+          "%%%mzn-stat: blockBoundBlocks="
+              + b.blocks()
+              + "\n%%%mzn-stat: blockBoundBounded="
+              + b.bounded()
+              + "\n%%%mzn-stat: blockBoundUncopied="
+              + b.uncopied()
+              + "\n%%%mzn-stat: blockBoundRaised="
+              + b.raised()
+              + "\n%%%mzn-stat: blockBoundTime="
+              + b.millis() / 1000.0);
+    }
     DecompositionBound.Outcome o = decomposition;
     if (o == null || !options.searchStatistics()) {
       return;
@@ -2471,11 +2550,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + " search explorarion strategy ; compilation aborted");
     }
 
-    if (!options.getAll() && lastSolution != null) {
-      helperSolutionPrinter(lastSolution.toString());
-    }
+    printAnswer(
+        () -> {
+          if (!options.getAll() && lastSolution != null) {
+            helperSolutionPrinter(lastSolution.toString());
+          }
 
-    printStatisticsForSingleSearch(false, result);
+          printStatisticsForSingleSearch(false, result);
+        });
   }
 
   /**
@@ -3822,7 +3904,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return alternateUnsolved(costVar);
     }
     if (lcgSlow && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch(lcg)) {
-      return free ? continueWithoutLcg(costVar) : continueFixedWithoutLcg(costVar);
+      if (free) {
+        return continueWithoutLcg(costVar);
+      }
+      // the check stops LCG only without a solution, but LCG can print one between the check and
+      // the stop: the search without learning then finds no better one, which is no refutation
+      boolean found = continueFixedWithoutLcg(costVar);
+      return found || numberSolutions > 0;
     }
     return numberSolutions > 0;
   }
@@ -9891,11 +9979,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + " search explorarion strategy ; compilation aborted");
     }
 
-    if (!options.getAll() && lastSolution != null) {
-      helperSolutionPrinter(lastSolution.toString());
-    }
+    printAnswer(
+        () -> {
+          if (!options.getAll() && lastSolution != null) {
+            helperSolutionPrinter(lastSolution.toString());
+          }
 
-    printStatisticsForSeqSearch(false, result);
+          printStatisticsForSeqSearch(false, result);
+        });
   }
 
   /**
@@ -10556,8 +10647,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
 
     if (options.getAll()) {
-      IO.print(printBuffer.toString());
-      appendSolutionToOutputFile(printBuffer.toString());
+      synchronized (answerLock) {
+        if (!answered) {
+          IO.print(printBuffer.toString());
+          appendSolutionToOutputFile(printBuffer.toString());
+        }
+      }
     } else {
       lastSolution = printBuffer;
     }
@@ -10835,6 +10930,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   public int getSolveKind() {
     return solveKind;
+  }
+
+  /**
+   * Prints the answer of the run (the kept solution, the status and the statistics) unless it was
+   * printed already: the shutdown hook of a run with -s prints it while the search still runs, and
+   * the search must then not print a second answer after it.
+   *
+   * @param print what prints the answer
+   * @return true if it printed the answer now
+   */
+  boolean printAnswer(Runnable print) {
+    synchronized (answerLock) {
+      if (answered) {
+        return false;
+      }
+      answered = true;
+      print.run();
+      return true;
+    }
   }
 
   void helperSolutionPrinter(String lastSolution) {

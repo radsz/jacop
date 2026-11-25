@@ -31,11 +31,17 @@ package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.jacop.constraints.LinearEqualities;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
+import org.jacop.fz.ASTAnnExpr;
+import org.jacop.fz.ASTAnnotation;
 import org.jacop.fz.ASTConstElem;
 import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.FzConsole;
@@ -52,7 +58,10 @@ import org.jacop.fz.SimpleNode;
  * two equalities of at least five variables each, a coefficient of at least 10 and domains of at
  * most 100 values) is also reformulated as Aardal, Hurkens and Lenstra do (Math. of OR 25(3),
  * 2000): new variables λ over a reduced basis of the lattice, x = x0 + Σ λ_k q_k, which the
- * relaxation takes in as rows, and which are searched first ({@link #lattice()}).
+ * relaxation takes in as rows, and which are searched first ({@link #lattice()}). A component whose
+ * own equalities, without the permutation sums below, would all be set aside as definitions of the
+ * variables their defines_var annotations name (the permutation sums alone keep it together) is not
+ * reformulated.
  *
  * <p>An all-different constraint over n variables whose domains together hold exactly n values (a
  * permutation) takes every value once, so the sum of its variables is the sum of those values. That
@@ -85,6 +94,12 @@ public class LinearSystemDetector {
 
   private final List<IntVar> lattice = new ArrayList<>();
 
+  // the variables of the permutation-sum rows added by permutationSum
+  private final List<Set<IntVar>> implied = new ArrayList<>();
+
+  // the variables that an int_lin_eq of the model defines (defines_var)
+  private final Set<IntVar> defined = Collections.newSetFromMap(new IdentityHashMap<>());
+
   /**
    * It creates a detector reading variables through the given support.
    *
@@ -111,7 +126,7 @@ public class LinearSystemDetector {
    * @throws org.jacop.core.FailException when the equalities have no integer solution.
    */
   public void detect(SimpleNode astTree, boolean relaxation) {
-    support.forEachConstraint(astTree, this::collect);
+    support.forEachConstraintItem(astTree, this::collect);
     int permutations = 0;
     if (!"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.permutationSums"))
         && !rows.isEmpty()) {
@@ -131,7 +146,7 @@ public class LinearSystemDetector {
     if (relaxation && "on".equals(REFORMULATE)) {
       le.setReformulate(true);
     } else if (relaxation && "auto".equals(REFORMULATE)) {
-      le.setReformulate(this::marketSplit);
+      le.setReformulate(this::reformulate);
     }
     le.apply(rows);
     lattice.addAll(le.lattice);
@@ -162,6 +177,85 @@ public class LinearSystemDetector {
    */
   public List<IntVar> lattice() {
     return lattice;
+  }
+
+  // a component like a market split problem, made of the model's own equalities: a component that
+  // only exists because the permutation-sum rows keep the variables the model defines from being
+  // definitions (x_i = Σ d_k b^k :: defines_var(x_i) of gcc_de_bruijn, with all_different(x) and
+  // each x_i in no other equality) is left alone
+  private boolean reformulate(List<LinearEqualities.Row> component) {
+    if (!marketSplit(component)) {
+      return false;
+    }
+    List<LinearEqualities.Row> model = new ArrayList<>();
+    for (LinearEqualities.Row r : component) {
+      if (!isImplied(r)) {
+        model.add(r);
+      }
+    }
+    return model.size() == component.size() || !allDefinitions(model);
+  }
+
+  // all variables of the row with one coefficient, within the variables of a permutation-sum row
+  private boolean isImplied(LinearEqualities.Row r) {
+    for (int i = 1; i < r.a().length; i++) {
+      if (r.a()[i] != r.a()[0]) {
+        return false;
+      }
+    }
+    for (Set<IntVar> s : implied) {
+      boolean inside = true;
+      for (IntVar x : r.x()) {
+        if (!s.contains(x)) {
+          inside = false;
+          break;
+        }
+      }
+      if (inside) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // the rows are all set aside as definitions, as LinearEqualities does, but only by the variables
+  // the model defines: repeatedly, a row with such a variable of coefficient ±1 that no other
+  // remaining row has
+  private boolean allDefinitions(List<LinearEqualities.Row> rows) {
+    Map<IntVar, Integer> occurs = new IdentityHashMap<>();
+    for (LinearEqualities.Row r : rows) {
+      for (IntVar x : r.x()) {
+        occurs.merge(x, 1, Integer::sum);
+      }
+    }
+    boolean[] peeled = new boolean[rows.size()];
+    int left = rows.size();
+    boolean changed = true;
+    while (changed) {
+      changed = false;
+      for (int k = 0; k < rows.size(); k++) {
+        LinearEqualities.Row r = rows.get(k);
+        if (peeled[k] || !hasDefined(r, occurs)) {
+          continue;
+        }
+        peeled[k] = true;
+        left--;
+        changed = true;
+        for (IntVar x : r.x()) {
+          occurs.merge(x, -1, Integer::sum);
+        }
+      }
+    }
+    return left == 0;
+  }
+
+  private boolean hasDefined(LinearEqualities.Row r, Map<IntVar, Integer> occurs) {
+    for (int i = 0; i < r.x().length; i++) {
+      if (Math.abs(r.a()[i]) == 1 && occurs.get(r.x()[i]) == 1 && defined.contains(r.x()[i])) {
+        return true;
+      }
+    }
+    return false;
   }
 
   // a component like a market split problem
@@ -220,11 +314,14 @@ public class LinearSystemDetector {
     }
     int[] a = new int[x.length];
     Arrays.fill(a, 1);
+    Set<IntVar> vars = Collections.newSetFromMap(new IdentityHashMap<>());
+    vars.addAll(Arrays.asList(x));
+    implied.add(vars);
     rows.add(new LinearEqualities.Row(x, a, (int) b));
     return 1;
   }
 
-  private void collect(ASTConstElem node) {
+  private void collect(SimpleNode item, ASTConstElem node) {
     if (!"int_lin_eq".equals(node.getName()) || node.jjtGetNumChildren() != 3) {
       return;
     }
@@ -233,6 +330,27 @@ public class LinearSystemDetector {
     int b = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
     if (a != null && x != null && a.length == x.length) {
       rows.add(new LinearEqualities.Row(x, a, b));
+      IntVar v = definedVar(item);
+      if (v != null) {
+        defined.add(v);
+      }
     }
+  }
+
+  // the variable of the constraint's defines_var annotation; the annotations are children of the
+  // constraint item, after its element
+  private IntVar definedVar(SimpleNode item) {
+    for (int i = 1; i < item.jjtGetNumChildren(); i++) {
+      if (item.jjtGetChild(i) instanceof ASTAnnotation ann
+          && "defines_var".equals(ann.getAnnId())
+          && ann.jjtGetNumChildren() > 0
+          && ann.jjtGetChild(0).jjtGetNumChildren() > 0
+          && ann.jjtGetChild(0).jjtGetChild(0) instanceof ASTAnnExpr expr
+          && expr.jjtGetChild(0) instanceof ASTScalarFlatExpr e
+          && (e.getType() == 2 || e.getType() == 3)) {
+        return support.getVariable(e) instanceof IntVar v ? v : null;
+      }
+    }
+    return null;
   }
 }
