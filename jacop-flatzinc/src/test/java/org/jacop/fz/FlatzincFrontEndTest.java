@@ -7701,4 +7701,18 @@ class FlatzincFrontEndTest {
     List<String> all = solveAllInOrder(model, "--lcg", "off");
     assertEquals(List.of("a = 0; obj = 0.0;"), all, all.toString());
   }
+
+  @Test
+  void floatPowWithASingletonExponentKeepsItsSolutions() throws IOException {
+    // with precision 0.01 the exponent 1.995..2.004 counted as the constant 1.995, its lower end,
+    // and 10^1.995 = 98.86 is outside z: UNSATISFIABLE, although 10^2 = 100 is a solution
+    String model =
+        "var 10.0..10.0: x :: output_var;\n"
+            + "var 1.995..2.004: y :: output_var;\n"
+            + "var 99.5..100.5: z :: output_var;\n"
+            + "constraint float_pow(x, y, z);\n"
+            + "solve satisfy;\n";
+    String out = run(model, "--precision", "0.01")[0];
+    assertTrue(out.contains("----------"), out);
+  }
 }
