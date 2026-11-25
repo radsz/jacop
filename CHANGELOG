@@ -9068,7 +9068,18 @@ Version 5.0 (unreleased)
    atom, from int arrays: the same search, sudoku_opt p29 and
    gfd-schedule n100 -2.9 % each, wide-quick -f -0.9 %, default -0.2 %.
 
-507. The FlatZinc front end removes int_ne and int_lin_ne constraints that
+507. Root probing and the Diffn area check are cheaper, with the same search.
+   DualFeasibleFunctions keeps a memo of its packing tests, keyed by the
+   container and the set of item sizes: root probing of MiniZinc Challenge
+   2014 rectangle-packing rpp23 made 34,513 tests on 346 distinct sets.
+   LcgSolver writes out equals and hashCode of its probing atoms (with the
+   values of the generated ones, so sets keep their order), and probing
+   stops collecting the consequences of a variable's values once none is
+   common to all. -f wall time on rectangle-packing rpp18-rpp26 -15 to
+   -19 %; at 240 s, Diffn instances proved by both 918 -> 836 s (-f) and
+   188 -> 175 s (default search); wide-quick -f at 600 s total 0.995.
+
+508. The FlatZinc front end removes int_ne and int_lin_ne constraints that
    the declared domains already satisfy (disjoint domains, a fixed side
    outside the other domain, a constant outside the range of the sum)
    before the detectors run, and IntensionTableDetector looks output
