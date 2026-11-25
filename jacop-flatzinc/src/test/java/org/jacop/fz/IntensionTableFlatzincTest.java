@@ -508,4 +508,30 @@ class IntensionTableFlatzincTest {
     assertTrue(out.contains("==========") || out.contains("UNSATISFIABLE"), out);
     return last;
   }
+
+  /**
+   * Two groups with the same constraints over variables of the same domains, but with two outer
+   * variables in the first and one in the second, shared the rows of the first: the second group,
+   * x2 mod y2 = 1, was dropped as if every x2 had a support, and the maximum was 6 instead of 5.
+   */
+  @Test
+  void groupsWithDifferentOuterVariablesKeepTheirOwnRows() throws IOException {
+    String model =
+        """
+        var 1..6: x :: output_var;
+        var 1..4: y :: output_var;
+        var 0..5: z;
+        var 1..6: obj :: output_var;
+        var 1..4: y2;
+        var 0..5: z2;
+        constraint int_mod(x, y, z);
+        constraint int_eq(z, 1);
+        constraint int_mod(obj, y2, z2);
+        constraint int_eq(z2, 1);
+        solve maximize obj;
+        """;
+    assertEquals("5", optimum(run(model, "false")));
+    assertEquals("5", optimum(run(model, null)));
+    assertEquals("5", optimum(run(model, null, "--lcg", "off")));
+  }
 }

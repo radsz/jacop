@@ -32,6 +32,7 @@ package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -470,7 +471,7 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   private boolean cumulativeResourceSumWithinCapacity(IntVar[] r, IntVar b) {
-    int resSum = 0;
+    long resSum = 0;
     for (IntVar v : r) {
       resSum += v.max();
     }
@@ -1301,7 +1302,7 @@ class GlobalConstraints implements ParserTreeConstants {
       if (low[i] > up[i]) {
         throw Store.failException;
       }
-      counter[i] = new IntVar(store, "counter" + i, low[i], up[i]);
+      counter[i] = new IntVar(store, store.freshVariableId("counter" + i), low[i], up[i]);
     }
 
     poseClosedGcc(x, cover, counter);
@@ -1487,10 +1488,14 @@ class GlobalConstraints implements ParserTreeConstants {
       // with the other axis fixed, rectangles apart along it never meet and diffn knows it; the
       // projection then only adds cost (accap), unless all of them cross one line (filters)
       // the projections are redundant: local search does not evaluate them
-      if (!fixedApart(y, ly) && !cumulativeTasks.contains(taskKey(x, lx, ly))) {
+      if (!fixedApart(y, ly)
+          && !cumulativeTasks.contains(taskKey(x, lx, ly))
+          && spanFitsInt(y, ly)) {
         support.implied(() -> poseCumulative(x, lx, ly, span(y, ly)));
       }
-      if (!fixedApart(x, lx) && !cumulativeTasks.contains(taskKey(y, ly, lx))) {
+      if (!fixedApart(x, lx)
+          && !cumulativeTasks.contains(taskKey(y, ly, lx))
+          && spanFitsInt(x, lx)) {
         support.implied(() -> poseCumulative(y, ly, lx, span(x, lx)));
       }
     }
@@ -1530,6 +1535,18 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   /** A variable equal to max(o[i] + l[i]) - min(o[i]), the span of the intervals along one axis. */
+  // first + span = last adds bounds in int, up to twice the distance from the lowest origin to the
+  // highest end
+  private static boolean spanFitsInt(IntVar[] o, IntVar[] l) {
+    long low = Long.MAX_VALUE;
+    long high = Long.MIN_VALUE;
+    for (int i = 0; i < o.length; i++) {
+      low = Math.min(low, o[i].min());
+      high = Math.max(high, (long) o[i].max() + l[i].max());
+    }
+    return 2 * (high - low) <= Integer.MAX_VALUE;
+  }
+
   private IntVar span(IntVar[] o, IntVar[] l) {
     Store localStore = support.store;
     IntVar[] end = new IntVar[o.length];
@@ -2042,6 +2059,10 @@ class GlobalConstraints implements ParserTreeConstants {
    */
   void poseTableRows(IntVar[] v, int[] tbl) {
     int size = v.length;
+    if (size == 0) {
+      // the row count of a table without columns is lost: an empty array has no rows
+      throw Store.failException;
+    }
     if (size == 2) {
       support.permutationElementSums.addTable(v, tbl);
     }
@@ -2670,6 +2691,11 @@ class GlobalConstraints implements ParserTreeConstants {
     // Keep the tuples that can match the domains and project them onto the distinct variables
     // that are not fixed; a tuple that gives two values to the same variable cannot match.
     int size = v.length;
+    if (size == 0) {
+      // no columns: the empty array has no rows, so the table is false
+      b.domain.in(store.level, b, 0, 0);
+      return;
+    }
     Map<IntVar, Integer> position = new LinkedHashMap<>();
     for (IntVar x : v) {
       if (!x.singleton()) {
@@ -2713,8 +2739,50 @@ class GlobalConstraints implements ParserTreeConstants {
     }
     if (b.max() == 0) {
       support.pose(new NegativeTable(nv, t));
+    } else if (position.containsKey(b)) {
+      tableReifiedOnControl(nv, t, position.get(b), b, implication);
     } else {
       support.pose(new TableReified(nv, t, b, implication));
+    }
+  }
+
+  /**
+   * Posts b = 1 implies (or if and only if) x is a tuple when b is x[k] (a bool2int alias), which
+   * TableReified rejects: b = 1 implies that the other variables are a tuple with 1 at k, and, for
+   * the reification, b = 0 implies that they are not a tuple with 0 at k.
+   */
+  private void tableReifiedOnControl(IntVar[] x, int[][] t, int k, IntVar b, boolean implication) {
+    IntVar[] rest = new IntVar[x.length - 1];
+    for (int i = 0, n = 0; i < x.length; i++) {
+      if (i != k) {
+        rest[n++] = x[i];
+      }
+    }
+    List<int[]> one = new ArrayList<>();
+    List<int[]> zero = new ArrayList<>();
+    for (int[] tuple : t) {
+      int[] r = new int[rest.length];
+      for (int i = 0, n = 0; i < tuple.length; i++) {
+        if (i != k) {
+          r[n++] = tuple[i];
+        }
+      }
+      (tuple[k] == 1 ? one : zero).add(r);
+    }
+    if (one.isEmpty()) {
+      b.domain.in(store.level, b, 0, 0);
+    } else if (rest.length > 0) {
+      support.pose(new TableReified(rest, one.toArray(new int[0][]), b, true));
+    }
+    if (implication || zero.isEmpty()) {
+      return;
+    }
+    if (rest.length == 0) {
+      b.domain.in(store.level, b, 1, 1);
+    } else {
+      BooleanVar inZero = new BooleanVar(store);
+      support.pose(new TableReified(rest, zero.toArray(new int[0][]), inZero, false));
+      support.pose(new XlteqY(inZero, b));
     }
   }
 
@@ -3131,6 +3199,18 @@ class GlobalConstraints implements ParserTreeConstants {
     }
   }
 
+  // an automaton over no variable accepts the empty word only: it holds when the start state is
+  // final and fails otherwise; true when the sequence is empty, so nothing is left to post
+  private static boolean emptyWord(IntVar[] x, int q0, IntDomain finalStates) {
+    if (x.length > 0) {
+      return false;
+    }
+    if (!finalStates.contains(q0)) {
+      throw Store.failException;
+    }
+    return true;
+  }
+
   void gen_jacop_regular(SimpleNode node) {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     int numStates = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
@@ -3139,6 +3219,10 @@ class GlobalConstraints implements ParserTreeConstants {
     int q0 = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(4));
     IntDomain F = support.getSetLiteral(node, 5);
     int minIndex = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(6));
+
+    if (emptyWord(x, q0, F)) {
+      return;
+    }
 
     // ---- KK, 2018-07-27
     // regular must not have duplicated variables; we create all
@@ -3467,6 +3551,10 @@ class GlobalConstraints implements ParserTreeConstants {
     IntDomain F = support.getSetLiteral(node, 5);
     support.getInt((ASTScalarFlatExpr) node.jjtGetChild(6)); // the minimum index, unused
 
+    if (emptyWord(x, q0, F)) {
+      return;
+    }
+
     // ---- KK, 2018-07-27
     // regular must not have duplicated variables; we create all
     // different variables and equality constraints here
@@ -3508,8 +3596,11 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar P = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(4));
 
-    if (Arrays.stream(x).anyMatch(v -> !v.singleton() && (v == W || v == P))) {
-      // Knapsack rejects a quantity that is also the capacity or the profit
+    if (Arrays.stream(x).anyMatch(v -> !v.singleton() && (v == W || v == P))
+        || mergedBeyondInt(x, weights)
+        || mergedBeyondInt(x, profits)) {
+      // Knapsack rejects a quantity that is also the capacity or the profit, and it merges the
+      // items of one variable into an item with an int weight and profit
       support.pose(new LinearInt(x, weights, "==", W));
       support.pose(new LinearInt(x, profits, "==", P));
       return;
@@ -3525,6 +3616,18 @@ class GlobalConstraints implements ParserTreeConstants {
             .build()
             // a proof derives the rows of the relaxation, not the prunings of the dynamic program
             .dynamicProgramming(support.options.proof() == null));
+  }
+
+  // true when the coefficients of one variable listed several times add up beyond an int
+  private static boolean mergedBeyondInt(IntVar[] x, int[] coefficients) {
+    Map<IntVar, Long> merged = new IdentityHashMap<>();
+    for (int i = 0; i < x.length; i++) {
+      long sum = merged.merge(x[i], (long) coefficients[i], Long::sum);
+      if (sum != (int) sum) {
+        return true;
+      }
+    }
+    return false;
   }
 
   void gen_jacop_sequence(SimpleNode node) {
@@ -3583,9 +3686,12 @@ class GlobalConstraints implements ParserTreeConstants {
     // files compiled with older versions of the library number them from the lowest node in arc.
     int minNode = Math.min(1, Arrays.stream(arc).min().getAsInt());
 
-    if (support.options.proof() != null && Arrays.stream(weight).allMatch(IntVar::singleton)) {
+    String mode = networkFlowMode();
+    if (Arrays.stream(weight).allMatch(IntVar::singleton) && !"global".equals(mode)) {
       networkFlowRows(arc, minNode, flow, weight, balance, cost);
-      return;
+      if ("rows".equals(mode)) {
+        return;
+      }
     }
 
     NetworkBuilder net = new NetworkBuilder();
@@ -3603,6 +3709,32 @@ class GlobalConstraints implements ParserTreeConstants {
     net.setCostVariable(cost);
 
     support.pose(new NetworkFlow(net));
+  }
+
+  /**
+   * How a network flow with fixed weights is posted, by the system property {@code
+   * org.jacop.fz.networkFlow}: {@code global} (only {@link NetworkFlow}), {@code rows} (only the
+   * flow conservation rows and the cost row, as MiniZinc's standard decomposition), {@code both},
+   * or {@code auto} (the default: rows under free search, both otherwise). Under --proof the rows
+   * alone. The arc analysis of NetworkFlow (reduced-cost pruning with a shortest path per arc)
+   * costs more than it prunes on the small networks of the MiniZinc Challenge mapping problem
+   * (sixteen networks of 11 nodes and 36 arcs, about 80 % of the time), and the rows explain better
+   * under lazy clause generation. Mapping and nfc 2015-2022, 30 instances at 120 s, two seeds: free
+   * search 841 s with the global, 712 s with both, 598 s with the rows (2018 ring_mp3 28-111 s to 7
+   * s); default search 945 s, 793 s with the rows, 687 s with both (2016 mesh3x3_mp3 proved in
+   * 12-18 s instead of not in 120 s; the rows alone lose 2021 mesh4x4_2, 6-9 s to 51-53 s).
+   *
+   * @return global, rows or both
+   */
+  private String networkFlowMode() {
+    if (support.options.proof() != null) {
+      return "rows";
+    }
+    String mode = System.getProperty("org.jacop.fz.networkFlow", "auto");
+    if ("auto".equals(mode)) {
+      return support.options.freeSearch() ? "rows" : "both";
+    }
+    return mode;
   }
 
   // --proof: the network flow as its rows, which the OPB model states and a proof derives from:
@@ -3688,6 +3820,13 @@ class GlobalConstraints implements ParserTreeConstants {
   void gen_jacop_lex_chain(SimpleNode node, boolean strict) {
     IntVar[] a = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     int vectors = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+    if (a.length == 0) {
+      // no vectors, or vectors of length 0: all equal, so a strict chain has at most one
+      if (strict && vectors > 1) {
+        throw Store.failException;
+      }
+      return;
+    }
     int n = a.length / vectors;
 
     // vector j is column j of the matrix that a lists row by row
@@ -3845,6 +3984,29 @@ class GlobalConstraints implements ParserTreeConstants {
     support.delayedConstraints.add(support.binPackingCardinality.binPacking(bin, cc, w, minBin));
     support.binPackingCliques.add(bin, cc, w, minBin);
     support.binPackingPermutations.add(bin, cc, w, minBin);
+    if (BIN_LOADS_DEFINED && !support.dictionary.isSearchAnnotated()) {
+      markLoadsDefined(bin, cc);
+    }
+  }
+
+  // the loads of a bin packing follow from the bins of its items: free search branches on them
+  // last, and LNS relaxes the bins only. The balanced academic curriculum of XCSP 2026 (BACPj,
+  // 500 courses in 100 periods of at least 2 courses) translated without defines_var annotations
+  // branched on the credit loads, the variables of its sum-of-squares objective, and found no
+  // solution in 240 s; on the bins the first solution comes in a second. Only in a model without
+  // a search annotation: the MiniZinc Challenge models carry one, and on gbac at 600 s with -f
+  // the loads defined made 6 of 19 objectives worse and 1 better
+  static final boolean BIN_LOADS_DEFINED =
+      !FALSE.equals(System.getProperty("org.jacop.fz.binPackingLoadsDefined"));
+
+  private void markLoadsDefined(IntVar[] bin, IntVar[] load) {
+    Set<IntVar> bins = Collections.newSetFromMap(new IdentityHashMap<>());
+    bins.addAll(Arrays.asList(bin));
+    for (IntVar l : load) {
+      if (!l.singleton() && !bins.contains(l)) {
+        support.dictionary.addDefinedVar(l);
+      }
+    }
   }
 
   void gen_jacop_bin_packing_capacity(SimpleNode node) {
@@ -3942,9 +4104,9 @@ class GlobalConstraints implements ParserTreeConstants {
 
       System.arraycopy(xx, i * dim, coords, 0, dim);
 
-      IntVar start = new IntVar(store, "start[" + i + "]", 0, 0);
-      IntVar duration = new IntVar(store, "duration[" + i + "]", 1, 1);
-      IntVar end = new IntVar(store, "end[" + i + "]", 1, 1);
+      IntVar start = new IntVar(store, store.freshVariableId("start[" + i + "]"), 0, 0);
+      IntVar duration = new IntVar(store, store.freshVariableId("duration[" + i + "]"), 1, 1);
+      IntVar end = new IntVar(store, store.freshVariableId("end[" + i + "]"), 1, 1);
       GeostObject obj = new GeostObject(i, coords, kk[i], start, duration, end);
       objects.add(obj);
     }

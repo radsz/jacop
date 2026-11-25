@@ -1299,6 +1299,14 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public int intersectAdapt(IntDomain domain) {
 
+    if (domain.isEmpty()) {
+      if (isEmpty()) {
+        return NONE;
+      }
+      clear();
+      return GROUND;
+    }
+
     if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
       return intersectAdapt(window(domain, 0));
     }
@@ -1398,11 +1406,8 @@ public class SmallDenseDomain extends IntDomain {
       return computeEventType(singleton, previousMin, minBound, previousMax, max);
     }
 
-    if (ASSERTS_ENABLED) {
-      throw new IllegalStateException(
-          String.valueOf("Not implemented for class " + domain.getClass()));
-    }
-    return -1;
+    // any other domain, such as an affine view, through the values within the bit window
+    return intersectAdapt(window(domain, 0));
   }
 
   @Override
@@ -1737,6 +1742,11 @@ public class SmallDenseDomain extends IntDomain {
 
   @Override
   public void setDomain(int min, int max) {
+
+    if ((long) max - min > 63) {
+      throw new IllegalArgumentException(
+          "The resulting domain can not be handled properly by " + this.getClass());
+    }
 
     this.minBound = min;
 

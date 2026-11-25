@@ -283,6 +283,36 @@ public class XorSystem extends Constraint
     return IntDomain.GROUND;
   }
 
+  /**
+   * It imposes the system with its rows as given: the same object imposed again after the level of
+   * an earlier imposition was removed would keep the columns seen and the rows eliminated there.
+   *
+   * @param store the constraint store in which the constraint is imposed.
+   */
+  @Override
+  public void impose(Store store) {
+    if (!firstCall) {
+      for (int i = 0; i < rows.length; i++) {
+        Arrays.fill(rows[i], 0L);
+        for (int c : givenRows[i]) {
+          rows[i][c >>> 6] ^= 1L << c;
+        }
+        parity[i] = givenParities[i];
+      }
+      Arrays.fill(pivotOf, -1);
+      Arrays.fill(rowOf, -1);
+      Arrays.fill(seen, 0L);
+      seenSize = 0;
+      Arrays.fill(newlyUnfixed, 0L);
+      Arrays.fill(isPending, false);
+      pendingSize = 0;
+      Arrays.fill(dirty, -1L);
+      failedValid = false;
+      firstCall = true;
+    }
+    super.impose(store);
+  }
+
   @Override
   public void consistency(final Store store) {
     if (off) {
