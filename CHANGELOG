@@ -8721,12 +8721,17 @@ Version 5.0 (unreleased)
    builds the cost function network of an objective that sums unary and
    binary cost tables (weighted CSP: protein design, frequency assignment)
    and posts the bound when its root bound is above the bound the objective
-   has after the linear relaxation. MiniZinc Challenge 2018 proteindesign12
-   1HZ5.12p.9aa.usingEref_self_x is proved in 9 s instead of more than
-   240 s. On the 46 celar, spot5 and proteindesign12 instances where a
-   network is built, at 240 s: default search 8 -> 18 proved
-   (proteindesign12 3 -> 13 of 15), -f 28 -> 31 (proteindesign12 8 -> 12);
-   spot5 unchanged, celar within its seed spread. On the wide set 48 of
+   has after the linear relaxation and the network has at most 500 cost
+   terms (-Dorg.jacop.cfn.maxTerms): a reason of the bound cites the whole
+   network, and on the CELAR networks of 1034 to 3417 terms explanations
+   grew from 8 to 144 atoms for a bound below 1 % of the optimum, so
+   solutions got worse. MiniZinc Challenge 2018 proteindesign12
+   1HZ5.12p.9aa.usingEref_self_x is proved in 12 s instead of more than
+   600 s (8 s instead of 477 s under -f). On the 46 celar, spot5 and
+   proteindesign12 instances where a network is built, at 600 s: default
+   search 9 -> 18 proved (proteindesign12 4 -> 13 of 15, 0.07 of the time
+   where both prove), -f 31 -> 36 (proteindesign12 9 -> 13, 0.18 of the
+   time); spot5 unchanged, celar within its seed spread. On the wide set 48 of
    187 optimisation instances build a network (4.5 s of detection in all,
    at most 0.5 s on one); the bound is posted only on proteindesign12.
    -Dorg.jacop.fz.costNetwork=false turns it off.
