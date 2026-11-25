@@ -13105,4 +13105,81 @@ class SingleConstraintTest extends TestHelper {
     assertThat(d[1].max()).isZero();
     assertThat(r3.max()).isEqualTo(1);
   }
+
+  // Decompositions named their variables Q0, W0, N0, bxMin, x_position, ... with fixed names. Two
+  // decompositions in one store, or a variable of the model with such a name, gave two variables
+  // one id: findVariable("Q0") returned the decomposition's variable instead of the model's, and
+  // the model's one was kept under a key that is not its id.
+  @Test
+  void decompositionsInOneStoreGiveTheirVariablesIdsOfTheirOwn() {
+    Store store = new Store();
+    IntVar q0 = new IntVar(store, "Q0", 0, 1);
+    IntVar w0 = new IntVar(store, "W0", 0, 1);
+    IntVar bxMin = new IntVar(store, "bxMin", 0, 0);
+    IntVar[] a = {new IntVar(store, "a0", 0, 1), new IntVar(store, "a1", 0, 1)};
+    IntVar[] b = {new IntVar(store, "b0", 0, 1), new IntVar(store, "b1", 0, 1)};
+    IntVar[] c = {new IntVar(store, "c0", 0, 1), new IntVar(store, "c1", 0, 1)};
+    IntVar[] d = {new IntVar(store, "d0", 0, 1), new IntVar(store, "d1", 0, 1)};
+    IntVar[] s = {
+      new IntVar(store, "s0", 1, 3), new IntVar(store, "s1", 1, 3), new IntVar(store, "s2", 1, 3)
+    };
+    IntVar[] t = {
+      new IntVar(store, "t0", 1, 3), new IntVar(store, "t1", 1, 3), new IntVar(store, "t2", 1, 3)
+    };
+    IntVar s0position = new IntVar(store, "s0_position", 0, 0);
+
+    // words over {0, 1} with a 1 at the end
+    FsmState[] state = {new FsmState(), new FsmState()};
+    Fsm fsm = new Fsm();
+    fsm.allStates.add(state[0]);
+    fsm.allStates.add(state[1]);
+    fsm.initState = state[0];
+    fsm.finalStates.add(state[1]);
+    for (FsmState from : state) {
+      from.addTransition(new FsmTransition(new IntervalDomain(0, 0), state[0]));
+      from.addTransition(new FsmTransition(new IntervalDomain(1, 1), state[1]));
+    }
+    store.imposeDecomposition(new Regular(fsm, a));
+    store.imposeDecomposition(new Regular(fsm, b));
+
+    // the cost is the number of ones, at most 1
+    int[][] transition = {{0, 0}};
+    int[][] costs = {{0, 1}};
+    IntVar costC = new IntVar(store, "costC", 0, 1);
+    IntVar costD = new IntVar(store, "costD", 0, 1);
+    store.imposeDecomposition(new CostRegular(c, transition, 0, 0, new int[] {0}, costs, costC));
+    store.imposeDecomposition(new CostRegular(d, transition, 0, 0, new int[] {0}, costs, costD));
+
+    // two unit squares in a 2 x 1 strip, twice
+    IntVar[][] squares = new IntVar[4][];
+    for (int i = 0; i < 4; i++) {
+      squares[i] =
+          new IntVar[] {
+            new IntVar(store, "x" + i, 0, 1),
+            new IntVar(store, "y" + i, 0, 0),
+            new IntVar(store, "lx" + i, 1, 1),
+            new IntVar(store, "ly" + i, 1, 1)
+          };
+    }
+    store.imposeDecomposition(new Diffn(new IntVar[][] {squares[0], squares[1]}));
+    store.imposeDecomposition(new Diffn(new IntVar[][] {squares[2], squares[3]}));
+
+    for (Constraint k : Subcircuit.decomposition(store, s, new IntVar[3])) {
+      store.impose(k);
+    }
+    for (Constraint k : Subcircuit.decomposition(store, t, new IntVar[3])) {
+      store.impose(k);
+    }
+
+    store.variablesHashMap.forEach((key, v) -> assertThat(v.id()).as(key).isEqualTo(key));
+    assertThat(store.findVariable("Q0")).isSameAs(q0);
+    assertThat(store.findVariable("W0")).isSameAs(w0);
+    assertThat(store.findVariable("bxMin")).isSameAs(bxMin);
+    assertThat(store.findVariable("s0_position")).isSameAs(s0position);
+
+    IntVar[] x = {squares[0][0], squares[1][0], squares[2][0], squares[3][0]};
+    // Regular 2 * 2, CostRegular 3 * 3 with the costs, Diffn 2 * 2
+    assertThat(noOfAllSolutions(store, a, b, c, d, new IntVar[] {costC, costD}, x))
+        .isEqualTo(2 * 2 * 3 * 3 * 2 * 2);
+  }
 }
