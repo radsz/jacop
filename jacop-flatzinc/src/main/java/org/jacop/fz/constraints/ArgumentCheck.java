@@ -106,6 +106,37 @@ public final class ArgumentCheck implements ParserTreeConstants {
           a.parts(0, k, "dimensions", "boxes of " + k + " dimensions");
         },
         "jacop_diffn_k");
+
+    // arrays with one entry per variable, task, item or value
+    rule(a -> a.sameLength("the variables and the occurrences", 0, 1), "jacop_alldifferent_opt");
+    rule(a -> a.sameLength("the starts, durations and resources", 0, 1, 2), "jacop_cumulative");
+    rule(
+        a -> a.sameLength("the starts, durations, resources and occurrences", 0, 1, 2, 4),
+        "jacop_cumulative_optional");
+    rule(
+        a -> a.sameLength("the starts, durations and occurrences", 0, 1, 2),
+        "jacop_disjunctive_optional",
+        "jacop_disjunctive_strict_optional");
+    rule(
+        a -> a.sameLength("the conditions and the values", 0, 1),
+        "jacop_if_then_else_int",
+        "jacop_if_then_else_bool",
+        "jacop_if_then_else_float",
+        "jacop_if_then_else_set");
+    rule(a -> a.sameLength("the weights, profits and items", 0, 1, 4), "jacop_knapsack");
+    rule(a -> a.sameLength("the values and the weights", 0, 1), "jacop_sum_set");
+    rule(
+        a -> a.sameLength("the values and the counts", 1, 2),
+        "jacop_count_values",
+        "jacop_global_cardinality_closed");
+    rule(
+        a -> a.sameLength("the values and the bounds", 1, 2, 3),
+        "jacop_count_values_bounds",
+        "jacop_global_cardinality_low_up_closed");
+    rule(a -> a.sameLength("the variables and the sorted variables", 0, 1), "jacop_sort");
+    rule(
+        a -> a.sameLength("the variables, the permutation and the sorted variables", 0, 1, 2),
+        "jacop_sort_permutation");
   }
 
   private ArgumentCheck() {}

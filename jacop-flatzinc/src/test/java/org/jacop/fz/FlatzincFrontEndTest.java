@@ -8213,4 +8213,32 @@ class FlatzincFrontEndTest {
                 + "constraint jacop_lex_chain_less_int([], 0);\nsolve satisfy;\n",
             "-a")[0]);
   }
+
+  @Test
+  void parallelArraysOfDifferentLengthsAreAnErrorOfTheModel() throws IOException {
+    // arrays with one entry per task, item or value threw ArrayIndexOutOfBoundsException when one
+    // was shorter ("JaCoP internal error"), or were cut to the shortest without a word
+    String vars = "var 0..3: x :: output_var;\nvar 0..3: y;\nvar 1..2: d;\nvar bool: b;\n";
+    assertModelError(
+        vars + "constraint jacop_cumulative([x, y], [d], [d, d], 2);\nsolve satisfy;\n",
+        "jacop_cumulative: the starts, durations and resources have different lengths");
+    assertModelError(
+        vars + "constraint jacop_if_then_else_int([b], [x, y], 1);\nsolve satisfy;\n",
+        "jacop_if_then_else_int: the conditions and the values have different lengths");
+    assertModelError(
+        vars + "constraint jacop_sort([x, y], [y]);\nsolve satisfy;\n",
+        "jacop_sort: the variables and the sorted variables have different lengths");
+    assertModelError(
+        vars
+            + "constraint jacop_global_cardinality_closed([x, y], [0, 1, 2, 3], [x, y]);\n"
+            + "solve satisfy;\n",
+        "jacop_global_cardinality_closed: the values and the counts have different lengths");
+    assertModelError(
+        vars + "constraint jacop_knapsack([1, 2], [1], x, y, [d, d]);\nsolve satisfy;\n",
+        "jacop_knapsack: the weights, profits and items have different lengths");
+    // a knapsack without items has no weight and no profit (Knapsack threw on it)
+    assertEquals(
+        "x = 0;\n----------\n==========\n",
+        run(vars + "constraint jacop_knapsack([], [], x, y, []);\nsolve satisfy;\n", "-a")[0]);
+  }
 }

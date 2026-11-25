@@ -3725,11 +3725,12 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar P = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(4));
 
-    if (Arrays.stream(x).anyMatch(v -> !v.singleton() && (v == W || v == P))
+    if (x.length == 0
+        || Arrays.stream(x).anyMatch(v -> !v.singleton() && (v == W || v == P))
         || mergedBeyondInt(x, weights)
         || mergedBeyondInt(x, profits)) {
       // Knapsack rejects a quantity that is also the capacity or the profit, and it merges the
-      // items of one variable into an item with an int weight and profit
+      // items of one variable into an item with an int weight and profit; it needs an item
       support.pose(new LinearInt(x, weights, "==", W));
       support.pose(new LinearInt(x, profits, "==", P));
       return;
