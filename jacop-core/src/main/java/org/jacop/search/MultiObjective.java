@@ -469,7 +469,8 @@ public final class MultiObjective<S> {
       IntVar cost = objectives[k];
       if (p.maximize()[k]) {
         if (negated[k] == null) {
-          negated[k] = new IntVar(store, "-" + cost.id(), -cost.max(), -cost.min());
+          negated[k] =
+              new IntVar(store, store.freshVariableId("-" + cost.id()), -cost.max(), -cost.min());
           store.impose(new XplusYeqC(negated[k], cost, 0));
         }
         cost = negated[k];

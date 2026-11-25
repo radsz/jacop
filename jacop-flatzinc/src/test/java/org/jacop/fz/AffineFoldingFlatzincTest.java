@@ -291,4 +291,27 @@ class AffineFoldingFlatzincTest {
     assertTrue(out.contains("==========") || out.contains("UNSATISFIABLE"), out);
     return last;
   }
+
+  @Test
+  void anArrayOfTheModelNamedLikeAFoldedRowKeepsItsVariables() throws IOException {
+    // the folded row z + y <= 9 became x + y <= 8 over an array named X_JACOP_AFFINE_0, which
+    // replaced the model's own array of that name: y - w = 3 was posted over [x, y], and solutions
+    // with y - w = 1 were printed
+    String model =
+        """
+        var 0..5: x :: output_var;
+        var 1..6: z :: is_defined_var;
+        var 0..10: y :: output_var;
+        var 0..10: w :: output_var;
+        array [1..2] of var int: X_JACOP_AFFINE_0 = [y, w];
+        constraint int_plus(x, 1, z) :: defines_var(z);
+        constraint int_lin_le([1,1],[z,y],9);
+        constraint int_lin_eq([1,-1],X_JACOP_AFFINE_0,3);
+        solve satisfy;
+        """;
+    String off = run(model, false, "-a");
+    assertEquals(21, solutions(off), off);
+    String on = run(model, true, "-a");
+    assertEquals(off, on);
+  }
 }
