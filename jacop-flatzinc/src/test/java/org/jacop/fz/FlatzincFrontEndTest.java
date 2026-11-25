@@ -8015,12 +8015,12 @@ class FlatzincFrontEndTest {
             "int_lin_eq([1], x, 3)",
             "Argument 2 of constraint int_lin_eq",
             "jacop_regular([x], 1, 3, [1,0], 1, {1}, 1)",
-            "The arguments of constraint jacop_regular do not fit",
+            "jacop_regular: the transition table has 2 elements, not 1 x 3 entries",
             "bool_and(x, b, b)",
             "Argument 1 of constraint bool_and is not of type var bool",
             // a transition to a state the automaton does not have was an internal error
             "jacop_regular([x], 1, 1, [2], 1, {1}, 1)",
-            "The arguments of constraint jacop_regular do not fit",
+            "jacop_regular: the next state 2 is not a state 0..1",
             "jacop_networkflow([1,2], [x], [x, y], [0,0], x)",
             "Arguments 2 and 3 of constraint jacop_networkflow");
     for (Map.Entry<String, String> c : constraints.entrySet()) {
@@ -8159,13 +8159,13 @@ class FlatzincFrontEndTest {
     String vars = "var 0..3: x :: output_var;\nvar 0..3: y;\nvar 0..3: z;\n";
     assertModelError(
         vars + "constraint int_lin_eq([1, 2], [x, y, z], 3);\nsolve satisfy;\n",
-        "int_lin_eq: the coefficients and the variables have different lengths");
+        "Arguments 1 and 2 of constraint int_lin_eq are arrays of different lengths; execution aborted");
     assertModelError(
         vars + "constraint int_lin_le([], [x, y, z], 3);\nsolve satisfy;\n",
-        "int_lin_le: the coefficients and the variables have different lengths");
+        "Arguments 1 and 2 of constraint int_lin_le are arrays of different lengths; execution aborted");
     assertModelError(
         vars + "constraint int_lin_ne([1, 2, -1], [x, y, z, z], 2);\nsolve satisfy;\n",
-        "int_lin_ne: the coefficients and the variables have different lengths");
+        "Arguments 1 and 2 of constraint int_lin_ne are arrays of different lengths; execution aborted");
   }
 
   @Test
@@ -8204,14 +8204,13 @@ class FlatzincFrontEndTest {
     assertModelError(
         vars + "constraint jacop_diffn_k([x, y], [z, z], 0, true);\nsolve satisfy;\n",
         "jacop_diffn_k: 2 elements do not split into boxes of 0 dimensions");
-    // no boxes of no dimensions do not overlap; no vectors form a chain
+    // boxes of no dimensions are an error of the model even without boxes; no vectors form a chain
+    assertModelError(
+        vars + "constraint jacop_diffn_k([], [], 0, true);\nsolve satisfy;\n",
+        "jacop_diffn_k: the number of dimensions is not positive");
     assertEquals(
         "x = 0;\n----------\nx = 1;\n----------\n==========\n",
-        run(
-            vars
-                + "constraint jacop_diffn_k([], [], 0, true);\n"
-                + "constraint jacop_lex_chain_less_int([], 0);\nsolve satisfy;\n",
-            "-a")[0]);
+        run(vars + "constraint jacop_lex_chain_less_int([], 0);\nsolve satisfy;\n", "-a")[0]);
   }
 
   @Test
@@ -8221,21 +8220,21 @@ class FlatzincFrontEndTest {
     String vars = "var 0..3: x :: output_var;\nvar 0..3: y;\nvar 1..2: d;\nvar bool: b;\n";
     assertModelError(
         vars + "constraint jacop_cumulative([x, y], [d], [d, d], 2);\nsolve satisfy;\n",
-        "jacop_cumulative: the starts, durations and resources have different lengths");
+        "Arguments 1 and 2 of constraint jacop_cumulative are arrays of different lengths; execution aborted");
     assertModelError(
         vars + "constraint jacop_if_then_else_int([b], [x, y], 1);\nsolve satisfy;\n",
-        "jacop_if_then_else_int: the conditions and the values have different lengths");
+        "Arguments 1 and 2 of constraint jacop_if_then_else_int are arrays of different lengths; execution aborted");
     assertModelError(
         vars + "constraint jacop_sort([x, y], [y]);\nsolve satisfy;\n",
-        "jacop_sort: the variables and the sorted variables have different lengths");
+        "Arguments 1 and 2 of constraint jacop_sort are arrays of different lengths; execution aborted");
     assertModelError(
         vars
             + "constraint jacop_global_cardinality_closed([x, y], [0, 1, 2, 3], [x, y]);\n"
             + "solve satisfy;\n",
-        "jacop_global_cardinality_closed: the values and the counts have different lengths");
+        "Arguments 2 and 3 of constraint jacop_global_cardinality_closed are arrays of different lengths; execution aborted");
     assertModelError(
         vars + "constraint jacop_knapsack([1, 2], [1], x, y, [d, d]);\nsolve satisfy;\n",
-        "jacop_knapsack: the weights, profits and items have different lengths");
+        "Arguments 1 and 2 of constraint jacop_knapsack are arrays of different lengths; execution aborted");
     // a knapsack without items has no weight and no profit (Knapsack threw on it)
     assertEquals(
         "x = 0;\n----------\n==========\n",

@@ -53,17 +53,12 @@ public final class ArgumentCheck implements ParserTreeConstants {
 
   private static final Map<String, Rule> RULES = new HashMap<>();
 
-  static {
-    // the weights and the variables of a linear row
-    Rule linear = a -> a.sameLength("the coefficients and the variables", 0, 1);
-    for (String type : new String[] {"int", "bool", "float"}) {
-      for (String relation : new String[] {"eq", "ne", "le", "lt", "ge", "gt"}) {
-        for (String suffix : new String[] {"", "_reif", "_imp"}) {
-          rule(linear, type + "_lin_" + relation + suffix);
-        }
-      }
-    }
+  // the arrays whose elements a predicate pairs (the weights and variables of a linear row, the
+  // starts, durations and resources of tasks, values and counts) are checked to be of one length
+  // with the types of the arguments, by org.jacop.fz.ConstraintArguments as each constraint is
+  // read; the rules here check the sizes that other arguments give
 
+  static {
     // flattened matrices: the number of vectors, lists, rows or columns must divide the array
     // (jacop_lex_chain_less_int with a negative number is left to the generator)
     rule(a -> a.parts(0, a.intArg(1), null, a.intArg(1) + " vectors"), "jacop_lex_chain_less_int");
@@ -103,42 +98,14 @@ public final class ArgumentCheck implements ParserTreeConstants {
         "jacop_cardinality_matrix");
     rule(
         a -> {
-          a.sameLength("the positions and the sizes", 0, 1);
           int k = a.intArg(2);
           a.parts(0, k, "dimensions", "boxes of " + k + " dimensions");
+          if (k == 0) {
+            // a box has at least one dimension (as ConstraintArguments read it, rejecting k < 1)
+            a.fail("the number of dimensions is not positive");
+          }
         },
         "jacop_diffn_k");
-
-    // arrays with one entry per variable, task, item or value
-    rule(a -> a.sameLength("the variables and the occurrences", 0, 1), "jacop_alldifferent_opt");
-    rule(a -> a.sameLength("the starts, durations and resources", 0, 1, 2), "jacop_cumulative");
-    rule(
-        a -> a.sameLength("the starts, durations, resources and occurrences", 0, 1, 2, 4),
-        "jacop_cumulative_optional");
-    rule(
-        a -> a.sameLength("the starts, durations and occurrences", 0, 1, 2),
-        "jacop_disjunctive_optional",
-        "jacop_disjunctive_strict_optional");
-    rule(
-        a -> a.sameLength("the conditions and the values", 0, 1),
-        "jacop_if_then_else_int",
-        "jacop_if_then_else_bool",
-        "jacop_if_then_else_float",
-        "jacop_if_then_else_set");
-    rule(a -> a.sameLength("the weights, profits and items", 0, 1, 4), "jacop_knapsack");
-    rule(a -> a.sameLength("the values and the weights", 0, 1), "jacop_sum_set");
-    rule(
-        a -> a.sameLength("the values and the counts", 1, 2),
-        "jacop_count_values",
-        "jacop_global_cardinality_closed");
-    rule(
-        a -> a.sameLength("the values and the bounds", 1, 2, 3),
-        "jacop_count_values_bounds",
-        "jacop_global_cardinality_low_up_closed");
-    rule(a -> a.sameLength("the variables and the sorted variables", 0, 1), "jacop_sort");
-    rule(
-        a -> a.sameLength("the variables, the permutation and the sorted variables", 0, 1, 2),
-        "jacop_sort_permutation");
 
     // a Boolean per value of the set
     rule(a -> a.size(1, a.set(2).getSize(), "b", "one Boolean per value"), "jacop_channel");
@@ -162,7 +129,6 @@ public final class ArgumentCheck implements ParserTreeConstants {
     rule(
         a -> {
           a.size(0, 2L * Math.max(0, a.length(1)), "arc", "two nodes per flow");
-          a.sameLength("the flows and the weights", 1, 2);
           int[] arc = a.ints(0);
           int nodes = a.length(3);
           if (arc != null && arc.length > 0 && nodes >= 0) {

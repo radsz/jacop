@@ -441,10 +441,6 @@ final class ConstraintArguments {
 
   private static final String END = "; execution aborted";
 
-  private static final Type VAR_INTS = Type.parse("[]var int");
-
-  private static final Type INTS = Type.parse("[]int");
-
   // the type of the elements of an array of each type, made once
   private static final Type[] ELEMENTS = new Type[2 * Base.values().length];
 
@@ -479,9 +475,8 @@ final class ConstraintArguments {
     if (types == null || !fits(call, types)) {
       errors(name, call, types);
     }
-    if (types != null) {
-      dimensions(name, call);
-    }
+    // the sizes that other arguments give (states, dimensions, tuples, nodes) are checked by
+    // org.jacop.fz.constraints.ArgumentCheck before the constraints are generated
   }
 
   // whether the arguments are of the types of the predicate, of the declared lengths
@@ -557,92 +552,6 @@ final class ConstraintArguments {
         }
       }
     }
-  }
-
-  // the arrays whose length the other arguments give: a transition table of states x symbols,
-  // tuples of the length of the scope, edges between the nodes of a diagram
-  private void dimensions(String name, SimpleNode call) {
-    switch (name) {
-      case "jacop_regular", "jacop_cost_regular" -> {
-        long cells = (long) intArg(call, 1) * intArg(call, 2);
-        int[] d = ints(call, 3);
-        if (d.length != cells
-            || "jacop_cost_regular".equals(name) && ints(call, 6).length != cells) {
-          throw dimension(name, "a table of states x symbols has " + cells + " entries");
-        }
-      }
-      case "jacop_diffn_k" -> {
-        int k = intArg(call, 2);
-        if (k < 1 || arrayLength((SimpleNode) call.jjtGetChild(0), VAR_INTS) % k != 0) {
-          throw dimension(name, "the origins are not boxes of " + k + " dimensions");
-        }
-      }
-      case "jacop_table_int",
-          "jacop_table_bool",
-          "jacop_short_table_int",
-          "jacop_negative_table_int",
-          "jacop_table_int_reif",
-          "jacop_table_bool_reif",
-          "jacop_table_int_imp",
-          "jacop_table_bool_imp" -> {
-        int scope = arrayLength((SimpleNode) call.jjtGetChild(0), VAR_INTS);
-        int tuples = arrayLength((SimpleNode) call.jjtGetChild(1), INTS);
-        if (scope > 0 ? tuples % scope != 0 : tuples != 0) {
-          throw dimension(name, "the tuples are not of the length of the scope, " + scope);
-        }
-      }
-      case "jacop_networkflow" -> {
-        int arcs = ints(call, 0).length;
-        if (arcs != 2 * arrayLength((SimpleNode) call.jjtGetChild(1), VAR_INTS)) {
-          throw dimension(name, "the arcs are not one pair of nodes for each flow");
-        }
-      }
-      case "jacop_mdd", "jacop_cost_mdd" -> {
-        int nodes = ints(call, 1).length;
-        int[] from = ints(call, 2);
-        int[] to = ints(call, "jacop_mdd".equals(name) ? 4 : 5);
-        for (int e = 0; e < from.length; e++) {
-          if (from[e] < 1 || from[e] > nodes || to[e] < 0 || to[e] > nodes) {
-            throw dimension(name, "an edge goes outside the nodes 1.." + nodes);
-          }
-        }
-      }
-      default -> {
-        // no dimension to check
-      }
-    }
-  }
-
-  private static IllegalArgumentException dimension(String name, String what) {
-    return new IllegalArgumentException(
-        "The arguments of constraint " + name + " do not fit: " + what + END);
-  }
-
-  // the value of a par int argument, which the types checked already
-  private int intArg(SimpleNode call, int i) {
-    ASTScalarFlatExpr e = (ASTScalarFlatExpr) call.jjtGetChild(i);
-    return switch (e.getType()) {
-      case 2 -> table.intTable.get(e.getIdent());
-      case 3 -> table.intArrayTable.get(e.getIdent())[e.getInt()];
-      default -> e.getInt();
-    };
-  }
-
-  // the values of an array of par int argument, which the types checked already
-  private int[] ints(SimpleNode call, int i) {
-    SimpleNode arg = (SimpleNode) call.jjtGetChild(i);
-    if (arg instanceof ASTScalarFlatExpr e) {
-      return table.intArrayTable.get(e.getIdent());
-    }
-    int[] packed = arg.packedInts();
-    if (packed != null) {
-      return packed;
-    }
-    int[] values = new int[arg.jjtGetNumChildren()];
-    for (int k = 0; k < values.length; k++) {
-      values[k] = intArg(arg, k);
-    }
-    return values;
   }
 
   // every identifier of an argument names a symbol of the model, and every array access lies
