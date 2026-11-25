@@ -8140,4 +8140,31 @@ class FlatzincFrontEndTest {
       assertEquals(0, lastStatus, accepted);
     }
   }
+
+  // a model whose arguments do not agree is an error of the model with this message, in one thread
+  // and in a portfolio, instead of an exception out of the front end
+  private void assertModelError(String model, String message) throws IOException {
+    for (String[] options : new String[][] {{}, {"-p", "2"}}) {
+      String[] out = run(model, options);
+      assertEquals("", out[0], Arrays.toString(options));
+      assertTrue(out[1].contains("%% Error: " + message + "\n"), Arrays.toString(options) + out[1]);
+      assertEquals(1, lastStatus, Arrays.toString(options));
+    }
+  }
+
+  @Test
+  void linearRowsWithArraysOfDifferentLengthsAreAnErrorOfTheModel() throws IOException {
+    // fewer weights than variables threw ArrayIndexOutOfBoundsException out of the translation of
+    // the row ("JaCoP internal error"), as did a repeated variable beyond the weights
+    String vars = "var 0..3: x :: output_var;\nvar 0..3: y;\nvar 0..3: z;\n";
+    assertModelError(
+        vars + "constraint int_lin_eq([1, 2], [x, y, z], 3);\nsolve satisfy;\n",
+        "int_lin_eq: the coefficients and the variables have different lengths");
+    assertModelError(
+        vars + "constraint int_lin_le([], [x, y, z], 3);\nsolve satisfy;\n",
+        "int_lin_le: the coefficients and the variables have different lengths");
+    assertModelError(
+        vars + "constraint int_lin_ne([1, 2, -1], [x, y, z, z], 2);\nsolve satisfy;\n",
+        "int_lin_ne: the coefficients and the variables have different lengths");
+  }
 }

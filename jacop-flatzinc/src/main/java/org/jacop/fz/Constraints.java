@@ -55,6 +55,7 @@ import org.jacop.fz.constraints.AlldiffChannels;
 import org.jacop.fz.constraints.AlldifferentDetector;
 import org.jacop.fz.constraints.AntichainDetector;
 import org.jacop.fz.constraints.ArgMaxFunctionDetector;
+import org.jacop.fz.constraints.ArgumentCheck;
 import org.jacop.fz.constraints.BalanceDetector;
 import org.jacop.fz.constraints.BinPackingCostBound;
 import org.jacop.fz.constraints.CardinalityDetector;
@@ -200,6 +201,8 @@ public class Constraints implements ParserTreeConstants {
 
   void generateAllConstraints(SimpleNode astTree) throws Throwable {
 
+    // sizes that do not agree are an error of the model, before any pass reads the constraints
+    ArgumentCheck.check(support, astTree);
     dictionary.searchAnnotated = searchAnnotated(astTree);
     // an objective declared beyond the integer range is divided by the factor its definition
     // forces on it, instead of being narrowed

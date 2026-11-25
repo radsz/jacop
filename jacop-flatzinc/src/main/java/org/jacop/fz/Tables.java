@@ -1385,6 +1385,30 @@ public class Tables {
   }
 
   /**
+   * Returns the length of the array of the given identity, of any type, without reading it as an
+   * array of variables or constants (which would add constants or set variables to the store).
+   *
+   * @param ident the identity of the array.
+   * @return the length of the array, or -1 if ident is no array.
+   */
+  public int arrayLength(String ident) {
+    Object[] tables = {
+      intArrayTable.get(ident),
+      variableArrayTable.get(ident),
+      setArrayTable.get(ident),
+      floatArrayTable.get(ident),
+      variableFloatArrayTable.get(ident),
+      setVariableArrayTable.get(ident)
+    };
+    for (Object a : tables) {
+      if (a != null) {
+        return java.lang.reflect.Array.getLength(a);
+      }
+    }
+    return -1;
+  }
+
+  /**
    * It adds a float variable array to the storage.
    *
    * @param ident the identity of the added variable array.
