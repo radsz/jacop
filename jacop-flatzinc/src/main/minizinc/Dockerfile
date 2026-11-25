@@ -24,7 +24,28 @@ RUN mvn -B -Pall -DskipTests -Dspotless.skip=true package \
   && cp -r jacop-flatzinc/src/main/minizinc/org/jacop/minizinc/. /dist/mzn-lib/ \
   && cp -r jacop-all/src/main/aot-training /dist/aot-training
 
-# Java 25 runtime.
+# Native image of the FlatZinc front end: it starts in milliseconds and runs compiled code at once,
+# where the JVM needs 0.1-0.5 s before JaCoP runs at speed. Oracle GraalVM (GraalVM Free Terms and
+# Conditions, free to use and redistribute without a fee) compiles it with profile-guided
+# optimization from the training models, so long runs are as fast as on the JVM or faster
+# (osolpro benchmarks/native-startup). The build stage's fzn-jacop-native-build does it; x86-64-v3 is
+# any x86 CPU since about 2015.
+
+FROM maven:3.9-eclipse-temurin-25 AS native
+
+ARG GRAALVM_URL=https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_linux-x64_bin.tar.gz
+RUN apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev zlib1g-dev \
+  && rm -rf /var/lib/apt/lists/* \
+  && mkdir -p /opt/graalvm && curl -fsSL --proto "=https" --tlsv1.2 "$GRAALVM_URL" | tar xz -C /opt/graalvm --strip-components=1
+COPY --from=build /jacop/jacop-all/target/fzn-jacop-native-build /native/
+COPY --from=build /jacop/jacop-all/target/lib /native/lib
+COPY --from=build /jacop/jacop-all/src/main/aot-training /native/aot-training
+COPY --from=build /dist/jacop.jar /native/
+WORKDIR /native
+RUN ln -s jacop.jar "$(grep -o 'jacop-all-[^"]*\.jar' fzn-jacop-native-build)" \
+  && GRAALVM_HOME=/opt/graalvm bash ./fzn-jacop-native-build
+
+# Java 25 runtime, for JACOP_JVM=1 (fzn-exec then runs the JVM with its ahead-of-time cache).
 
 FROM eclipse-temurin:25-jre AS jre
 
@@ -39,6 +60,7 @@ COPY --from=jre /opt/java/openjdk /opt/java/openjdk
 COPY --from=build /dist/jacop.jar /jacop/jacop.jar
 COPY --from=build /dist/lib /jacop/lib
 COPY --from=build /dist/mzn-lib/ /entry_data/mzn-lib/
+COPY --from=native /native/fzn-jacop-native /jacop/fzn-jacop-native
 
 # The JVM's ahead-of-time cache (Java 25): one training JVM solves the training models with their
 # own search, free search and LCG free search, and records the classes and method profiles they use.
@@ -58,6 +80,7 @@ RUN --mount=type=bind,from=build,source=/dist/aot-training,target=/aot-training 
   && chmod a+r /jacop/jacop.aot \
   && printf '%s\n' \
     '#!/bin/bash' \
+    'if [ -z "$JACOP_JVM" ]; then exec /jacop/fzn-jacop-native -Xmx10G -cs "$@"; fi' \
     'exec java -server -Xmx10G -Xss100M -XX:+UseTransparentHugePages -XX:AOTCache=/jacop/jacop.aot \' \
     '  -Xlog:disable -Xlog:all=warning:stderr \' \
     '  -cp "/jacop/jacop.jar:/jacop/lib/*" org.jacop.fz.Fz2jacop -cs "$@"' \
