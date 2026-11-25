@@ -9068,6 +9068,28 @@ Version 5.0 (unreleased)
    atom, from int arrays: the same search, sudoku_opt p29 and
    gfd-schedule n100 -2.9 % each, wide-quick -f -0.9 %, default -0.2 %.
 
+507. The FlatZinc front end posts lists that differ, written as clauses of
+   reified disequalities (x[1] != y[1]) \/ ... \/ (x[k] != y[k]), as one
+   AllDifferentLists over the largest group of lists that all differ
+   pairwise (DisjunctiveListsDifferDetector; allDifferent on lists,
+   F. Boussemart, C. Lecoutre, G. Audemard and C. Piette, XCSP3-core: A
+   format for representing constraint satisfaction/optimization problems,
+   arXiv:2009.00514, 2020, section 4.1.1). A clause qualifies when each of
+   its Booleans is defined by one int_ne_imp, int_lin_ne_imp or
+   reification and used nowhere else; a plain disequality of two lists
+   counts as an edge too, and a greedy clique is taken per connected group.
+   ExaminationTimetabling1 of XCSP 2026 states "no two events in the same
+   room and period" this way: 32k clauses and 64k half reifications over
+   261 events. 600 s, -f, 10 instances: 6 better (D1-2-16 568 -> 538,
+   D1-2-17 677 -> 658, D1-1-16 395 -> 384), 2 equal, 2 worse (D7-1-17
+   404 -> 434, D7-2-17 803 -> 848), and the first solution of the D1
+   instances comes in 13-59 s instead of 43-121 s; with the native XCSP
+   reader D1-3-17 finds its first solution in 15 s and none in 60 s
+   without it. SocialGolfers of XCSP 2024 (18 CSP instances, 240 s): the
+   same 9 decided in the same time. It fires on 1 of the 240 instances of
+   the wide set (gfd-schedule n180f7d50m30k18, neutral).
+   -Dorg.jacop.fz.listsDifferClauses=false turns it off.
+
 Version 4.11
 =============
 
