@@ -36,12 +36,13 @@ FROM maven:3.9-eclipse-temurin-25 AS native
 ARG GRAALVM_URL=https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_linux-x64_bin.tar.gz
 RUN apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev zlib1g-dev \
   && rm -rf /var/lib/apt/lists/* \
-  && mkdir -p /opt/graalvm && curl -fsSL "$GRAALVM_URL" | tar xz -C /opt/graalvm --strip-components=1
+  && mkdir -p /opt/graalvm && curl -fsSL --proto "=https" --tlsv1.2 "$GRAALVM_URL" | tar xz -C /opt/graalvm --strip-components=1
 COPY --from=build /jacop/jacop-all/target/fzn-jacop-native-build /native/
 COPY --from=build /jacop/jacop-all/target/lib /native/lib
 COPY --from=build /jacop/jacop-all/src/main/aot-training /native/aot-training
 COPY --from=build /dist/jacop.jar /native/
-RUN cd /native && ln -s jacop.jar "$(grep -o 'jacop-all-[^"]*\.jar' fzn-jacop-native-build)" \
+WORKDIR /native
+RUN ln -s jacop.jar "$(grep -o 'jacop-all-[^"]*\.jar' fzn-jacop-native-build)" \
   && GRAALVM_HOME=/opt/graalvm bash ./fzn-jacop-native-build
 
 # Java 25 runtime, for JACOP_JVM=1 (fzn-exec then runs the JVM with its ahead-of-time cache).

@@ -57,10 +57,10 @@ public final class NativeMain {
    */
   public static void main(String[] args) throws InterruptedException {
     Thread solver = new Thread(null, () -> new Fz2jacop().main(args), "main", STACK_MB << 20);
-    // as an exception that leaves main ends the JVM with status 1
+    // as an exception that leaves main ends the JVM with status 1, after the same report
     solver.setUncaughtExceptionHandler(
         (t, e) -> {
-          e.printStackTrace();
+          t.getThreadGroup().uncaughtException(t, e);
           System.exit(1);
         });
     solver.start();
