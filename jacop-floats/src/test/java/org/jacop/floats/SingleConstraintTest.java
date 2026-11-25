@@ -1070,4 +1070,13 @@ class SingleConstraintTest {
     assertThat(search.labeling(store, select)).isTrue();
     assertThat(x.min() >= 1.0e308 && x.max() <= 1.7e308).as("%s", x).isTrue();
   }
+
+  /** A singleton near the largest double is printed as its value, not as Infinity. */
+  @Test
+  void singletonNearTheLargestDoubleIsPrintedAsItsValue() {
+    Store store = new Store();
+    FloatVar x = new FloatVar(store, "x", 1.7e308, 1.7e308);
+    FloatVar y = new FloatVar(store, "y", -1.7e308, -1.7e308);
+    assertThat(x + " " + y).isEqualTo("x = 1.7E308 y = -1.7E308");
+  }
 }
