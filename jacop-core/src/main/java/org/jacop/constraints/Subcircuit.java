@@ -548,7 +548,7 @@ public class Subcircuit extends Alldiff {
     List<Constraint> out = new ArrayList<>();
     IntVar[] notFirst = new IntVar[n];
     for (int i = 0; i < n; i++) {
-      position[i] = new IntVar(store, list[i].id() + "_position", 0, n);
+      position[i] = new IntVar(store, store.freshVariableId(list[i].id() + "_position"), 0, n);
       out.add(new XgteqC(list[i], 1));
       out.add(new XlteqC(list[i], n));
       IntVar outside = new IntVar(store, 0, 1);

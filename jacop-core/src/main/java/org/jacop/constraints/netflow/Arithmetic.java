@@ -298,7 +298,7 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
 
     private ArithmeticBuilder(Store store, int[] sum) {
 
-      super(new IntVar(store, "Zero-cost", 0, 0));
+      super(new IntVar(store, store.freshVariableId("Zero-cost"), 0, 0));
 
       int[][] localEqns = copyEquations();
       Node root = addNode("source/sink", -sum[0]);
