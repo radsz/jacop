@@ -9068,7 +9068,25 @@ Version 5.0 (unreleased)
    atom, from int arrays: the same search, sudoku_opt p29 and
    gfd-schedule n100 -2.9 % each, wide-quick -f -0.9 %, default -0.2 %.
 
-507. FlatZinc front end as a GraalVM native image (fzn-jacop-native): it
+507. Free search (-f) with an annotation drops the annotation's runs when
+   50,000 conflicts found no solution: from then on LCG takes turns of
+   the SAT solver's own decisions on literals and of activity branching
+   only, as without an annotation (--free-config lcg-annotation-drop=<n>,
+   0 for never; LcgSolver.setAnnotationDrop; statistic
+   lcgAnnotationDropped). The runs of an annotation that does not lead to
+   a solution also hold back the other turns: on amaze2 2012-07-04
+   (first_fail on the path successors, indomain_min) the literal runs of
+   the rotation spent 417,000 conflicts in 300 s without a solution,
+   while the rotation without the annotation finds one after about
+   200,000 conflicts in all. Two seeds at 240 s: 28 instances where no
+   solution comes early (amaze2, cutstock, 2DBinPacking, bus_scheduling,
+   costas-array, orthorio and the wide set's others), solved 25 -> 29,
+   total time 8,486 -> 7,416 s, cutstock type16 finds 1,146 where it
+   found nothing; the 53 satisfaction instances of the wide set, solved
+   93 -> 94, total time 3,996 -> 3,648 s. The rule fires on 3 of the 240
+   instances of the wide set within 60 s.
+
+508. FlatZinc front end as a GraalVM native image (fzn-jacop-native): it
    starts in milliseconds and runs compiled code at once, where the JVM,
    even with its ahead-of-time cache, needs 0.1 s to start and runs JaCoP
    in its interpreter for the first 0.2-0.5 s. fzn-jacop-native-build (or
@@ -9086,7 +9104,7 @@ Version 5.0 (unreleased)
    the instances both solve; at 600 s two -f proofs past 400 s are lost
    (celar graph11, whirlpool d29).
 
-508. Root probing and the Diffn area check are cheaper, with the same search.
+509. Root probing and the Diffn area check are cheaper, with the same search.
    DualFeasibleFunctions keeps a memo of its packing tests, keyed by the
    container and the set of item sizes: root probing of MiniZinc Challenge
    2014 rectangle-packing rpp23 made 34,513 tests on 346 distinct sets.
