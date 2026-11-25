@@ -8464,4 +8464,13 @@ class FlatzincFrontEndTest {
     // in process (the command line watchdog ended it at -t + 1 s)
     assertEndsAtTheTimeOut(FLOAT_CRAWL + "solve maximize a;\n");
   }
+
+  @Test
+  void probingStopsAPropagationAtItsBudget() {
+    // a probe of presolve propagated without a deadline: probing b = 1 ran for minutes in process
+    assertEndsAtTheTimeOut(
+        FLOAT_CRAWL + "solve :: int_search([a], input_order, indomain_max, complete) minimize a;\n",
+        "--presolve",
+        "on");
+  }
 }
