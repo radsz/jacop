@@ -8430,4 +8430,38 @@ class FlatzincFrontEndTest {
     assertTrue(out.endsWith("=====UNSATISFIABLE=====\n"), out);
     assertEquals(0, lastStatus);
   }
+
+  // x = y and x < y over floats, when a = 1: each pass of the two moves a bound by one ulp, so
+  // the propagation that fails takes about 2^62 passes
+  private static final String FLOAT_CRAWL =
+      "var 0..1: a :: output_var;\nvar bool: b;\nvar 0.0..1.0: f;\nvar 0.0..1.0: g;\n"
+          + "constraint int_eq_reif(a, 1, b);\nconstraint float_eq_reif(f, g, b);\n"
+          + "constraint float_lt_reif(f, g, b);\n";
+
+  // the run ends within a few seconds of -t 1000, and as a time-out
+  private void assertEndsAtTheTimeOut(String model, String... options) {
+    String[] args = Arrays.copyOf(options, options.length + 2);
+    args[options.length] = "-t";
+    args[options.length + 1] = "1000";
+    String out =
+        assertTimeoutPreemptively(
+            Duration.ofSeconds(60),
+            () -> {
+              long start = System.nanoTime();
+              String o = run(model, args)[0];
+              long millis = (System.nanoTime() - start) / 1_000_000;
+              assertTrue(millis < 10_000, millis + " ms");
+              return o;
+            });
+    assertTrue(out.contains("=====UNKNOWN=====\n"), out);
+    assertFalse(out.contains("=====UNSATISFIABLE====="), out);
+    assertFalse(out.contains("=========="), out);
+  }
+
+  @Test
+  void freeSearchStopsAPropagationAtTheTimeOut() {
+    // FreeSearch read the clock at its nodes only: the propagation of a = 1 ran for minutes
+    // in process (the command line watchdog ended it at -t + 1 s)
+    assertEndsAtTheTimeOut(FLOAT_CRAWL + "solve maximize a;\n");
+  }
 }
