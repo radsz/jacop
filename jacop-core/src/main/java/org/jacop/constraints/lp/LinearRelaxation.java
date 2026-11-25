@@ -5328,19 +5328,28 @@ public class LinearRelaxation extends Constraint
     return true;
   }
 
-  /**
-   * The integer equality of a row of the basis inverse over the columns and the slacks of the rows
-   * (columns n + i), with the values and bounds of both.
-   *
-   * @param columns the columns and slacks of the equality
-   * @param weights their weights
-   * @param xv the LP values of the columns and slacks
-   * @param xlo the lower bounds of the columns and slacks
-   * @param xhi the upper bounds of the columns and slacks
-   * @param coef the weights of the columns alone
-   */
-  private record SlackRow(
-      int[] columns, long[] weights, double[] xv, long[] xlo, long[] xhi, long[] coef) {}
+  // the integer equality of a row of the basis inverse over the columns and the slacks of the rows
+  // (columns n + i), with the values and bounds of both
+  private static final class SlackRow {
+    // the columns and slacks of the equality, and their weights
+    final int[] columns;
+    final long[] weights;
+    // the LP values and the bounds of the columns and slacks
+    final double[] xv;
+    final long[] xlo;
+    final long[] xhi;
+    // the weights of the columns alone
+    final long[] coef;
+
+    SlackRow(int size, long[] coef, double[] value, long[] lo, long[] hi, int length) {
+      this.columns = new int[size];
+      this.weights = new long[size];
+      this.coef = coef;
+      this.xv = Arrays.copyOf(value, length);
+      this.xlo = Arrays.copyOf(lo, length);
+      this.xhi = Arrays.copyOf(hi, length);
+    }
+  }
 
   // the equality of lambda over the columns and slacks; null when a slack has no value
   private SlackRow slackRow(long[] lambda, double[] value, long[] lo, long[] hi) {
@@ -5359,29 +5368,25 @@ public class LinearRelaxation extends Constraint
         size++;
       }
     }
-    int[] columns = new int[size];
-    long[] weights = new long[size];
-    long[] xlo = Arrays.copyOf(lo, n + m);
-    long[] xhi = Arrays.copyOf(hi, n + m);
-    double[] xv = Arrays.copyOf(value, n + m);
+    SlackRow row = new SlackRow(size, coef, value, lo, hi, n + m);
     int q = 0;
     for (int j = 0; j < n; j++) {
       if (coef[j] != 0) {
-        columns[q] = j;
-        weights[q++] = coef[j];
+        row.columns[q] = j;
+        row.weights[q++] = coef[j];
       }
     }
     for (int i = 0; i < m; i++) {
       if (lambda[i] == 0) {
         continue;
       }
-      if (!slackRange(i, n, value, lo, hi, xv, xlo, xhi)) {
+      if (!slackRange(i, n, value, lo, hi, row)) {
         return null;
       }
-      columns[q] = n + i;
-      weights[q++] = -lambda[i];
+      row.columns[q] = n + i;
+      row.weights[q++] = -lambda[i];
     }
-    return new SlackRow(columns, weights, xv, xlo, xhi, coef);
+    return row;
   }
 
   // adds l times row i to coef
@@ -5394,8 +5399,9 @@ public class LinearRelaxation extends Constraint
   }
 
   // the value and bounds of the slack of row i (column n + i); false when its interval is empty
-  private boolean slackRange(
-      int i, int n, double[] value, long[] lo, long[] hi, double[] xv, long[] xlo, long[] xhi) {
+  private boolean slackRange(int i, int n, double[] value, long[] lo, long[] hi, SlackRow row) {
+    long[] xlo = row.xlo;
+    long[] xhi = row.xhi;
     long least = 0;
     long most = 0;
     double v = 0;
@@ -5410,7 +5416,7 @@ public class LinearRelaxation extends Constraint
     }
     xlo[n + i] = hasLo[i] ? Math.max(least, rowLo[i]) : least;
     xhi[n + i] = hasHi[i] ? Math.min(most, rowHi[i]) : most;
-    xv[n + i] = v;
+    row.xv[n + i] = v;
     return xlo[n + i] <= xhi[n + i];
   }
 
