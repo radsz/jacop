@@ -840,7 +840,7 @@ public class Support implements ParserTreeConstants {
    * @throws ModelTimeOut when the time-out has passed.
    */
   public boolean hasConstraint(SimpleNode astTree, Set<String> kinds) {
-    if ("false".equals(System.getProperty("org.jacop.fz.detectorGates"))) {
+    if (DISABLED.equals(System.getProperty("org.jacop.fz.detectorGates"))) {
       return true;
     }
     checkTimeOut();
@@ -863,7 +863,7 @@ public class Support implements ParserTreeConstants {
    * @throws ModelTimeOut when the time-out has passed.
    */
   public boolean hasConstraint(SimpleNode astTree, Predicate<String> kind) {
-    if ("false".equals(System.getProperty("org.jacop.fz.detectorGates"))) {
+    if (DISABLED.equals(System.getProperty("org.jacop.fz.detectorGates"))) {
       return true;
     }
     checkTimeOut();
