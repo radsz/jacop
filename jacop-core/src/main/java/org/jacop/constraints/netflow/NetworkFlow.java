@@ -88,6 +88,9 @@ public class NetworkFlow extends Constraint
   /** The set of queued variables. */
   private final Set<IntVar> queue;
 
+  /** The lowest level of the queued changes. */
+  private int queuedLevel = Integer.MAX_VALUE;
+
   final Statistics statistics = new Statistics();
 
   /** The cost variable. */
@@ -95,6 +98,13 @@ public class NetworkFlow extends Constraint
 
   /** Disables the queue variable function during consistency. */
   private boolean disableQueueVariable;
+
+  /**
+   * The store level at which the constraint was imposed. Removing that level removes the constraint
+   * and empties the timestamps made by impose, so the levels removed from then on are ignored until
+   * the constraint is imposed again.
+   */
+  private int imposedAt;
 
   /** Pairs of a variable of the caller and the copy the network uses for one of its roles. */
   private final List<IntVar[]> copies = new ArrayList<>();
@@ -233,8 +243,10 @@ public class NetworkFlow extends Constraint
           for (int k = 0; k < structureArcs.length; k++) {
             structureArcs[k] = built[st.arcs[k]];
           }
+          // a domain structure reorders its domains as it grounds arcs: each copy gets its own
           builder.handlerList.add(
-              new DomainStructure(map.get(st.variable), st.domains, structureArcs, st.behavior));
+              new DomainStructure(
+                  map.get(st.variable), st.domains.clone(), structureArcs, st.behavior));
         } else {
           builder.handlerList.add(built[(Integer) handler].companion);
         }
@@ -422,6 +434,7 @@ public class NetworkFlow extends Constraint
     // register with store
     queueIndex = QUEUE_INDEX;
     store.registerRemoveLevelLateListener(this);
+    imposedAt = store.level;
     super.impose(store);
 
     for (IntVar[] pair : copies) {
@@ -438,6 +451,7 @@ public class NetworkFlow extends Constraint
         return;
       }
       queue.add((IntVar) variable);
+      queuedLevel = Math.min(queuedLevel, level);
     }
   }
 
@@ -452,12 +466,16 @@ public class NetworkFlow extends Constraint
     network.increaseLevel();
     try {
       disableQueueVariable = true;
+      // a level at or below the imposition is never removed while the constraint is there
+      network.lateLevel = queuedLevel > imposedAt ? queuedLevel : Integer.MAX_VALUE;
       for (IntVar variable : queue) {
         VarHandler handler = map.get(variable);
         handler.processEvent(variable, network);
       }
     } finally {
       queue.clear();
+      queuedLevel = Integer.MAX_VALUE;
+      network.lateLevel = Integer.MAX_VALUE;
       disableQueueVariable = false;
     }
     return changed;
@@ -555,10 +573,21 @@ public class NetworkFlow extends Constraint
   @Override
   public void removeLevel(int level) {
     queue.clear();
+    queuedLevel = Integer.MAX_VALUE;
   }
 
   @Override
   public void removeLevelLate(int level) {
+
+    if (level <= imposedAt) {
+      // the constraint went with the level of its imposition: the changes made at that level go
+      // too, so that the same object imposed again starts from its whole network
+      if (imposedAt != Integer.MAX_VALUE) {
+        network.backtrackAll();
+      }
+      imposedAt = Integer.MAX_VALUE;
+      return;
+    }
 
     if (SHOW_LEVEL) {
       log.debug("");
@@ -566,7 +595,7 @@ public class NetworkFlow extends Constraint
       log.debug("");
     }
 
-    network.backtrack();
+    network.backtrack(level);
   }
 
   /* Identifiers */

@@ -30,7 +30,13 @@
 
 package org.jacop.constraints.lp;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * A mixed-integer rounding (MIR) cut of an integer inequality, computed exactly in integers.
@@ -159,6 +165,313 @@ final class MirCut {
       return cut(columns, c, b, value, lo, hi);
     } catch (ArithmeticException _) {
       return null;
+    }
+  }
+
+  /**
+   * Returns the best MIR cut of {@code sum c_k x_columns[k] <= b} after the substitution of
+   * variable bounds (Marchand and Wolsey, "Aggregation and mixed integer rounding to solve MIPs",
+   * Operations Research 49(3), 2001; the bound substitution of c-MIR as in SCIP and HiGHS), or null
+   * when none is violated enough or the arithmetic overflows. A column {@code x} with a variable
+   * upper bound {@code x <= a u} or lower bound {@code x >= a u} over a 0/1 column {@code u} is
+   * written as {@code a u - s} or {@code a u + s} with a slack {@code s >= 0}, when that bound is
+   * nearer to the LP value of {@code x} than both of its own bounds. The slack is an integer with
+   * bounds {@code [0, a - lo(x)]} for an upper and {@code [0, hi(x)]} for a lower bound. The MIR of
+   * the substituted row is a cut over the slacks, given back in the columns by {@code s = a u - x}
+   * or {@code s = x - a u}. On unit commitment, where the generation of a unit is bounded by its
+   * capacity times its commitment, these are the flow cover cuts of the demand rows.
+   *
+   * @param columns the columns of the row, each once (not changed)
+   * @param c the weights of the columns (not changed)
+   * @param b the right side
+   * @param value the LP solution by column
+   * @param lo the global lower bounds by column
+   * @param hi the global upper bounds by column
+   * @param bounds the variable bounds by column
+   * @return the cut, or null
+   */
+  static MirCut ofVariableBounds(
+      int[] columns,
+      long[] c,
+      long b,
+      double[] value,
+      long[] lo,
+      long[] hi,
+      VariableBounds bounds) {
+    try {
+      return variableBoundCut(columns, c, b, value, lo, hi, bounds);
+    } catch (ArithmeticException _) {
+      return null;
+    }
+  }
+
+  /** The variable bounds {@code x <= a u} and {@code x >= a u} of columns over 0/1 columns. */
+  static final class VariableBounds {
+    // by column: the 0/1 columns and factors of its upper and of its lower bounds, or null
+    final int[][] upperOver;
+    final long[][] upperFactor;
+    final int[][] lowerOver;
+    final long[][] lowerFactor;
+    final int count;
+
+    VariableBounds(
+        int[][] upperOver,
+        long[][] upperFactor,
+        int[][] lowerOver,
+        long[][] lowerFactor,
+        int count) {
+      this.upperOver = upperOver;
+      this.upperFactor = upperFactor;
+      this.lowerOver = lowerOver;
+      this.lowerFactor = lowerFactor;
+      this.count = count;
+    }
+
+    /**
+     * Collects the variable bounds stated by two-column rows {@code x - a u <= 0} (upper) and
+     * {@code x - a u >= 0} (lower), in either sign, with {@code a > 0}, u a 0/1 column and x a
+     * column with {@code lo >= 0} and {@code hi > 1}.
+     *
+     * @param n the number of columns
+     * @param rows the columns of each row
+     * @param weights the weights of each row
+     * @param upper the upper side of each row, if any
+     * @param lower the lower side of each row, if any
+     * @param lo the global lower bounds by column
+     * @param hi the global upper bounds by column
+     * @return the variable bounds, or null when there are none
+     */
+    static VariableBounds of(
+        int n,
+        List<int[]> rows,
+        List<long[]> weights,
+        List<Long> upper,
+        List<Long> lower,
+        long[] lo,
+        long[] hi) {
+      List<List<long[]>> ups = new ArrayList<>(Collections.nCopies(n, null));
+      List<List<long[]>> lows = new ArrayList<>(Collections.nCopies(n, null));
+      int count = 0;
+      for (int i = 0; i < rows.size(); i++) {
+        int[] cs = rows.get(i);
+        if (cs.length != 2) {
+          continue;
+        }
+        for (int t = 0; t < 2; t++) {
+          int x = cs[t];
+          int u = cs[1 - t];
+          long cx = weights.get(i)[t];
+          long cu = weights.get(i)[1 - t];
+          if (x >= n
+              || u >= n
+              || Math.abs(cx) != 1
+              || lo[u] != 0
+              || hi[u] != 1
+              || lo[x] < 0
+              || hi[x] <= 1) {
+            continue;
+          }
+          // normalized to x + (cu / cx) u ? 0
+          long a = -cu * cx;
+          if (a <= 0) {
+            continue;
+          }
+          Long up = upper.get(i);
+          Long down = lower.get(i);
+          // cx = 1: x - a u <= up; cx = -1: -x + a u <= up, so x - a u >= -up
+          Long xUpper = cx == 1 ? up : down == null ? null : -down;
+          Long xLower = cx == 1 ? down : up == null ? null : -up;
+          if (xUpper != null && xUpper == 0) {
+            add(ups, x, u, a);
+            count++;
+          }
+          if (xLower != null && xLower == 0) {
+            add(lows, x, u, a);
+            count++;
+          }
+        }
+      }
+      if (count == 0) {
+        return null;
+      }
+      int[][] uo = new int[n][];
+      long[][] uf = new long[n][];
+      int[][] lo2 = new int[n][];
+      long[][] lf = new long[n][];
+      for (int j = 0; j < n; j++) {
+        if (ups.get(j) != null) {
+          uo[j] = ups.get(j).stream().mapToInt(e -> (int) e[0]).toArray();
+          uf[j] = ups.get(j).stream().mapToLong(e -> e[1]).toArray();
+        }
+        if (lows.get(j) != null) {
+          lo2[j] = lows.get(j).stream().mapToInt(e -> (int) e[0]).toArray();
+          lf[j] = lows.get(j).stream().mapToLong(e -> e[1]).toArray();
+        }
+      }
+      return new VariableBounds(uo, uf, lo2, lf, count);
+    }
+
+    private static void add(List<List<long[]>> list, int x, int u, long a) {
+      if (list.get(x) == null) {
+        list.set(x, new ArrayList<>(2));
+      }
+      list.get(x).add(new long[] {u, a});
+    }
+  }
+
+  private static MirCut variableBoundCut(
+      int[] columns,
+      long[] c,
+      long b,
+      double[] value,
+      long[] lo,
+      long[] hi,
+      VariableBounds bounds) {
+    int n = columns.length;
+    // the substituted row over local terms: a column (kind 0) or the slack of column x over u with
+    // factor a, of an upper (kind 1) or a lower (kind 2) bound
+    Map<Integer, Integer> local = new HashMap<>();
+    List<int[]> terms = new ArrayList<>();
+    List<Long> factor = new ArrayList<>();
+    List<Long> weight = new ArrayList<>();
+    boolean substituted = false;
+    for (int t = 0; t < n; t++) {
+      int j = columns[t];
+      long w = c[t];
+      if (w == 0) {
+        continue;
+      }
+      double v = Math.clamp(value[j], (double) lo[j], (double) hi[j]);
+      double own = Math.min(v - lo[j], hi[j] - v);
+      int kind = 0;
+      int over = -1;
+      long a = 0;
+      double best = own - 1e-9;
+      if (j < bounds.upperOver.length && bounds.upperOver[j] != null) {
+        for (int k = 0; k < bounds.upperOver[j].length; k++) {
+          int u = bounds.upperOver[j][k];
+          double d = bounds.upperFactor[j][k] * value[u] - v;
+          if (d < best) {
+            best = d;
+            kind = 1;
+            over = u;
+            a = bounds.upperFactor[j][k];
+          }
+        }
+      }
+      if (j < bounds.lowerOver.length && bounds.lowerOver[j] != null) {
+        for (int k = 0; k < bounds.lowerOver[j].length; k++) {
+          int u = bounds.lowerOver[j][k];
+          double d = v - bounds.lowerFactor[j][k] * value[u];
+          if (d < best) {
+            best = d;
+            kind = 2;
+            over = u;
+            a = bounds.lowerFactor[j][k];
+          }
+        }
+      }
+      if (kind == 0) {
+        addTerm(local, terms, factor, weight, j, -1, 0, 0, w);
+      } else {
+        substituted = true;
+        // w x = w a u - w s (upper) or w a u + w s (lower)
+        addTerm(local, terms, factor, weight, over, -1, 0, 0, Math.multiplyExact(w, a));
+        addTerm(local, terms, factor, weight, j, over, kind, a, kind == 1 ? -w : w);
+      }
+    }
+    if (!substituted) {
+      return null;
+    }
+    int m = terms.size();
+    int[] ids = new int[m];
+    long[] cs = new long[m];
+    double[] lv = new double[m];
+    long[] ll = new long[m];
+    long[] lh = new long[m];
+    for (int q = 0; q < m; q++) {
+      int[] term = terms.get(q);
+      int j = term[0];
+      ids[q] = q;
+      cs[q] = weight.get(q);
+      if (term[2] == 0) {
+        lv[q] = value[j];
+        ll[q] = lo[j];
+        lh[q] = hi[j];
+      } else {
+        int u = term[1];
+        long a = factor.get(q);
+        ll[q] = 0;
+        if (term[2] == 1) {
+          lv[q] = Math.max(0, a * value[u] - value[j]);
+          lh[q] = Math.subtractExact(a, lo[j]);
+        } else {
+          lv[q] = Math.max(0, value[j] - a * value[u]);
+          lh[q] = hi[j];
+        }
+      }
+    }
+    long[] g = rawCut(ids, cs, b, lv, ll, lh);
+    if (g == null) {
+      return null;
+    }
+    // back in the columns: s = a u - x (upper) or s = x - a u (lower)
+    Map<Integer, Long> out = new TreeMap<>();
+    for (int q = 0; q < m; q++) {
+      if (g[q] == 0) {
+        continue;
+      }
+      int[] term = terms.get(q);
+      int j = term[0];
+      if (term[2] == 0) {
+        out.merge(j, g[q], Math::addExact);
+      } else {
+        long ga = Math.multiplyExact(g[q], factor.get(q));
+        if (term[2] == 1) {
+          out.merge(term[1], ga, Math::addExact);
+          out.merge(j, -g[q], Math::addExact);
+        } else {
+          out.merge(j, g[q], Math::addExact);
+          out.merge(term[1], -ga, Math::addExact);
+        }
+      }
+    }
+    out.values().removeIf(w -> w == 0);
+    int[] cutColumns = new int[out.size()];
+    long[] cutWeights = new long[out.size()];
+    int q = 0;
+    for (Map.Entry<Integer, Long> e : out.entrySet()) {
+      cutColumns[q] = e.getKey();
+      cutWeights[q++] = e.getValue();
+    }
+    return finishCut(cutColumns, cutWeights, g[m], value, lo, hi, REDUCE_CUTS, 2);
+  }
+
+  // adds weight w to the local term of column j (kind 0) or of the slack of j over u (kind 1, 2)
+  private static void addTerm(
+      Map<Integer, Integer> local,
+      List<int[]> terms,
+      List<Long> factor,
+      List<Long> weight,
+      int j,
+      int u,
+      int kind,
+      long a,
+      long w) {
+    if (kind != 0) {
+      terms.add(new int[] {j, u, kind});
+      factor.add(a);
+      weight.add(w);
+      return;
+    }
+    Integer q = local.get(j);
+    if (q == null) {
+      local.put(j, terms.size());
+      terms.add(new int[] {j, -1, 0});
+      factor.add(0L);
+      weight.add(w);
+    } else {
+      weight.set(q, Math.addExact(weight.get(q), w));
     }
   }
 

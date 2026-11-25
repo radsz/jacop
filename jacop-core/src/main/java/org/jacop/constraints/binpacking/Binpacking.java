@@ -893,7 +893,13 @@ public class Binpacking extends Constraint
   public void consistency(Store store) {
     applyPackAllRule(store);
     todo.clear();
-    IntervalDomain d = collectChangedDomains(store.level);
+    IntDomain d = collectChangedDomains(store.level);
+    int low = minBinNumber;
+    int high = minBinNumber + load.length - 1;
+    // an item narrowed from an unbounded domain to the bins changes about 10^9 values
+    if (!d.isEmpty() && (d.min() < low || d.max() > high)) {
+      d = d.intersect(low, high);
+    }
     for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
       int i = e.nextElement() - minBinNumber;
       if (i >= 0 && i < load.length) {

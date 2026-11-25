@@ -256,7 +256,7 @@ public class XmulYeqC extends AbstractConstraintXandY implements Copyable<XmulYe
 
   @Override
   public boolean satisfied() {
-    return grounded() && (x.min() * y.min() == c);
+    return grounded() && (long) x.min() * y.min() == c;
   }
 
   @Override

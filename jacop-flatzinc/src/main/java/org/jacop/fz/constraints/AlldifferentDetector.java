@@ -486,6 +486,20 @@ public class AlldifferentDetector implements ParserTreeConstants {
     elements.clear();
   }
 
+  /**
+   * It adds a disequality x - y != d stated by a constraint that another detector posts itself
+   * unless it is replaced: the token stands for it in {@link #replaced()}. It is called before
+   * {@link #detect(SimpleNode)}.
+   *
+   * @param x the first variable.
+   * @param y the second variable.
+   * @param d the excluded difference x - y.
+   * @param token the node that stands for the disequality.
+   */
+  public void statedDisequality(IntVar x, IntVar y, int d, SimpleNode token) {
+    edge(x, y, d, token);
+  }
+
   // x - y != d, stated by source or, when source is null, implied by other constraints
   private void edge(IntVar x, IntVar y, int d, SimpleNode source) {
     if (x == y || x.singleton() || y.singleton()) {
@@ -555,6 +569,8 @@ public class AlldifferentDetector implements ParserTreeConstants {
         if (work >= WORK_LIMIT) {
           break;
         }
+        // the clique search takes seconds on large models (hidato_table: 4.5 s)
+        support.checkTimeOut();
         if (covered.contains(Edge.of(seed, first[0], first[1]))) {
           continue;
         }

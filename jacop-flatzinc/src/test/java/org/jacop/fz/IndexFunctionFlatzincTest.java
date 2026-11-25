@@ -43,6 +43,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -219,6 +220,149 @@ class IndexFunctionFlatzincTest {
     assertEquals(solutions(run(model, false, "-a")), solutions(on));
   }
 
+  /**
+   * The unfolded clauses of two items compare the remainders of different goods with the same
+   * bound. Each comparison needs a 0/1 variable of its own even when the two remainders have the
+   * same identity hash code, which a JVM run with {@code -XX:hashCode=2} gives every object: the
+   * model is solved there in a JVM of its own.
+   */
+  @Test
+  void comparisonsOfVariablesWithEqualHashCodesKeepTheirOwnLiterals()
+      throws IOException, InterruptedException {
+    String model =
+        """
+        array [1..3] of int: VAL = [2,4,3];
+        var 0..4: r1:: output_var;
+        var 0..4: r2:: output_var;
+        var 0..4: r3:: output_var;
+        array [1..3] of var int: R = [r1,r2,r3];
+        array [1..3] of int: G0 = [2,2,3];
+        array [1..3] of int: N0 = [0,3,2];
+        var 1..3: pref0:: output_var;
+        var 1..3: g0;
+        var 0..3: n0;
+        var 0..4: rem0;
+        var bool: is0_1;
+        var 0..1: i0_1;
+        var 0..3: z0_1;
+        var bool: is0_2;
+        var 0..1: i0_2;
+        var 0..3: z0_2;
+        var bool: is0_3;
+        var 0..1: i0_3;
+        var 0..3: z0_3;
+        array [1..3] of int: G1 = [1,1,2];
+        array [1..3] of int: N1 = [2,1,3];
+        var 1..3: pref1:: output_var;
+        var 1..3: g1;
+        var 0..3: n1;
+        var 0..4: rem1;
+        var bool: is1_1;
+        var 0..1: i1_1;
+        var 0..3: z1_1;
+        var bool: is1_2;
+        var 0..1: i1_2;
+        var 0..3: z1_2;
+        var bool: is1_3;
+        var 0..1: i1_3;
+        var 0..3: z1_3;
+        array [1..3] of int: G2 = [1,3,3];
+        array [1..3] of int: N2 = [0,0,2];
+        var 1..3: pref2:: output_var;
+        var 1..3: g2;
+        var 0..3: n2;
+        var 0..4: rem2;
+        var bool: is2_1;
+        var 0..1: i2_1;
+        var 0..3: z2_1;
+        var bool: is2_2;
+        var 0..1: i2_2;
+        var 0..3: z2_2;
+        var bool: is2_3;
+        var 0..1: i2_3;
+        var 0..3: z2_3;
+        var bool: c0;
+        var bool: c1;
+        var bool: c2;
+        var bool: c3;
+        var bool: c4;
+        var bool: c5;
+        var bool: c6;
+        var bool: c7;
+        var bool: c8;
+        constraint jacop_array_var_int_element_nonshifted(pref0,G0,g0,1);
+        constraint jacop_array_var_int_element_nonshifted(pref0,N0,n0,1);
+        constraint jacop_array_var_int_element_nonshifted(g0,R,rem0,1);
+        constraint int_eq_reif(g0,1,is0_1);
+        constraint bool2int(is0_1,i0_1);
+        constraint int_times(n0,i0_1,z0_1);
+        constraint int_eq_reif(g0,2,is0_2);
+        constraint bool2int(is0_2,i0_2);
+        constraint int_times(n0,i0_2,z0_2);
+        constraint int_eq_reif(g0,3,is0_3);
+        constraint bool2int(is0_3,i0_3);
+        constraint int_times(n0,i0_3,z0_3);
+        constraint jacop_array_var_int_element_nonshifted(pref1,G1,g1,1);
+        constraint jacop_array_var_int_element_nonshifted(pref1,N1,n1,1);
+        constraint jacop_array_var_int_element_nonshifted(g1,R,rem1,1);
+        constraint int_eq_reif(g1,1,is1_1);
+        constraint bool2int(is1_1,i1_1);
+        constraint int_times(i1_1,n1,z1_1);
+        constraint int_eq_reif(g1,2,is1_2);
+        constraint bool2int(is1_2,i1_2);
+        constraint int_times(i1_2,n1,z1_2);
+        constraint int_eq_reif(g1,3,is1_3);
+        constraint bool2int(is1_3,i1_3);
+        constraint int_times(n1,i1_3,z1_3);
+        constraint jacop_array_var_int_element_nonshifted(pref2,G2,g2,1);
+        constraint jacop_array_var_int_element_nonshifted(pref2,N2,n2,1);
+        constraint jacop_array_var_int_element_nonshifted(g2,R,rem2,1);
+        constraint int_eq_reif(g2,1,is2_1);
+        constraint bool2int(is2_1,i2_1);
+        constraint int_times(n2,i2_1,z2_1);
+        constraint int_eq_reif(g2,2,is2_2);
+        constraint bool2int(is2_2,i2_2);
+        constraint int_times(i2_2,n2,z2_2);
+        constraint int_eq_reif(g2,3,is2_3);
+        constraint bool2int(is2_3,i2_3);
+        constraint int_times(i2_3,n2,z2_3);
+        constraint int_lin_eq([1,1,1,1],[z0_1,z1_1,z2_1,r1],4);
+        constraint int_lin_eq([1,1,1,1],[z0_2,z1_2,z2_2,r2],4);
+        constraint int_lin_eq([1,1,1,1],[z0_3,z1_3,z2_3,r3],4);
+        constraint int_lin_le_imp([1,-1],[n0,rem1],1,c0);
+        constraint int_eq_imp(g0,g1,c1);
+        constraint int_le_imp(n1,n0,c2);
+        constraint bool_clause([c0,c1,c2],[]);
+        constraint int_lin_le_imp([1,-1],[n0,rem2],0,c3);
+        constraint int_eq_imp(g0,g2,c4);
+        constraint int_ne_imp(n2,0,c5);
+        constraint bool_clause([c3,c4,c5],[]);
+        constraint int_lin_le_imp([1,-1],[n1,rem2],1,c6);
+        constraint int_eq_imp(g1,g2,c7);
+        constraint int_ne_imp(n2,2,c8);
+        constraint bool_clause([c6,c7,c8],[]);
+        solve satisfy;
+        """;
+    Path fzn = tmp.resolve("collide.fzn");
+    Files.writeString(fzn, model);
+    Path java = Path.of(System.getProperty("java.home"), "bin", "java");
+    Process child =
+        new ProcessBuilder(
+                java.toString(),
+                "-XX:+UnlockExperimentalVMOptions",
+                "-XX:hashCode=2",
+                "-cp",
+                System.getProperty("java.class.path"),
+                Fz2jacop.class.getName(),
+                "-a",
+                fzn.toString())
+            .redirectErrorStream(true)
+            .start();
+    String colliding = new String(child.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+    assertTrue(child.waitFor(60, TimeUnit.SECONDS), colliding);
+    assertEquals(solutions(run(model, false, "-a")), solutions(colliding), colliding);
+  }
+
   private static int solutions(String out) {
     return out.split("----------", -1).length - 1;
   }
@@ -250,5 +394,28 @@ class IndexFunctionFlatzincTest {
       System.clearProperty(PROPERTY);
     }
     return buffer.toString(StandardCharsets.UTF_8);
+  }
+
+  /**
+   * A variable repeated in an unfolded comparison merges its weights: 2000000000 + 2000000000 does
+   * not fit an int, and the cast made the comparison 4000000000 * x <= 0 hold for x = 1.
+   */
+  @Test
+  void repeatedVariableWithLargeWeightsKeepsItsComparison() throws IOException {
+    String model =
+        """
+        var 1..2: p :: output_var;
+        var 0..1: x :: output_var;
+        var 0..5: d;
+        var bool: b1;
+        var bool: b2;
+        constraint array_int_element(p, [0, 5], d);
+        constraint int_lin_le_imp([2000000000, 2000000000, 1], [x, x, d], 5, b1);
+        constraint int_le_imp(d, 0, b2);
+        constraint bool_clause([b1, b2], []);
+        solve satisfy;
+        """;
+    assertEquals(3, solutions(run(model, false, "-a")));
+    assertEquals(3, solutions(run(model, true, "-a")));
   }
 }
