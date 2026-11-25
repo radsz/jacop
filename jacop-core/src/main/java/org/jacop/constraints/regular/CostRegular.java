@@ -685,7 +685,7 @@ public class CostRegular extends Constraint
 
     IntVar[] q = new IntVar[list.length + 1];
     for (int i = 0; i < q.length; i++) {
-      q[i] = new IntVar(store, "Q" + i, 0, states - 1);
+      q[i] = new IntVar(store, store.freshVariableId("Q" + i), 0, states - 1);
     }
     IntVar[] w = new IntVar[list.length];
     for (int i = 0; i < list.length; i++) {
@@ -706,7 +706,7 @@ public class CostRegular extends Constraint
         lo = 0;
         hi = 0;
       }
-      w[i] = new IntVar(store, "W" + i, lo, hi);
+      w[i] = new IntVar(store, store.freshVariableId("W" + i), lo, hi);
       result.add(
           new Table(new IntVar[] {q[i], list[i], q[i + 1], w[i]}, tuples.toArray(new int[0][])));
     }

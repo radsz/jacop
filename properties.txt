@@ -406,6 +406,18 @@ unless stated otherwise):
   .out: cumulatives posted, default 5; .disjoint=false lifts over the
   cumulatives only; .useful=false also posts those whose capacity
   bound does not exceed that of an input cumulative or clique.
+- org.jacop.fz.blockBound: lower bounds on the parts of a linear
+  objective that belong to loosely coupled blocks of the model (the
+  independent lower bound of the travelling tournament problem), found
+  by LCG in a copy of each block and posted as redundant constraints
+  before search; default true, off under --proof. .share: share of the
+  time limit, default 0.02; .ms: at most this many milliseconds, default
+  5000; .blockMs: per block, default 1000; .gain: posted only when the
+  lower bound rises by this share of the distance to the upper bound,
+  default 0.05; .trace=true prints the blocks.
+- org.jacop.fz.optionalUnary: redundant unary resources with optional
+  tasks for flexible job shops, from disjunctions of two precedences
+  that apply only when two tasks run on the same machine; default true.
 - org.jacop.fz.elementTable: element constraints over constant arrays
   that share one index variable become one table.
 - org.jacop.fz.energyPrecedence: EnergyPrecedence on cumulatives

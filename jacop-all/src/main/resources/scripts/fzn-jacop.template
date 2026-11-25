@@ -2,6 +2,13 @@
 cd "$(dirname "$0")"
 JACOP_JAR="jacop-all-${project.version}.jar"
 
+# Native image made by ./fzn-jacop-native-build (optional, GraalVM): it starts in milliseconds
+# instead of the JVM's 0.1-0.5 s. One older than the jar was made for another build and is not used.
+# JACOP_JVM=1 runs the JVM anyway.
+if [ -x fzn-jacop-native ] && [ fzn-jacop-native -nt "$JACOP_JAR" ] && [ -z "$JACOP_JVM" ]; then
+  exec ./fzn-jacop-native -Xmx12G "$@"
+fi
+
 # Build classpath from lib/*.jar dynamically
 CLASSPATH="$JACOP_JAR"
 for jar in lib/*.jar; do
