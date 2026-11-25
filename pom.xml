@@ -402,6 +402,7 @@ setup to run configuration. -->
                                 <include>**/DefinedVariablesFlatzincTest.java</include>
                                 <include>**/DefinedLastFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
+                                <include>**/LinearIndexElementFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
                                 <include>**/ProgressionTilingFlatzincTest.java</include>
@@ -696,6 +697,7 @@ setup to run configuration. -->
                                 <include>**/DefinedVariablesFlatzincTest.java</include>
                                 <include>**/DefinedLastFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
+                                <include>**/LinearIndexElementFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
                                 <include>**/ProgressionTilingFlatzincTest.java</include>
@@ -985,6 +987,7 @@ setup to run configuration. -->
                                 <include>**/DefinedVariablesFlatzincTest.java</include>
                                 <include>**/DefinedLastFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
+                                <include>**/LinearIndexElementFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
                                 <include>**/ProgressionTilingFlatzincTest.java</include>
@@ -1272,6 +1275,7 @@ setup to run configuration. -->
                                 <include>**/DefinedVariablesFlatzincTest.java</include>
                                 <include>**/DefinedLastFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
+                                <include>**/LinearIndexElementFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
                                 <include>**/ProgressionTilingFlatzincTest.java</include>

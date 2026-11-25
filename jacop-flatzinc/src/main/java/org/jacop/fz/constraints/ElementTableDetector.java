@@ -146,6 +146,17 @@ public class ElementTableDetector implements ParserTreeConstants {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
+    detect(astTree, Set.of());
+  }
+
+  /**
+   * It scans the constraint items of the model, except the skipped ones, and posts one table for
+   * each index variable shared by at least two element constraints over constant arrays.
+   *
+   * @param astTree the root of the parsed model.
+   * @param skipped constraint nodes that are not posted.
+   */
+  public void detect(SimpleNode astTree, Set<SimpleNode> skipped) {
     Map<IntVar, List<Element>> groups = new IdentityHashMap<>();
     List<IntVar> order = new ArrayList<>();
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
@@ -153,7 +164,7 @@ public class ElementTableDetector implements ParserTreeConstants {
       if (node.getId() == JJTCONSTRAINTITEMS) {
         for (int j = 0; j < node.jjtGetNumChildren(); j++) {
           SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
-          if (item.getId() == JJTCONSTELEM) {
+          if (item.getId() == JJTCONSTELEM && !skipped.contains(item)) {
             collect((ASTConstElem) item, groups, order);
           }
         }
