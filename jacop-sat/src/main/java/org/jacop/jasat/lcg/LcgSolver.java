@@ -3415,6 +3415,24 @@ public final class LcgSolver implements ExternalPropagator {
     Atom negated() {
       return new Atom(var, kind, value, !holds);
     }
+
+    // equals and hashCode written out, with the values of the generated ones (so that sets of
+    // atoms keep their order): the generated ones go through method handles that stay slow until
+    // compiled, and root probing of a short run spends much of its time in them (a fifth of the
+    // samples of probing rectangle-packing rpp23 of the MiniZinc Challenge 2014)
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Atom a
+          && a.var == var
+          && a.kind == kind
+          && a.value == value
+          && a.holds == holds;
+    }
+
+    @Override
+    public int hashCode() {
+      return ((var * 31 + kind) * 31 + value) * 31 + Boolean.hashCode(holds);
+    }
   }
 
   private Atom atom(int lit) {
@@ -3739,11 +3757,11 @@ public final class LcgSolver implements ExternalPropagator {
         complete = false;
         continue;
       }
-      Set<Atom> atoms = consequences(implied);
       if (common == null) {
-        common = atoms;
-      } else {
-        common.retainAll(atoms);
+        common = consequences(implied);
+      } else if (!common.isEmpty()) {
+        // once no atom is common to the values probed, the rest cannot lift one
+        common.retainAll(consequences(implied));
       }
     }
     if (complete && common != null && !common.isEmpty()) {
@@ -5409,6 +5427,34 @@ public final class LcgSolver implements ExternalPropagator {
   public void setLiteralRuns(int before, int solved) {
     literalRuns = Math.max(1, before);
     literalRunsSolved = Math.max(1, solved);
+  }
+
+  // conflicts without a solution after which free search drops the annotation's runs, 0 for never
+  private long annotationDrop;
+  private boolean annotationDropped;
+
+  /**
+   * Makes free search with an annotation drop the annotation's runs when this many conflicts found
+   * no solution: from then on {@link Branching#ALTERNATE} takes turns of the literals and of
+   * activity branching only, as without an annotation. The runs of a fixed order that fails to
+   * reach a solution also hold back the other turns: on amaze2 (first_fail on the path successors,
+   * indomain_min) the literal runs of the rotation spent 417,000 conflicts in 300 s without a
+   * solution, while the same rotation without the annotation finds one after about 200,000
+   * conflicts in all.
+   *
+   * @param conflicts the conflicts without a solution, 0 for never
+   */
+  public void setAnnotationDrop(long conflicts) {
+    annotationDrop = conflicts;
+  }
+
+  /**
+   * Tells whether free search dropped the annotation's runs (see {@link #setAnnotationDrop}).
+   *
+   * @return true once they were dropped
+   */
+  public boolean annotationDropped() {
+    return annotationDropped;
   }
 
   /**
@@ -7764,7 +7810,20 @@ public final class LcgSolver implements ExternalPropagator {
     if (keepImprovingRun && improved) {
       return; // the run that improved the best solution goes on in the same way
     }
-    if (branching == Branching.ALTERNATE && annotation != null && freeSearch) {
+    if (annotationDrop > 0
+        && !annotationDropped
+        && best == null
+        && freeSearch
+        && annotation != null
+        && branching == Branching.ALTERNATE
+        && sat.conflicts >= annotationDrop) {
+      annotationDropped = true;
+    }
+    if (annotationDropped) {
+      // the literals and the activity in turn
+      annotationRun = false;
+      activityBranching = !activityBranching;
+    } else if (branching == Branching.ALTERNATE && annotation != null && freeSearch) {
       // the annotation, the literals and the activity in turn, with the activity completing the
       // annotation's runs
       runs++;

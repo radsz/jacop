@@ -59,10 +59,6 @@ public class IndomainMiddle<T extends IntVar> implements Indomain<T> {
           String.valueOf("indomain does not work with singleton variables."));
     }
 
-    if (ASSERTS_ENABLED && v.dom().domainId() == IntDomain.BOUND_DOMAIN_ID) {
-      throw new IllegalStateException(String.valueOf("It is not possible to use BoundDomain"));
-    }
-
     if (v.domain.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
       return indomainIntervalDomain((IntervalDomain) v.domain);
     }

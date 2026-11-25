@@ -250,6 +250,7 @@ import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SplitSelect;
+import org.jacop.search.ls.LocalSearch;
 import org.jacop.util.DominatorTree;
 import org.jacop.util.QueueForward;
 import org.jacop.util.fsm.Fsm;
@@ -13029,5 +13030,156 @@ class SingleConstraintTest extends TestHelper {
             store.variablesHashMap.values().stream().filter(BooleanVar.class::isInstance).count())
         .isEqualTo(2 * booleans);
     assertThat(noOfAllSolutions(store, x)).isEqualTo(16);
+  }
+
+  // Two Boolean variables of the API with one name: the second one took the name in the store's map
+  // of variables, which is also the only list of its Boolean variables, so Store.getConstraints(),
+  // local search, presolve and LCG did not see the first one. Local search then reported p = 0,
+  // q = 1, r = 0 as a solution, although p != r. With jacop.asserts.enabled the second variable
+  // was refused instead.
+  @Test
+  void booleanVariablesWithOneNameAreBothInTheStore() {
+    Store store = new Store();
+    BooleanVar p = new BooleanVar(store, "b");
+    BooleanVar q = new BooleanVar(store, "b");
+    BooleanVar r = new BooleanVar(store, "r");
+    IntVar[] x = {p, q, r};
+    XneqY pr = new XneqY(p, r);
+    store.impose(pr);
+    store.impose(new LinearInt(x, new int[] {1, 1, 1}, ">=", 2));
+    store.impose(new XneqY(q, r));
+    assertThat(store.consistency()).isTrue();
+    assertThat(store.variablesHashMap.values()).contains(p, q, r);
+    assertThat(store.getConstraints()).contains(pr);
+    assertThat(store.findVariable("b")).isSameAs(q);
+
+    LocalSearch ls =
+        LocalSearch.builder(store).order(x).timeLimit(Duration.ofSeconds(2)).seed(7).build();
+    assertThat(ls.solve()).isEqualTo(LocalSearch.Status.SATISFIED);
+    assertThat(ls.getSolution(x)).containsExactly(1, 1, 0);
+  }
+
+  // A BooleanVar over 0..2 was refused only under jacop.asserts.enabled; without it the store took
+  // b = 2, which the Boolean constraints do not expect.
+  @Test
+  void booleanVariableRefusesValuesOutsideZeroOne() {
+    Store store = new Store();
+    assertThatThrownBy(() -> new BooleanVar(store, "b", 0, 2))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new BooleanVar(store, -1, 0))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThat(new BooleanVar(store, "c", 1, 1).value()).isEqualTo(1);
+  }
+
+  // A present task of CumulativeOptional using more than the limit was not refuted while its
+  // start was open: the profile only sees compulsory parts. It now fails, an open task with a
+  // positive duration is made absent, a present one without duration gets duration 0, and a
+  // present one that runs gets its use bounded by the limit (as CumulativeBasic does).
+  @Test
+  void cumulativeOptionalTaskAboveTheLimit() {
+    Store store = new Store();
+    IntVar[] s = {new IntVar(store, "s0", 0, 3), new IntVar(store, "s1", 0, 3)};
+    IntVar[] d = {new IntVar(store, "d0", 1, 1), new IntVar(store, "d1", 1, 1)};
+    IntVar[] r = {new IntVar(store, "r0", 2, 2), new IntVar(store, "r1", 2, 2)};
+    IntVar[] o = {new IntVar(store, "o0", 0, 1), new IntVar(store, "o1", 1, 1)};
+    store.impose(new CumulativeOptional(s, d, r, new IntVar(store, "b", 1, 1), o));
+    assertThat(store.consistency()).isFalse();
+
+    store = new Store();
+    s = new IntVar[] {new IntVar(store, "s0", 0, 3), new IntVar(store, "s1", 0, 3)};
+    d = new IntVar[] {new IntVar(store, "d0", 1, 2), new IntVar(store, "d1", 0, 2)};
+    IntVar[] r2 = {new IntVar(store, "r0", 2, 3), new IntVar(store, "r1", 2, 3)};
+    IntVar d2 = new IntVar(store, "d2", 1, 2);
+    IntVar r3 = new IntVar(store, "r2", 0, 3);
+    IntVar[] o3 = {new IntVar(store, "o0", 0, 1), new IntVar(store, "o1", 1, 1)};
+    IntVar o2 = new IntVar(store, "o2", 1, 1);
+    store.impose(
+        new CumulativeOptional(
+            new IntVar[] {s[0], s[1], new IntVar(store, "s2", 0, 3)},
+            new IntVar[] {d[0], d[1], d2},
+            new IntVar[] {r2[0], r2[1], r3},
+            new IntVar(store, "b", 1, 1),
+            new IntVar[] {o3[0], o3[1], o2}));
+    assertThat(store.consistency()).isTrue();
+    assertThat(o3[0].max()).isZero();
+    assertThat(d[1].max()).isZero();
+    assertThat(r3.max()).isEqualTo(1);
+  }
+
+  // Decompositions named their variables Q0, W0, N0, bxMin, x_position, ... with fixed names. Two
+  // decompositions in one store, or a variable of the model with such a name, gave two variables
+  // one id: findVariable("Q0") returned the decomposition's variable instead of the model's, and
+  // the model's one was kept under a key that is not its id.
+  @Test
+  void decompositionsInOneStoreGiveTheirVariablesIdsOfTheirOwn() {
+    Store store = new Store();
+    IntVar q0 = new IntVar(store, "Q0", 0, 1);
+    IntVar w0 = new IntVar(store, "W0", 0, 1);
+    IntVar bxMin = new IntVar(store, "bxMin", 0, 0);
+    IntVar[] a = {new IntVar(store, "a0", 0, 1), new IntVar(store, "a1", 0, 1)};
+    IntVar[] b = {new IntVar(store, "b0", 0, 1), new IntVar(store, "b1", 0, 1)};
+    IntVar[] c = {new IntVar(store, "c0", 0, 1), new IntVar(store, "c1", 0, 1)};
+    IntVar[] d = {new IntVar(store, "d0", 0, 1), new IntVar(store, "d1", 0, 1)};
+    IntVar[] s = {
+      new IntVar(store, "s0", 1, 3), new IntVar(store, "s1", 1, 3), new IntVar(store, "s2", 1, 3)
+    };
+    IntVar[] t = {
+      new IntVar(store, "t0", 1, 3), new IntVar(store, "t1", 1, 3), new IntVar(store, "t2", 1, 3)
+    };
+    IntVar s0position = new IntVar(store, "s0_position", 0, 0);
+
+    // words over {0, 1} with a 1 at the end
+    FsmState[] state = {new FsmState(), new FsmState()};
+    Fsm fsm = new Fsm();
+    fsm.allStates.add(state[0]);
+    fsm.allStates.add(state[1]);
+    fsm.initState = state[0];
+    fsm.finalStates.add(state[1]);
+    for (FsmState from : state) {
+      from.addTransition(new FsmTransition(new IntervalDomain(0, 0), state[0]));
+      from.addTransition(new FsmTransition(new IntervalDomain(1, 1), state[1]));
+    }
+    store.imposeDecomposition(new Regular(fsm, a));
+    store.imposeDecomposition(new Regular(fsm, b));
+
+    // the cost is the number of ones, at most 1
+    int[][] transition = {{0, 0}};
+    int[][] costs = {{0, 1}};
+    IntVar costC = new IntVar(store, "costC", 0, 1);
+    IntVar costD = new IntVar(store, "costD", 0, 1);
+    store.imposeDecomposition(new CostRegular(c, transition, 0, 0, new int[] {0}, costs, costC));
+    store.imposeDecomposition(new CostRegular(d, transition, 0, 0, new int[] {0}, costs, costD));
+
+    // two unit squares in a 2 x 1 strip, twice
+    IntVar[][] squares = new IntVar[4][];
+    for (int i = 0; i < 4; i++) {
+      squares[i] =
+          new IntVar[] {
+            new IntVar(store, "x" + i, 0, 1),
+            new IntVar(store, "y" + i, 0, 0),
+            new IntVar(store, "lx" + i, 1, 1),
+            new IntVar(store, "ly" + i, 1, 1)
+          };
+    }
+    store.imposeDecomposition(new Diffn(new IntVar[][] {squares[0], squares[1]}));
+    store.imposeDecomposition(new Diffn(new IntVar[][] {squares[2], squares[3]}));
+
+    for (Constraint k : Subcircuit.decomposition(store, s, new IntVar[3])) {
+      store.impose(k);
+    }
+    for (Constraint k : Subcircuit.decomposition(store, t, new IntVar[3])) {
+      store.impose(k);
+    }
+
+    store.variablesHashMap.forEach((key, v) -> assertThat(v.id()).as(key).isEqualTo(key));
+    assertThat(store.findVariable("Q0")).isSameAs(q0);
+    assertThat(store.findVariable("W0")).isSameAs(w0);
+    assertThat(store.findVariable("bxMin")).isSameAs(bxMin);
+    assertThat(store.findVariable("s0_position")).isSameAs(s0position);
+
+    IntVar[] x = {squares[0][0], squares[1][0], squares[2][0], squares[3][0]};
+    // Regular 2 * 2, CostRegular 3 * 3 with the costs, Diffn 2 * 2
+    assertThat(noOfAllSolutions(store, a, b, c, d, new IntVar[] {costC, costD}, x))
+        .isEqualTo(2 * 2 * 3 * 3 * 2 * 2);
   }
 }
