@@ -8390,4 +8390,19 @@ class FlatzincFrontEndTest {
             + "constraint jacop_channel(x, [a, b], 0..1000000000);\nsolve satisfy;\n",
         "jacop_channel: b has 2 elements, not one Boolean per value");
   }
+
+  @Test
+  void aSpanningTreeOfMoreNodesThanItsEdgesSpanFails() throws IOException {
+    // jacop_wst and jacop_dwst made one variable per node: 2^31 - 1 nodes ran out of memory, and a
+    // negative number threw NegativeArraySizeException out of the run
+    String model =
+        "var bool: e1;\nvar bool: e2;\nvar 0..9: k :: output_var;\n"
+            + "constraint jacop_wst(%d, [1, 2], [2, 3], [1, 1], [e1, e2], k);\nsolve satisfy;\n";
+    assertEquals(
+        "=====UNSATISFIABLE=====\n",
+        run(String.format(model, 2147483647))[0].replace(
+            "%% problem detected for jacop_wst\n", ""));
+    assertEquals("k = 2;\n----------\n==========\n", run(String.format(model, 3), "-a")[0]);
+    assertModelError(String.format(model, -1), "jacop_wst: the number of nodes is negative");
+  }
 }
