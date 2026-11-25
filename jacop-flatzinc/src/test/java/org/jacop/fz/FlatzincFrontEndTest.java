@@ -7495,4 +7495,42 @@ class FlatzincFrontEndTest {
     assertEquals(
         "=====UNKNOWN=====\n%% =====TIME-OUT=====\n", buffer.toString(StandardCharsets.UTF_8));
   }
+
+  /**
+   * The shutdown hook of a run with -s (SIGTERM) prints the answer while the search runs: once the
+   * search printed its answer, the hook prints no second one after its status (the best solution
+   * again after ==========, 2 of 63 runs killed near their end).
+   */
+  @Test
+  void theShutdownHookPrintsNoSecondAnswer() throws IOException, ParseException {
+    Path fzn = tmp.resolve("hook.fzn");
+    Files.writeString(
+        fzn,
+        """
+        var 0..9: x :: output_var;
+        var 0..9: y :: output_var;
+        constraint int_lin_le([1, 1], [x, y], 12);
+        constraint int_ne(x, y);
+        solve :: int_search([x, y], input_order, indomain_min, complete) maximize x;
+        """,
+        StandardCharsets.UTF_8);
+    Options opt =
+        new Options(new String[] {"-s", "--lcg", "off", "--presolve", "off", fzn.toString()});
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+    try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8);
+        java.io.FileInputStream input = new java.io.FileInputStream(fzn.toFile())) {
+      System.setOut(capture);
+      Parser parser = new Parser(input);
+      parser.setOptions(opt);
+      parser.model();
+      new RunWhenShuttingDown(parser).run();
+    } finally {
+      System.setOut(originalOut);
+    }
+    String out = buffer.toString(StandardCharsets.UTF_8);
+    assertEquals(1, out.split("----------", -1).length - 1, out);
+    assertTrue(out.strip().contains("==========\n"), out);
+    assertEquals(out.indexOf("x = 9;"), out.lastIndexOf("x = 9;"), out);
+  }
 }

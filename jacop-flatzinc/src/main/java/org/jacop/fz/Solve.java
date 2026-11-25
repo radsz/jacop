@@ -205,6 +205,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   final NumberFormat nf = NumberFormat.getInstance(Locale.of("en"));
   public StringBuffer lastSolution;
 
+  // held while the answer of the run is printed, by the search or by the shutdown hook (SIGTERM
+  // with -s), which runs while the search goes on: whichever comes first prints the answer
+  private final Object answerLock = new Object();
+  private boolean answered;
+
   // the model's integer variables by name, whose values a portfolio thread shares with the others
   private String[] sharedNames;
   private IntVar[] sharedVars;
@@ -2505,11 +2510,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + " search explorarion strategy ; compilation aborted");
     }
 
-    if (!options.getAll() && lastSolution != null) {
-      helperSolutionPrinter(lastSolution.toString());
-    }
+    printAnswer(
+        () -> {
+          if (!options.getAll() && lastSolution != null) {
+            helperSolutionPrinter(lastSolution.toString());
+          }
 
-    printStatisticsForSingleSearch(false, result);
+          printStatisticsForSingleSearch(false, result);
+        });
   }
 
   /**
@@ -9923,11 +9931,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + " search explorarion strategy ; compilation aborted");
     }
 
-    if (!options.getAll() && lastSolution != null) {
-      helperSolutionPrinter(lastSolution.toString());
-    }
+    printAnswer(
+        () -> {
+          if (!options.getAll() && lastSolution != null) {
+            helperSolutionPrinter(lastSolution.toString());
+          }
 
-    printStatisticsForSeqSearch(false, result);
+          printStatisticsForSeqSearch(false, result);
+        });
   }
 
   /**
@@ -10588,8 +10599,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
 
     if (options.getAll()) {
-      IO.print(printBuffer.toString());
-      appendSolutionToOutputFile(printBuffer.toString());
+      synchronized (answerLock) {
+        if (!answered) {
+          IO.print(printBuffer.toString());
+          appendSolutionToOutputFile(printBuffer.toString());
+        }
+      }
     } else {
       lastSolution = printBuffer;
     }
@@ -10867,6 +10882,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   public int getSolveKind() {
     return solveKind;
+  }
+
+  /**
+   * Prints the answer of the run (the kept solution, the status and the statistics) unless it was
+   * printed already: the shutdown hook of a run with -s prints it while the search still runs, and
+   * the search must then not print a second answer after it.
+   *
+   * @param print what prints the answer
+   * @return true if it printed the answer now
+   */
+  boolean printAnswer(Runnable print) {
+    synchronized (answerLock) {
+      if (answered) {
+        return false;
+      }
+      answered = true;
+      print.run();
+      return true;
+    }
   }
 
   void helperSolutionPrinter(String lastSolution) {
