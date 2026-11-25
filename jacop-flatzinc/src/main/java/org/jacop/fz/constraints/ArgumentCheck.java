@@ -61,6 +61,51 @@ public final class ArgumentCheck implements ParserTreeConstants {
         }
       }
     }
+
+    // flattened matrices: the number of vectors, lists, rows or columns must divide the array
+    // (jacop_lex_chain_less_int with a negative number is left to the generator)
+    rule(a -> a.parts(0, a.intArg(1), null, a.intArg(1) + " vectors"), "jacop_lex_chain_less_int");
+    rule(
+        a -> a.parts(0, a.intArg(1), "vectors", a.intArg(1) + " vectors"),
+        "jacop_lex_chain_less_bool",
+        "jacop_lex_chain_lesseq_int",
+        "jacop_lex_chain_lesseq_bool");
+    rule(
+        a -> {
+          int rows = a.intArg(1);
+          int length = a.parts(0, rows, "lists", rows + " lists");
+          if (a.count() > 2 && rows > 0) {
+            a.parts(2, length, null, "excluded tuples of length " + length);
+          }
+        },
+        "jacop_all_different_lists",
+        "jacop_all_different_lists_except");
+    rule(
+        a -> {
+          int columns = a.intArg(1);
+          int rows = a.parts(0, columns, "columns", "rows of " + columns + " columns");
+          a.size(2, rows, "row_count", "one count per row");
+          a.size(3, columns, "col_count", "one count per column");
+        },
+        "jacop_symmetric_gcc");
+    rule(
+        a -> {
+          int columns = a.intArg(1);
+          int rows = a.parts(0, columns, "columns", "rows of " + columns + " columns");
+          int values = a.length(2);
+          if (values >= 0) {
+            a.size(3, (long) rows * values, "row_count", "one count per row and value");
+            a.size(4, (long) columns * values, "col_count", "one count per column and value");
+          }
+        },
+        "jacop_cardinality_matrix");
+    rule(
+        a -> {
+          a.sameLength("the positions and the sizes", 0, 1);
+          int k = a.intArg(2);
+          a.parts(0, k, "dimensions", "boxes of " + k + " dimensions");
+        },
+        "jacop_diffn_k");
   }
 
   private ArgumentCheck() {}
@@ -144,6 +189,37 @@ public final class ArgumentCheck implements ParserTreeConstants {
 
     void fail(String what) {
       throw new IllegalArgumentException(name + ": " + what);
+    }
+
+    /**
+     * Checks that array i splits into parts of equal length, as a flattened matrix does.
+     *
+     * @param i the array
+     * @param k the number of parts, or their length
+     * @param negative what k counts, for the message when it is negative; null to leave a negative
+     *     k unchecked
+     * @param parts what the parts are, for the message when k does not divide the array
+     * @return the length of the array divided by k, 0 when k is 0 or not checked
+     */
+    int parts(int i, int k, String negative, String parts) {
+      int n = length(i);
+      if (n < 0 || k < 0 && negative == null) {
+        return 0;
+      }
+      if (k < 0) {
+        fail("the number of " + negative + " is negative");
+      }
+      if (k == 0 ? n != 0 : n % k != 0) {
+        fail(n + " elements do not split into " + parts);
+      }
+      return k == 0 ? 0 : n / k;
+    }
+
+    void size(int i, long expected, String array, String what) {
+      int n = length(i);
+      if (n >= 0 && n != expected) {
+        fail(array + " has " + n + " elements, not " + what);
+      }
     }
 
     void sameLength(String what, int... args) {

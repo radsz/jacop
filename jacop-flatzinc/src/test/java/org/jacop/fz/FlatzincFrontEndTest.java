@@ -8167,4 +8167,50 @@ class FlatzincFrontEndTest {
         vars + "constraint int_lin_ne([1, 2, -1], [x, y, z, z], 2);\nsolve satisfy;\n",
         "int_lin_ne: the coefficients and the variables have different lengths");
   }
+
+  @Test
+  void flattenedMatricesWhoseSizesDoNotDivideAreAnErrorOfTheModel() throws IOException {
+    // a negative number of vectors, lists, columns or dimensions threw NegativeArraySizeException
+    // out of the run, 0 an ArithmeticException printed as an overflow, a huge one ran out of
+    // memory, and a number that does not divide the array dropped its last elements silently
+    String vars = "var 0..1: x :: output_var;\nvar 0..1: y;\nvar 0..1: z;\n";
+    String bools = "var bool: a :: output_var;\nvar bool: b;\n";
+    assertModelError(
+        vars + "constraint jacop_lex_chain_less_int([x, y], 0);\nsolve satisfy;\n",
+        "jacop_lex_chain_less_int: 2 elements do not split into 0 vectors");
+    assertModelError(
+        vars + "constraint jacop_lex_chain_lesseq_int([x, y, z], 2);\nsolve satisfy;\n",
+        "jacop_lex_chain_lesseq_int: 3 elements do not split into 2 vectors");
+    assertModelError(
+        vars + "constraint jacop_lex_chain_lesseq_int([x, y, z], 2147483647);\nsolve satisfy;\n",
+        "jacop_lex_chain_lesseq_int: 3 elements do not split into 2147483647 vectors");
+    assertModelError(
+        bools + "constraint jacop_lex_chain_less_bool([a, b], -1);\nsolve satisfy;\n",
+        "jacop_lex_chain_less_bool: the number of vectors is negative");
+    assertModelError(
+        vars + "constraint jacop_all_different_lists([x, y], -1);\nsolve satisfy;\n",
+        "jacop_all_different_lists: the number of lists is negative");
+    assertModelError(
+        vars
+            + "constraint jacop_all_different_lists_except([x, y], 1, [0, 1, 0]);\n"
+            + "solve satisfy;\n",
+        "jacop_all_different_lists_except: 3 elements do not split into excluded tuples of length 2");
+    assertModelError(
+        vars + "constraint jacop_symmetric_gcc([x, y], -1, [y], [z]);\nsolve satisfy;\n",
+        "jacop_symmetric_gcc: the number of columns is negative");
+    assertModelError(
+        vars + "constraint jacop_diffn_k([x, y], [z, z], -1, true);\nsolve satisfy;\n",
+        "jacop_diffn_k: the number of dimensions is negative");
+    assertModelError(
+        vars + "constraint jacop_diffn_k([x, y], [z, z], 0, true);\nsolve satisfy;\n",
+        "jacop_diffn_k: 2 elements do not split into boxes of 0 dimensions");
+    // no boxes of no dimensions do not overlap; no vectors form a chain
+    assertEquals(
+        "x = 0;\n----------\nx = 1;\n----------\n==========\n",
+        run(
+            vars
+                + "constraint jacop_diffn_k([], [], 0, true);\n"
+                + "constraint jacop_lex_chain_less_int([], 0);\nsolve satisfy;\n",
+            "-a")[0]);
+  }
 }

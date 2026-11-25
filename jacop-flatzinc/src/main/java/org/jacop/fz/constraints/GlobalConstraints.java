@@ -1701,6 +1701,10 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] size = support.getVarArray((SimpleNode) node.jjtGetChild(1));
     int k = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
     boolean strict = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3)) != 0;
+    if (posn.length == 0) {
+      // no boxes (of no dimensions when k = 0): nothing overlaps
+      return;
+    }
 
     int n = posn.length / k;
     IntVar[][] origin = new IntVar[n][k];
