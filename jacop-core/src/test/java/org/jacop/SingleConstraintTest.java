@@ -13070,4 +13070,39 @@ class SingleConstraintTest extends TestHelper {
         .isInstanceOf(IllegalArgumentException.class);
     assertThat(new BooleanVar(store, "c", 1, 1).value()).isEqualTo(1);
   }
+
+  // A present task of CumulativeOptional using more than the limit was not refuted while its
+  // start was open: the profile only sees compulsory parts. It now fails, an open task with a
+  // positive duration is made absent, a present one without duration gets duration 0, and a
+  // present one that runs gets its use bounded by the limit (as CumulativeBasic does).
+  @Test
+  void cumulativeOptionalTaskAboveTheLimit() {
+    Store store = new Store();
+    IntVar[] s = {new IntVar(store, "s0", 0, 3), new IntVar(store, "s1", 0, 3)};
+    IntVar[] d = {new IntVar(store, "d0", 1, 1), new IntVar(store, "d1", 1, 1)};
+    IntVar[] r = {new IntVar(store, "r0", 2, 2), new IntVar(store, "r1", 2, 2)};
+    IntVar[] o = {new IntVar(store, "o0", 0, 1), new IntVar(store, "o1", 1, 1)};
+    store.impose(new CumulativeOptional(s, d, r, new IntVar(store, "b", 1, 1), o));
+    assertThat(store.consistency()).isFalse();
+
+    store = new Store();
+    s = new IntVar[] {new IntVar(store, "s0", 0, 3), new IntVar(store, "s1", 0, 3)};
+    d = new IntVar[] {new IntVar(store, "d0", 1, 2), new IntVar(store, "d1", 0, 2)};
+    IntVar[] r2 = {new IntVar(store, "r0", 2, 3), new IntVar(store, "r1", 2, 3)};
+    IntVar d2 = new IntVar(store, "d2", 1, 2);
+    IntVar r3 = new IntVar(store, "r2", 0, 3);
+    IntVar[] o3 = {new IntVar(store, "o0", 0, 1), new IntVar(store, "o1", 1, 1)};
+    IntVar o2 = new IntVar(store, "o2", 1, 1);
+    store.impose(
+        new CumulativeOptional(
+            new IntVar[] {s[0], s[1], new IntVar(store, "s2", 0, 3)},
+            new IntVar[] {d[0], d[1], d2},
+            new IntVar[] {r2[0], r2[1], r3},
+            new IntVar(store, "b", 1, 1),
+            new IntVar[] {o3[0], o3[1], o2}));
+    assertThat(store.consistency()).isTrue();
+    assertThat(o3[0].max()).isZero();
+    assertThat(d[1].max()).isZero();
+    assertThat(r3.max()).isEqualTo(1);
+  }
 }
