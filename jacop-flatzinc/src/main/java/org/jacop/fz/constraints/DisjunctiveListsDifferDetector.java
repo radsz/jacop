@@ -107,36 +107,6 @@ public class DisjunctiveListsDifferDetector implements ParserTreeConstants {
   // disequalities x != y posted on their own
   private final List<IntVar[]> plain = new ArrayList<>();
 
-  /** A list of variables compared by identity. */
-  private record VarList(IntVar[] vars) {
-    @Override
-    public boolean equals(Object o) {
-      if (!(o instanceof VarList(IntVar[] v)) || v.length != vars.length) {
-        return false;
-      }
-      for (int i = 0; i < vars.length; i++) {
-        if (v[i] != vars[i]) {
-          return false;
-        }
-      }
-      return true;
-    }
-
-    @Override
-    public int hashCode() {
-      int h = 1;
-      for (IntVar x : vars) {
-        h = 31 * h + System.identityHashCode(x);
-      }
-      return h;
-    }
-
-    @Override
-    public String toString() {
-      return Arrays.toString(vars);
-    }
-  }
-
   // a clause read as lists a != b, with the nodes it replaces
   private record Pair(int a, int b, List<SimpleNode> nodes, List<IntVar> booleans) {}
 
