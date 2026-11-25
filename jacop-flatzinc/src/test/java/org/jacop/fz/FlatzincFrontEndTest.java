@@ -7715,4 +7715,18 @@ class FlatzincFrontEndTest {
     String out = run(model, "--precision", "0.01")[0];
     assertTrue(out.contains("----------"), out);
   }
+
+  @Test
+  void floatDomainBeyondTheFloatRangeHasNoValue() throws IOException {
+    // 1.5e308..1.5e308 is above JaCoP's float range 1e150: the bounds became 1.5e308..1e150, an
+    // inverted domain, and x = 7.5E307 (outside the declared domain) was printed as a solution
+    String model =
+        "var 1.5e308..1.5e308: x :: output_var;\n"
+            + "var -1.0..1.0: y :: output_var;\n"
+            + "constraint float_le(y, 0.5);\n"
+            + "solve satisfy;\n";
+    String out = run(model)[0];
+    assertFalse(out.contains("x = "), out);
+    assertTrue(out.contains("=====UNKNOWN====="), out);
+  }
 }
