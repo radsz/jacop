@@ -3594,6 +3594,7 @@ class GlobalConstraints implements ParserTreeConstants {
     if (scopeLen.length != rows.length || scenLen.length != prob.length) {
       throw new IllegalArgumentException("jacop_chance_table: arrays of different lengths");
     }
+    checkChanceTable(x.length, scopeLen, scopeFlat, rows, tupleFlat, scenLen, scenFlat, prob);
     int[][] scopes = new int[rows.length][];
     int[][][] tuples = new int[rows.length][][];
     int at = 0;
@@ -3623,6 +3624,45 @@ class GlobalConstraints implements ParserTreeConstants {
       throw new IllegalArgumentException("jacop_chance_table: arrays of the wrong length");
     }
     support.delayedConstraints.add(new ChanceTable(x, scopes, tuples, scenarios, weights, p));
+  }
+
+  // the lengths and indices that chance_table asserts, checked before the arrays are cut by them
+  private static void checkChanceTable(
+      int n,
+      int[] scopeLen,
+      int[] scopeFlat,
+      int[] rows,
+      int[] tupleFlat,
+      int[] scenLen,
+      int[] scenFlat,
+      int[] prob) {
+    long scopes = 0;
+    long tuples = 0;
+    for (int t = 0; t < rows.length; t++) {
+      if (scopeLen[t] < 0 || rows[t] < 0) {
+        throw new IllegalArgumentException("jacop_chance_table: arrays of the wrong length");
+      }
+      scopes += scopeLen[t];
+      tuples += (long) scopeLen[t] * rows[t];
+    }
+    long scenarios = 0;
+    for (int s : scenLen) {
+      if (s < 0) {
+        throw new IllegalArgumentException("jacop_chance_table: arrays of the wrong length");
+      }
+      scenarios += s;
+    }
+    if (scopes != scopeFlat.length || tuples != tupleFlat.length || scenarios != scenFlat.length) {
+      throw new IllegalArgumentException("jacop_chance_table: arrays of the wrong length");
+    }
+    boolean inRange =
+        Arrays.stream(scopeFlat).allMatch(i -> i >= 1 && i <= n)
+            && Arrays.stream(scenFlat).allMatch(t -> t >= 1 && t <= rows.length)
+            && Arrays.stream(prob).allMatch(p -> p >= 0);
+    if (!inRange) {
+      throw new IllegalArgumentException(
+          "jacop_chance_table: a position, a table index or a weight is out of range");
+    }
   }
 
   void gen_jacop_prob_mdd(SimpleNode node) {
@@ -3814,7 +3854,15 @@ class GlobalConstraints implements ParserTreeConstants {
 
     // JaCoP's library numbers the nodes from 1, as the positions in the balance array. FlatZinc
     // files compiled with older versions of the library number them from the lowest node in arc.
-    int minNode = Math.min(1, Arrays.stream(arc).min().orElse(1));
+    if (flow.length == 0) {
+      // no arcs: no node sends or receives a flow, and the cost is 0
+      if (Arrays.stream(balance).anyMatch(b -> b != 0)) {
+        throw Store.failException;
+      }
+      support.pose(new XeqC(cost, 0));
+      return;
+    }
+    int minNode = Math.min(1, Arrays.stream(arc).min().getAsInt());
 
     String mode = networkFlowMode();
     if (Arrays.stream(weight).allMatch(IntVar::singleton) && !"global".equals(mode)) {

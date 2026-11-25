@@ -8283,4 +8283,36 @@ class FlatzincFrontEndTest {
       assertModelError(vars + "constraint " + c[0] + ";\nsolve satisfy;\n", name + ": " + c[1]);
     }
   }
+
+  @Test
+  void diagramsTablesAndNetworksWithIndicesOutOfRangeAreAnErrorOfTheModel() throws IOException {
+    // an edge, a scope or an arc beyond its nodes, positions or balances, and a negative length,
+    // threw ArrayIndexOutOfBoundsException ("JaCoP internal error") or NegativeArraySizeException
+    // out of the run; a network without arcs threw NoSuchElementException
+    String vars = "var 0..3: x :: output_var;\nvar 0..3: y;\nvar 0..30: p;\n";
+    assertModelError(
+        vars
+            + "constraint jacop_mdd([x, y], [1, 2], [1, 1, 2, 3], [{0}, {1}, {0, 1}, {2}],"
+            + " [2, 3, 0, 0]);\nsolve satisfy;\n",
+        "Constraint ExtensionalSupportMdd has edge 2 outside nodes 1..2");
+    assertModelError(
+        vars
+            + "constraint jacop_chance_table([x, y], [-1, 1], [1, 2, 2], [2, 1], [0, 1, 1, 0, 2],"
+            + " [1, 2], [1, 1, 2], [1, 1], p);\nsolve satisfy;\n",
+        "jacop_chance_table: arrays of the wrong length");
+    assertModelError(
+        vars
+            + "constraint jacop_chance_table([x, y], [2, 1], [1, 2, 3], [2, 1], [0, 1, 1, 0, 2],"
+            + " [1, 2], [1, 1, 2], [1, 1], p);\nsolve satisfy;\n",
+        "jacop_chance_table: a position, a table index or a weight is out of range");
+    assertModelError(
+        vars
+            + "constraint jacop_networkflow([1, 2, 2], [x, y], [1, 1], [1, -1], p);\n"
+            + "solve satisfy;\n",
+        "jacop_networkflow: arc has 3 elements, not two nodes per flow");
+    // a network without arcs carries no flow and costs nothing
+    assertEquals(
+        "x = 0;\n----------\n==========\n",
+        run(vars + "constraint jacop_networkflow([], [], [], [0], x);\nsolve satisfy;\n", "-a")[0]);
+  }
 }

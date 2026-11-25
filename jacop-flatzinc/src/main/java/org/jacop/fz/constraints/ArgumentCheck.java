@@ -29,6 +29,7 @@
  */
 package org.jacop.fz.constraints;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import org.jacop.core.IntDomain;
@@ -138,6 +139,24 @@ public final class ArgumentCheck implements ParserTreeConstants {
     rule(
         a -> a.sameLength("the variables, the permutation and the sorted variables", 0, 1, 2),
         "jacop_sort_permutation");
+
+    // a network: two nodes per arc, numbered from 1 or from the lowest node of the arcs
+    rule(
+        a -> {
+          a.size(0, 2L * Math.max(0, a.length(1)), "arc", "two nodes per flow");
+          a.sameLength("the flows and the weights", 1, 2);
+          int[] arc = a.ints(0);
+          int nodes = a.length(3);
+          if (arc != null && arc.length > 0 && nodes >= 0) {
+            int first = Math.min(1, Arrays.stream(arc).min().getAsInt());
+            for (int node : arc) {
+              if ((long) node - first >= nodes) {
+                a.fail("the node " + node + " has no balance");
+              }
+            }
+          }
+        },
+        "jacop_networkflow");
 
     // automata: states 1..Q, a transition table of Q rows, next states in 0..Q (0 fails)
     rule(a -> a.automaton(a.intArg(2), true), "jacop_regular");
