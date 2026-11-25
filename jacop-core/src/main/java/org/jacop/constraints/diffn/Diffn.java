@@ -1258,8 +1258,8 @@ public class Diffn extends Nooverlap {
       auxVar.add(ex[i]);
     }
 
-    IntVar bxMin = new IntVar(store, "bxMin", xMin, xMax);
-    IntVar bxMax = new IntVar(store, "bxMax", xMin, xMax);
+    IntVar bxMin = new IntVar(store, store.freshVariableId("bxMin"), xMin, xMax);
+    IntVar bxMax = new IntVar(store, store.freshVariableId("bxMax"), xMin, xMax);
     IntVar bx = new IntVar(store, 0, xMax - xMin);
     auxVar.add(bxMin);
     auxVar.add(bxMax);

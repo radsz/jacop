@@ -120,9 +120,9 @@ public final class IntervalVar {
       boolean optional) {
     this(
         presence(store, name, startMin, endMax, durationMin, durationMax, optional),
-        new IntVar(store, name + ".start", startMin, endMax - durationMin),
-        new IntVar(store, name + ".duration", durationMin, durationMax),
-        new IntVar(store, name + ".end", startMin + durationMin, endMax));
+        new IntVar(store, store.freshVariableId(name + ".start"), startMin, endMax - durationMin),
+        new IntVar(store, store.freshVariableId(name + ".duration"), durationMin, durationMax),
+        new IntVar(store, store.freshVariableId(name + ".end"), startMin + durationMin, endMax));
     store.impose(new XplusYeqZ(start, duration, end));
   }
 
@@ -138,7 +138,9 @@ public final class IntervalVar {
     if (durationMin < 0 || durationMin > durationMax || (long) startMin + durationMin > endMax) {
       throw new IllegalArgumentException("IntervalVar " + name + ": no interval fits these bounds");
     }
-    return optional ? new IntVar(store, name + ".presence", 0, 1) : new IntVar(store, 1, 1);
+    return optional
+        ? new IntVar(store, store.freshVariableId(name + ".presence"), 0, 1)
+        : new IntVar(store, 1, 1);
   }
 
   /**
