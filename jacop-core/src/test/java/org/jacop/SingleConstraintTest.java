@@ -33,8 +33,10 @@ package org.jacop;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import java.io.StringReader;
+import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -112,6 +114,7 @@ import org.jacop.constraints.ExtensionalConflictVa;
 import org.jacop.constraints.ExtensionalSupportStr;
 import org.jacop.constraints.ExtensionalSupportVa;
 import org.jacop.constraints.GCC;
+import org.jacop.constraints.GlobalCardinality;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.IfThenBool;
 import org.jacop.constraints.IfThenElse;
@@ -4236,6 +4239,53 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void globalCardinalityOverMoreThan64ValuesKeepsSupportsAndReachesFixpoint() {
+    // 90 counted values plus the uncounted ones: the bit sets of the value lists span two words
+    Random random = new Random(23);
+    int[] values = IntStream.range(0, 90).toArray();
+    for (int run = 0; run < 300; run++) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[4];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i);
+        for (int k = 0; k < 4; k++) {
+          int v = random.nextInt(100);
+          x[i].addDom(v, v);
+        }
+      }
+      int[] low = new int[values.length];
+      int[] up = new int[values.length];
+      for (int a = 0; a < values.length; a++) {
+        up[a] = random.nextInt(4) == 0 ? 0 : 1 + random.nextInt(2);
+      }
+      String instance = "run " + run + " up " + Arrays.toString(up) + " " + domainsOf(x);
+      GlobalCardinality gcc = new GlobalCardinality(x, values, low, up);
+      store.impose(gcc);
+      checkSupportsAndFixpointAlongRandomWalk(
+          instance,
+          store,
+          x,
+          vs ->
+              bruteForce(
+                  vs,
+                  t -> {
+                    int[] count = new int[100];
+                    for (int v : t) {
+                      count[v]++;
+                    }
+                    for (int a = 0; a < values.length; a++) {
+                      if (count[a] > up[a]) {
+                        return false;
+                      }
+                    }
+                    return true;
+                  }),
+          () -> rerunAtNewLevel(store, gcc, x),
+          random);
+    }
+  }
+
+  @Test
   void channelReifKeepsSupportsAndReachesFixpoint() {
     Random random = new Random(19);
     for (int run = 0; run < 2000; run++) {
@@ -4281,6 +4331,61 @@ class SingleConstraintTest extends TestHelper {
           () -> rerunAtNewLevel(store, channel, vars),
           random);
     }
+  }
+
+  @Test
+  void channelImplyWakesForXAfterManyZeroFlagsThatNeedNoWake() {
+    // b = 0 never prunes for ChannelImply, so the flag changes are recorded without a wake-up;
+    // once more of them were recorded than there are items, a change of x must still wake it
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 5);
+    IntVar b0 = new IntVar(store, "b0", 0, 1);
+    IntVar b1 = new IntVar(store, "b1", 0, 1);
+    store.impose(new ChannelImply(x, new IntVar[] {b0, b1}, new int[] {0, 1}));
+    assertThat(store.consistency()).isTrue();
+    for (int round = 0; round < 3; round++) {
+      store.setLevel(1);
+      b0.domain.in(1, b0, 0, 0);
+      assertThat(store.consistency()).isTrue();
+      store.removeLevel(1);
+      store.setLevel(0);
+    }
+    store.setLevel(1);
+    x.domain.in(1, x, 2, 5);
+    assertThat(store.consistency()).isTrue();
+    assertThat(b0.singleton(0)).isTrue();
+    assertThat(b1.singleton(0)).isTrue();
+  }
+
+  @Test
+  void channelReifFollowsOnlyTheChangedFlagsAcrossBacktracks() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 5);
+    IntVar[] b = new IntVar[6];
+    for (int i = 0; i < 6; i++) {
+      b[i] = new IntVar(store, "b" + i, 0, 1);
+    }
+    store.impose(new ChannelReif(x, b, new int[] {0, 1, 2, 3, 4, 5}));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    b[2].domain.in(1, b[2], 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.domain.contains(2)).isFalse();
+    store.setLevel(2);
+    b[4].domain.in(2, b[4], 1, 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.singleton(4)).isTrue();
+    for (int i = 0; i < 6; i++) {
+      assertThat(b[i].singleton(i == 4 ? 1 : 0)).as("b%d", i).isTrue();
+    }
+    store.removeLevel(2);
+    store.setLevel(1);
+    assertThat(x.domain.contains(4)).isTrue();
+    store.setLevel(2);
+    b[5].domain.in(2, b[5], 0, 0);
+    b[0].domain.in(2, b[0], 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.domain.toString()).isEqualTo("{1, 3..4}");
   }
 
   @Test
@@ -11826,6 +11931,111 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isFalse();
   }
 
+  @Test
+  void assignmentOnUnboundedVariablesEnumeratesOnlyPrunedIndexes() {
+    // Assignment enumerated every value pruned from a variable before skipping those outside the
+    // index range, about 10^9 values per variable narrowed from MIN_INT..MAX_INT to the indexes
+    // (tens of seconds for inverse in FlatZinc, where var int is unbounded).
+    int n = 5;
+    int[][] excluded = {{0, 1}, {2, 3}, {4, 0}};
+    long decomposition = assignmentSolutions(n, excluded, false);
+    assertThat(decomposition).isEqualTo(64);
+    long solutions =
+        assertTimeoutPreemptively(
+            Duration.ofSeconds(2), () -> assignmentSolutions(n, excluded, true));
+    assertThat(solutions).isEqualTo(decomposition);
+  }
+
+  @Test
+  void binpackingOnUnboundedItemsEnumeratesOnlyChangedBins() {
+    // Binpacking enumerated every value an item lost, or its whole previous domain, before skipping
+    // the values that are no bin: an unbounded item narrowed above level 0 before the first
+    // consistency (a constraint imposed during search) cost about 10^9 values.
+    int[] weights = {2, 1, 1, 3, 1, 1, 1, 1};
+    long decomposition = binpackingSolutions(weights, 3, false);
+    assertThat(decomposition).isPositive();
+    long solutions =
+        assertTimeoutPreemptively(
+            Duration.ofSeconds(2), () -> binpackingSolutions(weights, 3, true));
+    assertThat(solutions).isEqualTo(decomposition);
+  }
+
+  private static long binpackingSolutions(int[] weights, int bins, boolean global) {
+    Store store = new Store();
+    int n = weights.length;
+    IntVar[] item = new IntVar[n];
+    IntVar[] load = new IntVar[bins];
+    for (int i = 0; i < n; i++) {
+      item[i] =
+          global
+              ? new IntVar(store, "b" + i, IntDomain.MIN_INT, IntDomain.MAX_INT)
+              : new IntVar(store, "b" + i, 0, bins - 1);
+    }
+    for (int j = 0; j < bins; j++) {
+      load[j] = new IntVar(store, "l" + j, 0, 4);
+    }
+    if (global) {
+      store.impose(new Binpacking(item, load, weights, 0));
+      store.setLevel(store.level + 1);
+      for (IntVar b : item) {
+        b.domain.in(store.level, b, 0, bins - 1);
+      }
+    } else {
+      for (int j = 0; j < bins; j++) {
+        IntVar[] in = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          in[i] = new BooleanVar(store);
+          store.impose(new Reified(new XeqC(item[i], j), in[i]));
+        }
+        store.impose(new LinearInt(in, weights, "==", load[j]));
+      }
+    }
+    Search<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    search.labeling(store, new SimpleSelect<>(item, null, new IndomainMin<>()));
+    return search.getSolutionListener().solutionsNo();
+  }
+
+  private static long assignmentSolutions(int n, int[][] excluded, boolean global) {
+    Store store = new Store();
+    IntVar[] x = new IntVar[n];
+    IntVar[] d = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      x[i] =
+          global
+              ? new IntVar(store, "x" + i, IntDomain.MIN_INT, IntDomain.MAX_INT)
+              : new IntVar(store, "x" + i, 0, n - 1);
+      d[i] =
+          global
+              ? new IntVar(store, "d" + i, IntDomain.MIN_INT, IntDomain.MAX_INT)
+              : new IntVar(store, "d" + i, 0, n - 1);
+    }
+    if (global) {
+      store.impose(new Assignment(x, d));
+    } else {
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+          BooleanVar b = new BooleanVar(store);
+          store.impose(new Reified(new XeqC(x[i], j), b));
+          store.impose(new Reified(new XeqC(d[j], i), b));
+        }
+      }
+    }
+    for (int[] pair : excluded) {
+      store.impose(new XneqC(x[pair[0]], pair[1]));
+    }
+    IntVar[] all = Stream.concat(Arrays.stream(x), Arrays.stream(d)).toArray(IntVar[]::new);
+    Search<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    SelectChoicePoint<IntVar> select = new SimpleSelect<>(all, null, new IndomainMin<>());
+    search.labeling(store, select);
+    return search.getSolutionListener().solutionsNo();
+  }
+
   /**
    * DiffnK skipped the boxes fixed before the current level as already checked, also after its
    * first pruning. Segments fixed after a consistency at level 0 reached the next pruning only at
@@ -12784,5 +12994,40 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     // x3 = 0 and exactly one pair of equal values
     assertThat(noOfAllSolutions(store, x)).isEqualTo(15);
+  }
+
+  /**
+   * Every Lex decomposition of more than two vectors named its Booleans lt_0_0, eq_0_0, ..., so a
+   * second one in the same store gave them the ids of the first one's: the store's checks refused
+   * them, and without the checks the first one's Booleans were hidden from the store's variables.
+   */
+  @Test
+  void twoLexDecompositionsInOneStoreKeepTheirVariablesApart() {
+    Store single = new Store();
+    IntVar[][] y = new IntVar[3][2];
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 2; j++) {
+        y[i][j] = new IntVar(single, "y" + i + "_" + j, 0, 1);
+      }
+    }
+    single.imposeDecomposition(new Lex(y, true));
+    long booleans =
+        single.variablesHashMap.values().stream().filter(BooleanVar.class::isInstance).count();
+    // the chains a < b < c of the four 0/1 vectors of length 2
+    assertThat(noOfAllSolutions(single, y)).isEqualTo(4);
+
+    Store store = new Store();
+    IntVar[][] x = new IntVar[6][2];
+    for (int i = 0; i < 6; i++) {
+      for (int j = 0; j < 2; j++) {
+        x[i][j] = new IntVar(store, "x" + i + "_" + j, 0, 1);
+      }
+    }
+    store.imposeDecomposition(new Lex(new IntVar[][] {x[0], x[1], x[2]}, true));
+    store.imposeDecomposition(new Lex(new IntVar[][] {x[3], x[4], x[5]}, true));
+    assertThat(
+            store.variablesHashMap.values().stream().filter(BooleanVar.class::isInstance).count())
+        .isEqualTo(2 * booleans);
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(16);
   }
 }

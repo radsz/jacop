@@ -71,6 +71,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
+import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -984,6 +985,104 @@ class FlatzincFrontEndTest {
     }
     fzn.append("solve %s satisfy;%n".formatted(annotation));
     return fzn.toString();
+  }
+
+  /**
+   * The detectors that skip a model without the constraint kinds they rewrite leave the model and
+   * the search as they are: a weighted clause model (the shape of the MaxSAT models, whose 2
+   * million clauses each detector pass read for seconds) and a model with a cyclic distance, whose
+   * detector still runs, give the same model and optimum with the gates on and off.
+   */
+  @Test
+  void detectorGatesKeepTheModelAndTheSearch() throws IOException {
+    StringBuilder clauses = new StringBuilder();
+    for (int i = 1; i <= 12; i++) {
+      clauses.append("var bool: x").append(i).append(";\n");
+    }
+    StringBuilder body = new StringBuilder();
+    Random random = new Random(7);
+    for (int c = 0; c < 30; c++) {
+      int a = 1 + random.nextInt(12);
+      int b = 1 + random.nextInt(12);
+      int d = 1 + random.nextInt(12);
+      body.append("constraint bool_clause([x").append(a).append(",x").append(b);
+      body.append("],[x").append(d).append("]);\n");
+    }
+    StringBuilder terms = new StringBuilder();
+    StringBuilder weights = new StringBuilder();
+    for (int i = 1; i <= 12; i++) {
+      clauses.append("var 0..1: b").append(i).append(":: is_defined_var;\n");
+      body.append("constraint bool2int(x").append(i).append(",b").append(i);
+      body.append("):: defines_var(b").append(i).append(");\n");
+      terms.append(i > 1 ? "," : "").append("b").append(i);
+      weights.append(i > 1 ? "," : "").append(1 + i % 4);
+    }
+    String clauseModel =
+        clauses
+            + "var 0..100: objective:: output_var:: is_defined_var;\n"
+            + body
+            + "constraint int_lin_eq(["
+            + weights
+            + ",-1],["
+            + terms
+            + ",objective],0):: defines_var(objective);\n"
+            + "solve minimize objective;\n";
+    String cyclic =
+        """
+        array [1..3] of var 0..9: x:: output_array([1..3]);
+        var -9..9: e1;
+        var -9..9: e2;
+        var 0..9: a1;
+        var 0..9: a2;
+        var 0..9: c1;
+        var 0..9: c2;
+        var 0..9: m1;
+        var 0..9: m2;
+        var 0..18: objective:: output_var;
+        constraint int_lin_eq([1,-1,-1],[x[1],x[2],e1],0);
+        constraint int_lin_eq([1,-1,-1],[x[2],x[3],e2],0);
+        constraint int_abs(e1,a1);
+        constraint int_abs(e2,a2);
+        constraint int_lin_eq([1,1],[a1,c1],10);
+        constraint int_lin_eq([1,1],[a2,c2],10);
+        constraint int_min(a1,c1,m1);
+        constraint int_min(a2,c2,m2);
+        constraint int_lin_eq([1,1,-1],[m1,m2,objective],0);
+        constraint int_ne(x[1],x[3]);
+        solve maximize objective;
+        """;
+    String gates = System.getProperty("org.jacop.fz.detectorGates");
+    try {
+      for (String model : List.of(clauseModel, cyclic)) {
+        System.clearProperty("org.jacop.fz.detectorGates");
+        String[] on = run(model, "-s", "-a");
+        System.setProperty("org.jacop.fz.detectorGates", "false");
+        String[] off = run(model, "-s", "-a");
+        // the search of a second run in one JVM may differ (static random, clocks): the model and
+        // the optimum are compared
+        assertEquals(modelStatistics(off[0]), modelStatistics(on[0]), model);
+        assertEquals(optimum(off[0]), optimum(on[0]), model);
+      }
+    } finally {
+      restoreProperty("org.jacop.fz.detectorGates", gates);
+    }
+  }
+
+  /** The last objective line of a run. */
+  private static String optimum(String out) {
+    int at = out.lastIndexOf("objective = ");
+    assertTrue(at >= 0, out);
+    return out.substring(at, out.indexOf(';', at));
+  }
+
+  /** The variables and propagators of the model of a run with -s. */
+  private static String modelStatistics(String out) {
+    return out.lines()
+        .filter(
+            l ->
+                l.startsWith("%%%mzn-stat: variables=")
+                    || l.startsWith("%%%mzn-stat: propagators="))
+        .collect(Collectors.joining("\n"));
   }
 
   /** The search statistics of a run with -s, without the times and the memory. */
@@ -3331,6 +3430,209 @@ class FlatzincFrontEndTest {
     assertEquals(12, withDetection.size(), withDetection.toString());
   }
 
+  /** The n-queens model as MiniZinc flattens abs(q[i] - q[j]) != j - i, with auxiliaries. */
+  private static String flattenedQueens(int n) {
+    StringBuilder fzn = new StringBuilder();
+    fzn.append("array [1..").append(n).append("] of var 1..").append(n);
+    fzn.append(": q :: output_array([1..").append(n).append("]);\n");
+    StringBuilder cs = new StringBuilder();
+    int aux = 0;
+    for (int i = 1; i <= n; i++) {
+      for (int j = i + 1; j <= n; j++) {
+        int c = j - i;
+        String t = "t" + aux;
+        String a = "a" + aux++;
+        fzn.append("var ").append(1 - n).append("..").append(n - 1).append(": ").append(t);
+        fzn.append(" :: var_is_introduced :: is_defined_var;\n");
+        fzn.append("var ").append(domainWithout(0, n - 1, c)).append(": ").append(a);
+        fzn.append(" :: var_is_introduced :: is_defined_var;\n");
+        cs.append("constraint int_lin_ne([1,-1],[q[").append(i).append("],q[").append(j);
+        cs.append("]],0);\n");
+        cs.append("constraint int_lin_eq([1,-1,-1],[q[").append(i).append("],q[").append(j);
+        cs.append("],").append(t).append("],0) :: defines_var(").append(t).append(");\n");
+        cs.append("constraint int_abs(").append(t).append(',').append(a);
+        cs.append(") :: defines_var(").append(a).append(");\n");
+      }
+    }
+    return fzn.append(cs).append("solve satisfy;\n").toString();
+  }
+
+  // lo..hi without v, as a FlatZinc set
+  private static String domainWithout(int lo, int hi, int v) {
+    StringJoiner values = new StringJoiner(",", "{", "}");
+    for (int k = lo; k <= hi; k++) {
+      if (k != v) {
+        values.add(Integer.toString(k));
+      }
+    }
+    return values.toString();
+  }
+
+  @Test
+  void networkFlowModesKeepTheSolutions() throws IOException {
+    // the flow conservation rows, NetworkFlow, or both, with and without free search: the same
+    // flows and costs on random networks
+    Random rnd = new Random(20261121);
+    for (int run = 0; run < 25; run++) {
+      String model = randomNetworkFlow(rnd);
+      Set<String> reference = null;
+      for (String mode : new String[] {"global", "rows", "both", "auto"}) {
+        System.setProperty("org.jacop.fz.networkFlow", mode);
+        try {
+          for (String[] options : new String[][] {{}, {"-f"}}) {
+            Set<String> solutions = new TreeSet<>(solveAllInOrder(model, options));
+            if (reference == null) {
+              reference = solutions;
+            }
+            assertEquals(
+                reference, solutions, mode + " " + Arrays.toString(options) + "\n" + model);
+          }
+        } finally {
+          System.clearProperty("org.jacop.fz.networkFlow");
+        }
+      }
+    }
+  }
+
+  // a network of 3 to 5 nodes and up to 7 arcs with flows 0..2 and fixed weights 0..3, balances
+  // that add up to 0, as jacop_networkflow (nodes numbered from 1)
+  private static String randomNetworkFlow(Random rnd) {
+    int nodes = 3 + rnd.nextInt(3);
+    int arcs = 3 + rnd.nextInt(5);
+    StringBuilder m = new StringBuilder();
+    StringJoiner arc = new StringJoiner(",", "[", "]");
+    StringJoiner flows = new StringJoiner(",", "[", "]");
+    StringJoiner weights = new StringJoiner(",", "[", "]");
+    for (int i = 0; i < arcs; i++) {
+      int from = 1 + rnd.nextInt(nodes);
+      int to = 1 + (from + rnd.nextInt(nodes - 1)) % nodes;
+      arc.add(from + "," + to);
+      m.append("var 0..2: f").append(i).append(" :: output_var;\n");
+      flows.add("f" + i);
+      weights.add(Integer.toString(rnd.nextInt(4)));
+    }
+    int[] balance = new int[nodes];
+    for (int k = 0; k < 2; k++) {
+      int a = rnd.nextInt(nodes);
+      int b = rnd.nextInt(nodes);
+      balance[a]++;
+      balance[b]--;
+    }
+    StringJoiner b = new StringJoiner(",", "[", "]");
+    for (int v : balance) {
+      b.add(Integer.toString(v));
+    }
+    m.append("var 0..100: cost :: output_var;\n");
+    m.append("constraint jacop_networkflow(")
+        .append(arc)
+        .append(",")
+        .append(flows)
+        .append(",")
+        .append(weights)
+        .append(",")
+        .append(b)
+        .append(",cost);\n");
+    m.append("solve satisfy;\n");
+    return m.toString();
+  }
+
+  @Test
+  void absoluteDifferencesOfQueensBecomeDiagonalCliques() throws IOException {
+    // t = q[i] - q[j], a = |t| with a hole at j - i: the rewrite drops t and a, and the diagonals
+    // become all-different cliques with offsets (CPAI08 queens-100: 34 s and 43,168 nodes under
+    // lazy clause generation before, 0.2 s and 88 nodes after)
+    String model = flattenedQueens(7);
+    String debug = run(model, "-debug", "-s")[0];
+    assertTrue(debug.contains("% absolute differences rewritten: 21 of 21,"), debug);
+    assertEquals(3, debug.split("% alldifferent on 7 variables", -1).length - 1, debug);
+    Set<String> rewritten = solveAll(model);
+    System.setProperty("org.jacop.fz.absoluteDifference", "false");
+    try {
+      assertEquals(solveAll(model), rewritten);
+    } finally {
+      System.clearProperty("org.jacop.fz.absoluteDifference");
+    }
+    assertEquals(40, rewritten.size());
+  }
+
+  @Test
+  void absoluteDifferencesOutsideCliquesStay() throws IOException {
+    // three queens: no clique of five, so the two adjacent pairs, whose hole at 1 would become
+    // lone disequalities, keep their auxiliaries; the corner pair excludes only the end of its
+    // range, which becomes two bounds
+    String debug = run(flattenedQueens(3), "-debug", "-s")[0];
+    assertTrue(debug.contains("% absolute differences rewritten: 1 of 3, 0 disequalities"), debug);
+  }
+
+  @Test
+  void absoluteDifferenceRewriteKeepsTheSolutions() throws IOException {
+    // every rewrite is made, also one whose disequalities are in no clique
+    System.setProperty("org.jacop.fz.absoluteDifference", "all");
+    try {
+      randomAbsoluteDifferences();
+    } finally {
+      System.clearProperty("org.jacop.fz.absoluteDifference");
+    }
+  }
+
+  private void randomAbsoluteDifferences() throws IOException {
+    // random x, y with holes, t defined by q * t + p * x - p * y = c in any term order, t and a
+    // with
+    // holes and narrowed bounds: the solutions over x and y are those without the rewrite
+    Random rnd = new Random(20261120);
+    int fired = 0;
+    for (int run = 0; run < 60; run++) {
+      int p = (rnd.nextBoolean() ? 1 : -1) * (1 + rnd.nextInt(2));
+      int q = rnd.nextBoolean() ? p : -p;
+      int c = q * (rnd.nextInt(5) - 2);
+      String[] terms = {"x", "y", "t"};
+      int[] coefficients = {p, -p, q};
+      int r = rnd.nextInt(3);
+      StringBuilder fzn = new StringBuilder();
+      fzn.append("var ").append(randomSet(rnd, 0, 6)).append(": x :: output_var;\n");
+      fzn.append("var ").append(randomSet(rnd, 0, 6)).append(": y :: output_var;\n");
+      fzn.append("var ").append(rnd.nextBoolean() ? "-9..9" : randomSet(rnd, -9, 9));
+      fzn.append(": t :: var_is_introduced;\n");
+      fzn.append("var ")
+          .append(rnd.nextInt(4) == 0 ? "0..9" : randomSet(rnd, 0, 1 + rnd.nextInt(9)));
+      fzn.append(": a :: var_is_introduced;\n");
+      StringJoiner ws = new StringJoiner(",", "[", "]");
+      StringJoiner vs = new StringJoiner(",", "[", "]");
+      for (int k = 0; k < 3; k++) {
+        ws.add(Integer.toString(coefficients[(k + r) % 3]));
+        vs.add(terms[(k + r) % 3]);
+      }
+      fzn.append("constraint int_lin_eq(").append(ws).append(',').append(vs).append(',');
+      fzn.append(c).append(");\n");
+      fzn.append("constraint int_abs(t,a);\nsolve satisfy;\n");
+      String model = fzn.toString();
+      if (run(model, "-debug", "-s")[0].contains("% absolute differences rewritten: 1 of 1,")) {
+        fired++;
+      }
+      Set<String> rewritten = solveAll(model);
+      System.setProperty("org.jacop.fz.absoluteDifference", "false");
+      try {
+        assertEquals(solveAll(model), rewritten, model);
+      } finally {
+        System.setProperty("org.jacop.fz.absoluteDifference", "all");
+      }
+    }
+    assertTrue(fired >= 20, "rewritten in " + fired + " of 60");
+  }
+
+  // a random non-empty subset of lo..hi, as a FlatZinc set
+  private static String randomSet(Random rnd, int lo, int hi) {
+    StringJoiner values = new StringJoiner(",", "{", "}");
+    int added = 0;
+    for (int k = lo; k <= hi; k++) {
+      if (rnd.nextInt(3) > 0 || k == hi && added == 0) {
+        values.add(Integer.toString(k));
+        added++;
+      }
+    }
+    return values.toString();
+  }
+
   /** The pigeon-hole problem as XCSP3 writes it: conflict tables over 0/1, n holes. */
   private static String conflictTableHoles(int pigeons, int n) {
     StringBuilder fzn = new StringBuilder();
@@ -3828,9 +4130,14 @@ class FlatzincFrontEndTest {
 
   @Test
   void lcgFreeSearchReturnsToClausesAfterEachPruningOnSatisfactionModels() throws IOException {
+    // lazy clause generation is under test: the model is not compiled to clauses
+    ClausalOff.run(this::lcgFreeSearchReturnsToClausesAfterEachPruningOnSatisfactionModelsBody);
+  }
+
+  private void lcgFreeSearchReturnsToClausesAfterEachPruningOnSatisfactionModelsBody()
+      throws IOException {
     // the full fixpoint of the store (#317) paid on optimisation models but not on satisfaction
-    // models: nonogram non_fast_3 took 39 to 57 s instead of 4 to 6 s; four values, so the model
-    // is not compiled to clauses (org.jacop.fz.clausal.maxDomain)
+    // models: nonogram non_fast_3 took 39 to 57 s instead of 4 to 6 s
     String model =
         """
         var 1..4: x :: output_var;
@@ -4607,7 +4914,8 @@ class FlatzincFrontEndTest {
   }
 
   @Test
-  void defaultLcgIsLeftOutForFloatModelsAndAllSolutionsOfSatisfactionProblems() throws IOException {
+  void defaultLcgIsLeftOutForFloatModelsAndEnumeratesAllSolutionsOfSatisfactionProblems()
+      throws IOException {
     // LCG on by default must not change how a model it cannot solve is solved: no "--lcg ignored"
     // message, and the Boolean constraints are not turned into clauses
     String floats =
@@ -4634,8 +4942,11 @@ class FlatzincFrontEndTest {
       out = run(sat, "-a");
       assertFalse(out[0].contains("--lcg ignored"), out[0]);
       assertEquals(2, out[0].split("----------", -1).length - 1, out[0]);
-      // asked for, LCG is still reported as ignored
-      assertTrue(run(sat, "-a", "--lcg")[0].contains("--lcg ignored"));
+      // asked for, LCG enumerates the solutions with blocking clauses
+      out = run(sat, "-a", "--lcg");
+      assertFalse(out[0].contains("--lcg ignored"), out[0]);
+      assertEquals(2, out[0].split("----------", -1).length - 1, out[0]);
+      assertTrue(out[0].contains("=========="), out[0]);
     } finally {
       restoreProperty("jacop.lcg", lcg);
     }
@@ -5426,6 +5737,36 @@ class FlatzincFrontEndTest {
     // the words of 4 letters without two consecutive ones, 8 of them, for each of the 3 regulars
     String all = run(m.toString(), "-a")[0];
     assertEquals(8 * 8 * 8, all.split("----------", -1).length - 1, all);
+  }
+
+  @Test
+  void anIdentifierKeepsItsVariableForItsStoreOnly() {
+    // the nodes of a name share an Ident that keeps the variable it was looked up as; the tables of
+    // another store (a portfolio thread, a presolved copy) look the name up again
+    Tables first = new Tables(new Store());
+    IntVar x = new IntVar(first.store, "x", 0, 5);
+    BooleanVar b = new BooleanVar(first.store, "b");
+    first.addVariable("x", x);
+    first.addVariable("b", b);
+    Tables second = new Tables(new Store());
+    IntVar otherX = new IntVar(second.store, "x", 0, 5);
+    second.addVariable("x", otherX);
+    ASTScalarFlatExpr node = new ASTScalarFlatExpr(ParserTreeConstants.JJTSCALARFLATEXPR);
+    node.setType(2);
+    node.setIdent(new Ident("x"));
+    assertEquals("x", node.getIdent());
+    assertSame(x, first.getVariable(node));
+    assertSame(otherX, second.getVariable(node));
+    assertSame(x, first.getVariable(node));
+    // an alias made after the lookup is followed
+    first.addAlias(b, x);
+    assertSame(b, first.getVariable(node));
+    assertSame(b, first.getVariable("x"));
+    assertSame(otherX, second.getVariable(node));
+    ASTScalarFlatExpr unknown = new ASTScalarFlatExpr(ParserTreeConstants.JJTSCALARFLATEXPR);
+    unknown.setType(2);
+    unknown.setIdent(new Ident("y"));
+    assertNull(first.getVariable(unknown));
   }
 
   @Test
@@ -6498,6 +6839,12 @@ class FlatzincFrontEndTest {
       super(args);
     }
 
+    // every check reads the clock, so the counts do not depend on the sampling of the set-up
+    @Override
+    public int timeOutCheckStride() {
+      return 1;
+    }
+
     @Override
     public boolean timeOutPassed() {
       if (!armed) {
@@ -6647,5 +6994,367 @@ class FlatzincFrontEndTest {
         }
       }
     }
+  }
+
+  /**
+   * A portfolio reads the model before any of its threads starts, without looking at the time-out:
+   * road_33 (86 MB) answered 1.9 s after -t 2000 from Portfolio.readModel on a slow disk. A model
+   * that never arrives (a pipe no one writes) held the run for good; a command-line run ends a
+   * second after its time-out, with UNKNOWN, as one thread does.
+   */
+  @Test
+  void commandLinePortfolioEndsAtItsTimeOutWhileReading() throws IOException, InterruptedException {
+    Path fifo = tmp.resolve("never.fzn");
+    Process mkfifo;
+    try {
+      mkfifo = new ProcessBuilder("mkfifo", fifo.toString()).start();
+    } catch (IOException e) {
+      org.junit.jupiter.api.Assumptions.abort("no mkfifo: " + e.getMessage());
+      return;
+    }
+    org.junit.jupiter.api.Assumptions.assumeTrue(
+        mkfifo.waitFor(30, TimeUnit.SECONDS) && mkfifo.exitValue() == 0, "no named pipe");
+    Path java = Path.of(System.getProperty("java.home"), "bin", "java");
+    Path log = tmp.resolve("never.out");
+    ProcessBuilder pb =
+        new ProcessBuilder(
+            java.toString(),
+            "-cp",
+            System.getProperty("java.class.path"),
+            "org.jacop.fz.Fz2jacop",
+            "-p",
+            "2",
+            "-t",
+            "500",
+            fifo.toString());
+    pb.redirectErrorStream(true);
+    pb.redirectOutput(log.toFile());
+    // a writer that never writes nor closes the pipe: the run can open the model, and reading it
+    // waits for good, as for a large model on a slow disk
+    CountDownLatch testOver = new CountDownLatch(1);
+    Thread writer =
+        new Thread(
+            () -> {
+              try (OutputStream _ = Files.newOutputStream(fifo)) {
+                testOver.await();
+              } catch (IOException _) {
+                // the test is over
+              } catch (InterruptedException _) {
+                Thread.currentThread().interrupt();
+              }
+            });
+    writer.setDaemon(true);
+    writer.start();
+    Process p = pb.start();
+    boolean ended = p.waitFor(60, TimeUnit.SECONDS);
+    if (!ended) {
+      p.destroyForcibly();
+      p.waitFor(10, TimeUnit.SECONDS);
+    }
+    testOver.countDown();
+    String out = Files.readString(log, StandardCharsets.UTF_8);
+    assertTrue(ended, "still reading 60 s after -t 500: " + out);
+    assertEquals(0, p.exitValue(), out);
+    assertTrue(out.contains("=====UNKNOWN=====\n%% =====TIME-OUT====="), out);
+  }
+
+  /**
+   * The watchdog of a portfolio prints the answer the run lacks once: the best solution, or
+   * UNKNOWN, with the time-out; nothing once the answer is out, and no solution after its own.
+   */
+  @Test
+  void portfolioWatchdogPrintsTheAnswerOnce() throws InterruptedException {
+    Options options = new Options(new String[] {"-p", "2", "-t", "1000", "m.fzn"});
+    int[] halts = new int[1];
+    Runnable halt = () -> halts[0]++;
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    PrintStream out = new PrintStream(buffer, true, StandardCharsets.UTF_8);
+
+    Portfolio none = new Portfolio(options);
+    none.timeLimit(out, System.currentTimeMillis(), halt);
+    none.timeLimit(out, System.currentTimeMillis(), halt);
+    assertEquals(
+        "=====UNKNOWN=====\n%% =====TIME-OUT=====\n", buffer.toString(StandardCharsets.UTF_8));
+    assertEquals(1, halts[0]);
+
+    buffer.reset();
+    Portfolio solved = new Portfolio(options);
+    Portfolio.Worker w = solved.new Worker("w", List.of());
+    w.solution("x = 7;\n----------\n", 7, false, new String[0], new int[0]);
+    solved.timeLimit(out, System.currentTimeMillis(), halt);
+    // a thread that finds a better solution once the watchdog fired is too late
+    w.solution("x = 5;\n----------\n", 5, false, new String[0], new int[0]);
+    solved.timeLimit(out, System.currentTimeMillis(), halt);
+    assertEquals(
+        "x = 7;\n----------\n%% =====TIME-OUT=====\n", buffer.toString(StandardCharsets.UTF_8));
+    assertEquals(2, halts[0]);
+
+    // started, it fires on its own after the delay
+    buffer.reset();
+    CountDownLatch fired = new CountDownLatch(1);
+    PrintStream saved = System.out;
+    Portfolio stuck = new Portfolio(options);
+    try {
+      System.setOut(out);
+      stuck.startWatchdog(10, fired::countDown);
+    } finally {
+      System.setOut(saved);
+    }
+    assertTrue(fired.await(30, TimeUnit.SECONDS));
+    assertEquals(
+        "=====UNKNOWN=====\n%% =====TIME-OUT=====\n", buffer.toString(StandardCharsets.UTF_8));
+  }
+
+  @Test
+  void freeSearchFirstKeepsTheClausesOfLcg() throws IOException {
+    // a sum of four squares runs free search without learning before LCG when a time-out is given;
+    // the clauses collected for LCG were not in its store, so it ignored b and printed x = 1
+    String model =
+        """
+        var 0..3: x :: output_var;
+        var -3..3: d;
+        var -2..3: m;
+        var 0..9: s1;
+        var 2..13: u;
+        var 0..168: s2;
+        var 0..4: v;
+        var 0..16: s3;
+        var -5..7: w;
+        var 0..49: s4;
+        var -260..260: obj :: output_var;
+        var bool: b :: output_var;
+        constraint int_lin_eq([-1,2],[d,x],3);
+        constraint int_max(d,-2,m);
+        constraint int_times(m,m,s1);
+        constraint int_times(u,u,s2);
+        constraint int_pow(v,2,s3);
+        constraint int_pow(w,2,s4);
+        constraint int_lin_eq([1,1,1,3,-1],[s1,s2,s3,s4,obj],0);
+        constraint int_le_reif(x, 0, b);
+        constraint bool_clause([b], []);
+        solve minimize obj;
+        """;
+    String out = run(model, "-t", "5000", "--lcg", "on")[0];
+    assertTrue(out.endsWith("x = 0;\nobj = 8;\nb = true;\n----------\n==========\n"), out);
+  }
+
+  @Test
+  void knapsackSurrogateKeepsBooleanItemsApart() throws IOException {
+    // every Boolean variable has store index -1, so the detector merged d9 and d11 (bool2int
+    // aliases of b3 and b7) into one item of the surrogate knapsack and refuted the model
+    String model =
+        """
+        var 0..1: x0 :: output_var;
+        var 0..1: x2 :: output_var;
+        var bool: b3 :: output_var;
+        var 0..1: x4 :: output_var;
+        var 0..1: x6 :: output_var;
+        var bool: b7 :: output_var;
+        var 0..1: d8 :: output_var;
+        var 0..1: d9 :: output_var;
+        var 0..1: d10 :: output_var;
+        var 0..1: d11 :: output_var;
+        constraint bool2int(b3,d9);
+        constraint bool2int(b7,d11);
+        constraint int_lin_le([7,1,2],[x2,d9,x0],7);
+        constraint int_lin_le([-2,-9,-7,-2,-4,-6,-1,-9],[x0,d8,x2,d9,x4,d10,x6,d11],-34);
+        solve satisfy;
+        """;
+    // brute force: x2 = 1, x0 = d9 = 0, d8 = x4 = d10 = d11 = 1, x6 free
+    assertEquals(2, solveAll(model).size());
+  }
+
+  @Test
+  void maxCliqueKeepsConflictsOfAVariableDeclaredEqualToAVertex() throws IOException {
+    // the sum names a = v0 and the conflicts name v0: the model was taken for pure maximum clique,
+    // its conflicts were left to the bound, which holds those between vertices only, and z = 9
+    StringBuilder model = new StringBuilder();
+    for (int i = 0; i < 10; i++) {
+      model.append("var 0..1: v").append(i).append(";\n");
+    }
+    model.append("var 0..1: a = v0;\nvar 0..10: z :: output_var;\n");
+    for (int i = 1; i < 10; i++) {
+      model.append("constraint int_lin_le([1,1],[v0,v").append(i).append("],1);\n");
+    }
+    model.append("constraint int_lin_le([1,1],[v1,v2],1);\n");
+    model.append(
+        "constraint int_lin_eq([1,1,1,1,1,1,1,1,1,1,-1],[a,v1,v2,v3,v4,v5,v6,v7,v8,v9,z],0);\n");
+    model.append("solve maximize z;\n");
+    for (String lcg : new String[] {"on", "off"}) {
+      String out = run(model.toString(), "--lcg", lcg)[0];
+      // v0 = 0 and one of v1, v2: 8
+      assertTrue(out.endsWith("z = 8;\n----------\n==========\n"), out);
+    }
+  }
+
+  @Test
+  void emptySearchArraysSearchNothing() throws IOException {
+    // MiniZinc may write a search over no variable or a sequence of no search; seq_search([]),
+    // priority_search over [] and set_search or float_search over [] threw an exception
+    String model =
+        """
+        var 1..3: x :: output_var;
+        var 1..3: y :: output_var;
+        constraint int_lt(x, y);
+        solve :: %s satisfy;
+        """;
+    for (String ann :
+        new String[] {
+          "seq_search([])",
+          "seq_search([seq_search([]), int_search([y], input_order, indomain_max, complete)])",
+          "priority_search([], [], input_order, complete)",
+          "set_search([], input_order, indomain_min, complete)",
+          "float_search([], 0.1, input_order, indomain_split, complete)",
+          "seq_search([float_search([], 0.1, input_order, indomain_split, complete),"
+              + " int_search([x, y], input_order, indomain_min, complete)])"
+        }) {
+      String out = run(String.format(model, ann), "-a")[0];
+      assertEquals(3, out.split("----------", -1).length - 1, ann + "\n" + out);
+      assertTrue(out.contains("=========="), ann + "\n" + out);
+    }
+  }
+
+  @Test
+  void unknownVariableSelectionIsInputOrder() throws IOException {
+    // the warning said input_order was used, and the search threw a NullPointerException
+    String[] r =
+        run(
+            """
+            var 1..3: x :: output_var;
+            var 1..3: y :: output_var;
+            constraint int_lt(x, y);
+            solve :: int_search([x, y], no_such_heuristic, indomain_min, complete) satisfy;
+            """,
+            "-a");
+    assertTrue(r[1].contains("no_such_heuristic"), r[1]);
+    assertEquals(
+        "x = 1;\ny = 2;\n----------\nx = 1;\ny = 3;\n----------\nx = 2;\ny = 3;\n----------\n==========\n",
+        r[0]);
+  }
+
+  @Test
+  void nestedSequenceSearchFollowsItsFirstSearch() throws IOException {
+    // the master of seq_search([seq_search([a, b])]) was labelled with the selection of b: the
+    // search branched on y before x, and a random selection shared by both searches printed a
+    // solution with a variable not fixed ("Variable is not grounded in the solution")
+    String order =
+        run(
+            """
+            var 1..2: x :: output_var;
+            var 1..2: y :: output_var;
+            solve :: seq_search([seq_search([int_search([x], input_order, indomain_min, \
+            complete), int_search([y], input_order, indomain_max, complete)])]) satisfy;
+            """,
+            "-a")[0];
+    assertEquals(
+        """
+        x = 1;
+        y = 2;
+        ----------
+        x = 1;
+        y = 1;
+        ----------
+        x = 2;
+        y = 2;
+        ----------
+        x = 2;
+        y = 1;
+        ----------
+        ==========
+        """,
+        order);
+    String out =
+        run(
+            """
+            var 1..3: a :: output_var;
+            var 1..2: k :: output_var;
+            var -20..20: w :: output_var;
+            solve :: seq_search([seq_search([int_search([w], input_order, indomain_min, \
+            complete), int_search([k,w,a], random, indomain_min, complete)])]) satisfy;
+            """,
+            "-a")[0];
+    assertEquals(41 * 2 * 3, out.split("----------", -1).length - 1, out);
+    assertTrue(out.endsWith("==========\n"), out);
+  }
+
+  @Test
+  void onRestartWithRestartsKeepsTheClausesOfLcg() throws IOException {
+    // on_restart with restarts searches without learning, but the clauses collected for LCG were
+    // never posted in the store: the at most one of a, b, c was ignored
+    String model =
+        """
+        var 1..5: st :: output_var;
+        var bool: a :: output_var;
+        var bool: b :: output_var;
+        var bool: c :: output_var;
+        constraint jacop_on_restart_status(st);
+        constraint bool_clause([],[a,b]);
+        constraint bool_clause([],[b,c]);
+        constraint bool_clause([],[a,c]);
+        solve :: bool_search([a,b,c], input_order, indomain_max, complete) satisfy;
+        """;
+    for (String[] options :
+        new String[][] {
+          {"--lcg", "on", "--restart", "luby", "--lp", "off"},
+          {"--lcg", "on", "-f", "--restart", "luby", "--lp", "off"}
+        }) {
+      String out = run(model, options)[0];
+      assertTrue(out.contains("a = true;\nb = false;\nc = false;\n----------\n"), out);
+    }
+  }
+
+  @Test
+  void onRestartWithRestartsFailsOnAClauseFalseAtTheRoot() throws IOException {
+    // the table fixes a and b before the clauses of a = b are posted for the restart search: its
+    // first run failed at the root, the next runs forgot it and printed a = false, b = true
+    String model =
+        """
+        var 1..5: st :: output_var;
+        var bool: a :: output_var;
+        var bool: b :: output_var;
+        constraint jacop_on_restart_status(st);
+        constraint bool_eq(a,b);
+        constraint jacop_table_bool([a,b],[false,true]);
+        solve :: bool_search([a,b], input_order, indomain_max, complete) satisfy;
+        """;
+    String out = run(model, "--lcg", "on", "--restart", "luby", "--lp", "off")[0];
+    assertEquals("=====UNSATISFIABLE=====\n", out);
+  }
+
+  @Test
+  void variablesNamedLikeGeneratedOnesKeepTheirConstraints() throws IOException {
+    // the closed cardinality creates counters named counter0 and counter1, which hid the model's
+    // own counter0 and counter1 from the store's constraints: the components missed the link
+    // counter0 + counter1 <= 3, fixed counter0 = 2 with its own component and refuted the model
+    String model =
+        """
+        var 1..2: a :: output_var;
+        var 1..2: counter0 :: output_var;
+        var 1..2: counter1 :: output_var;
+        var 1..2: p1;
+        var 1..2: p2;
+        var 1..2: p3;
+        var bool: r;
+        var bool: s12;
+        var bool: s13;
+        var bool: s23;
+        var 1..2: y1;
+        var 1..2: y2;
+        constraint int_ne(a, counter0);
+        constraint int_lin_le([1,1],[counter0,counter1],3);
+        constraint int_eq_reif(counter1, 1, r);
+        constraint int_ne_reif(p1, p2, s12);
+        constraint int_ne_reif(p1, p3, s13);
+        constraint int_ne_reif(p2, p3, s23);
+        constraint bool_clause([s12],[r]);
+        constraint bool_clause([s13],[r]);
+        constraint bool_clause([s23],[r]);
+        constraint jacop_global_cardinality_low_up_closed([y1,y2],[1,2],[0,0],[2,2]);
+        solve satisfy;
+        """;
+    // r = 1 puts three pigeons p1..p3 into two holes, so counter1 = 2, counter0 = 1 and a = 2
+    String out = run(model)[0];
+    assertEquals("a = 2;\ncounter0 = 1;\ncounter1 = 2;\n----------\n", out);
+    assertEquals(1, solveAll(model).size());
   }
 }

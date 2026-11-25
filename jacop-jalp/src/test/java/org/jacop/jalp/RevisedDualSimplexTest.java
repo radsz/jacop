@@ -609,6 +609,33 @@ class RevisedDualSimplexTest {
   }
 
   @Test
+  void columnWhoseBoundsOtherRowsImplyIsAggregated() {
+    // x + y + z = 4 with y, z in [0, 5] implies only x in [-6, 4], so the equation alone does not
+    // make x free; x - w >= 0 with w >= 0 implies x >= 0, its lower bound, so x is implied free
+    // and substituted out with its equation. min -x - 2w with x + w <= 6: x = w = 3, -9
+    double inf = Double.POSITIVE_INFINITY;
+    int[][] cols = {{0, 1, 2}, {0, 3}, {0, 3}};
+    double[][] vals = {{1, 1, 1}, {1, -1}, {1, 1}};
+    double[] lo = {4, 0, -inf};
+    double[] hi = {4, inf, 6};
+    double[] cost = {-1, 0, 0, -2};
+    for (boolean presolve : new boolean[] {false, true}) {
+      RevisedDualSimplex lp = new RevisedDualSimplex(cols, vals, lo, hi, cost, true);
+      lp.setExact(true);
+      lp.setPresolve(presolve);
+      lp.setBounds(0, 0, 10);
+      lp.setBounds(1, 0, 5);
+      lp.setBounds(2, 0, 5);
+      lp.setBounds(3, 0, 10);
+      assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      assertThat(lp.objective()).isCloseTo(-9, org.assertj.core.data.Offset.offset(1e-9));
+      if (presolve) {
+        assertThat(lp.presolveReductions()[Presolve.AGGREGATED_COLUMN]).isEqualTo(1);
+      }
+    }
+  }
+
+  @Test
   void dominatedColumnIsFixedByTheDualBoundOfAColumnSingleton() {
     // x + s + t = 4 and x - v <= 2, s >= 0 without upper bound and cost 1 bounds the dual of row 0
     // by 1, so the reduced cost of x (cost 3) is at least 2: x = 0 in every optimum. min 4

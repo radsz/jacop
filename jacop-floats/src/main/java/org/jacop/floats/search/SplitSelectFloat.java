@@ -112,6 +112,10 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
   @Override
   public PrimitiveConstraint getChoiceConstraint(int index) {
 
+    if (searchVariables.length == 0) {
+      return null;
+    }
+
     super.getChoiceVariable(index);
     T v;
 
