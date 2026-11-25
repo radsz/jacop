@@ -8380,4 +8380,14 @@ class FlatzincFrontEndTest {
         4,
         solveAll(vars + "constraint jacop_negative_table_int([x], []);\nsolve satisfy;\n").size());
   }
+
+  @Test
+  void aChannelWithoutABooleanPerValueIsAnErrorOfTheModel() throws IOException {
+    // ChannelReif listed the values of 0..1000000000 before it compared their number with the
+    // Booleans, and ran out of memory
+    assertModelError(
+        "var 0..3: x :: output_var;\nvar bool: a;\nvar bool: b;\n"
+            + "constraint jacop_channel(x, [a, b], 0..1000000000);\nsolve satisfy;\n",
+        "jacop_channel: b has 2 elements, not one Boolean per value");
+  }
 }

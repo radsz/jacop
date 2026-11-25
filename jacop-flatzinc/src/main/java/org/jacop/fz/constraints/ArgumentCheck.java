@@ -140,6 +140,9 @@ public final class ArgumentCheck implements ParserTreeConstants {
         a -> a.sameLength("the variables, the permutation and the sorted variables", 0, 1, 2),
         "jacop_sort_permutation");
 
+    // a Boolean per value of the set
+    rule(a -> a.size(1, a.set(2).getSize(), "b", "one Boolean per value"), "jacop_channel");
+
     // tables: tuples of one value per variable
     rule(
         a -> {
