@@ -134,6 +134,11 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
     }
 
     double value = (((FloatVar) v).min() + ((FloatVar) v).max()) / 2.0;
+    if (Double.isInfinite(value)) {
+      // the sum of two bounds beyond Double.MAX_VALUE / 2 overflows; the split at infinity
+      // narrowed nothing and the search recursed until the stack overflowed
+      value = ((FloatVar) v).min() / 2 + ((FloatVar) v).max() / 2;
+    }
 
     if (leftFirst) {
       if (((FloatVar) v).max() > value) {

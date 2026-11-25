@@ -1054,4 +1054,20 @@ class SingleConstraintTest {
       FloatDomain.setPrecision(precision);
     }
   }
+
+  /**
+   * Splitting a domain whose bounds add up beyond Double.MAX_VALUE: the middle (min + max) / 2 was
+   * infinite, the choice x &lt; Infinity narrowed nothing and the search recursed until a
+   * StackOverflowError.
+   */
+  @Test
+  void splitOfADomainNearTheLargestDoubleNarrowsIt() {
+    Store store = new Store();
+    FloatVar x = new FloatVar(store, "x", 1.0e308, 1.7e308);
+    DepthFirstSearch<FloatVar> search = new DepthFirstSearch<>();
+    SplitSelectFloat<FloatVar> select = new SplitSelectFloat<>(store, new FloatVar[] {x}, null);
+    search.setPrintInfo(false);
+    assertThat(search.labeling(store, select)).isTrue();
+    assertThat(x.min() >= 1.0e308 && x.max() <= 1.7e308).as("%s", x).isTrue();
+  }
 }
