@@ -9068,6 +9068,28 @@ Version 5.0 (unreleased)
    atom, from int arrays: the same search, sudoku_opt p29 and
    gfd-schedule n100 -2.9 % each, wide-quick -f -0.9 %, default -0.2 %.
 
+507. The JaLP presolve stuffs singleton columns (G. Gamrath, T. Koch,
+   A. Martin, M. Miltenberger and D. Weninger, "Progress in presolving
+   for mixed integer programming", Mathematical Programming Computation
+   7, 2015): in a row with one side, the column singletons whose cost
+   asks to use up the row are taken from the largest gain per unit of
+   the row; one that fits even with the other columns at their worst
+   moves to its bound, one the better ones already overflow the row with
+   stays at the other. trucking_15 presolves to 87 x 98 like HiGHS (was
+   87 x 600). -Dorg.jacop.jalp.presolveStuffing=false turns it off.
+
+508. The JaLP presolve removes rows that the bounds other rows imply on
+   their columns keep (E. D. Andersen and K. D. Andersen, "Presolving in
+   linear programming", Mathematical Programming 71, 1995, section 3.3,
+   with implied column bounds as HiGHS keeps them). Each row bounds its
+   columns, one step, from the bounds of the others; the bounds of a
+   removed row are not used after it goes, so every removed row is
+   implied by rows that are kept. Column bounds do not change. Over the
+   687 LPs of the osolpro LP bench the presolved sizes above HiGHS's drop
+   from 244,977 to 210,986 rows and columns (with item 507); agg, cont4
+   and rocII-5-11 presolve to HiGHS's size. -Dorg.jacop.jalp.presolveImpliedRows=false
+   turns it off.
+
 Version 4.11
 =============
 
