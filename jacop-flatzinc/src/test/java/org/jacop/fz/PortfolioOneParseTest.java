@@ -325,6 +325,17 @@ class PortfolioOneParseTest {
         unassigned,
         "var 1..3: x :: output_var;\nconstraint int_lin_le(w, [x], 3);\nsolve minimize x;\n",
         StandardCharsets.UTF_8);
+    // an exception the front end does not handle (a negative number of rows, a value the argument
+    // check does not look at), in every thread
+    Path rows = tmp.resolve("rows.fzn");
+    Files.writeString(
+        rows,
+        "var 1..3: x :: output_var;\nvar 1..3: y :: output_var;\n"
+            + "constraint jacop_lex_chain_less_int([x, y], -1);\nsolve minimize x;\n",
+        StandardCharsets.UTF_8);
+    String[] exception = status("-p", "3", rows.toString());
+    assertEquals("1", exception[0]);
+    assertEquals(1, exception[2].lines().filter(l -> l.contains("stopped")).count(), exception[2]);
     Path broken = tmp.resolve("broken.fzn");
     Files.writeString(
         broken,
