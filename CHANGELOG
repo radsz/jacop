@@ -9156,8 +9156,8 @@ Version 5.0 (unreleased)
    Wide set at 240 s, -f: total time 13,154 -> 13,005 s, 196 instances
    solved by both 2,681 -> 2,445 s (blocks-world 16-4-83 173 -> 92 s,
    liner-sf-repositioning tp7_4 177 -> 106 s), whirlpool d29 lost at the
-   limit (154 s before).
-
+   limit (154 s before); default mode 19,811 -> 19,825 s, 169 = 169
+   solved.
 
 Version 4.11
 =============
