@@ -548,15 +548,11 @@ final class Presolve {
   private int stuffing() {
     int found = 0;
     for (int i = 0; i < m; i++) {
-      if (!rowAlive[i] || rowCount[i] < 2) {
-        continue;
-      }
       boolean hasLo = rowLo[i] != Double.NEGATIVE_INFINITY;
       boolean hasHi = rowHi[i] != Double.POSITIVE_INFINITY;
-      if (hasLo == hasHi) {
-        continue;
+      if (rowAlive[i] && rowCount[i] >= 2 && hasLo != hasHi) {
+        found += stuffRow(i, hasHi ? 1 : -1, hasHi ? rowHi[i] : -rowLo[i]);
       }
-      found += stuffRow(i, hasHi ? 1 : -1, hasHi ? rowHi[i] : -rowLo[i]);
     }
     return found;
   }
@@ -2094,13 +2090,12 @@ final class Presolve {
       int i = recRow[t];
       int j = recCol[t];
       switch (kind[t]) {
-        case FIX_COLUMN:
+        case FIX_COLUMN, DOMINATED_COLUMN, STUFFED_COLUMN:
           basic[j] = false;
           value[j] = fixedAt[j];
           upper[j] = fixedAt[j] == givenHi[j] && givenHi[j] != givenLo[j];
           break;
-        case DROP_ROW:
-        case IMPLIED_ROW:
+        case DROP_ROW, IMPLIED_ROW:
           basic[n + i] = true;
           y[i] = 0;
           break;
@@ -2134,12 +2129,6 @@ final class Presolve {
           upper[n + i] = false;
           y[i] = 0;
           y[i] = reducedCost(recNum[3][t], j, recLenA[t], y) / recNum[0][t];
-          break;
-        case DOMINATED_COLUMN:
-        case STUFFED_COLUMN:
-          basic[j] = false;
-          value[j] = fixedAt[j];
-          upper[j] = fixedAt[j] == givenHi[j] && givenHi[j] != givenLo[j];
           break;
         default:
           doubletonBasis(t, i, j, recOther[t], y, value, basic, upper);
