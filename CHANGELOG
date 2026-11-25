@@ -9086,6 +9086,17 @@ Version 5.0 (unreleased)
    the instances both solve; at 600 s two -f proofs past 400 s are lost
    (celar graph11, whirlpool d29).
 
+508. Root probing and the Diffn area check are cheaper, with the same search.
+   DualFeasibleFunctions keeps a memo of its packing tests, keyed by the
+   container and the set of item sizes: root probing of MiniZinc Challenge
+   2014 rectangle-packing rpp23 made 34,513 tests on 346 distinct sets.
+   LcgSolver writes out equals and hashCode of its probing atoms (with the
+   values of the generated ones, so sets keep their order), and probing
+   stops collecting the consequences of a variable's values once none is
+   common to all. -f wall time on rectangle-packing rpp18-rpp26 -15 to
+   -19 %; at 240 s, Diffn instances proved by both 918 -> 836 s (-f) and
+   188 -> 175 s (default search); wide-quick -f at 600 s total 0.995.
+
 Version 4.11
 =============
 
