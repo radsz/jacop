@@ -403,6 +403,7 @@ setup to run configuration. -->
                                 <include>**/DefinedLastFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
                                 <include>**/LinearIndexElementFlatzincTest.java</include>
+                                <include>**/BoundedCyclesFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
                                 <include>**/ProgressionTilingFlatzincTest.java</include>
@@ -698,6 +699,7 @@ setup to run configuration. -->
                                 <include>**/DefinedLastFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
                                 <include>**/LinearIndexElementFlatzincTest.java</include>
+                                <include>**/BoundedCyclesFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
                                 <include>**/ProgressionTilingFlatzincTest.java</include>
@@ -988,6 +990,7 @@ setup to run configuration. -->
                                 <include>**/DefinedLastFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
                                 <include>**/LinearIndexElementFlatzincTest.java</include>
+                                <include>**/BoundedCyclesFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
                                 <include>**/ProgressionTilingFlatzincTest.java</include>
@@ -1276,6 +1279,7 @@ setup to run configuration. -->
                                 <include>**/DefinedLastFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
                                 <include>**/LinearIndexElementFlatzincTest.java</include>
+                                <include>**/BoundedCyclesFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
                                 <include>**/ProgressionTilingFlatzincTest.java</include>

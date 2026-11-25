@@ -104,6 +104,9 @@ public class CircuitCostDetector implements ParserTreeConstants {
 
   private final List<SimpleNode> linears = new ArrayList<>();
 
+  // the cycle formulation of permutations whose cycle labels are packed into bins
+  private final BoundedCycleRows cycleRows;
+
   // an element constraint value = array[index - firstIndex] with a constant array
   // (classes rather than records with array components, which would compare the arrays by identity)
   private static final class Element {
@@ -162,6 +165,7 @@ public class CircuitCostDetector implements ParserTreeConstants {
    */
   public CircuitCostDetector(Support support) {
     this.support = support;
+    this.cycleRows = BoundedCycleRows.enabled() ? new BoundedCycleRows(support) : null;
   }
 
   /**
@@ -259,6 +263,9 @@ public class CircuitCostDetector implements ParserTreeConstants {
   }
 
   private void collect(ASTConstElem node) {
+    if (cycleRows != null) {
+      cycleRows.collect(node);
+    }
     switch (node.getName()) {
       case "jacop_circuit" ->
           targets.add(new Target(support.getVarArray(child(node, 0)), Kind.CIRCUIT, 1));
@@ -417,6 +424,7 @@ public class CircuitCostDetector implements ParserTreeConstants {
       }
     }
     List<Sum> sums = new ArrayList<>();
+    boolean cycled = false;
     boolean anyEquation = false;
     for (SimpleNode node : linears) {
       Sum sum = sumOf(node, c, arcCosts, fixed, rowOfValue, rowOfSuccessor);
@@ -438,7 +446,12 @@ public class CircuitCostDetector implements ParserTreeConstants {
       switch (c.kind) {
         case SUBCIRCUIT -> posted.add(new SubcircuitCost(c.x, sum.costs, sum.cost, c.offset));
         case CIRCUIT -> posted.add(new CircuitCost(c.x, sum.costs, sum.cost, c.offset));
-        case ALLDIFFERENT -> posted.add(new CostAlldifferent(c.x, sum.costs, sum.cost, c.offset));
+        case ALLDIFFERENT -> {
+          posted.add(new CostAlldifferent(c.x, sum.costs, sum.cost, c.offset));
+          if (!cycled && cycleRows != null && cycleRows.hasCandidates() && c.m == n) {
+            cycled = cycleRows.post(c.x, c.offset, sum.costs, sum.cost) > 0;
+          }
+        }
         case GCC -> posted.add(new CostGCC(c.x, sum.costs, counters(c), sum.cost, c.offset));
       }
       for (Constraint cc : posted) {
