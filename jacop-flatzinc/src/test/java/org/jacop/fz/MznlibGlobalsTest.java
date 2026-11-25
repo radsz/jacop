@@ -93,6 +93,7 @@ class MznlibGlobalsTest {
         "hook_element_nonshifted",
         "hook_element2d",
         "hook_count_var_rel",
+        "hook_count_var_reif",
         "hook_regular_nfa",
         "hook_regular_nfa_set",
         "hook_sum_set",

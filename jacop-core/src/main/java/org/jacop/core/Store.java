@@ -1118,6 +1118,26 @@ public class Store {
   }
 
   /**
+   * It gives an id that no variable of this store has yet: the given id, or the given id followed
+   * by primes. The variables that a reformulation creates take their ids from it, so that they
+   * never share an id with a variable of the model, which would hide one of them from {@link
+   * #variablesHashMap} and so its constraints from {@link #getConstraints()}.
+   *
+   * @param id the preferred id.
+   * @return an id unused in this store.
+   */
+  public String freshVariableId(String id) {
+    if (!variablesHashMap.containsKey(id)) {
+      return id;
+    }
+    StringBuilder fresh = new StringBuilder(id).append('\'');
+    while (variablesHashMap.containsKey(fresh.toString())) {
+      fresh.append('\'');
+    }
+    return fresh.toString();
+  }
+
+  /**
    * This function sets the prefix of the automatically generated names for noname variables.
    *
    * @param idPrefix prefix of all variables with automatically generated names.

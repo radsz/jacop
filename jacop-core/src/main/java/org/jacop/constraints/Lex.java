@@ -213,21 +213,21 @@ public class Lex extends DecomposedConstraint<Constraint> {
 
     private void buildLtVariable(int i, int j, int sizeToCompare) {
       if (isLe) {
-        lt[i][j] = new BooleanVar(store, "lt_" + i + "_" + j);
+        lt[i][j] = new BooleanVar(store, store.freshVariableId("lt_" + i + "_" + j));
         constraints.add(new Reified(new XltY(x[i][j], x[i + 1][j]), lt[i][j]));
       } else {
         if (x[i].length < x[i + 1].length) {
           if (j < sizeToCompare - 1) {
-            lt[i][j] = new BooleanVar(store, "lt_" + i + "_" + j);
+            lt[i][j] = new BooleanVar(store, store.freshVariableId("lt_" + i + "_" + j));
             constraints.add(new Reified(new XltY(x[i][j], x[i + 1][j]), lt[i][j]));
             numberVar++;
           } else {
-            lt[i][j] = new BooleanVar(store, "le_" + i + "_" + j);
+            lt[i][j] = new BooleanVar(store, store.freshVariableId("le_" + i + "_" + j));
             constraints.add(new Reified(new XlteqY(x[i][j], x[i + 1][j]), lt[i][j]));
             numberVar++;
           }
         } else {
-          lt[i][j] = new BooleanVar(store, "lt_" + i + "_" + j);
+          lt[i][j] = new BooleanVar(store, store.freshVariableId("lt_" + i + "_" + j));
           constraints.add(new Reified(new XltY(x[i][j], x[i + 1][j]), lt[i][j]));
           numberVar++;
         }
@@ -236,7 +236,7 @@ public class Lex extends DecomposedConstraint<Constraint> {
 
     private void buildEqVariable(int i, int j, int sizeToCompare) {
       if (isLe) {
-        eq[i][j] = new BooleanVar(store, "eq_" + i + "_" + j);
+        eq[i][j] = new BooleanVar(store, store.freshVariableId("eq_" + i + "_" + j));
         constraints.add(new Reified(new XeqY(x[i][j], x[i + 1][j]), eq[i][j]));
 
         if (x[i].length > x[i + 1].length && j == sizeToCompare - 1) {
@@ -244,7 +244,7 @@ public class Lex extends DecomposedConstraint<Constraint> {
         }
       } else {
         if (j < sizeToCompare - 1) {
-          eq[i][j] = new BooleanVar(store, "eq_" + i + "_" + j);
+          eq[i][j] = new BooleanVar(store, store.freshVariableId("eq_" + i + "_" + j));
           constraints.add(new Reified(new XeqY(x[i][j], x[i + 1][j]), eq[i][j]));
           numberVar++;
         }

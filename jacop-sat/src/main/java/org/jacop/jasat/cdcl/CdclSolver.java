@@ -271,6 +271,9 @@ public final class CdclSolver {
   private long lubyLimit;
   // conflicts of one unit of the Luby sequence in stable mode
   private static final long LUBY_UNIT = Long.getLong("jacop.jasat.lubyUnit", 512L);
+  // a lazy activity order while an external propagator decides, see VarHeap.setLazy
+  private static final boolean LAZY_ORDER =
+      !"false".equals(System.getProperty("jacop.jasat.lazyOrder"));
   private final int[] lbdQueue = new int[50];
   private int lbdQueueSize;
   private int lbdQueueHead;
@@ -1017,6 +1020,12 @@ public final class CdclSolver {
     interrupted = true;
   }
 
+  /** Takes back {@link #cancel()}: later calls of {@link #solve} run again. */
+  public void uncancel() {
+    cancelled = false;
+    interrupted = false;
+  }
+
   /**
    * Whether the clock of the solver is virtual (system property {@code jacop.virtualClock}): {@link
    * #now} then counts {@link #work}, {@link #VIRTUAL_WORK_PER_MS} per millisecond, instead of
@@ -1526,6 +1535,27 @@ public final class CdclSolver {
     vdata[r | REASON] = why;
     vdata[r | TPOS] = trailSize;
     trail[trailSize++] = lit;
+  }
+
+  /**
+   * Returns the decisions of the current assignment: the literals assigned without a reason above
+   * the root, in the order of the trail.
+   *
+   * @return the decision literals, in DIMACS form
+   */
+  public int[] decisionLiterals() {
+    int[] out = new int[decisionLevel];
+    int n = 0;
+    for (int k = decisionLevel == 0 ? trailSize : trailLim[0]; k < trailSize; k++) {
+      int lit = trail[k];
+      if (varReason(lit >> 1) == NO_REASON && litLevel(lit) > 0) {
+        if (n == out.length) {
+          out = Arrays.copyOf(out, 2 * n + 1);
+        }
+        out[n++] = toDimacs(lit);
+      }
+    }
+    return Arrays.copyOf(out, n);
   }
 
   /** The decision level of variable v (meaningful while v is assigned). */
@@ -3556,6 +3586,10 @@ public final class CdclSolver {
           lit = external.propagate();
         }
         if (lit == 0) {
+          // a propagation cut by the deadline is no fixpoint: no decision and no model follow
+          if (external.propagationCut()) {
+            outOfTime = true;
+          }
           return NO_CONFLICT;
         }
         implied = toLit(lit);
@@ -3734,6 +3768,18 @@ public final class CdclSolver {
     backtrack(0);
     external = propagator;
     notified = 0;
+  }
+
+  /**
+   * Sets whether the activity order of the decisions is lazy (see {@link VarHeap#setLazy}), for an
+   * external propagator that makes almost every decision, as lazy clause generation under a fixed
+   * search does: the order is then read only when the propagator has no decision. The system
+   * property {@code jacop.jasat.lazyOrder=false} keeps it eager. Off by default.
+   *
+   * @param lazy true for the lazy order
+   */
+  public void setLazyOrder(boolean lazy) {
+    order.setLazy(lazy && LAZY_ORDER);
   }
 
   /**
@@ -6306,6 +6352,7 @@ public final class CdclSolver {
     if (assigned != trailSize) {
       throw new IllegalStateException(assigned + " variables assigned, trail " + trailSize);
     }
+    markWatched();
     for (int pass = 0; pass < 2; pass++) {
       int[] list = pass == 0 ? originals : learnts;
       int n = pass == 0 ? numOriginals : numLearnts;
@@ -6318,6 +6365,11 @@ public final class CdclSolver {
         checkClause(mem, ref + HEADER, mem[ref + SIZE], pass == 0 ? "original" : "learnt");
       }
     }
+    for (int l = 0; l < 2 * numVars; l++) {
+      for (int i = 1; i < watches[l][0]; i++) {
+        watchedMarks[watchRef(watches[l][i])] = 0;
+      }
+    }
     int[] pair = new int[2];
     for (int l = 0; l < 2 * numVars; l++) {
       for (int b = 1; b < binWatches[l][0]; b++) {
@@ -6328,19 +6380,37 @@ public final class CdclSolver {
     }
   }
 
+  // per clause reference, bit k set when the clause is in the watch list of its k-th literal
+  private int[] watchedMarks = new int[0];
+
+  /**
+   * Marks every clause found in the watch list of its first or second literal, in one pass over the
+   * watch lists, so that checking all clauses stays linear when a watch list is long.
+   */
+  private void markWatched() {
+    if (watchedMarks.length < mem.length) {
+      watchedMarks = new int[mem.length];
+    }
+    for (int l = 0; l < 2 * numVars; l++) {
+      for (int i = 1; i < watches[l][0]; i++) {
+        int ref = watchRef(watches[l][i]);
+        for (int k = 0; k < 2 && ref + HEADER + k < mem.length; k++) {
+          if (mem[ref + HEADER + k] == l) {
+            watchedMarks[ref] |= 1 << k;
+          }
+        }
+      }
+    }
+  }
+
   private void checkWatched(int ref) {
     for (int k = 0; k < 2; k++) {
-      int w = mem[ref + HEADER + k];
-      boolean found = false;
-      for (int i = 1; i < watches[w][0] && !found; i++) {
-        found = watchRef(watches[w][i]) == ref;
-      }
-      if (!found) {
+      if ((watchedMarks[ref] & 1 << k) == 0) {
         throw new IllegalStateException(
             "clause "
                 + clauseText(mem, ref + HEADER, mem[ref + SIZE])
                 + " not watched by "
-                + toDimacs(w));
+                + toDimacs(mem[ref + HEADER + k]));
       }
     }
   }

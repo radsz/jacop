@@ -76,6 +76,22 @@ interface ElementwiseExplainable extends Explainable, PbEncodable {
             || SetExplanation.explainCardinalityFailure(trail, explainedSets(), r, out));
   }
 
+  @Override
+  default boolean explainEntailment(
+      AtomicTrail trail, int position, boolean entailed, EntryList out) {
+    SetExplanation.Relation r = relation();
+    return r != null
+        && SetExplanation.explainEntailment(trail, position, explainedSets(), r, entailed, out);
+  }
+
+  /** A failure of the negation: the memberships entail the relation on every element. */
+  @Override
+  default boolean explainNegatedFailure(AtomicTrail trail, EntryList out) {
+    SetExplanation.Relation r = relation();
+    return r != null
+        && SetExplanation.explainEntailment(trail, trail.size(), explainedSets(), r, true, out);
+  }
+
   /** Writes the relation on the memberships of every element, when it is the whole constraint. */
   @Override
   default boolean encode(PbModel model) {

@@ -283,7 +283,8 @@ public final class CostNetworkDetector implements ParserTreeConstants {
     Map<IntVar, Integer> netIndex = new IdentityHashMap<>();
     for (IntVar t : weight.keySet()) {
       Group g = group(t, occurs, internal, weight.keySet());
-      if (g == null || !tabulable(g, t) || !small(g.leaves)) {
+      // the bound does not take the objective among its variables
+      if (g == null || g.leaves.contains(objective) || !tabulable(g, t) || !small(g.leaves)) {
         continue;
       }
       termGroups.put(t, g);

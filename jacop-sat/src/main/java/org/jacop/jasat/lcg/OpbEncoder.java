@@ -184,6 +184,12 @@ final class OpbEncoder implements PbModel {
   private Constraint current;
 
   /**
+   * Whether the model names the constraint before its lines, in a comment {@code * c <class> <id>};
+   * the system property {@code jacop.lcg.proofOwners} sets it.
+   */
+  private static final boolean OWNERS = Boolean.getBoolean("jacop.lcg.proofOwners");
+
+  /**
    * Creates the encoder.
    *
    * @param vars the variables, by id
@@ -209,6 +215,9 @@ final class OpbEncoder implements PbModel {
   /** Writes the literals of every variable and the constraints that define them. */
   void variables() {
     chainStart = new long[vars.length];
+    if (OWNERS) {
+      constraints.append("* c variables\n");
+    }
     for (int i = 0; i < vars.length; i++) {
       if (vars[i] == null || root[i].singleton()) {
         continue;
@@ -254,6 +263,11 @@ final class OpbEncoder implements PbModel {
    */
   void constraint(Constraint c) {
     current = c;
+    if (OWNERS) {
+      // the constraint whose lines follow, for a checker that derives them from another model
+      constraints.append("* c ").append(c.getClass().getSimpleName()).append(' ');
+      constraints.append(c.id()).append('\n');
+    }
     if (!encode(c)) {
       String name = c.getClass().getSimpleName();
       if (c instanceof AbstractReifiedConstraint r) {
@@ -575,6 +589,9 @@ final class OpbEncoder implements PbModel {
    * @param negative variables of which one may be below 1
    */
   void solverClause(IntVar[] positive, IntVar[] negative) {
+    if (OWNERS) {
+      constraints.append("* c solver clause\n");
+    }
     StringBuilder s = new StringBuilder();
     for (int sign = 1; sign >= -1; sign -= 2) {
       for (IntVar x : sign > 0 ? positive : negative) {

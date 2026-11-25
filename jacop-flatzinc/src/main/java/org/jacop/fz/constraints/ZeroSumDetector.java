@@ -326,7 +326,7 @@ public class ZeroSumDetector implements ParserTreeConstants {
         least &= u.value == d.least;
       }
       long more = (long) us.size() * d.x.length;
-      if (!least || implications + more > MAX_IMPLICATIONS) {
+      if (!least || implications + more > MAX_IMPLICATIONS || !holdsEverySum(d)) {
         continue;
       }
       implications += more;
@@ -339,8 +339,12 @@ public class ZeroSumDetector implements ParserTreeConstants {
         }
       }
       replaced.add(d.node);
-      if (kept.contains(d.s) && support.options.presolve() != Options.Presolve.OFF) {
-        // presolve may eliminate terms; the sum keeps the value of s right
+      if (kept.contains(d.s)
+          && (support.options.presolve() != Options.Presolve.OFF
+              || support.dictionary.isDeclaredEqual(d.s)
+              || support.dictionary.isAliasTarget(d.s))) {
+        // presolve may eliminate terms; the sum keeps the value of s right. A variable declared
+        // equal to s, or an alias of it, is printed from s, which must keep its value
         support.pose(groundSum(d));
       } else {
         // s is not constrained otherwise: its value follows from the terms when a solution is
@@ -399,6 +403,18 @@ public class ZeroSumDetector implements ParserTreeConstants {
       literals++;
     }
     return b;
+  }
+
+  // whether the domain of s holds every value of its sum, so that dropping the sum keeps the
+  // solutions: a narrower domain of s is a constraint on the terms
+  private static boolean holdsEverySum(Definition d) {
+    long most = 0;
+    for (int i = 0; i < d.x.length; i++) {
+      most += (long) d.w[i] * (d.w[i] > 0 ? d.x[i].max() : d.x[i].min());
+    }
+    return d.least >= d.s.min()
+        && most <= d.s.max()
+        && d.s.dom().contains((int) d.least, (int) most);
   }
 
   private void spoil(Set<IntVar> vars) {
@@ -527,14 +543,15 @@ public class ZeroSumDetector implements ParserTreeConstants {
     }
     ASTScalarFlatExpr e = (ASTScalarFlatExpr) arg;
     if (e.getType() == 2) {
+      // a name is of a variable or of an array; the variable is kept by the identifier
+      IntVar v = support.dictionary.getVariable(e);
+      if (v != null) {
+        out.add(v);
+        return;
+      }
       IntVar[] array = support.dictionary.getDeclaredVariableArray(e.getIdent());
       if (array != null) {
         Collections.addAll(out, array);
-        return;
-      }
-      IntVar v = support.dictionary.getVariable(e.getIdent());
-      if (v != null) {
-        out.add(v);
       }
     } else if (e.getType() == 3
         && support.dictionary.getDeclaredVariableArray(e.getIdent()) != null) {

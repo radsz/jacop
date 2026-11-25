@@ -104,9 +104,24 @@ public class Fz2jacop {
     }
 
     if (opt.threads() > 1) {
-      String unsupported = Portfolio.unsupported(opt);
-      if (unsupported == null) {
-        return Portfolio.solve(args, opt);
+      Portfolio portfolio = new Portfolio(opt);
+      if (watchdog && opt.getTimeOut() > 0) {
+        // the model is read before any thread starts, and that does not look at the time-out
+        portfolio.startWatchdog(
+            watchdogDelay(opt) + TimeLimitWatchdog.GRACE,
+            () -> {
+              VeriPbProof.abandon();
+              Runtime.getRuntime().halt(0);
+            });
+      }
+      String unsupported;
+      try {
+        unsupported = Portfolio.unsupported(opt);
+        if (unsupported == null) {
+          return portfolio.run(args);
+        }
+      } finally {
+        portfolio.cancelWatchdog();
       }
       IO.println("%% -p ignored: " + unsupported);
     }
@@ -152,6 +167,15 @@ public class Fz2jacop {
   private static final long VIRTUAL_CLOCK_WALL_FACTOR =
       Long.getLong("jacop.virtualClock.wallFactor", 10);
 
+  // when the watchdog fires, before its grace period: under the virtual clock the search stops on
+  // its work, which can take longer than the time-out on the wall clock, and the watchdog only
+  // catches a run that hangs
+  private static long watchdogDelay(Options opt) {
+    return CdclSolver.VIRTUAL_CLOCK
+        ? VIRTUAL_CLOCK_WALL_FACTOR * opt.getRemainingTimeOut()
+        : opt.getRemainingTimeOut();
+  }
+
   private int solve(Options opt, InputStream file, SimpleNode model) {
 
     Parser parser = new Parser(file);
@@ -159,18 +183,18 @@ public class Fz2jacop {
 
     RunWhenShuttingDown t = new RunWhenShuttingDown(parser);
     if (printsAtShutdown(opt)) {
-      Runtime.getRuntime().addShutdownHook(t);
+      try {
+        Runtime.getRuntime().addShutdownHook(t);
+      } catch (IllegalStateException _) {
+        // the JVM is already shutting down (a signal right after the start): nothing to print
+      }
     }
 
     TimeLimitWatchdog watch = null;
     if (watchdog && opt.getTimeOut() > 0 && opt.portfolioWorker() == null) {
       watch =
           TimeLimitWatchdog.start(
-              // under the virtual clock the search stops on its work, which can take longer than
-              // the time-out on the wall clock: the watchdog only catches a run that hangs
-              CdclSolver.VIRTUAL_CLOCK
-                  ? VIRTUAL_CLOCK_WALL_FACTOR * opt.getRemainingTimeOut()
-                  : opt.getRemainingTimeOut(),
+              watchdogDelay(opt),
               report(opt, parser),
               () -> {
                 // a proof ends after its last whole step, so that it still checks
@@ -262,7 +286,11 @@ public class Fz2jacop {
     }
 
     if (opt.getStatistics()) {
-      Runtime.getRuntime().removeShutdownHook(t);
+      try {
+        Runtime.getRuntime().removeShutdownHook(t);
+      } catch (IllegalStateException _) {
+        // the JVM is already shutting down, and the hook is running or has run
+      }
       printStatisticsTime(parser);
     }
     return status;

@@ -403,7 +403,7 @@ public class IntensionTableDetector implements ParserTreeConstants {
         outer.size() < 2 ? MAX_TUPLES : Math.clamp(2 * smallest, MAX_TUPLES, MAX_LARGE_TUPLES);
     long wanted = Math.max(MAX_NODES, 4L * rowLimit);
     long nodeLimit = Math.min(wanted, BUDGET - nodes);
-    String key = signature(bound, vars);
+    String key = signature(bound, vars, outer.size());
     int[][] rows = cache.get(key);
     if (rows == null) {
       Tabulator t = new Tabulator(vars, outer.size(), bound, nodeLimit, rowLimit);
@@ -442,10 +442,10 @@ public class IntensionTableDetector implements ParserTreeConstants {
     }
   }
 
-  // the group with its variables replaced by their places and domains: groups with the same
-  // signature have the same rows
-  private static String signature(Bound[] bounds, IntVar[] vars) {
-    StringBuilder key = new StringBuilder();
+  // the group with its variables replaced by their places and domains, and the number of outer
+  // variables, the columns of its rows: groups with the same signature have the same rows
+  private static String signature(Bound[] bounds, IntVar[] vars, int outer) {
+    StringBuilder key = new StringBuilder().append(outer).append(':');
     for (Bound b : bounds) {
       key.append(b.item.op.ordinal()).append('(');
       for (int i = 0; i < b.at.length; i++) {

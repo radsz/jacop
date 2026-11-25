@@ -290,6 +290,12 @@ public class Alldistinct extends Constraint
 
     notGrounded = new TimeStampInt(store, list.length);
 
+    // an object imposed again (LcgSolver.lend, release) starts from no matching and no failure
+    impositionFailure = false;
+    pendingSize = 0;
+    Arrays.fill(varMatch, -1);
+    Arrays.fill(valMatch, -1);
+
     // the initial maximum matching needs to be computed, failure is reported by consistency
     if (words > 0) {
       Arrays.fill(taken, 0);
