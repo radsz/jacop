@@ -1073,12 +1073,22 @@ public class Constraints implements ParserTreeConstants {
         } else {
           FzConsole.printlnErr("%% problem detected for " + p);
         }
+        if (cause instanceof IndexOutOfBoundsException) {
+          // the arrays of an encoding (an automaton, a diagram, shapes of geost) that point outside
+          // each other: the types and lengths are checked, these values are not
+          throw new IllegalArgumentException(
+              "The arguments of constraint " + p + " do not fit: " + cause.getMessage(), cause);
+        }
         throw cause;
       }
     }
   }
 
   void generateAlias(SimpleNode constraintWithAnnotations) {
+
+    // the arguments are checked before any pass reads them, in every mode and every thread of a
+    // portfolio, so that a malformed model is an error of the model wherever it is read
+    new ConstraintArguments(dictionary).check(constraintWithAnnotations);
 
     SimpleNode node = (SimpleNode) constraintWithAnnotations.jjtGetChild(0);
 

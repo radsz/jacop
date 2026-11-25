@@ -7992,4 +7992,63 @@ class FlatzincFrontEndTest {
                     + " bool_search([x], input_order, indomain_min, complete)]) satisfy;\n")
             .size());
   }
+
+  @Test
+  void constraintArgumentsOfAnotherTypeNumberOrLengthAreAnError() throws IOException {
+    // a set where an integer is expected threw a ClassCastException, an undeclared array of
+    // coefficients a NullPointerException (and -p 2 printed a message instead), int_le with three
+    // arguments was solved as int_le with two, coefficients beyond the variables were dropped
+    String head =
+        "var 1..3: x :: output_var;\nvar 1..3: y :: output_var;\nvar bool: b :: output_var;\n";
+    Map<String, String> constraints =
+        Map.of(
+            "int_le(x, {1,2})",
+            "Argument 2 of constraint int_le is not of type var int",
+            "int_lin_le(w, [x], 3)",
+            "Symbol \"w\" does not have assigned value",
+            "int_le(x, y, 3)",
+            "Constraint int_le has 3 arguments, its predicate takes 2",
+            "int_lin_le([1,1,1], [x,y], 3)",
+            "Arguments 1 and 2 of constraint int_lin_le",
+            "array_bool_and([b, {1}], b)",
+            "Argument 1 of constraint array_bool_and",
+            "int_lin_eq([1], x, 3)",
+            "Argument 2 of constraint int_lin_eq",
+            "jacop_regular([x], 1, 3, [1,0], 1, {1}, 1)",
+            "The arguments of constraint jacop_regular do not fit",
+            "bool_and(x, b, b)",
+            "Argument 1 of constraint bool_and is not of type var bool",
+            // a transition to a state the automaton does not have was an internal error
+            "jacop_regular([x], 1, 1, [2], 1, {1}, 1)",
+            "The arguments of constraint jacop_regular do not fit",
+            "jacop_networkflow([1,2], [x], [x, y], [0,0], x)",
+            "Arguments 2 and 3 of constraint jacop_networkflow");
+    for (Map.Entry<String, String> c : constraints.entrySet()) {
+      String model = head + "constraint " + c.getKey() + ";\nsolve satisfy;\n";
+      for (String[] options :
+          new String[][] {{}, {"-f"}, {"--lcg", "on"}, {"-p", "2"}, {"--presolve", "on"}}) {
+        String[] out = run(model, options);
+        String what = c.getKey() + " " + Arrays.toString(options);
+        assertEquals("", out[0], what);
+        assertTrue(out[1].contains("%% Error: " + c.getValue()), what + out[1]);
+        assertFalse(out[1].contains("Exception"), what + out[1]);
+        assertEquals(1, lastStatus, what);
+      }
+    }
+    // a Boolean where an integer is expected, a 0..1 integer where a Boolean is, are still read:
+    // b = 0 with any y and x in 1..2, or b = 1 with y = 1 and x = 2
+    assertEquals(
+        5,
+        solveAll(
+                head.replace("1..3: y", "0..1: y")
+                    + "constraint int_lt(b, x);\n"
+                    + "constraint bool_and(y, b, b);\nconstraint int_le(x, 2);\nsolve satisfy;\n")
+            .size());
+    // a network without arcs threw a NoSuchElementException; its cost is 0
+    assertEquals(
+        Set.of("c = 0;"),
+        solveAll(
+            "var 0..3: c :: output_var;\nconstraint jacop_networkflow([], [], [], [0], c);\n"
+                + "solve satisfy;\n"));
+  }
 }

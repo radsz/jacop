@@ -96,7 +96,8 @@ class GraphConstraints implements ParserTreeConstants {
         | IllegalAccessException
         | InstantiationException
         | NoSuchMethodException _) {
-      throw new RuntimeException(
+      // a constraint this build cannot post is an error of the model, not a stack trace
+      throw new IllegalArgumentException(
           "% Constraint "
               + cName
               + " is not available in this version; requires "
@@ -173,7 +174,8 @@ class GraphConstraints implements ParserTreeConstants {
         | IllegalAccessException
         | InstantiationException
         | NoSuchMethodException _) {
-      throw new RuntimeException(
+      // a constraint this build cannot post is an error of the model, not a stack trace
+      throw new IllegalArgumentException(
           "% Constraint "
               + constraintName
               + " is not available in this version; requires "
@@ -205,7 +207,8 @@ class GraphConstraints implements ParserTreeConstants {
         | IllegalAccessException
         | InstantiationException
         | NoSuchMethodException _) {
-      throw new RuntimeException(
+      // a constraint this build cannot post is an error of the model, not a stack trace
+      throw new IllegalArgumentException(
           "% Constraint "
               + cName
               + " is not available in this version; requires "

@@ -319,21 +319,18 @@ class PortfolioOneParseTest {
         unsupported,
         "var 1..3: x :: output_var;\nconstraint no_such_constraint(x, x);\nsolve minimize x;\n",
         StandardCharsets.UTF_8);
-    // an exception the front end does not handle, in every thread
+    // an undeclared symbol, which every thread rejects as the arguments are read
     Path unassigned = tmp.resolve("unassigned.fzn");
     Files.writeString(
         unassigned,
         "var 1..3: x :: output_var;\nconstraint int_lin_le(w, [x], 3);\nsolve minimize x;\n",
         StandardCharsets.UTF_8);
-    String[] exception = status("-p", "3", unassigned.toString());
-    assertEquals("1", exception[0]);
-    assertEquals(1, exception[2].lines().filter(l -> l.contains("stopped")).count(), exception[2]);
     Path broken = tmp.resolve("broken.fzn");
     Files.writeString(
         broken,
         "var 1..3: x :: output_var;\nconstraint int_le(x;\nsolve minimize x;\n",
         StandardCharsets.UTF_8);
-    for (Path fzn : new Path[] {unsupported, broken}) {
+    for (Path fzn : new Path[] {unsupported, unassigned, broken}) {
       String[] one = status(fzn.toString());
       assertEquals("1", one[0]);
       for (String p : new String[] {"2", "4"}) {

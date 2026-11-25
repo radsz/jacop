@@ -3809,7 +3809,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
     // JaCoP's library numbers the nodes from 1, as the positions in the balance array. FlatZinc
     // files compiled with older versions of the library number them from the lowest node in arc.
-    int minNode = Math.min(1, Arrays.stream(arc).min().getAsInt());
+    int minNode = Math.min(1, Arrays.stream(arc).min().orElse(1));
 
     String mode = networkFlowMode();
     if (Arrays.stream(weight).allMatch(IntVar::singleton) && !"global".equals(mode)) {
