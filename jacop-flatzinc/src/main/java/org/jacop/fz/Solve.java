@@ -4776,7 +4776,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         || label == null) {
       return false;
     }
-    long millis = Math.max(1, (long) (share * options.getRemainingTimeOut()));
+    // at most fixed-first-max ms, default 1000: a slice that does not decide the model is paid by
+    // every easy one (freepizza pizza6 at 600 s, a 3 s slice: 2.3 s to 5.4 s), and a second
+    // measured the rates of city-position at 240 s
+    long millis =
+        Math.max(
+            1,
+            Math.min(
+                (long) (share * options.getRemainingTimeOut()),
+                Long.parseLong(options.freeConfig("fixed-first-max", "1000"))));
     setLabelTimeOut(label, millis);
     long start = System.nanoTime();
     int before = numberSolutions;
