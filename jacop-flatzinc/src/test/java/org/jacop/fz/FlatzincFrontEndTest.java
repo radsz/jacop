@@ -7951,4 +7951,45 @@ class FlatzincFrontEndTest {
           String.join(" ", options) + ": " + out);
     }
   }
+
+  void aSearchOverUndeclaredSymbolsOrSymbolsOfAnotherTypeIsAnError() throws IOException {
+    // the thread that followed the annotation threw a NullPointerException (or ignored an
+    // undeclared q under input_order), while -f and the other threads of -p 2 solved the model
+    String head = "var 1..3: x :: output_var;\nvar set of 1..3: s :: output_var;\n";
+    Map<String, String> searches =
+        Map.of(
+            "int_search(qq, input_order, indomain_min, complete)",
+            "\"qq\" does not",
+            "int_search([x, q], input_order, indomain_min, complete)",
+            "\"q\" does not",
+            "int_search([x, q], first_fail, indomain_min, complete)",
+            "\"q\" does not",
+            "int_search([s], input_order, indomain_min, complete)",
+            "\"s\" in int_search",
+            "set_search([x], input_order, indomain_min, complete)",
+            "\"x\" in set_search",
+            "float_search([x], 0.1, input_order, indomain_split, complete)",
+            "\"x\" in float_search",
+            "seq_search([int_search([x], input_order, indomain_min, complete),"
+                + " int_search([q], input_order, indomain_min, complete)])",
+            "\"q\" does not");
+    for (Map.Entry<String, String> search : searches.entrySet()) {
+      String model = head + "solve :: " + search.getKey() + " satisfy;\n";
+      for (String[] options : new String[][] {{}, {"-f"}, {"-p", "2"}}) {
+        String[] out = run(model, options);
+        String what = search.getKey() + " " + Arrays.toString(options);
+        assertEquals("", out[0], what);
+        assertTrue(out[1].contains("%% Error: Symbol " + search.getValue()), what + out[1]);
+        assertEquals(1, lastStatus, what);
+      }
+    }
+    // a Boolean in int_search and an integer in bool_search are still searched
+    assertEquals(
+        6,
+        solveAll(
+                "var 1..3: x :: output_var;\nvar bool: b :: output_var;\n"
+                    + "solve :: seq_search([int_search([b], input_order, indomain_min, complete),"
+                    + " bool_search([x], input_order, indomain_min, complete)]) satisfy;\n")
+            .size());
+  }
 }
