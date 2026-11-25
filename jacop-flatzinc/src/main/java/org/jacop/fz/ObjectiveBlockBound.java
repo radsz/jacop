@@ -39,16 +39,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.jacop.api.Copyable;
-import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
-import org.jacop.constraints.DifferenceCycles;
 import org.jacop.constraints.LinearForms;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XgteqC;
-import org.jacop.constraints.lp.LinearRelaxation;
-import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -161,15 +157,7 @@ final class ObjectiveBlockBound {
     long budget = timeLimitMillis > 0 ? Math.min(MILLIS, (long) (SHARE * timeLimitMillis)) : MILLIS;
     long deadline = start + budget;
 
-    List<Constraint> all = new ArrayList<>();
-    for (Constraint c : Components.constraints(store)) {
-      if (c instanceof SatisfiedPresent s && s.satisfied()
-          || c instanceof LinearRelaxation
-          || c instanceof DifferenceCycles) {
-        continue;
-      }
-      all.add(c);
-    }
+    List<Constraint> all = DecompositionBound.relaxable(store);
     // the equations: a variable that only its equation and one other constraint use, such as a
     // part of a long sum split for lazy clause generation, is replaced by its definition
     Map<Var, Integer> uses = new IdentityHashMap<>();
@@ -187,7 +175,7 @@ final class ObjectiveBlockBound {
         continue;
       }
       equations.put(c, f);
-      int i = indexOf(f.vars(), objective);
+      int i = DecompositionBound.indexOf(f.vars(), objective);
       if (i >= 0
           && Math.abs(f.weights()[i]) == 1
           && (definition == null || f.vars().length > equations.get(definition).vars().length)) {
@@ -534,25 +522,7 @@ final class ObjectiveBlockBound {
       List<Long> ws,
       long millis) {
     Store copy = new Store();
-    Map<Var, Var> copies = new IdentityHashMap<>();
-    VarMap map =
-        new VarMap() {
-          @Override
-          public Store target() {
-            return copy;
-          }
-
-          @Override
-          @SuppressWarnings("unchecked")
-          public <V extends Var> V get(V v) {
-            Var c = copies.get(v);
-            if (c == null) {
-              c = copyOf(copy, v);
-              copies.put(v, c);
-            }
-            return (V) c;
-          }
-        };
+    VarMap map = DecompositionBound.copyMap(copy);
     IntVar cost;
     try {
       for (Constraint c : own) {
@@ -619,19 +589,6 @@ final class ObjectiveBlockBound {
     return lower[0];
   }
 
-  // a copy of a variable in another store: an integer or a Boolean variable with its domain
-  private static Var copyOf(Store target, Var v) {
-    if (v.getClass() == IntVar.class) {
-      IntVar x = (IntVar) v;
-      return new IntVar(target, x.id(), x.dom().cloneLight());
-    }
-    if (v.getClass() == BooleanVar.class) {
-      IntVar x = (IntVar) v;
-      return new BooleanVar(target, x.id(), x.min(), x.max());
-    }
-    throw new IllegalArgumentException(v + " cannot be copied");
-  }
-
   private static long elapsed(long start) {
     return System.currentTimeMillis() - start;
   }
@@ -657,35 +614,9 @@ final class ObjectiveBlockBound {
       if (a == null || a == 0 || d == null) {
         continue;
       }
-      LinearForm f = equations.get(d);
-      long wv = f.weights()[indexOf(f.vars(), v)];
       used.add(d);
-      terms.remove(v);
-      // wv v + sum w_u u = c, wv = +-1: v = wv (c - sum w_u u)
-      constant[0] += a * wv * f.c();
-      for (int i = 0; i < f.vars().length; i++) {
-        IntVar u = f.vars()[i];
-        if (u == v) {
-          continue;
-        }
-        long coefficient = -a * wv * f.weights()[i];
-        if (u.singleton()) {
-          constant[0] += coefficient * u.value();
-        } else {
-          terms.merge(u, coefficient, Long::sum);
-          work.add(u);
-        }
-      }
+      DecompositionBound.substitute(terms, constant, work, v, a, equations.get(d));
     }
-  }
-
-  private static int indexOf(IntVar[] vars, IntVar v) {
-    for (int i = 0; i < vars.length; i++) {
-      if (vars[i] == v) {
-        return i;
-      }
-    }
-    return -1;
   }
 
   private static Var find(Map<Var, Var> parent, Var x) {

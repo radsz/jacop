@@ -873,15 +873,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (k == 0 || !(kind.jjtGetChild(0) instanceof ASTSolveExpr expr) || !store.consistency()) {
       return;
     }
-    IntVar objective =
-        switch (expr.getType()) {
-          case 0 -> dictionary.getVariable(expr.getIdent());
-          case 1 -> {
-            IntVar[] a = dictionary.getVariableArray(expr.getIdent());
-            yield a == null ? null : a[expr.getIndex()];
-          }
-          default -> null;
-        };
+    IntVar objective = objectiveVariable(expr);
     if (objective == null) {
       return;
     }
@@ -920,15 +912,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (k == 0 || !(kind.jjtGetChild(0) instanceof ASTSolveExpr expr) || !store.consistency()) {
       return;
     }
-    IntVar objective =
-        switch (expr.getType()) {
-          case 0 -> dictionary.getVariable(expr.getIdent());
-          case 1 -> {
-            IntVar[] a = dictionary.getVariableArray(expr.getIdent());
-            yield a == null ? null : a[expr.getIndex()];
-          }
-          default -> null;
-        };
+    IntVar objective = objectiveVariable(expr);
     if (objective == null) {
       return;
     }
