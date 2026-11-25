@@ -173,6 +173,24 @@ public class Constraints implements ParserTreeConstants {
     debug = options.debug();
   }
 
+  /**
+   * Removes the disequalities that the declared domains already satisfy, before {@link
+   * #generateAllConstraints} and its detectors scan them; see {@link EntailedDisequalities}.
+   *
+   * @param astTree the model
+   */
+  void removeEntailedDisequalities(SimpleNode astTree) {
+    // with clamped domains a disequality true over the clamped domain need not be true over the
+    // declared one
+    if (!EntailedDisequalities.enabled() || dictionary.domainsClamped()) {
+      return;
+    }
+    int entailed = new EntailedDisequalities(support).remove(astTree);
+    if (support.options.debug() && entailed > 0) {
+      FzConsole.println("% " + entailed + " disequalities true by the domains removed");
+    }
+  }
+
   void generateAllConstraints(SimpleNode astTree) throws Throwable {
 
     dictionary.searchAnnotated = searchAnnotated(astTree);
@@ -199,14 +217,6 @@ public class Constraints implements ParserTreeConstants {
     }
 
     Options options = support.options;
-    // with clamped domains a disequality true over the clamped domain need not be true over the
-    // declared one
-    if (EntailedDisequalities.enabled() && !dictionary.domainsClamped()) {
-      int entailed = new EntailedDisequalities(support).remove(astTree);
-      if (options.debug() && entailed > 0) {
-        FzConsole.println("% " + entailed + " disequalities true by the domains removed");
-      }
-    }
     boolean manySolutions =
         (options.getAll() || options.getNumberSolutions() > 1) && satisfaction(astTree);
     // the exchanges of values that symmetry breaking breaks in a satisfaction problem compare the

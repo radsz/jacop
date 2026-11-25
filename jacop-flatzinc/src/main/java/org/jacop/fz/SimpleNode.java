@@ -201,7 +201,13 @@ public class SimpleNode implements Node, Cloneable {
     if (k == n) {
       return;
     }
-    children = k == 0 ? null : k == 1 ? kept[0] : java.util.Arrays.copyOf(kept, k);
+    if (k == 0) {
+      children = null;
+    } else if (k == 1) {
+      children = kept[0];
+    } else {
+      children = java.util.Arrays.copyOf(kept, k);
+    }
   }
 
   /** Drops every child, which keeps its place: the number of children stays. */

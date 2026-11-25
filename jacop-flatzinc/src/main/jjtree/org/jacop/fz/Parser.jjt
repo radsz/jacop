@@ -200,6 +200,7 @@ public class Parser {
 
     private void modelRead(SimpleNode model) throws Throwable {
 	dict.removeAliasFromSearch();
+	cc.removeEntailedDisequalities(model);
 	// generate constraints
 	cc.generateAllConstraints(model);
 	// search
