@@ -424,14 +424,36 @@ final class ConstraintArguments {
       int colon = d.indexOf(':');
       String[] params = d.substring(colon + 1).split(",");
       Type[] types = new Type[params.length];
+      char group = 0;
       for (int i = 0; i < params.length; i++) {
         types[i] = Type.parse(params[i]);
+        if (types[i].group() != 0) {
+          // fits keeps the length of one group of arrays
+          if (group != 0 && group != types[i].group()) {
+            throw new IllegalStateException("two groups in " + d);
+          }
+          group = types[i].group();
+        }
       }
       SIGNATURES.put(d.substring(0, colon), types);
     }
   }
 
   private static final String END = "; execution aborted";
+
+  private static final Type VAR_INTS = Type.parse("[]var int");
+
+  private static final Type INTS = Type.parse("[]int");
+
+  // the type of the elements of an array of each type, made once
+  private static final Type[] ELEMENTS = new Type[2 * Base.values().length];
+
+  static {
+    for (Base b : Base.values()) {
+      ELEMENTS[b.ordinal()] = new Type(false, false, b, (char) 0);
+      ELEMENTS[Base.values().length + b.ordinal()] = new Type(false, true, b, (char) 0);
+    }
+  }
 
   private final Tables table;
 
@@ -450,11 +472,53 @@ final class ConstraintArguments {
       return;
     }
     String name = call.getName();
+    Type[] types = SIGNATURES.get(name);
+    // a constraint of the model fits its predicate: checked without a lookup more than the types
+    // need and without allocation, as it runs once per constraint item. Any other constraint is
+    // checked again in the order that gives the first error of the model
+    if (types == null || !fits(call, types)) {
+      errors(name, call, types);
+    }
+    if (types != null) {
+      dimensions(name, call);
+    }
+  }
+
+  // whether the arguments are of the types of the predicate, of the declared lengths
+  private boolean fits(SimpleNode call, Type[] types) {
+    int n = call.jjtGetNumChildren();
+    if (types.length != n) {
+      return false;
+    }
+    char group = 0;
+    int groupLength = 0;
+    for (int i = 0; i < n; i++) {
+      SimpleNode arg = (SimpleNode) call.jjtGetChild(i);
+      Type t = types[i];
+      int length = t.array() ? arrayLength(arg, t) : scalar(arg, t) ? 0 : -1;
+      if (length < 0) {
+        return false;
+      }
+      if (t.group() != 0) {
+        // the first array of the group gives its length (a predicate has one group)
+        if (group == 0) {
+          group = t.group();
+          groupLength = length;
+        } else if (groupLength != length) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  // the first error of the arguments: an undeclared identifier or an index out of its array, then
+  // the number of arguments, then the type of each argument and the lengths of paired arrays
+  private void errors(String name, SimpleNode call, Type[] types) {
     int n = call.jjtGetNumChildren();
     for (int i = 0; i < n; i++) {
       declared((SimpleNode) call.jjtGetChild(i));
     }
-    Type[] types = SIGNATURES.get(name);
     if (types == null) {
       return;
     }
@@ -468,7 +532,6 @@ final class ConstraintArguments {
               + types.length
               + END);
     }
-    Map<Character, int[]> lengths = new HashMap<>();
     for (int i = 0; i < n; i++) {
       SimpleNode arg = (SimpleNode) call.jjtGetChild(i);
       Type t = types[i];
@@ -477,22 +540,23 @@ final class ConstraintArguments {
         throw new IllegalArgumentException(
             "Argument " + (i + 1) + " of constraint " + name + " is not of type " + t + END);
       }
-      if (t.group() != 0) {
-        int[] first = lengths.putIfAbsent(t.group(), new int[] {length, i});
-        if (first != null && first[0] != length) {
-          throw new IllegalArgumentException(
-              "Arguments "
-                  + (first[1] + 1)
-                  + " and "
-                  + (i + 1)
-                  + " of constraint "
-                  + name
-                  + " are arrays of different lengths"
-                  + END);
+      for (int j = 0; t.group() != 0 && j < i; j++) {
+        if (types[j].group() == t.group()) {
+          if (arrayLength((SimpleNode) call.jjtGetChild(j), types[j]) != length) {
+            throw new IllegalArgumentException(
+                "Arguments "
+                    + (j + 1)
+                    + " and "
+                    + (i + 1)
+                    + " of constraint "
+                    + name
+                    + " are arrays of different lengths"
+                    + END);
+          }
+          break;
         }
       }
     }
-    dimensions(name, call);
   }
 
   // the arrays whose length the other arguments give: a transition table of states x symbols,
@@ -509,8 +573,7 @@ final class ConstraintArguments {
       }
       case "jacop_diffn_k" -> {
         int k = intArg(call, 2);
-        if (k < 1
-            || arrayLength((SimpleNode) call.jjtGetChild(0), Type.parse("[]var int")) % k != 0) {
+        if (k < 1 || arrayLength((SimpleNode) call.jjtGetChild(0), VAR_INTS) % k != 0) {
           throw dimension(name, "the origins are not boxes of " + k + " dimensions");
         }
       }
@@ -522,15 +585,15 @@ final class ConstraintArguments {
           "jacop_table_bool_reif",
           "jacop_table_int_imp",
           "jacop_table_bool_imp" -> {
-        int scope = arrayLength((SimpleNode) call.jjtGetChild(0), Type.parse("[]var int"));
-        int tuples = arrayLength((SimpleNode) call.jjtGetChild(1), Type.parse("[]int"));
+        int scope = arrayLength((SimpleNode) call.jjtGetChild(0), VAR_INTS);
+        int tuples = arrayLength((SimpleNode) call.jjtGetChild(1), INTS);
         if (scope > 0 ? tuples % scope != 0 : tuples != 0) {
           throw dimension(name, "the tuples are not of the length of the scope, " + scope);
         }
       }
       case "jacop_networkflow" -> {
         int arcs = ints(call, 0).length;
-        if (arcs != 2 * arrayLength((SimpleNode) call.jjtGetChild(1), Type.parse("[]var int"))) {
+        if (arcs != 2 * arrayLength((SimpleNode) call.jjtGetChild(1), VAR_INTS)) {
           throw dimension(name, "the arcs are not one pair of nodes for each flow");
         }
       }
@@ -615,7 +678,10 @@ final class ConstraintArguments {
   }
 
   private int arrayLength(String ident) {
-    Object a = arrayOf(ident);
+    return lengthOf(arrayOf(ident));
+  }
+
+  private static int lengthOf(Object a) {
     return switch (a) {
       case int[] v -> v.length;
       case double[] v -> v.length;
@@ -643,8 +709,8 @@ final class ConstraintArguments {
 
   // the length of an array argument of the type, or -1 when it is not one
   private int arrayLength(SimpleNode arg, Type t) {
-    Type element = new Type(false, t.var(), t.base(), (char) 0);
     if (arg instanceof ASTArrayLiteral) {
+      Type element = ELEMENTS[(t.var() ? Base.values().length : 0) + t.base().ordinal()];
       int[] packed = arg.packedInts();
       if (packed != null) {
         for (int v : packed) {
@@ -665,27 +731,40 @@ final class ConstraintArguments {
       return -1;
     }
     String ident = e.getIdent();
-    boolean fits =
-        switch (t.base()) {
-          case INT ->
-              table.intArrayTable.containsKey(ident)
-                  || t.var() && table.variableArrayTable.containsKey(ident);
-          case BOOL -> {
-            int[] p = table.intArrayTable.get(ident);
-            if (p != null) {
-              yield allBool(p);
-            }
-            IntVar[] v = t.var() ? table.variableArrayTable.get(ident) : null;
-            yield v != null && allBool(v);
-          }
-          case FLOAT ->
-              table.floatArrayTable.containsKey(ident)
-                  || t.var() && table.variableFloatArrayTable.containsKey(ident);
-          case SET ->
-              table.setArrayTable.containsKey(ident)
-                  || t.var() && table.setVariableArrayTable.containsKey(ident);
-        };
-    return fits ? arrayLength(ident) : -1;
+    return switch (t.base()) {
+      case INT -> {
+        int[] p = table.intArrayTable.get(ident);
+        if (p != null) {
+          yield p.length;
+        }
+        IntVar[] v = t.var() ? table.variableArrayTable.get(ident) : null;
+        yield v != null ? v.length : -1;
+      }
+      case BOOL -> {
+        int[] p = table.intArrayTable.get(ident);
+        if (p != null) {
+          yield allBool(p) ? p.length : -1;
+        }
+        IntVar[] v = t.var() ? table.variableArrayTable.get(ident) : null;
+        yield v != null && allBool(v) ? v.length : -1;
+      }
+      case FLOAT -> {
+        double[] p = table.floatArrayTable.get(ident);
+        if (p != null) {
+          yield p.length;
+        }
+        Object[] v = t.var() ? table.variableFloatArrayTable.get(ident) : null;
+        yield v != null ? v.length : -1;
+      }
+      case SET -> {
+        Object[] p = table.setArrayTable.get(ident);
+        if (p != null) {
+          yield p.length;
+        }
+        Object[] v = t.var() ? table.setVariableArrayTable.get(ident) : null;
+        yield v != null ? v.length : -1;
+      }
+    };
   }
 
   private static boolean allBool(int[] p) {
@@ -725,10 +804,39 @@ final class ConstraintArguments {
     return switch (e.getType()) {
       case 0, 1 -> intFits(e.getInt(), t);
       case 5 -> t.base() == Base.FLOAT;
-      case 2 -> identifier(e.getIdent(), t);
+      case 2 -> identifier(e, t);
       case 3 -> element(e.getIdent(), e.getInt(), t);
       default -> false;
     };
+  }
+
+  // an identifier of the type; a variable is found through the identifier's node, which keeps the
+  // variable its name was looked up as for the generators that read it next
+  private boolean identifier(ASTScalarFlatExpr e, Type t) {
+    if (t.var() && (t.base() == Base.INT || t.base() == Base.BOOL)) {
+      IntVar v = variable(e);
+      if (v != null) {
+        return t.base() == Base.INT || bool(v);
+      }
+    }
+    return identifier(e.getIdent(), t);
+  }
+
+  // the variable an identifier names as declared (not its alias), or null, as Tables.getVariable
+  // finds it before it takes the alias
+  private IntVar variable(ASTScalarFlatExpr e) {
+    Ident ident = e.ident();
+    if (ident == null) {
+      return table.variableTable.get(e.getIdent());
+    }
+    IntVar v = ident.variable;
+    if (v == null || v.store != table.store || table.store == null) {
+      v = table.variableTable.get(ident.name);
+      if (v != null) {
+        ident.variable = v;
+      }
+    }
+    return v;
   }
 
   private boolean identifier(String ident, Type t) {
@@ -750,9 +858,12 @@ final class ConstraintArguments {
     };
   }
 
-  // an element a[i] of a declared array; i lies within it (declared checks it first)
+  // an element a[i] of a declared array, with i within it
   private boolean element(String ident, int i, Type t) {
     Object a = arrayOf(ident);
+    if (i < 0 || i >= lengthOf(a)) {
+      return false;
+    }
     return switch (t.base()) {
       case INT -> a instanceof int[] || t.var() && a instanceof IntVar[];
       case BOOL ->

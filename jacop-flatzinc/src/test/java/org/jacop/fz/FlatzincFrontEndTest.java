@@ -8087,4 +8087,57 @@ class FlatzincFrontEndTest {
             "var 1..3: x;\narray [1..2] of var int: a :: output_array([1..2, 1..1]) = [x, x];\n"
                 + "solve satisfy;\n")[0]);
   }
+
+  @Test
+  void theArgumentCheckOfAConstraintGivesItsFirstErrorAndAcceptsWhatMiniZincWrites()
+      throws IOException {
+    // the check of a constraint that fits its predicate looks up each argument once; the first
+    // error of one that does not is still an undeclared symbol or an index out of its array, then
+    // the number of arguments, then the types and lengths in the order of the arguments
+    String head =
+        "var 1..3: x :: output_var;\nvar 1..3: y :: output_var;\nvar bool: b :: output_var;\n"
+            + "array [1..2] of var 1..3: a = [x, y];\narray [1..2] of int: c = [1, 1];\n"
+            + "set of int: s = 1..2;\n";
+    Map<String, String> errors =
+        Map.of(
+            "int_lin_le({1}, [x], w)",
+            "Symbol \"w\" does not have assigned value",
+            "int_le(x, y, w)",
+            "Symbol \"w\" does not have assigned value",
+            "int_lin_le(c, [a[1], a[3]], 3)",
+            "Index out of bound for a[3]",
+            "int_lin_le(c, [x], {1})",
+            "Arguments 1 and 2 of constraint int_lin_le are arrays of different lengths",
+            "jacop_cumulative([x, y], [1], [1, 1], 2)",
+            "Arguments 1 and 2 of constraint jacop_cumulative are arrays of different lengths",
+            "bool_eq(b, 2)",
+            "Argument 2 of constraint bool_eq is not of type var bool",
+            "array_int_element(x, a, y)",
+            "Argument 2 of constraint array_int_element is not of type array of int");
+    for (Map.Entry<String, String> e : errors.entrySet()) {
+      String[] out = run(head + "constraint " + e.getKey() + ";\nsolve satisfy;\n");
+      assertEquals("", out[0], e.getKey());
+      assertTrue(out[1].contains("%% Error: " + e.getValue()), e.getKey() + out[1]);
+      assertEquals(1, lastStatus, e.getKey());
+    }
+    // literals where variables are declared, arrays of parameters for arrays of variables, empty
+    // arrays, Booleans as integers and 0/1 as Booleans, elements of arrays, sets of parameters
+    for (String accepted :
+        new String[] {
+          "int_lin_le(c, a, 3)",
+          "int_lin_le([1, 1], [x, 2], 3)",
+          "int_lin_le([], [], 0)",
+          "jacop_alldiff([a[1], a[2], 3])",
+          "jacop_increasing([b, true])",
+          "set_in(x, s)",
+          "int_lin_le(c, [x, b], 3)",
+          "bool_eq(b, 1)",
+          "array_var_int_element(x, c, y)",
+          "bool_clause([b], [])"
+        }) {
+      String[] out = run(head + "constraint " + accepted + ";\nsolve satisfy;\n");
+      assertTrue(out[0].endsWith("----------\n"), accepted + out[1]);
+      assertEquals(0, lastStatus, accepted);
+    }
+  }
 }

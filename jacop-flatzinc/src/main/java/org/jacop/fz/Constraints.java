@@ -139,6 +139,8 @@ public class Constraints implements ParserTreeConstants {
   static final int GE = 5;
   final ConstraintFncs cf;
   final Tables dictionary;
+  // checks the arguments of each constraint item against its predicate
+  private final ConstraintArguments arguments;
   final Store store;
   // ============ SAT solver interface ==============
   final float satThreshold = 1.0f; // 1.0 pure SAT problem, 0.85 good heuristic ;)
@@ -162,6 +164,7 @@ public class Constraints implements ParserTreeConstants {
   public Constraints(Store store, Tables dict) {
     this.store = store;
     this.dictionary = dict;
+    this.arguments = new ConstraintArguments(dict);
 
     sat = new SatTranslation(store);
     // impose SAT-solver
@@ -1088,7 +1091,7 @@ public class Constraints implements ParserTreeConstants {
 
     // the arguments are checked before any pass reads them, in every mode and every thread of a
     // portfolio, so that a malformed model is an error of the model wherever it is read
-    new ConstraintArguments(dictionary).check(constraintWithAnnotations);
+    arguments.check(constraintWithAnnotations);
 
     SimpleNode node = (SimpleNode) constraintWithAnnotations.jjtGetChild(0);
 
