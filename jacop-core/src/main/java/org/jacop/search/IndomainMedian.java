@@ -61,9 +61,6 @@ public class IndomainMedian<T extends IntVar> implements Indomain<T> {
       throw new IllegalStateException(
           String.valueOf("indomain does not work with singleton variables."));
     }
-    if (ASSERTS_ENABLED && v.dom().domainId() == IntDomain.BOUND_DOMAIN_ID) {
-      throw new IllegalStateException(String.valueOf("It is not possible to use BoundDomain"));
-    }
 
     int position = medianPosition(v.getSize());
     return medianForDomain(v, position);
