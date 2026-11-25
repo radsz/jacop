@@ -8241,4 +8241,46 @@ class FlatzincFrontEndTest {
         "x = 0;\n----------\n==========\n",
         run(vars + "constraint jacop_knapsack([], [], x, y, []);\nsolve satisfy;\n", "-a")[0]);
   }
+
+  @Test
+  void automataWithSizesOrStatesOutOfRangeAreAnErrorOfTheModel() throws IOException {
+    // a negative number of states threw NegativeArraySizeException out of the run, 2^31 - 1 states
+    // ran out of memory, and a start, next or final state outside the states, or a table shorter
+    // than Q x S, threw ArrayIndexOutOfBoundsException ("JaCoP internal error")
+    String vars = "var 0..1: x :: output_var;\nvar 0..1: y;\nvar 0..9: c;\n";
+    String[][] cases = {
+      {
+        "jacop_regular([x, y], -1, 2, [1, 2, 2, 1], 1, {1}, 0)",
+        "the number of states is not positive"
+      },
+      {
+        "jacop_regular([x, y], 2147483647, 2, [1, 2, 2, 1], 1, {1}, 0)",
+        "the transition table has 4 elements, not 2147483647 x 2 entries"
+      },
+      {
+        "jacop_regular([x, y], 2, 2, [1, 2, 2, 1], 3, {1}, 0)",
+        "the start state 3 is not a state 1..2"
+      },
+      {
+        "jacop_regular_set([x, y], 2, 0..1, [1, 3, 2, 1], 1, {1}, 0)",
+        "the next state 3 is not a state 0..2"
+      },
+      {
+        "jacop_regular_set([x, y], 2, 0..1, [1, 2, 2, 1], 1, {0}, 0)",
+        "a final state is not a state 1..2"
+      },
+      {
+        "jacop_cost_regular([x, y], 2, 2, [1, 2, 2, 1], 1, {1}, [0, 1, 1], c)",
+        "the cost table has 3 elements, not one cost per transition"
+      },
+      {
+        "jacop_regular_nfa([x, y], 2, 0..1, [{1}, {2}, {2}, {1, 2}], 1, {1}, 1, 0, 2147483647)",
+        "the transition table has 4 elements, not 2 x 2147483647 entries"
+      }
+    };
+    for (String[] c : cases) {
+      String name = c[0].substring(0, c[0].indexOf('('));
+      assertModelError(vars + "constraint " + c[0] + ";\nsolve satisfy;\n", name + ": " + c[1]);
+    }
+  }
 }

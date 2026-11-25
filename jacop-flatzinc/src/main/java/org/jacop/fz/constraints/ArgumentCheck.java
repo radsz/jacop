@@ -31,6 +31,7 @@ package org.jacop.fz.constraints;
 
 import java.util.HashMap;
 import java.util.Map;
+import org.jacop.core.IntDomain;
 import org.jacop.fz.ASTConstElem;
 import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.ParserTreeConstants;
@@ -137,6 +138,25 @@ public final class ArgumentCheck implements ParserTreeConstants {
     rule(
         a -> a.sameLength("the variables, the permutation and the sorted variables", 0, 1, 2),
         "jacop_sort_permutation");
+
+    // automata: states 1..Q, a transition table of Q rows, next states in 0..Q (0 fails)
+    rule(a -> a.automaton(a.intArg(2), true), "jacop_regular");
+    rule(a -> a.automaton(a.set(2).getSize(), true), "jacop_regular_set");
+    rule(
+        a -> {
+          a.automaton(a.intArg(2), true);
+          a.size(6, (long) a.intArg(1) * a.intArg(2), "the cost table", "one cost per transition");
+        },
+        "jacop_cost_regular");
+    rule(
+        a -> {
+          int columns = a.intArg(8);
+          if (columns < 0) {
+            a.fail("the number of symbols is negative");
+          }
+          a.automaton(columns, false);
+        },
+        "jacop_regular_nfa");
   }
 
   private ArgumentCheck() {}
@@ -244,6 +264,51 @@ public final class ArgumentCheck implements ParserTreeConstants {
         fail(n + " elements do not split into " + parts);
       }
       return k == 0 ? 0 : n / k;
+    }
+
+    IntDomain set(int i) {
+      return support.getSetLiteral(node, i);
+    }
+
+    /**
+     * Checks an automaton (x, Q, S, d, q0, F, ...) with Q states, a table d of Q rows of the given
+     * number of columns, and the start state q0 among the states.
+     *
+     * @param columns the number of symbols, the columns of d
+     * @param dfa whether d holds next states, which must be states or 0, and F must hold states
+     */
+    void automaton(int columns, boolean dfa) {
+      int states = intArg(1);
+      if (states <= 0) {
+        fail("the number of states is not positive");
+      }
+      if (dfa && columns <= 0) {
+        fail("the number of symbols is not positive");
+      }
+      size(
+          3,
+          (long) states * columns,
+          "the transition table",
+          states + " x " + columns + " entries");
+      int start = intArg(4);
+      if (start < 1 || start > states) {
+        fail("the start state " + start + " is not a state 1.." + states);
+      }
+      if (!dfa) {
+        return;
+      }
+      int[] d = ints(3);
+      if (d != null) {
+        for (int next : d) {
+          if (next < 0 || next > states) {
+            fail("the next state " + next + " is not a state 0.." + states);
+          }
+        }
+      }
+      IntDomain finalStates = set(5);
+      if (!finalStates.isEmpty() && (finalStates.min() < 1 || finalStates.max() > states)) {
+        fail("a final state is not a state 1.." + states);
+      }
     }
 
     void size(int i, long expected, String array, String what) {
