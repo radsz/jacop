@@ -1031,4 +1031,27 @@ class SingleConstraintTest {
     store.impose(new ExpPeqR(product, z));
     assertThat(store.consistency()).as("%s %s %s", lnX, product, z).isFalse();
   }
+
+  /**
+   * A singleton interval that contains a pole of tan is not the pole: with precision 0.1, x in
+   * -4.75..-4.65 holds the pole -3 PI / 2 and the solution x = -4.68, tan(x) = -30.8, but TanPeqR
+   * failed (FlatZinc float_tan under float_search precision 0.1 claimed UNSATISFIABLE).
+   */
+  @Test
+  void tanOfASingletonAroundAPoleKeepsItsSolutions() {
+    double precision = FloatDomain.precision();
+    FloatDomain.setPrecision(0.1);
+    try {
+      Store store = new Store();
+      FloatVar x = new FloatVar(store, "x", -4.75, -4.65);
+      FloatVar y = new FloatVar(store, "y", -40, -30);
+      store.impose(new TanPeqR(x, y));
+      assertThat(store.consistency()).isTrue();
+      assertThat(x.dom().contains(-4.68) && y.dom().contains(Math.tan(-4.68)))
+          .as("%s %s", x, y)
+          .isTrue();
+    } finally {
+      FloatDomain.setPrecision(precision);
+    }
+  }
 }
