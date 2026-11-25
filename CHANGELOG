@@ -9137,6 +9137,27 @@ Version 5.0 (unreleased)
    -19 %; at 240 s, Diffn instances proved by both 918 -> 836 s (-f) and
    188 -> 175 s (default search); wide-quick -f at 600 s total 0.995.
 
+512. Opt-in variable-bound MIR of the Gomory rows of the linear relaxation
+   (-Dorg.jacop.lp.vbGomory=true). The exact slack Gomory separator, which
+   aggregates the rows by an integer scaling of a row of the basis inverse
+   with the row slacks as integer columns, also builds the complemented MIR
+   of that aggregation with the variable bounds x <= a u and x >= a u
+   substituted (H. Marchand and L. A. Wolsey, Aggregation and mixed integer
+   rounding to solve MIPs, Operations Research 49(3), 2001; R. E. Gomory,
+   An algorithm for integer solutions to linear programs, 1963), and
+   substitutes the slacks back by their rows. It counts in lpVbCuts. The
+   relative progress a cut round must make to go on is now a property,
+   -Dorg.jacop.lp.cutProgress (default 0.01). On MiniZinc Challenge 2023
+   unit-commitment L10 the root cut bound goes from 1,698,000 to 1,699,000
+   (1,700,500 with cutProgress 0.0005, cutRoundsMax 100 and
+   cutExtraSeconds 20; the HiGHS root reaches 1,702,500). 600 s bounds with
+   clauseRows and vbMir on in both: L10 1,696,315 -> 1,697,495 (-f) and
+   1,695,410 -> 1,696,915 (default), L12 1,419,720 -> 1,433,245 (-f) and
+   1,418,835 -> 1,434,205 (default). On the 41 instances whose relaxation
+   the flags of 503 change, 600 s: -f 26 -> 27 solved (physician-scheduling
+   instance10-duplicated_0.23 proved in 332 s), total time 0.960; default
+   the same 26 solved, total 0.998.
+
 Version 4.11
 =============
 
