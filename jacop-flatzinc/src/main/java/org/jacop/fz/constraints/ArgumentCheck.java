@@ -140,6 +140,21 @@ public final class ArgumentCheck implements ParserTreeConstants {
         a -> a.sameLength("the variables, the permutation and the sorted variables", 0, 1, 2),
         "jacop_sort_permutation");
 
+    // tables: tuples of one value per variable
+    rule(
+        a -> {
+          int n = a.length(0);
+          a.parts(1, Math.max(0, n), null, "tuples of " + n + " values");
+        },
+        "jacop_table_int",
+        "jacop_table_bool",
+        "jacop_table_int_reif",
+        "jacop_table_bool_reif",
+        "jacop_table_int_imp",
+        "jacop_table_bool_imp",
+        "jacop_negative_table_int",
+        "jacop_short_table_int");
+
     // a network: two nodes per arc, numbered from 1 or from the lowest node of the arcs
     rule(
         a -> {

@@ -8360,4 +8360,24 @@ class FlatzincFrontEndTest {
                 + "constraint jacop_geost_bb(0, [], [], [], [], [], [], []);\nsolve satisfy;\n",
             "-a")[0]);
   }
+
+  @Test
+  void tablesWhoseTuplesDoNotFitTheVariablesAreAnErrorOfTheModel() throws IOException {
+    // a table of 5 values on 2 variables threw ArrayIndexOutOfBoundsException in
+    // PermutationElementSums ("JaCoP internal error"); the reified tables cut the last tuple
+    String vars = "var 0..3: x :: output_var;\nvar 0..3: y;\nvar bool: b;\n";
+    assertModelError(
+        vars + "constraint jacop_table_int([x, y], [0, 0, 1, 1, 1]);\nsolve satisfy;\n",
+        "jacop_table_int: 5 elements do not split into tuples of 2 values");
+    assertModelError(
+        vars + "constraint jacop_table_int_reif([x, y], [0, 0, 1], b);\nsolve satisfy;\n",
+        "jacop_table_int_reif: 3 elements do not split into tuples of 2 values");
+    // a table without tuples holds for no assignment, a negative one for all
+    assertTrue(
+        run(vars + "constraint jacop_table_int([x, y], []);\nsolve satisfy;\n")[0].endsWith(
+            "=====UNSATISFIABLE=====\n"));
+    assertEquals(
+        4,
+        solveAll(vars + "constraint jacop_negative_table_int([x], []);\nsolve satisfy;\n").size());
+  }
 }
