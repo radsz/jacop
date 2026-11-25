@@ -364,6 +364,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // labels the integer and Boolean variables it leaves out, after completionSearch labelled the
   // set variables
   DepthFirstSearch<T> completionChild;
+  // splits the float variables it leaves out, below completionSearch or in its place
+  DepthFirstSearch<T> floatCompletion;
   // Values for search created from flatzinc
   DepthFirstSearch<T> flatzincDfs;
   SelectChoicePoint<T> flatzincVariableSelection;
@@ -2587,7 +2589,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     DepthFirstSearch<T> parentSearch = null;
     do {
       s.getSolutionListener().recordSolutions(false);
-      s.getSolutionListener().searchAll(s != completionSearch && s != completionChild);
+      s.getSolutionListener()
+          .searchAll(s != completionSearch && s != completionChild && s != floatCompletion);
 
       if (parentSearch != null) {
         s.getSolutionListener().setParentSolutionListener(parentSearch.getSolutionListener());
@@ -9776,10 +9779,22 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     allVars.defaultVars();
     LinkedHashSet<IntVar> rest = new LinkedHashSet<>(Arrays.asList(allVars.getIntVars()));
     rest.addAll(Arrays.asList(allVars.getBoolVars()));
-    // the sets whose constraints a reformulation replaced take any value
+    // the float variables whose constraints a reformulation replaced take any value, and those
+    // MiniZinc introduced are intermediate results that the others define
     Set<Var> unused = new HashSet<>(dictionary.unusedVariables);
+    unused.addAll(dictionary.introducedFloatVariables());
+    FloatVar[] floats =
+        Arrays.stream(allVars.getFloatVars())
+            .filter(v -> !unused.contains(v))
+            .toArray(FloatVar[]::new);
+    floatCompletion = null;
+    completionChild = null;
+    // the sets whose constraints a reformulation replaced take any value
+    Set<Var> unusedSets = new HashSet<>(dictionary.unusedVariables);
     SetVar[] sets =
-        Arrays.stream(allVars.getSetVars()).filter(v -> !unused.contains(v)).toArray(SetVar[]::new);
+        Arrays.stream(allVars.getSetVars())
+            .filter(v -> !unusedSets.contains(v))
+            .toArray(SetVar[]::new);
     DepthFirstSearch<T> first = null;
     if (sets.length > 0) {
       // the set variables first, then the others below this search
@@ -9797,13 +9812,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (rest.isEmpty()) {
         completionSearch = setCompletion;
         completionChild = null;
+        addFloatCompletion(setCompletion, floats);
         return setCompletion;
       }
       first = setCompletion;
       lastSearch = setCompletion;
     }
     if (rest.isEmpty()) {
-      return null;
+      completionSearch = addFloatCompletion(lastSearch, floats);
+      return completionSearch;
     }
 
     DepthFirstSearch<T> completion = new DepthFirstSearch<>();
@@ -9822,14 +9839,45 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     completion.setSolutionListener(new CostListener<>());
     lastSearch.addChildSearch(completion);
     setSearchTimeout(completion);
+    addFloatCompletion(completion, floats);
     if (first == null) {
       completionSearch = completion;
-      completionChild = null;
       return completion;
     }
     completionSearch = first;
     completionChild = completion;
     return first;
+  }
+
+  /**
+   * Adds below lastSearch a search that splits the float variables the search on output variables
+   * leaves out, which propagation alone does not show to have values consistent with the rest (x =
+   * y and x != y over 0..1 holds no solution but propagates). It stops at the first solution.
+   *
+   * @return the search, or null when there are no such variables
+   */
+  @SuppressWarnings("unchecked")
+  private DepthFirstSearch<T> addFloatCompletion(
+      DepthFirstSearch<T> lastSearch, FloatVar[] floats) {
+    // not under a float objective: splitting a variable it depends on narrows the cost below the
+    // box the search found, so each completed solution improved on the last by a few floats
+    // (ex2_1_1 with its squares not introduced: 1001 solutions and no proof in 30 s)
+    if (floats.length == 0 || costVariable instanceof FloatVar) {
+      return null;
+    }
+    DepthFirstSearch<T> completion = new DepthFirstSearch<>();
+    if (options.debug()) {
+      completion.setConsistencyListener(failStatistics);
+    }
+    completion.setSelectChoicePoint(
+        (SelectChoicePoint<T>) new SplitSelectFloat<>(store, floats, null));
+    completion.setPrintInfo(false);
+    lastSearch.setSolutionListener(new SimpleSolutionListener<>());
+    completion.setSolutionListener(new CostListener<>());
+    lastSearch.addChildSearch(completion);
+    setSearchTimeout(completion);
+    floatCompletion = completion;
+    return completion;
   }
 
   private boolean shouldUseDefaultSearchVars(

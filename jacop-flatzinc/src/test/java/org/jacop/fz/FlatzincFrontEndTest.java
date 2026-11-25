@@ -7613,6 +7613,25 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void floatVariablesThatAreNotOutputAreCompleted() throws IOException {
+    // the completion search after the search on the output variables labelled only the integer
+    // and Boolean variables: a = 1 was printed, although it asks f * g >= 0.1 with g = -f
+    String model =
+        "var 0..1: a :: output_var;\n"
+            + "var -1.0..1.0: f;\n"
+            + "var -1.0..1.0: g;\n"
+            + "var -1.0..1.0: h;\n"
+            + "var bool: b;\n"
+            + "constraint float_lin_eq([1.0, 1.0], [f, g], 0.0);\n"
+            + "constraint float_times(f, g, h);\n"
+            + "constraint int_eq_reif(a, 1, b);\n"
+            + "constraint float_le_reif(0.1, h, b);\n"
+            + "solve :: int_search([a], input_order, indomain_min, complete) satisfy;\n";
+    List<String> all = solveAllInOrder(model, "--lcg", "off");
+    assertEquals(List.of("a = 0;"), all, all.toString());
+  }
+
+  @Test
   void floatObjectiveImprovesFromSolutionToSolution() throws IOException {
     // with precision 0.01 the objective of a solution is an interval up to 0.01 wide, printed as
     // its middle; each next solution had only to raise its minimum by one float, so the printed
