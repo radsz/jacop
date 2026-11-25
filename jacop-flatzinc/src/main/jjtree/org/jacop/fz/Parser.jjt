@@ -200,6 +200,8 @@ public class Parser {
 
     private void modelRead(SimpleNode model) throws Throwable {
 	dict.removeAliasFromSearch();
+	// an objective that is no variable or parameter of the model is an error of the model
+	Solve.checkObjective(model, dict);
 	cc.removeEntailedDisequalities(model);
 	// generate constraints
 	cc.generateAllConstraints(model);

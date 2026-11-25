@@ -1201,7 +1201,8 @@ public class VariablesParameters implements ParserTreeConstants {
     }
     int low = ((ASTIntFlatExpr) setLiteral.jjtGetChild(0)).getInt();
     int high = ((ASTIntFlatExpr) setLiteral.jjtGetChild(1)).getInt();
-    return new IntervalDomain(low, high);
+    // 1..0 is the index set of an empty array, which IntervalDomain(1, 0) refuses under asserts
+    return low > high ? new IntervalDomain() : new IntervalDomain(low, high);
   }
 
   private IntDomain parseSetLiteralList(SimpleNode setLiteral) {

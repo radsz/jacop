@@ -636,6 +636,62 @@ class RevisedDualSimplexTest {
   }
 
   @Test
+  void rowKeptByTheBoundsOtherRowsImplyIsRemoved() {
+    // x + y + v = 10 and z + w + u = 5 with every column >= 0 imply x <= 10 and z <= 5, so
+    // x + z <= 30 holds over those bounds alone and goes; no column bound changes. min -x - z: -15
+    double inf = Double.POSITIVE_INFINITY;
+    for (boolean presolve : new boolean[] {false, true}) {
+      RevisedDualSimplex lp =
+          new RevisedDualSimplex(
+              new int[][] {{0, 1, 2}, {3, 4, 5}, {0, 3}},
+              new double[][] {{1, 1, 1}, {1, 1, 1}, {1, 1}},
+              new double[] {10, 5, -inf},
+              new double[] {10, 5, 30},
+              new double[] {-1, 0, 0, -1, 0, 0},
+              true);
+      lp.setExact(true);
+      lp.setPresolve(presolve);
+      for (int j = 0; j < 6; j++) {
+        lp.setBounds(j, 0, inf);
+      }
+      assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      assertThat(lp.objective()).isCloseTo(-15, org.assertj.core.data.Offset.offset(1e-9));
+      if (presolve) {
+        assertThat(lp.presolveReductions()[Presolve.IMPLIED_ROW]).isEqualTo(1);
+      }
+    }
+  }
+
+  @Test
+  void singletonColumnsOfACoveringRowAreStuffed() {
+    // 56x + 55y + 54z >= 27 with x, y, z in [0, 1] and costs 10, 49, 33: x covers the row alone
+    // at the lowest cost per unit (Gamrath et al. 2015, singleton column stuffing), so y and z,
+    // the dearest first, are fixed at 0. min 10 * 27 / 56
+    double inf = Double.POSITIVE_INFINITY;
+    for (boolean presolve : new boolean[] {false, true}) {
+      RevisedDualSimplex lp =
+          new RevisedDualSimplex(
+              new int[][] {{0, 1, 2}},
+              new double[][] {{56, 55, 54}},
+              new double[] {27},
+              new double[] {inf},
+              new double[] {10, 49, 33},
+              true);
+      lp.setExact(true);
+      lp.setPresolve(presolve);
+      for (int j = 0; j < 3; j++) {
+        lp.setBounds(j, 0, 1);
+      }
+      assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      assertThat(lp.objective())
+          .isCloseTo(10.0 * 27 / 56, org.assertj.core.data.Offset.offset(1e-9));
+      if (presolve) {
+        assertThat(lp.presolveReductions()[Presolve.STUFFED_COLUMN]).isEqualTo(2);
+      }
+    }
+  }
+
+  @Test
   void dominatedColumnIsFixedByTheDualBoundOfAColumnSingleton() {
     // x + s + t = 4 and x - v <= 2, s >= 0 without upper bound and cost 1 bounds the dual of row 0
     // by 1, so the reduced cost of x (cost 3) is at least 2: x = 0 in every optimum. min 4
@@ -764,7 +820,7 @@ class RevisedDualSimplexTest {
     // the chunks of the chunked solves, apart so that they leave the problems as they were
     Random chunks = new Random(29);
     Random parallels = new Random(31);
-    int[] reductions = new int[10];
+    int[] reductions = new int[12];
     int runs = Integer.getInteger("jalp.test.runs", 3000) / 3;
     int reduced = 0;
     int optimal = 0;

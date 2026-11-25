@@ -48,10 +48,14 @@ public class RunWhenShuttingDown extends Thread {
   @Override
   public void run() {
 
-    if (!parser.options.getAll() && parser.solver.lastSolution != null) {
-      parser.solver.helperSolutionPrinter(parser.solver.lastSolution.toString());
-    }
+    // the search may print its answer at the same time: only one of them prints
+    parser.solver.printAnswer(
+        () -> {
+          if (!parser.options.getAll() && parser.solver.lastSolution != null) {
+            parser.solver.helperSolutionPrinter(parser.solver.lastSolution.toString());
+          }
 
-    parser.solver.printStatisticsIterrupt();
+          parser.solver.printStatisticsIterrupt();
+        });
   }
 }
