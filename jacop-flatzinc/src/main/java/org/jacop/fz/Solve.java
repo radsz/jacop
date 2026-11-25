@@ -927,8 +927,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   /**
    * Posts the cost network bound when its root bound is above the bound the objective already has
-   * at the root (from the linear relaxation, for example), or always with
-   * -Dorg.jacop.cfn.gate=false.
+   * at the root (from the linear relaxation, for example) and the network has at most
+   * -Dorg.jacop.cfn.maxTerms cost terms (default 500), or always with -Dorg.jacop.cfn.gate=false. A
+   * reason of the bound cites the domains of the whole network, so on large networks (frequency
+   * assignment with thousands of terms) explanations grow twentyfold while the bound stays far
+   * below the optimum.
    */
   private void imposeCostNetworkBound() {
     CostNetworkBound b = costNetworkBound;
@@ -939,7 +942,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     long before = b.maximize() ? -(long) z.max() : z.min();
     b.prepare(store);
     if (!Boolean.parseBoolean(System.getProperty("org.jacop.cfn.gate", "true"))
-        || b.rootBound > before) {
+        || b.rootBound > before
+            && costNetworkDetector.terms <= Integer.getInteger("org.jacop.cfn.maxTerms", 500)) {
       store.impose(b);
       costNetworkPosted = true;
     }
