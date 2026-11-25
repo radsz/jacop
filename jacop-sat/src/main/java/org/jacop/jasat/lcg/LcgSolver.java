@@ -3415,6 +3415,24 @@ public final class LcgSolver implements ExternalPropagator {
     Atom negated() {
       return new Atom(var, kind, value, !holds);
     }
+
+    // equals and hashCode written out, with the values of the generated ones (so that sets of
+    // atoms keep their order): the generated ones go through method handles that stay slow until
+    // compiled, and root probing of a short run spends much of its time in them (a fifth of the
+    // samples of probing rectangle-packing rpp23 of the MiniZinc Challenge 2014)
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Atom a
+          && a.var == var
+          && a.kind == kind
+          && a.value == value
+          && a.holds == holds;
+    }
+
+    @Override
+    public int hashCode() {
+      return ((var * 31 + kind) * 31 + value) * 31 + Boolean.hashCode(holds);
+    }
   }
 
   private Atom atom(int lit) {
@@ -3739,11 +3757,11 @@ public final class LcgSolver implements ExternalPropagator {
         complete = false;
         continue;
       }
-      Set<Atom> atoms = consequences(implied);
       if (common == null) {
-        common = atoms;
-      } else {
-        common.retainAll(atoms);
+        common = consequences(implied);
+      } else if (!common.isEmpty()) {
+        // once no atom is common to the values probed, the rest cannot lift one
+        common.retainAll(consequences(implied));
       }
     }
     if (complete && common != null && !common.isEmpty()) {
