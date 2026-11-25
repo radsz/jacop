@@ -110,7 +110,9 @@ import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeBasic;
+import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
+import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
 import org.jacop.constraints.cumulative.EnergyPrecedence;
 import org.jacop.constraints.cumulative.HornFlow;
 import org.jacop.core.BooleanVar;
@@ -1853,6 +1855,45 @@ class ConsistencyChecker {
         concat(s, d, r, new IntVar[] {limit}));
   }
 
+  /**
+   * CumulativeOptional over three tasks with presences o (unary: CumulativeUnaryOptional, limit 1,
+   * uses 0..1), with zero durations, zero uses and uses above the limit: an absent task, a task
+   * without duration and a task without use take nothing.
+   */
+  private static Model cumulativeOptional(Store store, Random random, boolean unary) {
+    int n = 3;
+    IntVar[] s = vars(store, "s", n, 0, 3, random);
+    IntVar[] d =
+        IntStream.range(0, n)
+            .mapToObj(i -> interval(store, "d" + i, random.nextInt(2), 2, random))
+            .toArray(IntVar[]::new);
+    IntVar[] r =
+        IntStream.range(0, n)
+            .mapToObj(i -> interval(store, "r" + i, random.nextInt(2), unary ? 1 : 3, random))
+            .toArray(IntVar[]::new);
+    IntVar limit = unary ? new IntVar(store, "b", 1, 1) : aVar(store, "b", 0, 2, random);
+    IntVar[] o = bools(store, "o", n);
+    return new Model(
+        unary
+            ? new CumulativeUnaryOptional(s, d, r, limit, o)
+            : new CumulativeOptional(s, d, r, limit, o),
+        t -> {
+          for (int time = 0; time <= 5; time++) {
+            int load = 0;
+            for (int i = 0; i < n; i++) {
+              if (t[3 * n + 1 + i] == 1 && t[i] <= time && time < t[i] + t[n + i]) {
+                load += t[2 * n + i];
+              }
+            }
+            if (load > t[3 * n]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        concat(s, d, r, new IntVar[] {limit}, o));
+  }
+
   /** inter_distance(x, p) with every variable on its own window of 0..11. */
   private static Model interDistance(Store store, Random random, boolean unary) {
     int n = 2 + random.nextInt(4);
@@ -2525,6 +2566,8 @@ class ConsistencyChecker {
         new Case("CumulativeBasic", Level.NONE, (s, r) -> cumulative(s, r, true)),
         new Case("Cumulative", Level.NONE, (s, r) -> cumulative(s, r, false)),
         new Case("HornFlow", Level.NONE, (s, r) -> cumulative(s, r, 2)),
+        new Case("CumulativeOptional", Level.NONE, (s, r) -> cumulativeOptional(s, r, false)),
+        new Case("CumulativeUnaryOptional", Level.NONE, (s, r) -> cumulativeOptional(s, r, true)),
         // relaxations (Eastman, Even and Isaacs; Moore and Hodgson), so no consistency level, but
         // never wrong pruning
         new Case(

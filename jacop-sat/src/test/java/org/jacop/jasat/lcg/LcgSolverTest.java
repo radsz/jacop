@@ -931,6 +931,7 @@ class LcgSolverTest {
       solver.setBranching(branching);
       if (instance % 4 == 3) {
         solver.setAnnotation(new SimpleSelect<>(x, null, new IndomainMin<>()), true);
+        solver.setAnnotationDrop(instance % 16 >= 8 ? 5 : 0);
       }
       solver.sat().setInitialPhase(false);
       solver.setBooleansFirstTurns(instance % 8 >= 4);
@@ -956,6 +957,57 @@ class LcgSolverTest {
       proved++;
     }
     assertThat(proved).isGreaterThan(300);
+  }
+
+  /**
+   * Free search drops the annotation's runs once the given number of conflicts found no solution
+   * (amaze2 under -f, CHANGELOG 507), and only then: pigeons into one hole fewer, pairwise
+   * different, are refuted with the drop, and as many pigeons as holes are placed before it.
+   */
+  @Test
+  void annotationRunsAreDroppedAfterConflictsWithoutSolution() {
+    for (int drop : new int[] {0, 30}) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[9];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 1, x.length - 1);
+      }
+      for (int i = 0; i < x.length; i++) {
+        for (int j = i + 1; j < x.length; j++) {
+          store.impose(new XneqY(x[i], x[j]));
+        }
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      solver.setBranching(LcgSolver.Branching.ALTERNATE);
+      solver.setAnnotation(new SimpleSelect<>(x, null, new IndomainMin<>()), true);
+      solver.setAnnotationDrop(drop);
+      assertThat(solver.solve()).as("drop %d", drop).isEqualTo(CdclSolver.UNSAT);
+      assertThat(solver.sat().restarts).as("drop %d", drop).isGreaterThan(1);
+      assertThat(solver.annotationDropped()).as("drop %d", drop).isEqualTo(drop > 0);
+    }
+    Store store = new Store();
+    IntVar[] x = new IntVar[6];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, x.length);
+    }
+    for (int i = 0; i < x.length; i++) {
+      for (int j = i + 1; j < x.length; j++) {
+        store.impose(new XneqY(x[i], x[j]));
+      }
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setBranching(LcgSolver.Branching.ALTERNATE);
+    solver.setAnnotation(new SimpleSelect<>(x, null, new IndomainMin<>()), true);
+    solver.setAnnotationDrop(1000);
+    assertThat(solver.solve()).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.annotationDropped()).isFalse();
+    Set<Integer> values = new HashSet<>();
+    for (IntVar v : x) {
+      values.add(solver.value(v));
+    }
+    assertThat(values).hasSize(x.length);
   }
 
   /**
