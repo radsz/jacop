@@ -9068,6 +9068,27 @@ Version 5.0 (unreleased)
    atom, from int arrays: the same search, sudoku_opt p29 and
    gfd-schedule n100 -2.9 % each, wide-quick -f -0.9 %, default -0.2 %.
 
+507. LCG explanations drop the atoms that another atom of the same
+   explanation implies: of the bounds of one variable only the strongest
+   lower and upper bound stay, and a removed value stays only when no
+   cited bound excludes it. A reason or failure that excludes a range of
+   values one value at a time cites, for each value, the weakest bound
+   that removed it (lifting, Feydy and Stuckey, CP 2009), so an element
+   over a range of positions cited one index bound per position where the
+   strongest alone implies the others: on MZNC 2013 javarouting trip_6_3
+   ElementInteger reasons had 6.3 distinct atoms where 1 was needed. The
+   clause is a subset of the old one, so it stays implied and is
+   stronger, and conflict analysis no longer resolves the weaker bounds.
+   -Djacop.lcg.dropDominated=false keeps every atom (and --proof keeps
+   them, so the proof steps stay as before). Wide-quick set at 240 s:
+   -f total time 2,580 -> 2,367 s, solved 52 -> 53 (lot-sizing pigment20a
+   proved in 63 s), celar graph11 35,355 -> 6,364, mapping mesh_star
+   45 -> 14 s; default mode neutral (4,275 -> 4,304 s, same solved).
+   Wide set at 240 s, -f: total time 13,154 -> 13,005 s, 196 instances
+   solved by both 2,681 -> 2,445 s (blocks-world 16-4-83 173 -> 92 s,
+   liner-sf-repositioning tp7_4 177 -> 106 s), whirlpool d29 lost at the
+   limit (154 s before).
+
 Version 4.11
 =============
 
