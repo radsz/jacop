@@ -8405,4 +8405,16 @@ class FlatzincFrontEndTest {
     assertEquals("k = 2;\n----------\n==========\n", run(String.format(model, 3), "-a")[0]);
     assertModelError(String.format(model, -1), "jacop_wst: the number of nodes is negative");
   }
+
+  @Test
+  void amongAHugeSetIsPostedAtOnce() throws IOException {
+    // the set was copied value by value: 15 s for 0..1000000000 before the search started
+    long start = System.nanoTime();
+    String out =
+        run(
+            "var 0..3: x :: output_var;\nvar 0..3: y;\nvar 0..1: n;\n"
+                + "constraint jacop_among([x, y], 0..1000000000, n);\nsolve satisfy;\n")[0];
+    assertTrue(out.endsWith("=====UNSATISFIABLE=====\n"), out);
+    assertTrue(System.nanoTime() - start < 5_000_000_000L, "among took more than 5 s");
+  }
 }

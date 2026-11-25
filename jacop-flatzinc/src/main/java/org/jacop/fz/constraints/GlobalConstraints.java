@@ -1213,11 +1213,10 @@ class GlobalConstraints implements ParserTreeConstants {
       return;
     }
 
+    // interval by interval: value by value took 15 s for 0..1000000000
     IntervalDomain setImpl = new IntervalDomain();
-    for (ValueEnumeration e = s.valueEnumeration(); e.hasMoreElements(); ) {
-      int val = e.nextElement();
-
-      setImpl.unionAdapt(new IntervalDomain(val, val));
+    for (int i = 0; i < s.noIntervals(); i++) {
+      setImpl.unionAdapt(new IntervalDomain(s.leftElement(i), s.rightElement(i)));
     }
 
     support.pose(new Among(xx, setImpl, vv));
