@@ -44,6 +44,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
@@ -842,19 +843,64 @@ public class Support implements ParserTreeConstants {
     if ("false".equals(System.getProperty("org.jacop.fz.detectorGates"))) {
       return true;
     }
-    for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
-      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
-      if (node.getId() == JJTCONSTRAINTITEMS) {
-        for (int j = 0; j < node.jjtGetNumChildren(); j++) {
-          checkTimeOut();
-          SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
-          if (item instanceof ASTConstElem c && kinds.contains(c.getName())) {
-            return true;
-          }
-        }
+    checkTimeOut();
+    Set<String> present = constraintKinds(astTree);
+    for (String kind : kinds) {
+      if (present.contains(kind)) {
+        return true;
       }
     }
     return false;
+  }
+
+  /**
+   * Tells whether the model has a constraint whose name passes a test, as {@link
+   * #hasConstraint(SimpleNode, Set)} does for a set of names.
+   *
+   * @param astTree the root of the parsed model.
+   * @param kind the test of a constraint name.
+   * @return true when a constraint name passes the test, or the gates are off.
+   * @throws ModelTimeOut when the time-out has passed.
+   */
+  public boolean hasConstraint(SimpleNode astTree, Predicate<String> kind) {
+    if ("false".equals(System.getProperty("org.jacop.fz.detectorGates"))) {
+      return true;
+    }
+    checkTimeOut();
+    for (String name : constraintKinds(astTree)) {
+      if (kind.test(name)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // the names of the constraints of the model whose root is kindsOf, read once: the constraint
+  // items and their names do not change while the detectors read the model, and a scan per gate
+  // of the 1.9 million rows of PB 2006 haplotype simp-nonunif cost 0.1 s each
+  private SimpleNode kindsOf;
+
+  private Set<String> kinds;
+
+  private Set<String> constraintKinds(SimpleNode astTree) {
+    if (kindsOf != astTree) {
+      Set<String> present = new HashSet<>();
+      for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
+        SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
+        if (node.getId() == JJTCONSTRAINTITEMS) {
+          for (int j = 0; j < node.jjtGetNumChildren(); j++) {
+            checkTimeOut();
+            SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
+            if (item instanceof ASTConstElem c) {
+              present.add(c.getName());
+            }
+          }
+        }
+      }
+      kinds = present;
+      kindsOf = astTree;
+    }
+    return kinds;
   }
 
   /**

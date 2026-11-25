@@ -78,6 +78,8 @@ import org.jacop.fz.SimpleNode;
  */
 public final class BinPackingCostBound {
 
+  private static final Set<String> GATE_KINDS = Set.of("jacop_bin_packing");
+
   /**
    * It tells if the bounds are posted.
    *
@@ -123,6 +125,10 @@ public final class BinPackingCostBound {
    * @return the number of sums posted
    */
   public int detect(SimpleNode astTree) {
+    // the bounds are of bin packings: a model without them is not read
+    if (!support.hasConstraint(astTree, GATE_KINDS)) {
+      return 0;
+    }
     support.forEachConstraint(
         astTree,
         item -> {

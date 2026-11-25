@@ -67,6 +67,9 @@ import org.jacop.fz.SimpleNode;
  */
 public class StockingCostDetector implements ParserTreeConstants {
 
+  private static final Set<String> GATE_KINDS =
+      Set.of("jacop_alldiff", "jacop_alldistinct", "jacop_count_values_bounds");
+
   private final Support support;
 
   // the variables of each capacity constraint, as a set, and its capacity
@@ -103,6 +106,10 @@ public class StockingCostDetector implements ParserTreeConstants {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
+    // the periods are all-different and counted sets: a model without them is not read
+    if (!support.hasConstraint(astTree, GATE_KINDS)) {
+      return;
+    }
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {

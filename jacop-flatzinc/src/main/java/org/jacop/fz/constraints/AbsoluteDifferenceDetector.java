@@ -75,6 +75,8 @@ import org.jacop.fz.SimpleNode;
  */
 public class AbsoluteDifferenceDetector implements ParserTreeConstants {
 
+  private static final Set<String> GATE_KINDS = Set.of("int_abs");
+
   private static final String PROPERTY = "org.jacop.fz.absoluteDifference";
 
   /** The most values of x - y that are read. */
@@ -170,6 +172,10 @@ public class AbsoluteDifferenceDetector implements ParserTreeConstants {
    * @param skipped the constraint nodes already replaced by other detectors.
    */
   public void detect(SimpleNode astTree, Set<SimpleNode> skipped) {
+    // the differences it rewrites are int_abs constraints: a model without them is not read
+    if (!support.hasConstraint(astTree, GATE_KINDS)) {
+      return;
+    }
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {

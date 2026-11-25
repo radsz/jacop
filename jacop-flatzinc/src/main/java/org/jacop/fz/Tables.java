@@ -1470,18 +1470,30 @@ public class Tables {
    * @return true if variable is output, false otherwise
    */
   public boolean isOutput(Var v) {
-    if (outputVariables.contains(v)) {
-      return true;
-    } else {
+    if (outputSet == null
+        || outputSetVariables != outputVariables.size()
+        || outputSetArrays != outputArray.size()) {
+      // the lists only grow; a scan of both per call made the output check of every alias
+      // quadratic (a third of the set-up of PB 2012 ped2.B.recomb1, 164k aliases)
+      Set<Var> all = Collections.newSetFromMap(new IdentityHashMap<>());
+      all.addAll(outputVariables);
       for (OutputArrayAnnotation oa : outputArray) {
-        if (oa.contains(v)) {
-          return true;
-        }
+        Collections.addAll(all, oa.getArray());
       }
+      outputSet = all;
+      outputSetVariables = outputVariables.size();
+      outputSetArrays = outputArray.size();
     }
-
-    return false;
+    return outputSet.contains(v);
   }
+
+  // the output variables and the variables of the output arrays, for isOutput, built from the
+  // lists when they have grown since
+  private Set<Var> outputSet;
+
+  private int outputSetVariables;
+
+  private int outputSetArrays;
 
   /**
    * It adds an output array annotation.
