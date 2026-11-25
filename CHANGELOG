@@ -9211,6 +9211,26 @@ Version 5.0 (unreleased)
    limit (154 s before); default mode 19,811 -> 19,825 s, 169 = 169
    solved.
 
+513. LCG reasons of products (MulExplanation) and of x + y = z with a
+   fixed term cite only the bounds they need. A product reason guarded
+   its range exclusion with the variable's own earlier bound, which the
+   trail gives as the root bound, so a third of its atoms were the
+   variable's own; it now first explains the exclusion from the other
+   factors' bounds alone, each lifted by bisection to the weakest value
+   that still excludes the range and cited by the earliest trail atom
+   that reaches it (lifting, Feydy and Stuckey, CP 2009), and a failure
+   is explained from all bounds lifted the same way. x + y = z explains a
+   bound and a failure from the lifted linear bounds before the shift,
+   which cited both bounds of the fixed term. -Djacop.lcg.mulLift=false
+   turns the product lifting off and -Djacop.lcg.shiftLast=false the
+   linear sum reasons. MZNC 2018
+   train instance.17: objective <= 35000 proved in 10 s (unfinished
+   before), optimum found at 27 s instead of 98 s. Wide set at 240 s,
+   -f: total time 13,288 -> 13,038 s, the 194 instances solved by both
+   2,434 -> 1,998 s (lot-sizing pigment20a 182 -> 51 s, javarouting
+   trip_7_2 212 -> 127 s, ship-schedule 8Ships 59 -> 11 s); wide-quick
+   default mode 4,504 -> 4,536 s, same solved.
+
 Version 4.11
 =============
 
