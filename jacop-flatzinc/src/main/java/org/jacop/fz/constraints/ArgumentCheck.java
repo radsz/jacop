@@ -39,11 +39,11 @@ import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
 
 /**
- * Checks the sizes of the arguments of the built-ins before any constraint is read: the lengths of
- * arrays that must agree, and the numbers of rows, columns, vectors or states that a flattened
- * array must fit. A model that breaks them is an error of the model (an IllegalArgumentException,
- * printed as %% Error:), as MiniZinc reports it with its assertions; the generators and the
- * detectors that read the constraints before them assume the sizes agree.
+ * Checks the sizes of the arguments of the built-ins as each constraint is read, after its types:
+ * the numbers of rows, columns, vectors, dimensions, nodes or states that a flattened array must
+ * fit. A model that breaks them is an error of the model (an IllegalArgumentException, printed as
+ * %% Error:), as MiniZinc reports it with its assertions; the generators and the detectors that
+ * read the constraints before them assume the sizes agree.
  */
 public final class ArgumentCheck implements ParserTreeConstants {
 
@@ -177,27 +177,18 @@ public final class ArgumentCheck implements ParserTreeConstants {
   private ArgumentCheck() {}
 
   /**
-   * Checks the arguments of every constraint of the model.
+   * Checks the sizes of the arguments of one constraint item, as it is read: the item is at hand,
+   * and the parameters and arrays it names are declared before it.
    *
    * @param support the support of the model, with its parameters and arrays declared
-   * @param astTree the model
-   * @throws IllegalArgumentException when the sizes of the arguments of a constraint do not agree
+   * @param constraintItem the constraint item, whose first child is the call
+   * @throws IllegalArgumentException when the sizes of the arguments of the constraint do not agree
    */
-  public static void check(Support support, SimpleNode astTree) {
-    for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
-      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
-      if (node.getId() != JJTCONSTRAINTITEMS) {
-        continue;
-      }
-      for (int j = 0; j < node.jjtGetNumChildren(); j++) {
-        SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
-        if (item.getId() == JJTCONSTELEM) {
-          String name = ((ASTConstElem) item).getName();
-          Rule rule = RULES.get(name);
-          if (rule != null) {
-            rule.check(new Arguments(support, name, item));
-          }
-        }
+  public static void check(Support support, SimpleNode constraintItem) {
+    if (constraintItem.jjtGetChild(0) instanceof ASTConstElem call && call.getName() != null) {
+      Rule rule = RULES.get(call.getName());
+      if (rule != null) {
+        rule.check(new Arguments(support, call.getName(), call));
       }
     }
   }

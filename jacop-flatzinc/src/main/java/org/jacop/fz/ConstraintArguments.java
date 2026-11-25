@@ -476,7 +476,7 @@ final class ConstraintArguments {
       errors(name, call, types);
     }
     // the sizes that other arguments give (states, dimensions, tuples, nodes) are checked by
-    // org.jacop.fz.constraints.ArgumentCheck before the constraints are generated
+    // org.jacop.fz.constraints.ArgumentCheck right after this check
   }
 
   // whether the arguments are of the types of the predicate, of the declared lengths

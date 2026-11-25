@@ -201,8 +201,6 @@ public class Constraints implements ParserTreeConstants {
 
   void generateAllConstraints(SimpleNode astTree) throws Throwable {
 
-    // sizes that do not agree are an error of the model, before any pass reads the constraints
-    ArgumentCheck.check(support, astTree);
     dictionary.searchAnnotated = searchAnnotated(astTree);
     // an objective declared beyond the integer range is divided by the factor its definition
     // forces on it, instead of being narrowed
@@ -1095,6 +1093,8 @@ public class Constraints implements ParserTreeConstants {
     // the arguments are checked before any pass reads them, in every mode and every thread of a
     // portfolio, so that a malformed model is an error of the model wherever it is read
     arguments.check(constraintWithAnnotations);
+    // and so are sizes that do not agree, checked once the types are known to fit
+    ArgumentCheck.check(support, constraintWithAnnotations);
 
     SimpleNode node = (SimpleNode) constraintWithAnnotations.jjtGetChild(0);
 
