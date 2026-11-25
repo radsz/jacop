@@ -414,7 +414,7 @@ public class NumberedPathDetector {
       if (x[c].domain.contains(n)) {
         dom.unionAdapt(n + 1, n + 1);
       }
-      s[c] = new IntVar(store, "path" + paths + "_s" + c, dom);
+      s[c] = new IntVar(store, store.freshVariableId("path" + paths + "_s" + c), dom);
     }
     IntervalDomain firsts = new IntervalDomain();
     for (int c = 0; c < n; c++) {
@@ -422,7 +422,7 @@ public class NumberedPathDetector {
         firsts.unionAdapt(c + 1, c + 1);
       }
     }
-    s[n] = new IntVar(store, "path" + paths + "_start", firsts);
+    s[n] = new IntVar(store, store.freshVariableId("path" + paths + "_start"), firsts);
     for (int c = 0; c < n; c++) {
       Map<Integer, IntVar> row = rows.get(c);
       if (row != null) {
@@ -430,19 +430,23 @@ public class NumberedPathDetector {
           IntVar b = e.getValue();
           if (b == null) {
             // the model has no literal for x[d] = x[c] + 1 (table form)
-            b = new BooleanVar(store, "path" + paths + "_arc" + c + "_" + e.getKey());
+            b =
+                new BooleanVar(
+                    store, store.freshVariableId("path" + paths + "_arc" + c + "_" + e.getKey()));
             support.pose(new Reified(new XplusCeqZ(x[c], 1, x[e.getKey()]), b));
           }
           support.pose(new Reified(new XeqC(s[c], e.getKey() + 1), b));
         }
       }
       if (x[c].domain.contains(n)) {
-        BooleanVar last = new BooleanVar(store, "path" + paths + "_last" + c);
+        BooleanVar last =
+            new BooleanVar(store, store.freshVariableId("path" + paths + "_last" + c));
         support.pose(new Reified(new XeqC(s[c], n + 1), last));
         support.pose(new Reified(new XeqC(x[c], n), last));
       }
       if (x[c].domain.contains(1)) {
-        BooleanVar first = new BooleanVar(store, "path" + paths + "_first" + c);
+        BooleanVar first =
+            new BooleanVar(store, store.freshVariableId("path" + paths + "_first" + c));
         support.pose(new Reified(new XeqC(s[n], c + 1), first));
         support.pose(new Reified(new XeqC(x[c], 1), first));
       }
@@ -451,7 +455,8 @@ public class NumberedPathDetector {
     // the cell of each value, for the search that follows the path (Solve.pathSearch)
     IntVar[] position = new IntVar[n];
     for (int k = 0; k < n; k++) {
-      position[k] = new IntVar(store, "path" + paths + "_cell" + (k + 1), 1, n);
+      position[k] =
+          new IntVar(store, store.freshVariableId("path" + paths + "_cell" + (k + 1)), 1, n);
     }
     support.delayedConstraints.add(new Assignment(x, position, 1, 1));
     support.dictionary.pathPositions.add(position);

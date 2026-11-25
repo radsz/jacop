@@ -282,4 +282,96 @@ class PortfolioOneParseTest {
     err.set(errors.toString(StandardCharsets.UTF_8));
     return out.toString(StandardCharsets.UTF_8);
   }
+
+  @Test
+  void aNumberOfSolutionsLimitsThePortfolioAsOneThread() throws IOException {
+    // each thread stopped after k solutions of its own, and the portfolio printed every improving
+    // solution of all of them: 8 solutions with -n 2 -p 4
+    StringBuilder model = new StringBuilder();
+    model.append("array [1..8] of var 0..9: x :: output_array([1..8]);\n");
+    model.append("var 0..1000: cost :: output_var;\n");
+    model.append("constraint int_lin_eq([1, 2, 3, 4, 5, 6, 7, 8, -1], [x[1], x[2], x[3], x[4], ");
+    model.append("x[5], x[6], x[7], x[8], cost], 0);\n");
+    model.append("constraint int_lin_le([-1, -1, -1, -1, -1, -1, -1, -1], [x[1], x[2], x[3], ");
+    model.append("x[4], x[5], x[6], x[7], x[8]], -30);\n");
+    model.append("solve :: int_search(x, input_order, indomain_max, complete) minimize cost;\n");
+    Path fzn = tmp.resolve("limit.fzn");
+    Files.writeString(fzn, model.toString(), StandardCharsets.UTF_8);
+    assertEquals(2, count(run("-n", "2", fzn.toString()), "----------"));
+    for (String p : new String[] {"2", "4"}) {
+      String out = run("-n", "2", "-p", p, fzn.toString());
+      // fewer when a thread proves a solution optimal before
+      int printed = count(out, "----------");
+      assertTrue(printed >= 1 && printed <= 2, out);
+    }
+  }
+
+  private static int count(String out, String line) {
+    return (int) out.lines().filter(line::equals).count();
+  }
+
+  @Test
+  void aModelEveryThreadRejectsEndsAsInOneThread() throws IOException {
+    // the portfolio printed =====UNKNOWN=====, the error once per thread and exit status 0, where
+    // one thread prints the error alone and ends with exit status 1
+    Path unsupported = tmp.resolve("unsupported.fzn");
+    Files.writeString(
+        unsupported,
+        "var 1..3: x :: output_var;\nconstraint no_such_constraint(x, x);\nsolve minimize x;\n",
+        StandardCharsets.UTF_8);
+    // an exception the front end does not handle, in every thread
+    Path unassigned = tmp.resolve("unassigned.fzn");
+    Files.writeString(
+        unassigned,
+        """
+        array [1..2] of var 1..3: x :: output_array([1..2]);
+        var 1..3: m :: output_var;
+        constraint jacop_maximum(x, m);
+        solve minimize m;
+        """,
+        StandardCharsets.UTF_8);
+    String[] exception = status("-p", "3", unassigned.toString());
+    assertEquals("1", exception[0]);
+    assertEquals(1, exception[2].lines().filter(l -> l.contains("stopped")).count(), exception[2]);
+    Path broken = tmp.resolve("broken.fzn");
+    Files.writeString(
+        broken,
+        "var 1..3: x :: output_var;\nconstraint int_le(x;\nsolve minimize x;\n",
+        StandardCharsets.UTF_8);
+    for (Path fzn : new Path[] {unsupported, broken}) {
+      String[] one = status(fzn.toString());
+      assertEquals("1", one[0]);
+      for (String p : new String[] {"2", "4"}) {
+        String[] portfolio = status("-p", p, fzn.toString());
+        assertEquals(Arrays.asList(one), Arrays.asList(portfolio), "-p " + p);
+      }
+    }
+  }
+
+  // the exit status, stdout and the error lines of a run in this JVM
+  private static String[] status(String... args) {
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    ByteArrayOutputStream errors = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+    PrintStream originalErr = System.err;
+    int status;
+    try (PrintStream o = new PrintStream(out, true, StandardCharsets.UTF_8);
+        PrintStream e = new PrintStream(errors, true, StandardCharsets.UTF_8)) {
+      System.setOut(o);
+      System.setErr(e);
+      status = new Fz2jacop().callMain(args);
+    } finally {
+      System.setOut(originalOut);
+      System.setErr(originalErr);
+    }
+    String err =
+        String.join(
+            "\n",
+            errors
+                .toString(StandardCharsets.UTF_8)
+                .lines()
+                .filter(l -> l.startsWith("%%"))
+                .toList());
+    return new String[] {Integer.toString(status), out.toString(StandardCharsets.UTF_8), err};
+  }
 }
