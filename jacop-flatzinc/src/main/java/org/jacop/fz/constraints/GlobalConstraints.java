@@ -1776,9 +1776,9 @@ class GlobalConstraints implements ParserTreeConstants {
         support.constraintPriority = pc.priority();
         IntVar c = pc.counter();
         if (c.singleton()) {
-          support.pose(new CountBounds(pc.list(), pc.value(), c.value(), c.value()));
+          support.poseCount(pc.list(), pc.value(), null, c.value(), c.value());
         } else {
-          support.pose(new Count(pc.list(), c, pc.value()));
+          support.poseCount(pc.list(), pc.value(), c, 0, 0);
         }
       } else {
         support.constraintPriority = -1;
@@ -1869,7 +1869,7 @@ class GlobalConstraints implements ParserTreeConstants {
         ub[i] = counters[i].max();
       }
       support.pose(new CountValuesBounds(x, lb, ub, values));
-    } else {
+    } else if (!support.poseCountValuesSplit(x, counters, values)) {
       support.pose(new CountValues(x, counters, values));
     }
   }

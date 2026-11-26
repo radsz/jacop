@@ -4056,6 +4056,136 @@ class FlatzincFrontEndTest {
   }
 
   // the average atoms of the LinearInt reasons in the -s statistics, or -1 without such reasons
+  @Test
+  void lcgSplitsLongCountsIntoBlockCounts() throws IOException {
+    // a count over 43 variables: blocks of sqrt(43) = 7 variables, the last variable joining the
+    // block before it, so 6 block counts; the count with a fixed counter is split the same way.
+    // The optimum stays that of plain CP and of whole counts (lcg-split-count=0)
+    java.util.Random rnd = new java.util.Random(11);
+    int n = 43;
+    for (int run = 0; run < 4; run++) {
+      StringBuilder model = new StringBuilder();
+      for (int j = 0; j < 6; j++) {
+        model.append("var 0..2: y%d;%n".formatted(j));
+      }
+      for (int i = 0; i < n; i++) {
+        model.append("var 0..2: x%d;%n".formatted(i));
+      }
+      model.append("var 0..%d: obj :: output_var;%n".formatted(n));
+      // x(i) equals y(i mod 6) or y((i + 1) mod 6), so the search is small
+      for (int i = 0; i < n; i++) {
+        model.append("constraint int_le(x%d, y%d);%n".formatted(i, i % 6));
+        model.append("constraint int_le(y%d, x%d);%n".formatted((i + run) % 6, i));
+      }
+      String xs =
+          java.util.stream.IntStream.range(0, n)
+              .mapToObj(i -> "x" + i)
+              .collect(Collectors.joining(","));
+      String reversed =
+          java.util.stream.IntStream.range(0, n)
+              .mapToObj(i -> "x" + (n - 1 - i))
+              .collect(Collectors.joining(","));
+      String ws =
+          java.util.stream.IntStream.range(0, n)
+              .mapToObj(i -> Integer.toString(rnd.nextInt(5) - 1))
+              .collect(Collectors.joining(","));
+      model.append("constraint int_lin_le([%s], [%s], %d);%n".formatted(ws, xs, 20 + 5 * run));
+      model.append("constraint jacop_count([%s], 1, obj);%n".formatted(xs));
+      // over the list in another order, so it is not merged with the first into CountValues
+      model.append("constraint jacop_count([%s], 2, %d);%n".formatted(reversed, 7 + run));
+      model.append(
+          "solve :: int_search([y0,y1,y2,y3,y4,y5], input_order, indomain_min, complete) %s obj;%n"
+              .formatted(run % 2 == 0 ? "maximize" : "minimize"));
+      String cp = lastObjective(run(model.toString()));
+      String[] whole =
+          run(
+              model.toString(),
+              "--lcg",
+              "--search-statistics",
+              "--free-config",
+              "lcg-split-count=0");
+      String[] split = run(model.toString(), "--lcg", "--search-statistics");
+      assertEquals(cp, lastObjective(whole), model.toString());
+      assertEquals(cp, lastObjective(split), model.toString());
+      if (!cp.startsWith("=====UNSAT")) {
+        assertEquals(0, statistic(whole[0], "lcgSplitCounts"), whole[0]);
+        assertEquals(12, statistic(split[0], "lcgSplitCounts"), split[0]);
+      }
+    }
+  }
+
+  @Test
+  void lcgSplitsLongCountValuesIntoBlockCountValues() throws IOException {
+    // CountValues over 43 variables: 6 blocks, as for one count, with a counter per block and
+    // value (24 for 4 values); with 8 values the 48 block counters would outnumber the 43
+    // variables, so the constraint stays whole. The optimum stays that of plain CP and of the
+    // whole constraint (lcg-split-count-values=0)
+    java.util.Random rnd = new java.util.Random(13);
+    int n = 43;
+    int checked = 0;
+    for (int run = 0; run < 4; run++) {
+      int values = run < 3 ? 4 : 8;
+      StringBuilder model = new StringBuilder();
+      for (int j = 0; j < 6; j++) {
+        model.append("var 0..3: y%d;%n".formatted(j));
+      }
+      for (int i = 0; i < n; i++) {
+        model.append("var 0..3: x%d;%n".formatted(i));
+      }
+      for (int v = 0; v < values; v++) {
+        model.append("var 0..%d: c%d;%n".formatted(n, v));
+      }
+      model.append("var 0..%d: obj :: output_var;%n".formatted(n));
+      for (int i = 0; i < n; i++) {
+        model.append("constraint int_le(x%d, y%d);%n".formatted(i, i % 6));
+        model.append("constraint int_le(y%d, x%d);%n".formatted((i + run) % 6, i));
+      }
+      String xs =
+          java.util.stream.IntStream.range(0, n)
+              .mapToObj(i -> "x" + i)
+              .collect(Collectors.joining(","));
+      String ws =
+          java.util.stream.IntStream.range(0, n)
+              .mapToObj(i -> Integer.toString(rnd.nextInt(5) - 1))
+              .collect(Collectors.joining(","));
+      String vs =
+          java.util.stream.IntStream.range(0, values)
+              .mapToObj(Integer::toString)
+              .collect(Collectors.joining(","));
+      String cs =
+          java.util.stream.IntStream.range(0, values)
+              .mapToObj(v -> "c" + v)
+              .collect(Collectors.joining(","));
+      model.append("constraint int_lin_le([%s], [%s], %d);%n".formatted(ws, xs, 60 + 10 * run));
+      model.append("constraint jacop_count_values([%s], [%s], [%s]);%n".formatted(xs, vs, cs));
+      model.append("constraint int_le(c2, %d);%n".formatted(10 + 3 * run));
+      model.append("constraint int_le(c0, %d);%n".formatted(20 + run));
+      model.append("constraint int_le(c1, %d);%n".formatted(15 + run));
+      model.append("constraint int_lin_eq([1,-2,-1], [obj,c1,c0], 0);\n");
+      model.append(
+          "solve :: int_search([y0,y1,y2,y3,y4,y5], input_order, indomain_min, complete) %s obj;%n"
+              .formatted(run % 2 == 0 ? "maximize" : "minimize"));
+      String cp = lastObjective(run(model.toString()));
+      String[] whole =
+          run(
+              model.toString(),
+              "--lcg",
+              "--search-statistics",
+              "--verbose",
+              "--free-config",
+              "lcg-split-count-values=0");
+      String[] split = run(model.toString(), "--lcg", "--search-statistics", "--verbose");
+      assertEquals(cp, lastObjective(whole), model.toString());
+      assertEquals(cp, lastObjective(split), model.toString());
+      if (!cp.startsWith("=====UNSAT")) {
+        assertEquals(0, statistic(whole[0], "lcgSplitCounts"), whole[0]);
+        assertEquals(values == 4 ? 24 : 0, statistic(split[0], "lcgSplitCounts"), split[0]);
+        checked++;
+      }
+    }
+    assertTrue(checked >= 3, "models with a solution: " + checked);
+  }
+
   private static double linearAtoms(String out) {
     java.util.regex.Matcher m =
         java.util.regex.Pattern.compile("%% lcg LinearInt: reasons=(\\d+) .*?avgAtoms=([0-9.]+)")

@@ -162,6 +162,9 @@ public class Tables {
   // the block sums of linear constraints split for lazy clause generation
   final ArrayList<IntVar> splitSums = new ArrayList<>();
 
+  // the block counts of long counts split for lazy clause generation
+  final ArrayList<IntVar> splitCounts = new ArrayList<>();
+
   // whether the linear rows of the model were set rows before linear overlap factoring rewrote
   // them (LinearOverlapDetector.setRows), and the integer variables they define
   boolean overlapSetRows;
@@ -930,6 +933,7 @@ public class Tables {
     t.unusedVariables.addAll(map.get(unusedVariables));
     t.auxiliaryVariables.addAll(map.get(auxiliaryVariables));
     t.splitSums.addAll(map.get(splitSums));
+    t.splitCounts.addAll(map.get(splitCounts));
     t.searchAnnotated = searchAnnotated;
     t.overlapSetRows = overlapSetRows;
     t.overlapSetRowsDefined.addAll(map.get(overlapSetRowsDefined));
@@ -1599,6 +1603,27 @@ public class Tables {
   public void addSplitSum(IntVar v) {
     splitSums.add(v);
     definedVariables.add(v);
+  }
+
+  /**
+   * Records the block count of a long count split for lazy clause generation. It is a defined
+   * variable but, unlike a block sum, not substituted in the linear relaxation, which has no linear
+   * definition of it: the relaxation keeps it as a column with the value rows of its block.
+   *
+   * @param v the block count
+   */
+  public void addSplitCount(IntVar v) {
+    splitCounts.add(v);
+    definedVariables.add(v);
+  }
+
+  /**
+   * Returns the block counts of the long counts split for lazy clause generation.
+   *
+   * @return the block counts
+   */
+  public List<IntVar> splitCounts() {
+    return splitCounts;
   }
 
   /**
