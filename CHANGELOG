@@ -9539,6 +9539,20 @@ Version 5.0 (unreleased)
    -Dorg.jacop.lp.subsetCardinalities=false turns the merge off,
    org.jacop.lp.subsetCardinalityLength (default 5) bounds the clauses.
 
+527. Lazy clause generation no longer shrinks learnt clauses to one
+   literal per lower decision level (all-UIP shrinking, M. Fleury and
+   A. Biere, "Efficient all-UIP learned clause minimization", SAT 2021;
+   it stays on in the pure SAT solver). Under LCG the literals of a lower
+   level are bounds and values reached by propagation, which other orders
+   of the decisions reach too; shrinking replaced them by the decision of
+   that level and pinned the clause to one prefix of the search, so every
+   later first decision refuted the same subtrees again. MZNC 2015
+   open_stacks problem_20_20_1 (fixed search): 90,000 -> 39,000 nodes,
+   30 -> 18 s. 240 s, open stacks and precedence set (38, fixed search):
+   total 1,940 -> 1,706 s, 2 more decided (wbo_30_30_1 240 -> 29 s);
+   wide-quick total 0.998 (default search) and 0.973 (-f).
+   -Djacop.lcg.shrink=true restores shrinking.
+
 Version 4.11
 =============
 

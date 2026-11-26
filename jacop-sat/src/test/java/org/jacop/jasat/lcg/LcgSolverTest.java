@@ -57,6 +57,7 @@ import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
+import org.jacop.constraints.And;
 import org.jacop.constraints.AndBool;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.Circuit;
@@ -7773,5 +7774,78 @@ class LcgSolverTest {
     }
     assertThat(optimum[0]).isEqualTo(6);
     assertThat(optimum[1]).isEqualTo(optimum[0]);
+  }
+
+  /**
+   * Open stacks proofs under fixed search: all-UIP shrinking replaced the propagated literals of a
+   * lower level by its decision, which pinned a learnt clause to one order of the first products,
+   * so each later first product refuted the same subtrees again. Without shrinking (the default)
+   * the proofs need well under 0.6 of the conflicts.
+   */
+  @Test
+  void openStacksProofsNeedFewerConflictsWithoutShrinking() {
+    long withShrink = 0;
+    long without = 0;
+    for (int seed = 1; seed <= 3; seed++) {
+      Random r = new Random(seed);
+      int size = 12;
+      int[][] orders = new int[size][size];
+      for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+          orders[i][j] = r.nextInt(100) < 30 ? 1 : 0;
+        }
+        orders[i][r.nextInt(size)] = 1;
+      }
+      int ub = size;
+      while (ub > 0 && openStacks(orders, ub - 1, null)[0] == CdclSolver.SAT) {
+        ub--;
+      }
+      long[] shrunk = openStacks(orders, ub - 1, true);
+      long[] plain = openStacks(orders, ub - 1, null);
+      assertThat(shrunk[0]).isEqualTo(CdclSolver.UNSAT);
+      assertThat(plain[0]).isEqualTo(CdclSolver.UNSAT);
+      withShrink += shrunk[1];
+      without += plain[1];
+    }
+    assertThat(without * 10).isLessThan(withShrink * 6);
+  }
+
+  /** Solves open stacks with at most {@code ub} open stacks; returns the status and conflicts. */
+  private static long[] openStacks(int[][] orders, int ub, Boolean shrink) {
+    int customers = orders.length;
+    int products = orders[0].length;
+    Store store = new Store();
+    IntVar[] s = new IntVar[products];
+    for (int t = 0; t < products; t++) {
+      s[t] = new IntVar(store, "s" + t, 1, products);
+    }
+    store.impose(new Alldistinct(s));
+    BooleanVar[][] open = new BooleanVar[products][customers];
+    for (int i = 0; i < customers; i++) {
+      int n = Arrays.stream(orders[i]).sum();
+      IntVar done = new IntVar(store, 0, 0);
+      for (int t = 0; t < products; t++) {
+        IntVar b = new IntVar(store, 0, 1);
+        store.impose(new ElementInteger(s[t], orders[i], b, 0));
+        IntVar next = new IntVar(store, 0, n);
+        store.impose(new XplusYeqZ(done, b, next));
+        open[t][i] = new BooleanVar(store);
+        store.impose(
+            new Reified(new And(new XlteqC(done, n - 1), new XgteqC(next, 1)), open[t][i]));
+        done = next;
+      }
+    }
+    int[] ones = new int[customers];
+    Arrays.fill(ones, 1);
+    for (int t = 0; t < products; t++) {
+      store.impose(new LinearInt(open[t], ones, "<=", ub));
+    }
+    LcgSolver solver = new LcgSolver(store);
+    if (shrink != null) {
+      solver.setShrink(shrink);
+    }
+    solver.setAnnotation(new SimpleSelect<>(s, null, new IndomainMin<>()), false);
+    int status = solver.solve();
+    return new long[] {status, solver.sat().conflicts};
   }
 }

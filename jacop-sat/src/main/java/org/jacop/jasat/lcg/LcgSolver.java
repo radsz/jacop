@@ -641,6 +641,7 @@ public final class LcgSolver implements ExternalPropagator {
     // one more instance in each
     sat.setExternalReasonKeep(Integer.getInteger("jacop.lcg.reasonKeep", 3));
     sat.setExternalWork(() -> WORK_PER_CALL * store.numberConsistencyCalls);
+    sat.setShrink(SHRINK);
     // learnt clauses keep longer in LCG, where a level holds many atoms: core up to LBD 3, middle
     // up to 8 scored 19.4 against 15.6 for 2 and 6 on the Challenge sample, in four pairings
     sat.setTierLimits(3, 8);
@@ -7905,6 +7906,26 @@ public final class LcgSolver implements ExternalPropagator {
         setBooleansFirst(splitAtStart);
       }
     }
+  }
+
+  /**
+   * Whether learnt clauses are shrunk to one literal per lower decision level (all-UIP shrinking,
+   * Fleury and Biere 2021) under lazy clause generation ({@code jacop.lcg.shrink}); default false.
+   * Shrinking replaces the literals of a lower level by the decision of that level. Under lazy
+   * clause generation those literals are bounds and values reached by propagation, which other
+   * orders of the decisions reach too, while the decision pins the clause to one prefix of the
+   * search: open stacks problem_20_20_1 under fixed search needs 90,000 conflicts with shrinking
+   * and 39,000 without.
+   */
+  static final boolean SHRINK = Boolean.getBoolean("jacop.lcg.shrink");
+
+  /**
+   * Turns all-UIP shrinking of learnt clauses on or off; the default is {@link #SHRINK}.
+   *
+   * @param on whether to shrink
+   */
+  public void setShrink(boolean on) {
+    sat.setShrink(on);
   }
 
   /**
