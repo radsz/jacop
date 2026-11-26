@@ -9228,4 +9228,24 @@ class FlatzincFrontEndTest {
     assertTrue(out.contains("obj = -10;"), out);
   }
 
+  @Test
+  void energyPrecedenceReadsNoSumOfMinValueWeightsAsAPrecedence() throws IOException {
+    // -2147483648 * (s2 + s1) <= 1 says s1 + s2 >= 0; read as s2 >= s1 + 1 (and s3 alike), the
+    // energy precedence raised the optimal makespan from 6 to 10
+    String model =
+        "var 4..10: s1 :: output_var;\n"
+            + "var 0..10: s2 :: output_var;\n"
+            + "var 0..10: s3 :: output_var;\n"
+            + "var 0..20: mk :: output_var;\n"
+            + "constraint jacop_cumulative([s1,s2,s3],[2,2,2],[2,2,2],2);\n"
+            + "constraint int_lin_le([MIN,MIN],[s2,s1],1);\n"
+            + "constraint int_lin_le([MIN,MIN],[s3,s1],1);\n"
+            + "constraint int_lin_le([1,-1],[s1,mk],-2);\n"
+            + "constraint int_lin_le([1,-1],[s2,mk],-2);\n"
+            + "constraint int_lin_le([1,-1],[s3,mk],-2);\n"
+            + "solve minimize mk;\n";
+    String out = run(model.replace("MIN", "-2147483648"), "--lcg", "off")[0];
+    assertTrue(out.contains("mk = 6;"), out);
+  }
+
 }
