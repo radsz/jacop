@@ -399,6 +399,12 @@ unless stated otherwise):
 - org.jacop.fz.conjunctionSum.maxValues: ConjunctionSum is posted only
   when every variable of a literal has at most this many values;
   default 4.
+- org.jacop.fz.factoredRows: a linear row whose variables are all
+  multiplied (int_times) by one variable m is posted again multiplied by
+  m, over the product variables (first-level RLT, Sherali and Adams
+  1990); default true, off under --proof.
+  org.jacop.fz.factoredRows.maxTerms: longest row, default 1000;
+  org.jacop.fz.factoredRows.maxRows: most rows posted, default 10000.
 - org.jacop.fz.inferredCumulatives: redundant cumulatives lifted from
   covers of the cumulatives with a fixed capacity and from the tasks
   that can never overlap (Sidorov, CP 2026); default true.

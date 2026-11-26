@@ -395,6 +395,7 @@ setup to run configuration. -->
                                 <include>**/IndexFunctionFlatzincTest.java</include>
                                 <include>**/MddLinearSumFlatzincTest.java</include>
                                 <include>**/ProductOfSumsFlatzincTest.java</include>
+                                <include>**/FactoredRowFlatzincTest.java</include>
                                 <include>**/TableMddFlatzincTest.java</include>
                                 <include>**/CostAlldifferentFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
@@ -694,6 +695,7 @@ setup to run configuration. -->
                                 <include>**/IndexFunctionFlatzincTest.java</include>
                                 <include>**/MddLinearSumFlatzincTest.java</include>
                                 <include>**/ProductOfSumsFlatzincTest.java</include>
+                                <include>**/FactoredRowFlatzincTest.java</include>
                                 <include>**/TableMddFlatzincTest.java</include>
                                 <include>**/CostAlldifferentFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
@@ -988,6 +990,7 @@ setup to run configuration. -->
                                 <include>**/IndexFunctionFlatzincTest.java</include>
                                 <include>**/MddLinearSumFlatzincTest.java</include>
                                 <include>**/ProductOfSumsFlatzincTest.java</include>
+                                <include>**/FactoredRowFlatzincTest.java</include>
                                 <include>**/TableMddFlatzincTest.java</include>
                                 <include>**/CostAlldifferentFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
@@ -1280,6 +1283,7 @@ setup to run configuration. -->
                                 <include>**/IndexFunctionFlatzincTest.java</include>
                                 <include>**/MddLinearSumFlatzincTest.java</include>
                                 <include>**/ProductOfSumsFlatzincTest.java</include>
+                                <include>**/FactoredRowFlatzincTest.java</include>
                                 <include>**/TableMddFlatzincTest.java</include>
                                 <include>**/CostAlldifferentFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>

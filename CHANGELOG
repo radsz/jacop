@@ -9305,6 +9305,23 @@ Version 5.0 (unreleased)
    instead of 45 and 65, Strike.s2.k8 and s6.k5 are unchanged. The test
    holds on 3 of the 187 optimisation instances of the wide set, and the
    wide-quick set at 240 s gives way on none.
+515. The FlatZinc front end multiplies a linear row by a variable that
+   the model multiplies with every variable of the row, and posts the
+   product row as a redundant linear constraint (FactoredRowDetector,
+   -Dorg.jacop.fz.factoredRows=false turns it off): from
+   sum(i) a[i] * x[i] <= b and z[i] = x[i] * m (int_times) with m >= 0
+   it posts sum(i) a[i] * z[i] <= b * m (an equality for an equality
+   row, reversed for m <= 0). This is the first level of the
+   reformulation-linearization technique (Sherali and Adams, SIAM J.
+   Discrete Math. 1990; Sherali and Tuncbilek, J. Global Optim. 1992)
+   over the products the model already has. In cutting stock models
+   with a pattern per stock piece it gives the linear relaxation the
+   material bound s * sum(m) >= sum(p) size[p] * demand[p]. MiniZinc
+   Challenge 2019 stack-cuttingstock under -f at 240 s: d5 and d14
+   proved in 3.4-3.5 s (none proved in 240 s before; 900-975 s in the
+   2019 replay), d7 and d8, open in the 2019 Challenge, proved optimal
+   (31, 58) in 8-10 s, d3 5.0 -> 1.1 s; hoist-benchmark PU_3_8_5 under
+   fd 125 -> 6.5 s.
 
 516. Opt-in variable-bound MIR of the Gomory rows of the linear relaxation
    (-Dorg.jacop.lp.vbGomory=true). The exact slack Gomory separator, which

@@ -78,6 +78,7 @@ import org.jacop.fz.constraints.ElementTableDetector;
 import org.jacop.fz.constraints.EnforcementInliner;
 import org.jacop.fz.constraints.EntailedDisequalities;
 import org.jacop.fz.constraints.ExactCoverDetector;
+import org.jacop.fz.constraints.FactoredRowDetector;
 import org.jacop.fz.constraints.GiantTourDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
 import org.jacop.fz.constraints.IndexDisjunctionDetector;
@@ -754,6 +755,12 @@ public class Constraints implements ParserTreeConstants {
       // --proof does not encode it
       if (ConjunctionSumDetector.enabled() && options.proof() == null) {
         new ConjunctionSumDetector(support).detect(astTree);
+      }
+
+      // a linear row times a variable that multiplies each of its terms (first-level RLT over the
+      // model's products), redundant; --proof does not encode it
+      if (FactoredRowDetector.enabled() && options.proof() == null) {
+        new FactoredRowDetector(support, replaced).detect(astTree);
       }
 
       // the coloring bound of a maximized sum of 0/1 variables with pairwise conflicts (maximum
