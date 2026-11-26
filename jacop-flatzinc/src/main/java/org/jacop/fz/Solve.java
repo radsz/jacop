@@ -11125,6 +11125,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return value * dictionary.objectiveScale();
   }
 
+  // the value a solution prints for a float variable fixed to within the precision: the middle of
+  // its interval (FloatInterval.toString), not its lower bound
+  private static double printedValue(FloatVar v) {
+    double mean = (v.min() + v.max()) / 2;
+    return Double.isInfinite(mean) ? v.min() / 2 + v.max() / 2 : mean;
+  }
+
   private void appendCostLineToBuffer(StringBuffer printBuffer) {
     if (costVariable == null) {
       return;
@@ -11133,13 +11140,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (costVariable instanceof IntVar var1) {
         printBuffer.append(MZN_STAT_OBJECTIVE).append(objectiveValue(var1.value())).append("\n");
       } else if (costVariable instanceof FloatVar fv) {
-        printBuffer.append(MZN_STAT_OBJECTIVE).append(fv.value()).append("\n");
+        printBuffer.append(MZN_STAT_OBJECTIVE).append(printedValue(fv)).append("\n");
       }
     } else {
       if (costVariable instanceof IntVar var1) {
         printBuffer.append(MZN_STAT_OBJECTIVE).append(objectiveValue(-var1.value())).append("\n");
       } else if (costVariable instanceof FloatVar fv) {
-        printBuffer.append(MZN_STAT_OBJECTIVE).append(-fv.value()).append("\n");
+        printBuffer.append(MZN_STAT_OBJECTIVE).append(-printedValue(fv)).append("\n");
       }
     }
   }

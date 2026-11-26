@@ -8630,4 +8630,28 @@ class FlatzincFrontEndTest {
       assertTrue(statistic(out, "peakDepth") <= statistic(out, "nodes"), out);
     }
   }
+
+  @Test
+  void verboseObjectiveOfAFloatIsTheValuePrinted() throws IOException {
+    // -v printed the lower bound of the float objective, the solution the middle of its interval
+    for (String goal : new String[] {"minimize", "maximize"}) {
+      String out =
+          run(
+              "var 0.0..10.0: f :: output_var;\nvar 1.3..2.3: g;\n"
+                  + "constraint float_times(g, g, f);\nsolve "
+                  + goal
+                  + " f;\n",
+              "-v",
+              "--lcg",
+              "off")[0];
+      int at = out.lastIndexOf("f = ");
+      assertTrue(at >= 0, out);
+      String printed = out.substring(at + 4, out.indexOf(';', at));
+      String key = "%%%mzn-stat: objective=";
+      int stat = out.lastIndexOf(key);
+      assertTrue(stat >= 0, out);
+      String objective = out.substring(stat + key.length(), out.indexOf('\n', stat));
+      assertEquals(Double.parseDouble(printed), Double.parseDouble(objective), out);
+    }
+  }
 }
