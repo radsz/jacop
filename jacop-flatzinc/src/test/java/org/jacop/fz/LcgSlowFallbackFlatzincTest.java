@@ -548,6 +548,58 @@ class LcgSlowFallbackFlatzincTest {
         + "], input_order, indomain_min, complete) satisfy;\n";
   }
 
+  @Test
+  void defaultSearchOfSatisfactionKeepsItsTurns() throws IOException {
+    // lazy clause generation is under test: the model is not compiled to clauses
+    ClausalOff.run(this::defaultSearchOfSatisfactionKeepsItsTurnsBody);
+  }
+
+  private void defaultSearchOfSatisfactionKeepsItsTurnsBody() throws IOException {
+    // CHANGELOG 513: under -f the annotation's runs are dropped after 5 conflicts without a
+    // solution when the model has a search annotation, not the default search of a satisfaction
+    // model without one, with or without -f (the XCSP CSPs PegSolitaireTable-english-3-3-0 and
+    // SportsScheduling-dummy-14 were lost by dropping it)
+    String annotated = pigeonsInputOrder();
+    String withAnnotation = runAnnotationDrop(annotated, "-f");
+    assertTrue(withAnnotation.contains("=====UNSATISFIABLE====="), withAnnotation);
+    assertTrue(withAnnotation.contains("lcgAnnotationDropped=1"), withAnnotation);
+    String plain = annotated.substring(0, annotated.indexOf("solve ")) + "solve satisfy;\n";
+    for (String mode : new String[] {"-f", "--lcg"}) {
+      String without = runAnnotationDrop(plain, mode);
+      assertTrue(without.contains("=====UNSATISFIABLE====="), without);
+      assertTrue(without.contains("restarts="), without);
+      assertFalse(without.contains("restarts=0\n"), mode + "\n" + without);
+      assertTrue(without.contains("lcgAnnotationDropped=0"), mode + "\n" + without);
+    }
+  }
+
+  private String runAnnotationDrop(String model, String mode) throws IOException {
+    Path fzn = tmp.resolve("drop.fzn");
+    Files.writeString(fzn, model, StandardCharsets.UTF_8);
+    String[] args = {
+      "--lcg",
+      mode,
+      "-s",
+      "--search-statistics",
+      "--lp",
+      "off",
+      "-t",
+      "30000",
+      "--free-config",
+      "lcg-annotation-drop=5",
+      fzn.toString()
+    };
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+    try (PrintStream capture = new PrintStream(out, true, StandardCharsets.UTF_8)) {
+      System.setOut(capture);
+      new Fz2jacop().callMain(args);
+    } finally {
+      System.setOut(originalOut);
+    }
+    return out.toString(StandardCharsets.UTF_8);
+  }
+
   private static void checkQueens(String out, int n) {
     int[] q = new int[n + 1];
     for (int i = 1; i <= n; i++) {

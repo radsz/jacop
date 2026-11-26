@@ -9189,6 +9189,14 @@ Version 5.0 (unreleased)
    and Cepek, Constraints 2005). MiniZinc Challenge 2014 stochastic-fjsp
    fjsp-a1-s3 under fd: 452 after 600 s -> optimum 207 proved in 15 s.
 
+513. Free search does not drop the runs of the default search of a
+   satisfaction model without a search annotation after 50,000 conflicts
+   (510): the drop was measured on annotated models and on optimisation
+   models only. On XCSP CSPs, which have no annotation, it lost
+   PegSolitaireTable-english-3-3-0 (2025, solved in 20 s before, unsolved
+   at 30 s) and SportsScheduling-dummy-14 (2022, 71 s before, unsolved at
+   90 s) in the default mode.
+
 Version 4.11
 =============
 
