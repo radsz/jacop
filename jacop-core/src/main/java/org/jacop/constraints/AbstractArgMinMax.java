@@ -136,11 +136,12 @@ public abstract class AbstractArgMinMax extends Constraint
    */
   protected void pruneIndexToFirstExtremum(Store store, boolean max) {
     int n = list.length;
-    prefixWorst[0] = IntDomain.MIN_INT;
+    // below every value, so that the first position can be first with its variable at MIN_INT
+    prefixWorst[0] = Integer.MIN_VALUE;
     for (int i = 0; i < n; i++) {
       prefixWorst[i + 1] = Math.max(prefixWorst[i], worst(i, max));
     }
-    suffixWorst[n] = IntDomain.MIN_INT;
+    suffixWorst[n] = Integer.MIN_VALUE;
     for (int i = n - 1; i >= 0; i--) {
       suffixWorst[i] = Math.max(suffixWorst[i + 1], worst(i, max));
     }

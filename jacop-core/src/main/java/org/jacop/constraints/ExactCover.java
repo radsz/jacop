@@ -41,6 +41,7 @@ import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.VarMap;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -163,7 +164,8 @@ public class ExactCover extends Constraint
 
   private final int[] seenAt;
 
-  private boolean firstCall = true;
+  // the first call's pushes and prunings, due again when the level of that call is removed
+  private final InitOnce firstCall = new InitOnce();
 
   /** Switches the DL+ rule off (system property org.jacop.exactCover.inclusion=false). */
   static final boolean INCLUSION =
@@ -318,8 +320,7 @@ public class ExactCover extends Constraint
 
   @Override
   public void consistency(Store store) {
-    if (firstCall) {
-      firstCall = false;
+    if (firstCall.begin(store)) {
       for (int o = 0; o < x.length; o++) {
         if (x[o].singleton()) {
           push(2 * o + x[o].value());

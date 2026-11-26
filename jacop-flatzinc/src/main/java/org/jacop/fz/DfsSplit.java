@@ -79,6 +79,8 @@ final class DfsSplit<T extends Var> implements SelectChoicePoint<T>, ExitChildLi
   private final IntVar[] byId;
   // the cube being solved
   private int[] cube;
+  // whether the propagation of the cube stopped at its deadline
+  private boolean cut;
   // per depth (store level) of the search: the decision as an atom (id, kind, value), or id -1
   private int[][] atoms = new int[64][];
   private boolean[] right = new boolean[64];
@@ -110,9 +112,12 @@ final class DfsSplit<T extends Var> implements SelectChoicePoint<T>, ExitChildLi
    * thread searches.
    *
    * @param c the cube
-   * @return false when the cube fails at once
+   * @param deadline the time-out as given by System.currentTimeMillis(), 0 for none: the
+   *     propagation of the cube stops there, and {@link #cut()} then tells that it was not refuted
+   * @return false when the cube fails at once or its propagation stopped at the deadline
    */
-  boolean impose(int[] c) {
+  boolean impose(int[] c, long deadline) {
+    cut = false;
     cube = c;
     top = -1;
     first = Integer.MAX_VALUE;
@@ -134,7 +139,18 @@ final class DfsSplit<T extends Var> implements SelectChoicePoint<T>, ExitChildLi
     } catch (FailException _) {
       return false;
     }
-    return store.consistency();
+    boolean consistent = store.consistencyUntil(deadline);
+    cut = !consistent && store.isConsistencyCut();
+    return consistent;
+  }
+
+  /**
+   * Whether the propagation of the last cube imposed stopped at its deadline.
+   *
+   * @return true if it did, so that the cube was not refuted
+   */
+  boolean cut() {
+    return cut;
   }
 
   /** Takes back the cube's level. */

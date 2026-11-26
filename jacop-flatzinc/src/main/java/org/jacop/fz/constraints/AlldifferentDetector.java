@@ -259,7 +259,8 @@ public class AlldifferentDetector implements ParserTreeConstants {
       }
       case "int_lin_ne" -> {
         int[] a = support.getIntArray((SimpleNode) node.jjtGetChild(0));
-        if (a == null || a.length != 2 || a[0] != -a[1] || a[0] == 0) {
+        // -a[1] in long: [MIN_VALUE, MIN_VALUE] weighs x0 + x1, not x0 - x1
+        if (a == null || a.length != 2 || a[0] != -(long) a[1] || a[0] == 0) {
           return;
         }
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(1));
@@ -388,7 +389,8 @@ public class AlldifferentDetector implements ParserTreeConstants {
     for (int r = 0; r < 3; r++) {
       int p = (r + 1) % 3;
       int q = (r + 2) % 3;
-      if (a[p] != 0 && a[p] == -a[q] && a[r] != 0 && !x[r].singleton()) {
+      // -a[q] in long: [MIN_VALUE, MIN_VALUE] weighs x[p] + x[q], not x[p] - x[q]
+      if (a[p] != 0 && a[p] == -(long) a[q] && a[r] != 0 && !x[r].singleton()) {
         differences.add(new Difference(x[p], x[q], a[p], x[r], a[r], c));
       }
     }

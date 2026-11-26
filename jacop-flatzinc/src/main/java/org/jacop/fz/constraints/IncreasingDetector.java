@@ -210,7 +210,8 @@ public class IncreasingDetector implements ParserTreeConstants {
   // k * (x0 - x1) <= c with k != 0: x0 <= x1 when floor(c / |k|) is 0, x0 < x1 when it is below
   private void difference(ASTConstElem node) {
     int[] a = support.getIntArray(child(node, 0));
-    if (a == null || a.length != 2 || a[0] != -a[1] || a[0] == 0) {
+    // -a[1] in long: [MIN_VALUE, MIN_VALUE] weighs x0 + x1, not x0 - x1
+    if (a == null || a.length != 2 || a[0] != -(long) a[1] || a[0] == 0) {
       return;
     }
     IntVar[] x = support.getVarArray(child(node, 1));

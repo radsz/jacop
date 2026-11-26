@@ -89,7 +89,7 @@ public class NetworkSimplex {
   private int incidentArcs;
   // the best entering arc found so far by a dual pivot, and its reduced cost
   private Arc bestEntering;
-  private int bestEnteringCost;
+  private long bestEnteringCost;
 
   /**
    * Constructs a network simplex solver with the given nodes and arcs, initializing the spanning
@@ -409,13 +409,21 @@ public class NetworkSimplex {
   }
 
   private void initializeArtificialArcs() {
+    // the cost of an artificial arc must exceed the cost of any path of real arcs, or the
+    // optimum keeps flow on the artificial arcs of a feasible network: a fixed LARGE_COST made a
+    // network with an arc of weight -200000 infeasible
+    long sum = 0;
+    for (Arc arc : allArcs) {
+      sum += Math.abs((long) arc.cost);
+    }
+    int largeCost = (int) Math.min(Integer.MAX_VALUE, Math.max(LARGE_COST, sum + 1));
     Iterator<Node> it = infeasibleNodes.iterator();
     while (it.hasNext()) {
       Node node = it.next();
       int delta = node.deltaBalance;
       if (delta > 0) {
         Arc arc = node.artificial;
-        arc.sister.set(-LARGE_COST, delta);
+        arc.sister.set(-largeCost, delta);
         if (ASSERTS_ENABLED && arc.index == DELETED_ARC) {
           throw new IllegalStateException("Assertion failed");
         }
@@ -424,7 +432,7 @@ public class NetworkSimplex {
         }
       } else if (delta < 0) {
         Arc arc = node.artificial;
-        arc.set(-LARGE_COST, -delta);
+        arc.set(-largeCost, -delta);
         if (ASSERTS_ENABLED && arc.index == DELETED_ARC) {
           throw new IllegalStateException("Assertion failed");
         }
@@ -750,12 +758,12 @@ public class NetworkSimplex {
       entering = enteringArcFromCut(tree, forward, subtreeArcs);
     } else {
       entering = null;
-      int minimumCost = Integer.MAX_VALUE;
+      long minimumCost = Long.MAX_VALUE;
       for (int i = 0; i < numArcs; i++) {
         Arc arc = lower[i];
         if (arc.capacity > 0 && arc.isInCut(forward)) {
 
-          int reducedCost = arc.reducedCost();
+          long reducedCost = arc.reducedCost();
           if (minimumCost > reducedCost) {
             minimumCost = reducedCost;
             entering = arc;
@@ -788,7 +796,7 @@ public class NetworkSimplex {
    */
   private Arc enteringArcFromCut(Node tree, boolean forward, int subtreeArcs) {
     bestEntering = null;
-    bestEnteringCost = Integer.MAX_VALUE;
+    bestEnteringCost = Long.MAX_VALUE;
     Node last = tree.rightMostLeaf();
     if (2 * subtreeArcs <= incidentArcs) {
       for (Node node = tree; node != last.thread; node = node.thread) {
@@ -828,7 +836,7 @@ public class NetworkSimplex {
     if (residual.capacity <= 0 || !residual.isInCut(forward)) {
       return;
     }
-    int reducedCost = residual.reducedCost();
+    long reducedCost = residual.reducedCost();
     if (reducedCost < bestEnteringCost
         || (reducedCost == bestEnteringCost && residual.index < bestEntering.index)) {
       bestEntering = residual;

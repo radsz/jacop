@@ -206,6 +206,7 @@ setup to run configuration. -->
                                 <unary.transition.trials>100</unary.transition.trials>
                                 <grounding.trials>10</grounding.trials>
                                 <setfuzz.trials>100</setfuzz.trials>
+                                <setfixpoint.instances>100</setfixpoint.instances>
                                 <rootRefutation.fuzz.trials>1000</rootRefutation.fuzz.trials>
                                 <layeredgraph.trials>8</layeredgraph.trials>
                                 <disjunctiveCliques.trials>100</disjunctiveCliques.trials>
@@ -340,6 +341,7 @@ setup to run configuration. -->
                                 <include>**/ColouredTreeFuzzTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
+                                <include>**/SetFixpointTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/HornFlowTest.java</include>
@@ -477,6 +479,7 @@ setup to run configuration. -->
                                 <include>**/LocalSearchFlatzincTest.java</include>
                                 <include>**/LcgSlowFallbackFlatzincTest.java</include>
                                 <include>**/FreeFirstFlatzincTest.java</include>
+                                <include>**/FixedFirstFlatzincTest.java</include>
                                 <include>**/NValueBlocksFlatzincTest.java</include>
                                 <include>**/EntailedDisequalitiesFlatzincTest.java</include>
                                 <include>**/PureClauseFlatzincTest.java</include>
@@ -636,6 +639,7 @@ setup to run configuration. -->
                                 <include>**/ColouredTreeFuzzTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
+                                <include>**/SetFixpointTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/HornFlowTest.java</include>
@@ -779,6 +783,7 @@ setup to run configuration. -->
                                 <include>**/LocalSearchFlatzincTest.java</include>
                                 <include>**/LcgSlowFallbackFlatzincTest.java</include>
                                 <include>**/FreeFirstFlatzincTest.java</include>
+                                <include>**/FixedFirstFlatzincTest.java</include>
                                 <include>**/NValueBlocksFlatzincTest.java</include>
                                 <include>**/EntailedDisequalitiesFlatzincTest.java</include>
                                 <include>**/PureClauseFlatzincTest.java</include>
@@ -932,6 +937,7 @@ setup to run configuration. -->
                                 <include>**/ColouredTreeFuzzTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
+                                <include>**/SetFixpointTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/HornFlowTest.java</include>
@@ -1075,6 +1081,7 @@ setup to run configuration. -->
                                 <include>**/LocalSearchFlatzincTest.java</include>
                                 <include>**/LcgSlowFallbackFlatzincTest.java</include>
                                 <include>**/FreeFirstFlatzincTest.java</include>
+                                <include>**/FixedFirstFlatzincTest.java</include>
                                 <include>**/NValueBlocksFlatzincTest.java</include>
                                 <include>**/EntailedDisequalitiesFlatzincTest.java</include>
                                 <include>**/PureClauseFlatzincTest.java</include>
@@ -1228,6 +1235,7 @@ setup to run configuration. -->
                                 <include>**/ColouredTreeFuzzTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
+                                <include>**/SetFixpointTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/HornFlowTest.java</include>

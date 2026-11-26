@@ -201,6 +201,13 @@ public class Fz2jacop {
 
     Parser parser = new Parser(file);
     parser.setOptions(opt);
+    if (opt.portfolioWorker() != null) {
+      // a thread the portfolio stops while it builds the model or works at the root (the linear
+      // relaxation, presolve) stops there too, not only in its search
+      opt.portfolioWorker().onStop(parser.getStore()::interrupt);
+      // once the portfolio has returned, the thread prints nothing more
+      opt.portfolioWorker().onClose(parser.solver::closeAnswer);
+    }
 
     RunWhenShuttingDown t = new RunWhenShuttingDown(parser);
     if (printsAtShutdown(opt)) {
@@ -276,33 +283,43 @@ public class Fz2jacop {
       }
       status = 0;
     } catch (FailException _) {
-      handleFailException(opt, parser);
+      print(opt, () -> handleFailException(opt, parser));
       status = 0;
     } catch (UnsupportedOperationException e) {
       if (opt.proof() == null) {
         throw e;
       }
       // a model that --proof cannot write: no answer rather than one without its proof
-      IO.println("%% --proof: " + e.getMessage());
-      IO.println("=====UNKNOWN=====");
+      print(
+          opt,
+          () -> {
+            IO.println("%% --proof: " + e.getMessage());
+            IO.println("=====UNKNOWN=====");
+          });
     } catch (ArithmeticException e) {
-      handleArithmeticException(e);
+      print(opt, () -> handleArithmeticException(e));
     } catch (IllegalArgumentException e) {
-      handleIllegalArgumentException(e);
+      print(opt, () -> handleIllegalArgumentException(e));
     } catch (ParseException | TokenMgrError e) {
-      FzConsole.printlnErr("%% Parser error: " + e.getMessage());
+      print(opt, () -> FzConsole.printlnErr("%% Parser error: " + e.getMessage()));
     } catch (ArrayIndexOutOfBoundsException e) {
-      handleArrayIndexOutOfBoundsException(e);
+      print(opt, () -> handleArrayIndexOutOfBoundsException(e));
     } catch (OutOfMemoryError _) {
-      IO.println("%% Out of memory error; consider option -Xmx... for JVM");
+      print(opt, () -> IO.println("%% Out of memory error; consider option -Xmx... for JVM"));
     } catch (StackOverflowError _) {
-      IO.println("%% Stack overflow exception error; consider option -Xss... for JVM");
+      print(
+          opt,
+          () -> IO.println("%% Stack overflow exception error; consider option -Xss... for JVM"));
     } catch (TrivialSolution _) {
       Runtime.getRuntime().removeShutdownHook(t);
       status = 0;
     } catch (ModelTimeOut _) {
-      IO.println("=====UNKNOWN=====");
-      IO.println("%% =====TIME-OUT=====");
+      print(
+          opt,
+          () -> {
+            IO.println("=====UNKNOWN=====");
+            IO.println("%% =====TIME-OUT=====");
+          });
       status = 0;
     }
 
@@ -312,9 +329,19 @@ public class Fz2jacop {
       } catch (IllegalStateException _) {
         // the JVM is already shutting down, and the hook is running or has run
       }
-      printStatisticsTime(parser);
+      print(opt, () -> printStatisticsTime(parser));
     }
     return status;
+  }
+
+  // prints what the run prints at its end; a thread of a portfolio that has returned prints nothing
+  private static void print(Options opt, Runnable print) {
+    Portfolio.Worker worker = opt.portfolioWorker();
+    if (worker == null) {
+      print.run();
+    } else {
+      worker.print(print);
+    }
   }
 
   private void handleFailException(Options opt, Parser parser) {
@@ -342,6 +369,8 @@ public class Fz2jacop {
               + (parser.getStore().size() + parser.getTables().getNumberBoolVariables()));
       IO.println("%%%mzn-stat: propagators=" + parser.getStore().numberConstraints());
       IO.println("\n%%%mzn-stat: propagations=" + parser.getStore().numberConsistencyCalls);
+      // the block ends as every other block of statistics does
+      IO.println("%%%mzn-stat-end");
     }
   }
 

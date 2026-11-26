@@ -143,6 +143,20 @@ public class Store {
 
   private int firstRunsSize;
 
+  /**
+   * Constraints whose first consistency call is owed: it was made at a level above their imposition
+   * and undone with that level, or it was still queued when such a level was removed. The next
+   * consistency call queues them again.
+   */
+  private Constraint[] undoneRuns = new Constraint[16];
+
+  private int undoneRunsSize;
+
+  /** Constraints imposed since the queue was last cleared, in the order of imposition. */
+  private Constraint[] imposedSinceRemoval = new Constraint[64];
+
+  private int imposedSinceRemovalSize;
+
   /** One-time work done so far, in the order of the levels at which it was done. */
   private InitOnce[] initOnce = new InitOnce[16];
 
@@ -313,6 +327,9 @@ public class Store {
 
   /** It specifies that consistencyDeadline has passed. */
   private boolean consistencyDeadlinePassed;
+
+  /** It specifies that the last call of {@link #consistencyUntil(long)} stopped at a deadline. */
+  private boolean consistencyCut;
 
   /** Set by {@link #interrupt()}: the deadline stays passed. */
   private volatile boolean interrupted;
@@ -833,6 +850,8 @@ public class Store {
    */
   public void clearChanged() {
 
+    oweQueuedFirstRuns(level);
+
     while (currentQueue < queueNo) {
       changed[currentQueue++].clear();
     }
@@ -902,12 +921,63 @@ public class Store {
   }
 
   /**
+   * It specifies whether {@link #interrupt()} has stopped the searches of this store.
+   *
+   * @return true once interrupted
+   */
+  public boolean isInterrupted() {
+    return interrupted;
+  }
+
+  /**
    * It specifies whether consistency() has failed because of the deadline since it was set.
    *
    * @return true if the deadline set by {@link #setConsistencyDeadline(long)} has passed.
    */
   public boolean isConsistencyDeadlinePassed() {
     return consistencyDeadlinePassed;
+  }
+
+  /**
+   * It propagates as {@link #consistency()} does, but stops at the given deadline, or at the
+   * earlier one {@link #setConsistencyDeadline(long)} has set: a decision or a probe made outside a
+   * search can then not overrun a time-out when bounds converge a step per pass. The deadline holds
+   * for this call only. A false result proves an inconsistency only when {@link
+   * #isConsistencyCut()} is false after it.
+   *
+   * @param deadline the deadline as given by {@link System#currentTimeMillis()}, or 0 for none.
+   * @return true if the store is consistent, false if it failed or stopped at a deadline.
+   */
+  public boolean consistencyUntil(long deadline) {
+    long previous = consistencyDeadline;
+    if (deadline <= 0 || previous > 0 && previous <= deadline) {
+      // the deadline set already comes first
+      boolean consistent = consistency();
+      consistencyCut = !consistent && previous > 0 && consistencyDeadlinePassed;
+      return consistent;
+    }
+    boolean passed = consistencyDeadlinePassed;
+    consistencyDeadline = deadline;
+    consistencyDeadlinePassed = false;
+    boolean consistent = false;
+    try {
+      consistent = consistency();
+    } finally {
+      consistencyCut = !consistent && consistencyDeadlinePassed;
+      consistencyDeadline = interrupted ? 1 : previous;
+      consistencyDeadlinePassed = passed;
+    }
+    return consistent;
+  }
+
+  /**
+   * It specifies whether the last call of {@link #consistencyUntil(long)} failed because of a
+   * deadline, which proves nothing about the store.
+   *
+   * @return true if that call stopped at a deadline.
+   */
+  public boolean isConsistencyCut() {
+    return consistencyCut;
   }
 
   private boolean consistencyDeadlinePassed() {
@@ -949,6 +1019,11 @@ public class Store {
    * @return true if some constraint waits for its consistency function.
    */
   public boolean hasPendingConstraints() {
+    for (int i = 0; i < undoneRunsSize; i++) {
+      if (dueFirstRun(undoneRuns[i])) {
+        return true;
+      }
+    }
     for (int i = currentQueue; i < queueNo; i++) {
       if (!changed[i].isEmpty()) {
         return true;
@@ -978,7 +1053,15 @@ public class Store {
 
     if (raiseLevelBeforeConsistency) {
       raiseLevelBeforeConsistency = false;
-      setLevel(level + 1);
+      // above the root a search keeps track of the level itself and removes only the levels it
+      // set, so a level raised here would keep its changes after the search backtracks
+      if (level == 0) {
+        setLevel(level + 1);
+      }
+    }
+
+    if (undoneRunsSize > 0) {
+      queueUndoneRuns();
     }
 
     if (this.sparseSetSize > 0 && this.sparseSet == null) {
@@ -1546,13 +1629,34 @@ public class Store {
     // Remove level is called so we clear flag isLastConsistencyFailure.
     isLastConsistencyFailure = false;
 
+    // the constraints imposed at this level go with it
+    int kept = 0;
+    for (int i = 0; i < undoneRunsSize; i++) {
+      Constraint c = undoneRuns[i];
+      undoneRuns[i] = null;
+      if (c.imposedAt() < level) {
+        undoneRuns[kept++] = c;
+      } else {
+        c.setFirstRunOwed(false);
+      }
+    }
+    undoneRunsSize = kept;
+
+    oweQueuedFirstRuns(level - 1);
+
     while (currentQueue < queueNo) {
       changed[currentQueue++].clear();
     }
 
     while (firstRunsSize > 0 && firstRuns[firstRunsSize - 1].firstRunAt() >= level) {
-      firstRuns[--firstRunsSize].setFirstRunAt(Constraint.RUN_UNDONE);
+      Constraint undone = firstRuns[--firstRunsSize];
+      undone.setFirstRunAt(Constraint.RUN_UNDONE);
       firstRuns[firstRunsSize] = null;
+      // imposed below this level, it stays imposed but its first call is lost with the level and
+      // nothing may wake it again (a constraint over fixed variables, or one that prunes once)
+      if (undone.imposedAt() < level) {
+        oweFirstRun(undone);
+      }
     }
 
     // One-time work done at this level is due again; listeners below can already see it.
@@ -1698,6 +1802,11 @@ public class Store {
   }
 
   private void rec(Constraint c) {
+    c.setImposedAt(level);
+    if (imposedSinceRemovalSize == imposedSinceRemoval.length) {
+      imposedSinceRemoval = Arrays.copyOf(imposedSinceRemoval, 2 * imposedSinceRemovalSize);
+    }
+    imposedSinceRemoval[imposedSinceRemovalSize++] = c;
     if (model != null) {
       model.add(c);
     }
@@ -1781,13 +1890,15 @@ public class Store {
 
   /**
    * Records the first consistency call of a constraint at the current level. If an earlier first
-   * call was undone by removing its level, the constraint's variables are queued again, as imposing
-   * the constraint did, since the constraint dropped what it had queued with that level.
+   * call was undone by removing its level, or the call is owed after the queue was cleared, the
+   * constraint's variables are queued again, as imposing the constraint did, since the constraint
+   * may have dropped what it had queued with that level.
    *
    * @param c the constraint about to be called.
    */
   private void startFirstRun(Constraint c) {
-    if (c.firstRunAt() == Constraint.RUN_UNDONE && c instanceof UsesQueueVariable) {
+    if ((c.firstRunAt() == Constraint.RUN_UNDONE || c.firstRunOwed())
+        && c instanceof UsesQueueVariable) {
       c.arguments().forEach(v -> c.queueVariable(level, v));
     }
     c.setFirstRunAt(level);
@@ -1795,6 +1906,63 @@ public class Store {
       firstRuns = Arrays.copyOf(firstRuns, firstRunsSize * 2);
     }
     firstRuns[firstRunsSize++] = c;
+  }
+
+  /**
+   * Records the constraints imposed at or below a level and still queued for their first
+   * consistency call, as the queue is about to be cleared.
+   *
+   * @param maxLevel the highest level of imposition that stays.
+   */
+  private void oweQueuedFirstRuns(int maxLevel) {
+    for (int i = 0; i < imposedSinceRemovalSize; i++) {
+      Constraint c = imposedSinceRemoval[i];
+      imposedSinceRemoval[i] = null;
+      if (c.firstRunAt() == Constraint.NOT_RUN
+          && c.imposedAt() <= maxLevel
+          && c.queueMembership(this) != 0) {
+        oweFirstRun(c);
+      }
+    }
+    imposedSinceRemovalSize = 0;
+  }
+
+  private void oweFirstRun(Constraint c) {
+    if (c.firstRunOwed()) {
+      return;
+    }
+    c.setFirstRunOwed(true);
+    if (undoneRunsSize == undoneRuns.length) {
+      undoneRuns = Arrays.copyOf(undoneRuns, 2 * undoneRunsSize);
+    }
+    undoneRuns[undoneRunsSize++] = c;
+  }
+
+  /**
+   * Queues the constraints whose first consistency call is owed and that are still imposed, so that
+   * they run again, as after their imposition.
+   */
+  private void queueUndoneRuns() {
+    int kept = 0;
+    for (int i = 0; i < undoneRunsSize; i++) {
+      Constraint c = undoneRuns[i];
+      undoneRuns[i] = null;
+      if (c.firstRunAt() >= 0) {
+        // run since
+        c.setFirstRunOwed(false);
+        continue;
+      }
+      // kept until it runs: a failure of this call may drop it from the queue again
+      undoneRuns[kept++] = c;
+      if (dueFirstRun(c)) {
+        addChanged(c);
+      }
+    }
+    undoneRunsSize = kept;
+  }
+
+  private boolean dueFirstRun(Constraint c) {
+    return c.firstRunAt() < 0 && c.imposedAt() <= level && !c.isEntailed();
   }
 
   /**

@@ -90,22 +90,30 @@ public class AdisjointB extends Constraint
   @Override
   public void consistency(Store store) {
 
-    // A.lub = 1+2+4+5, A.glb = 4+5
-    if (bHasChanged) {
-      a.domain.inLub(store.level, a, a.domain.lub().subtract(b.domain.glb()));
-    }
+    // a cardinality that fixes a set prunes the other set again (the store does not re-queue a
+    // constraint for its own changes)
+    boolean again;
+    do {
+      long open = AinB.openness(a) + AinB.openness(b);
 
-    // B.lub = 2+3+7+8, B.glb = 7+8
-    if (aHasChanged) {
-      b.domain.inLub(store.level, b, b.domain.lub().subtract(a.domain.glb()));
-    }
+      // A.lub = 1+2+4+5, A.glb = 4+5
+      if (bHasChanged) {
+        a.domain.inLub(store.level, a, a.domain.lub().subtract(b.domain.glb()));
+      }
 
-    if (performCardinalityReasoning) {
-      performCardinalityPropagation(store);
-    }
+      // B.lub = 2+3+7+8, B.glb = 7+8
+      if (aHasChanged) {
+        b.domain.inLub(store.level, b, b.domain.lub().subtract(a.domain.glb()));
+      }
 
-    aHasChanged = false;
-    bHasChanged = false;
+      if (performCardinalityReasoning) {
+        performCardinalityPropagation(store);
+      }
+
+      again = AinB.openness(a) + AinB.openness(b) != open;
+      aHasChanged = again;
+      bHasChanged = again;
+    } while (again);
   }
 
   private void performCardinalityPropagation(Store store) {

@@ -60,6 +60,8 @@ public class Shape {
 
   private ArrayList<Dbox> holes;
 
+  private ArrayList<Dbox> relativeHoles;
+
   /**
    * It constructs a shape with a given id based on a specified collection of Dboxes.
    *
@@ -216,19 +218,26 @@ public class Shape {
 
   /** It (re)initializes the holes. */
   private void initHoles() {
+    if (holes == null) {
+      holes = new ArrayList<>();
+    }
+    computeHoles(holes, false);
+  }
+
+  /**
+   * It computes the holes into the given list, at a scale of 4 and, if relative, from the origin of
+   * the bounding box: 4 times a coordinate beyond a quarter of the integers leaves them.
+   */
+  private void computeHoles(ArrayList<Dbox> into, boolean relative) {
     /*
      * the holes are the result of the subtraction to the bounding
      * box of all components
      */
-    if (holes == null) {
-      holes = new ArrayList<>();
-    } else {
-      if (!holes.isEmpty()) {
-        for (Dbox hole : holes) {
-          Dbox.dispatchBox(hole);
-        }
-        holes.clear();
+    if (!into.isEmpty()) {
+      for (Dbox hole : into) {
+        Dbox.dispatchBox(hole);
       }
+      into.clear();
     }
 
     /*in order to be able to get a correct frame in the limit cases,
@@ -241,7 +250,8 @@ public class Shape {
     for (Dbox b : boxes) {
       Dbox scaled = Dbox.newBox(dimension);
       for (int i = 0; i < dimension; i++) {
-        scaled.origin[i] = b.origin[i] * 4 - 1; // 1 extra quarter unit
+        int base = relative ? boundingBox.origin[i] : 0;
+        scaled.origin[i] = (b.origin[i] - base) * 4 - 1; // 1 extra quarter unit
         scaled.length[i] =
             b.length[i] * 4 + 2; // 1 extra quarter unit, + the one removed from the origin
       }
@@ -251,17 +261,32 @@ public class Shape {
     Dbox scaledBoundingBox = Dbox.newBox(dimension);
 
     for (int i = 0; i < dimension; i++) {
-      scaledBoundingBox.origin[i] = boundingBox.origin[i] * 4;
+      scaledBoundingBox.origin[i] = relative ? 0 : boundingBox.origin[i] * 4;
       scaledBoundingBox.length[i] = boundingBox.length[i] * 4;
     }
 
-    scaledBoundingBox.subtractAll(rescaledBoxes, holes);
+    scaledBoundingBox.subtractAll(rescaledBoxes, into);
 
     // release boxes
     for (Dbox b : rescaledBoxes) {
       Dbox.dispatchBox(b);
     }
     Dbox.dispatchBox(scaledBoundingBox);
+  }
+
+  /**
+   * It returns the holes of this shape as holes() does, but with coordinates from the origin of the
+   * bounding box of the shape (scaled by 4 as well), so that they stay within the integers for a
+   * shape far from the origin.
+   *
+   * @return the holes of this shape, from the origin of its bounding box.
+   */
+  Collection<Dbox> holesFromBoundingBox() {
+    if (relativeHoles == null) {
+      relativeHoles = new ArrayList<>();
+      computeHoles(relativeHoles, true);
+    }
+    return relativeHoles;
   }
 
   /**
