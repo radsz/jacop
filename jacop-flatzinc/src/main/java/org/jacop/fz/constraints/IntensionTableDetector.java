@@ -214,6 +214,7 @@ public class IntensionTableDetector implements ParserTreeConstants {
    * @param skipped constraint nodes another detector already replaced; a group holding one is left.
    */
   public void detect(SimpleNode astTree, Set<SimpleNode> skipped) {
+    output = null;
     List<Item> items = new ArrayList<>();
     Set<IntVar> pinned = Collections.newSetFromMap(new IdentityHashMap<>());
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
@@ -285,8 +286,14 @@ public class IntensionTableDetector implements ParserTreeConstants {
     }
   }
 
+  // the output variables, read once per detection (the output arrays do not change meanwhile)
+  private Set<org.jacop.core.Var> output;
+
   private boolean isInternal(IntVar v, Set<IntVar> pinned) {
-    return !v.singleton() && !pinned.contains(v) && !support.dictionary.isOutput(v);
+    if (output == null) {
+      output = support.dictionary.outputSnapshot();
+    }
+    return !v.singleton() && !pinned.contains(v) && !output.contains(v);
   }
 
   private void collectAll(SimpleNode node, Set<IntVar> into) {
