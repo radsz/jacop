@@ -9159,6 +9159,19 @@ Version 5.0 (unreleased)
    -19 %; at 240 s, Diffn instances proved by both 918 -> 836 s (-f) and
    188 -> 175 s (default search); wide-quick -f at 600 s total 0.995.
 
+513. Table explanations (HybridTable under LCG) are cheaper on wide tables,
+   with the same reasons. Once a row is killed by one atom of a column
+   fixed before the explained position, only a column dead at the root
+   can beat it, so the other columns are checked against their root
+   domains instead of being scored one by one; the columns with covered
+   values and with entries in the reason are kept in lists. MiniZinc
+   Challenge 2020 minimal-decision-sets, whose element lookups become
+   tables of 127-196 columns: fixed search australian_train5 46 -> 39 s,
+   colic_train4 74 -> 57 s, cleve_train5 27 -> 23 s at 600 s with the same
+   failures; table explanations 33 % -> 14 % of the run. On the 67
+   Challenge instances with such tables and on wide-quick the total time
+   is unchanged (0.99-1.01).
+
 508. The FlatZinc front end bounds the parts of a linear objective that
    belong to loosely coupled blocks of the model (ObjectiveBlockBound,
    -Dorg.jacop.fz.blockBound=false turns it off). Constraints and clauses
