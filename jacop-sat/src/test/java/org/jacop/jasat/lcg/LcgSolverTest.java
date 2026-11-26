@@ -7665,4 +7665,52 @@ class LcgSolverTest {
     // 3*1 + 2*2 + 1*3 + 0*4
     assertThat(solver.value(cost)).isEqualTo(10);
   }
+
+  // the reasons of value precedence mark a bound that removed a value as that value's removal,
+  // which may be cited as x != v; dropping dominated atoms compacts the reason, and the marks
+  // stayed at their old positions: a moved bound took the mark of the atom before it, so the
+  // learnt clause cited x != v of a value the reason did not need and lost the bound, and the
+  // optimum 6 was missed (9)
+  @Test
+  void droppedDominatedAtomsKeepTheValueMarksWithTheirEntries() {
+    int[] optimum = new int[2];
+    for (int mode = 0; mode < 2; mode++) {
+      Store store = new Store();
+      int[] lo = {1, 1, 1, 0, 1, 1, 1, 1};
+      IntVar[] x = new IntVar[8];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, lo[i], 5);
+      }
+      for (int i : new int[] {1, 3, 7}) {
+        x[i].domain.inComplement(0, x[i], 4);
+      }
+      IntVar obj = new IntVar(store, "obj", -1000, 1000);
+      store.impose(
+          new LinearInt(
+              new IntVar[] {x[1], x[3], x[4], x[5], x[6], x[0], x[2], obj},
+              new int[] {3, 2, 2, 3, 2, -1, -3, -1},
+              "==",
+              0));
+      store.impose(new SeqPrecedeChain(x, new int[] {4, 5, 3, 1}));
+      store.impose(new LinearInt(new IntVar[] {x[0], x[2]}, new int[] {1, 1}, "<=", 7));
+      if (mode == 0) {
+        DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+        search.setPrintInfo(false);
+        assertThat(search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()), obj))
+            .isTrue();
+        optimum[mode] = obj.value();
+      } else {
+        LcgSolver solver = new LcgSolver(store);
+        IntVar[] order = new IntVar[x.length];
+        for (int i = 0; i < x.length; i++) {
+          order[i] = x[x.length - 1 - i];
+        }
+        solver.setAnnotation(new SimpleSelect<>(order, null, new IndomainMin<>()), false);
+        assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+        optimum[mode] = solver.value(obj);
+      }
+    }
+    assertThat(optimum[0]).isEqualTo(6);
+    assertThat(optimum[1]).isEqualTo(optimum[0]);
+  }
 }

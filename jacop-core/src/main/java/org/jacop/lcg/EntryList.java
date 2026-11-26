@@ -176,7 +176,7 @@ public final class EntryList {
   }
 
   /**
-   * Copies the entry at one position, with its slack, to another position.
+   * Copies the entry at one position, with its slack and its excluded value, to another position.
    *
    * @param from the position copied, below {@link #size()}
    * @param to the position written, below {@link #size()}
@@ -185,6 +185,10 @@ public final class EntryList {
     entries[to] = entries[from];
     if (slacks != null) {
       slacks[to] = slacks[from];
+    }
+    if (values != null) {
+      values[to] = values[from];
+      hasValues[to] = hasValues[from];
     }
   }
 
