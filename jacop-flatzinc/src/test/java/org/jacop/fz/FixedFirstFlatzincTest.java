@@ -193,14 +193,19 @@ class FixedFirstFlatzincTest {
     int trials = Integer.getInteger("fixedfirst.trials", 4);
     int gaveWay = 0;
     int kept = 0;
+    int handedBack = 0;
     for (int t = 0; t < trials; t++) {
       String model = cityModel(random, 5, 4 + random.nextInt(2));
       int optimum = optimum(model);
-      // the default; a first search of a millisecond after which LCG gives way at once; LCG kept
+      // the default; a first search of a millisecond after which LCG gives way at once; the same
+      // with LCG back as soon as the search without learning goes a millisecond without a better
+      // solution; LCG kept
       for (String config :
           new String[] {
             "",
             "fixed-first=0.0005,fixed-first-lcg=0,fixed-first-lcg-min=0,fixed-first-rate=0",
+            "fixed-first=0.0005,fixed-first-lcg=0,fixed-first-lcg-min=0,fixed-first-rate=0,"
+                + "fixed-first-stall=0.000001,fixed-first-stall-min=0",
             "fixed-first=0.0005,fixed-first-lcg-min=60000"
           }) {
         String out = run(model, config, "");
@@ -208,10 +213,12 @@ class FixedFirstFlatzincTest {
         checkCosts(out, optimum, context);
         gaveWay += out.contains("fixedFirst=cp") ? 1 : 0;
         kept += out.contains("fixedFirst=lcg") ? 1 : 0;
+        handedBack += out.contains("fixedFirst=cp-lcg") ? 1 : 0;
       }
     }
     assertTrue(gaveWay > 0, "LCG never gave way");
     assertTrue(kept > 0, "LCG never went on");
+    assertTrue(handedBack > 0, "the search without learning never handed back to LCG");
   }
 
   @Test
