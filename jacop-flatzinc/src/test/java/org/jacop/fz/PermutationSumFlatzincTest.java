@@ -275,4 +275,90 @@ class PermutationSumFlatzincTest {
         .forEach(solutions::add);
     return solutions;
   }
+
+  /**
+   * A binary de Bruijn sequence of order 5 as gcc_de_bruijn writes it: digits d_0..d_31 (cyclic),
+   * x_i = 16 d_i + 8 d_(i+1) + 4 d_(i+2) + 2 d_(i+3) + d_(i+4) :: defines_var(x_i) and
+   * all_different(x).
+   */
+  private static String deBruijn() {
+    int n = 32;
+    StringBuilder fzn = new StringBuilder();
+    StringBuilder ds = new StringBuilder();
+    StringBuilder xs = new StringBuilder();
+    for (int i = 0; i < n; i++) {
+      fzn.append("var 0..1: d_").append(i).append(";\n");
+      ds.append(i == 0 ? "" : ",").append("d_").append(i);
+      xs.append(i == 0 ? "" : ",").append("x_").append(i);
+    }
+    for (int i = 0; i < n; i++) {
+      fzn.append("var 0..").append(n - 1).append(": x_").append(i).append(" :: is_defined_var;\n");
+    }
+    fzn.append("array [1..32] of var int: d :: output_array([1..32]) = [")
+        .append(ds)
+        .append("];\n");
+    fzn.append("array [1..32] of var int: x = [").append(xs).append("];\n");
+    for (int i = 0; i < n; i++) {
+      fzn.append("constraint int_lin_eq([1,-16,-8,-4,-2,-1],[x_").append(i);
+      for (int k = 0; k < 5; k++) {
+        fzn.append(",d_").append((i + k) % n);
+      }
+      fzn.append("],0) :: defines_var(x_").append(i).append(");\n");
+    }
+    fzn.append("constraint jacop_alldiff(x);\n");
+    return fzn.append("solve :: int_search(d,input_order,indomain_min,complete) satisfy;\n")
+        .toString();
+  }
+
+  private static String stat(String out, String name) {
+    for (String line : out.split("\\R")) {
+      if (line.startsWith("%%%mzn-stat: " + name + "=")) {
+        return line.substring(line.indexOf('=') + 1);
+      }
+    }
+    return null;
+  }
+
+  @Test
+  void definitionsHeldTogetherByAPermutationSumAreNotReformulated() throws IOException {
+    // the 32 definitions x_i are joined only by the permutation sum of all_different(x), which kept
+    // them from being set aside as definitions: the component looked like a market split problem,
+    // was reformulated over lattice variables and the search branched on those before the
+    // annotation (gcc_de_bruijn: 80,000 failures and no solution in 60 s at the defaults)
+    String model = deBruijn();
+    String off = run(model, "--lcg", "off");
+    String on = run(model, "--lcg", "on", "--lp", "on", "-s", "-v");
+    assertEquals(solutions(off), solutions(on), on);
+    assertEquals(1, solutions(on).size(), on);
+    assertEquals("0", stat(on, "latticeVars"), on);
+    assertEquals("0", stat(on, "failures"), on);
+  }
+
+  @Test
+  void aCryptarithmWithItsPermutationSumIsStillReformulated() throws IOException {
+    // the equality of general_store with the permutation sum of its ten digits: its own equality
+    // is no definition, so the component is still reformulated
+    String model =
+        """
+        var 0..9: S :: output_var;
+        var 0..9: E :: output_var;
+        var 0..9: H :: output_var;
+        var 0..9: L :: output_var;
+        var 0..9: O :: output_var;
+        var 0..9: P :: output_var;
+        var 0..9: A :: output_var;
+        var 0..9: W :: output_var;
+        var 0..9: B :: output_var;
+        var 0..9: C :: output_var;
+        array [1..10] of var int: x = [S,E,H,L,O,P,A,W,B,C];
+        constraint int_lin_eq([12049,2342,25001,-89790,10610,1011032,-698690,111,101000,223000],\
+        [S,E,H,L,O,P,A,W,B,C],0);
+        constraint jacop_alldiff(x);
+        solve satisfy;
+        """;
+    String on = run(model, "-a", "--lcg", "on", "--lp", "on", "-s", "-v");
+    assertTrue(Integer.parseInt(stat(on, "latticeVars")) > 0, on);
+    assertEquals(1, solutions(on).size(), on);
+    assertEquals(solutions(run(model, "-a", "--lcg", "off", "--lp", "off")), solutions(on), on);
+  }
 }

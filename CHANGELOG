@@ -9068,6 +9068,127 @@ Version 5.0 (unreleased)
    atom, from int arrays: the same search, sudoku_opt p29 and
    gfd-schedule n100 -2.9 % each, wide-quick -f -0.9 %, default -0.2 %.
 
+507. The FlatZinc front end posts lists that differ, written as clauses of
+   reified disequalities (x[1] != y[1]) \/ ... \/ (x[k] != y[k]), as one
+   AllDifferentLists over the largest group of lists that all differ
+   pairwise (DisjunctiveListsDifferDetector; allDifferent on lists,
+   F. Boussemart, C. Lecoutre, G. Audemard and C. Piette, XCSP3-core: A
+   format for representing constraint satisfaction/optimization problems,
+   arXiv:2009.00514, 2020, section 4.1.1). A clause qualifies when each of
+   its Booleans is defined by one int_ne_imp, int_lin_ne_imp or
+   reification and used nowhere else; a plain disequality of two lists
+   counts as an edge too, and a greedy clique is taken per connected group.
+   ExaminationTimetabling1 of XCSP 2026 states "no two events in the same
+   room and period" this way: 32k clauses and 64k half reifications over
+   261 events. 600 s, -f, 10 instances: 6 better (D1-2-16 568 -> 538,
+   D1-2-17 677 -> 658, D1-1-16 395 -> 384), 2 equal, 2 worse (D7-1-17
+   404 -> 434, D7-2-17 803 -> 848), and the first solution of the D1
+   instances comes in 13-59 s instead of 43-121 s; with the native XCSP
+   reader D1-3-17 finds its first solution in 15 s and none in 60 s
+   without it. SocialGolfers of XCSP 2024 (18 CSP instances, 240 s): the
+   same 9 decided in the same time. It fires on 1 of the 240 instances of
+   the wide set (gfd-schedule n180f7d50m30k18, neutral).
+   -Dorg.jacop.fz.listsDifferClauses=false turns it off.
+
+508. The JaLP presolve stuffs singleton columns (G. Gamrath, T. Koch,
+   A. Martin, M. Miltenberger and D. Weninger, "Progress in presolving
+   for mixed integer programming", Mathematical Programming Computation
+   7, 2015): in a row with one side, the column singletons whose cost
+   asks to use up the row are taken from the largest gain per unit of
+   the row; one that fits even with the other columns at their worst
+   moves to its bound, one the better ones already overflow the row with
+   stays at the other. trucking_15 presolves to 87 x 98 like HiGHS (was
+   87 x 600). -Dorg.jacop.jalp.presolveStuffing=false turns it off.
+
+509. The JaLP presolve removes rows that the bounds other rows imply on
+   their columns keep (E. D. Andersen and K. D. Andersen, "Presolving in
+   linear programming", Mathematical Programming 71, 1995, section 3.3,
+   with implied column bounds as HiGHS keeps them). Each row bounds its
+   columns, one step, from the bounds of the others; the bounds of a
+   removed row are not used after it goes, so every removed row is
+   implied by rows that are kept. Column bounds do not change. Over the
+   687 LPs of the osolpro LP bench the presolved sizes above HiGHS's drop
+   from 244,977 to 210,986 rows and columns (with item 507); agg, cont4
+   and rocII-5-11 presolve to HiGHS's size. -Dorg.jacop.jalp.presolveImpliedRows=false
+   turns it off.
+
+510. Free search (-f) with an annotation drops the annotation's runs when
+   50,000 conflicts found no solution: from then on LCG takes turns of
+   the SAT solver's own decisions on literals and of activity branching
+   only, as without an annotation (--free-config lcg-annotation-drop=<n>,
+   0 for never; LcgSolver.setAnnotationDrop; statistic
+   lcgAnnotationDropped). The runs of an annotation that does not lead to
+   a solution also hold back the other turns: on amaze2 2012-07-04
+   (first_fail on the path successors, indomain_min) the literal runs of
+   the rotation spent 417,000 conflicts in 300 s without a solution,
+   while the rotation without the annotation finds one after about
+   200,000 conflicts in all. Two seeds at 240 s: 28 instances where no
+   solution comes early (amaze2, cutstock, 2DBinPacking, bus_scheduling,
+   costas-array, orthorio and the wide set's others), solved 25 -> 29,
+   total time 8,486 -> 7,416 s, cutstock type16 finds 1,146 where it
+   found nothing; the 53 satisfaction instances of the wide set, solved
+   93 -> 94, total time 3,996 -> 3,648 s. The rule fires on 3 of the 240
+   instances of the wide set within 60 s.
+
+511. FlatZinc front end as a GraalVM native image (fzn-jacop-native): it
+   starts in milliseconds and runs compiled code at once, where the JVM,
+   even with its ahead-of-time cache, needs 0.1 s to start and runs JaCoP
+   in its interpreter for the first 0.2-0.5 s. fzn-jacop-native-build (or
+   mvn -Pnative) makes it with native-image; with Oracle GraalVM it is
+   compiled with profile-guided optimization from the aot-training models,
+   which makes long runs as fast as on the JVM. fzn-jacop uses the image
+   when it is newer than the jar (JACOP_JVM=1 runs the JVM), and the
+   MiniZinc Challenge image runs it. org.jacop.fz.NativeMain runs the
+   solver in a thread with a 100 MB stack; org.jacop.fz.NativeMetadata
+   lists the reflection the image needs. MiniZinc Challenge filters
+   fir_1_4: 0.39 s -> 0.05 s; 22 easy Challenge instances of 2012-2016:
+   faster in all 44 runs, 26 under 0.3 s (none before). Wide-quick set at
+   240 s, the same instances solved, total time -f 2,250 -> 2,123 s and
+   default 4,047 -> 3,967 s, 0.26x / 0.28x the time (geometric mean) on
+   the instances both solve; at 600 s two -f proofs past 400 s are lost
+   (celar graph11, whirlpool d29).
+
+512. Root probing and the Diffn area check are cheaper, with the same search.
+   DualFeasibleFunctions keeps a memo of its packing tests, keyed by the
+   container and the set of item sizes: root probing of MiniZinc Challenge
+   2014 rectangle-packing rpp23 made 34,513 tests on 346 distinct sets.
+   LcgSolver writes out equals and hashCode of its probing atoms (with the
+   values of the generated ones, so sets keep their order), and probing
+   stops collecting the consequences of a variable's values once none is
+   common to all. -f wall time on rectangle-packing rpp18-rpp26 -15 to
+   -19 %; at 240 s, Diffn instances proved by both 918 -> 836 s (-f) and
+   188 -> 175 s (default search); wide-quick -f at 600 s total 0.995.
+
+508. The FlatZinc front end bounds the parts of a linear objective that
+   belong to loosely coupled blocks of the model (ObjectiveBlockBound,
+   -Dorg.jacop.fz.blockBound=false turns it off). Constraints and clauses
+   join the variables they share into fragments in the order of their
+   scope size, as in the block detection of Gamrath and Luebbecke (SEA
+   2010); one that would put more than half of the objective's terms
+   together is a linking constraint and is left out. The least cost of
+   each block's terms, found by LCG in a copy of the block, is the
+   Lagrangian relaxation with zero multipliers (Geoffrion 1974), for the
+   travelling tournament problem its independent lower bound (Easton,
+   Nemhauser and Trick, CP 2001). It is posted as cost_b >= least_b with
+   the objective as the sum of the cost_b, only when it raises the
+   objective's lower bound by 5 % of the distance to the upper bound; it
+   takes at most 2 % of the time limit and 5 s. MiniZinc Challenge
+   traveling-tppv circ8 (2014, 2017): the root bound rises from 0 to
+   70-74 and all five are proved at 600 s, fd in 33-111 s and -f in
+   10-60 s, against no proof before (Gecode proves circ8bbal in 536 s).
+   Of 48 instances of the topic and wide sets where blocks are found the
+   bound is posted on 14; on the 8 of them not in traveling-tppv the time
+   is unchanged.
+
+509. The FlatZinc front end posts redundant unary resources with optional
+   tasks for flexible job shops (-Dorg.jacop.fz.optionalUnary=false turns
+   it off): from disjunctions s1 + d1 <= s2 \/ s2 + d2 <= s1 \/ m1 != m2
+   it takes, for every machine v, the tasks that are pairwise
+   conditionally disjoint and posts CumulativeUnary with task t present
+   when m_t = v (unary resources with optional activities, Vilim, Bartak
+   and Cepek, Constraints 2005). MiniZinc Challenge 2014 stochastic-fjsp
+   fjsp-a1-s3 under fd: 452 after 600 s -> optimum 207 proved in 15 s.
+
 Version 4.11
 =============
 

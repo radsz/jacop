@@ -95,7 +95,28 @@ public class Fz2jacop {
     // indomain_random, on_restart) repeat from run to run
     Store.setSeed(0);
 
-    Options opt = new Options(args);
+    Options opt;
+    try {
+      opt = new Options(args);
+      // the settings that the portfolio reads before its threads start
+      for (String key :
+          new String[] {"portfolio-split", "portfolio-dfs-split", "portfolio-bisect"}) {
+        String value = opt.freeConfig(key, "0");
+        try {
+          Double.parseDouble(value);
+          if (!key.endsWith("bisect")) {
+            Integer.parseInt(value);
+          }
+        } catch (NumberFormatException _) {
+          throw new IllegalArgumentException(
+              "option --free-config " + key + "=" + value + ": not a number");
+        }
+      }
+    } catch (IllegalArgumentException e) {
+      // a value of an option that is not one, as an error of the command line, not a stack trace
+      FzConsole.printlnErr("%% Error: " + e.getMessage());
+      return 1;
+    }
 
     // several objectives: each subproblem is solved by this method in turn
     Goals goals = Goals.of(opt, args);
