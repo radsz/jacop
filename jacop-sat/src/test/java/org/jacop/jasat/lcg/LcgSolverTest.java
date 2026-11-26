@@ -263,6 +263,65 @@ class LcgSolverTest {
   }
 
   /**
+   * Elements over ascending lists, linked by a sum: a bound of a value is explained by one index
+   * bound per excluded position, the weakest bound that excluded it, so a reason cites several
+   * bounds of one index where the strongest implies the others. Dropping the implied atoms keeps
+   * every explanation valid (the checker is on) and the answers those of brute force, and it fires.
+   */
+  @Test
+  void explanationsDropTheAtomsAnotherOfTheirAtomsImplies() {
+    long dropped = 0;
+    for (int instance = 0; instance < 300; instance++) {
+      for (boolean drop : new boolean[] {false, true}) {
+        Random rnd = new Random(77 + instance);
+        Store store = new Store();
+        int n = 3;
+        IntVar[] index = new IntVar[n];
+        IntVar[] value = new IntVar[n];
+        int[][] lists = new int[n][];
+        for (int i = 0; i < n; i++) {
+          int[] list = new int[8];
+          for (int j = 0, v = 0; j < list.length; j++) {
+            v += rnd.nextInt(3);
+            list[j] = v;
+          }
+          lists[i] = list;
+          index[i] = new IntVar(store, "i" + i, 1, list.length);
+          value[i] = new IntVar(store, "v" + i, 0, 16);
+          store.impose(new ElementInteger(index[i], list, value[i], 0));
+        }
+        int target = 6 + rnd.nextInt(14);
+        IntVar total = new IntVar(store, "total", target, target);
+        store.impose(new SumInt(value, "==", total));
+        int limit = 2 + rnd.nextInt(6);
+        store.impose(new LinearInt(index, new int[] {1, -1, 1}, ">=", limit));
+        boolean expected = false;
+        for (int a = 0; a < 8; a++) {
+          for (int b = 0; b < 8; b++) {
+            for (int c = 0; c < 8; c++) {
+              expected |=
+                  lists[0][a] + lists[1][b] + lists[2][c] == target && a - b + c + 1 >= limit;
+            }
+          }
+        }
+        LcgSolver solver = new LcgSolver(store);
+        solver.setChecking(true);
+        solver.setDropDominated(drop);
+        int status = solver.solve();
+        assertThat(status)
+            .as("instance %d, drop %s", instance, drop)
+            .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+        if (drop) {
+          dropped += solver.dominatedAtoms;
+        } else {
+          assertThat(solver.dominatedAtoms).isZero();
+        }
+      }
+    }
+    assertThat(dropped).isPositive();
+  }
+
+  /**
    * A solution given by setIncumbent is the best one of minimize: only better solutions are
    * reported, and an optimal incumbent is the answer without any report.
    */
@@ -3857,6 +3916,8 @@ class LcgSolverTest {
       LcgSolver solver = new LcgSolver(store);
       solver.setChecking(true);
       solver.setGraphClauses(clauses);
+      // the atom count below is a golden of the explanations and the search they lead to
+      solver.setDropDominated(false);
       int status = solver.solve();
       encoded += solver.graphConstraintsEncoded;
       assertThat(status)
@@ -3895,8 +3956,9 @@ class LcgSolverTest {
     } else {
       assertThat(own).isGreaterThan(300);
       // the cuts are found by one walk each way since the cut explanation of WordDesign2-words-mdd
-      // (XCSP 2023) was made faster; the atoms are those of the four walks per cut before it
-      assertThat(atoms).isEqualTo(751);
+      // (XCSP 2023) was made faster; the atoms are those of the four walks per cut before it (751
+      // until the product and sum reasons of the other relations changed the search)
+      assertThat(atoms).isEqualTo(746);
     }
   }
 

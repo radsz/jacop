@@ -3984,9 +3984,28 @@ class GlobalConstraints implements ParserTreeConstants {
     support.delayedConstraints.add(support.binPackingCardinality.binPacking(bin, cc, w, minBin));
     support.binPackingCliques.add(bin, cc, w, minBin);
     support.binPackingPermutations.add(bin, cc, w, minBin);
+    if (binPackingSums()) {
+      support.addLoadSums(bin, cc, w, minBin);
+    }
     if (BIN_LOADS_DEFINED && !support.dictionary.isSearchAnnotated()) {
       markLoadsDefined(bin, cc);
     }
+  }
+
+  /**
+   * Whether the loads of a bin packing are also posted as sums of the items in each bin, from the
+   * system property {@code org.jacop.fz.binPackingSums}: {@code lcg} (the default) under lazy
+   * clause generation, {@code true} always, {@code false} never. Binpacking explains a load bound
+   * or a removed bin by the bins of many items at once (97 atoms per reason on MZNC 2017
+   * steelmillslab bench_19_5); the sum of a bin, over a 0/1 variable per item that says the item is
+   * in it, gives the learnt clauses those 0/1 variables and lifted linear reasons. With the sums
+   * beside Binpacking, bench_19_5 under a fixed search reaches its optimum 0 in 103 s, where
+   * Binpacking alone stays at 28 and the decomposition alone at 13 after 120 s. The sums are the
+   * load decomposition that P. Shaw, "A constraint for bin packing", CP 2004, strengthens.
+   */
+  private boolean binPackingSums() {
+    String mode = System.getProperty("org.jacop.fz.binPackingSums", "lcg").toLowerCase();
+    return "true".equals(mode) || "lcg".equals(mode) && support.options.lcg();
   }
 
   // the loads of a bin packing follow from the bins of its items: free search branches on them
