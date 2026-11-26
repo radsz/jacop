@@ -9231,6 +9231,21 @@ Version 5.0 (unreleased)
    trip_7_2 212 -> 127 s, ship-schedule 8Ships 59 -> 11 s); wide-quick
    default mode 4,504 -> 4,536 s, same solved.
 
+514. Under lazy clause generation the FlatZinc front end also posts the
+   load of each bin of a bin packing as a linear sum of 0/1 variables, one
+   per item that may go in the bin, channelled to the item's bin (the
+   model's own reified equalities where it has them). Binpacking explains
+   a load bound or a removed bin by the bins of many items at once (97
+   atoms per reason on MZNC 2017 steelmillslab bench_19_5); the sums give
+   the learnt clauses the 0/1 variables and lifted linear reasons (the
+   load decomposition of P. Shaw, "A constraint for bin packing", CP
+   2004). -Dorg.jacop.fz.binPackingSums=lcg (default) | true | false; at
+   most 65,536 item-bin pairs. bench_19_5 under --lcg with a fixed search:
+   28 -> 13 in 120 s. MZNC gbac (19 instances), -f at 240 s, two rounds:
+   total 2,840 -> 2,647 s and 2,886 -> 2,608 s, 2017 UD4 proved in
+   103-111 s (unsolved before), 2016 UD3 objective 230 -> 165 and 250 ->
+   238. -f does not run steelmillslab under LCG, so it is unchanged there.
+
 Version 4.11
 =============
 

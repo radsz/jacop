@@ -4000,7 +4000,8 @@ class GlobalConstraints implements ParserTreeConstants {
    * steelmillslab bench_19_5); the sum of a bin, over a 0/1 variable per item that says the item is
    * in it, gives the learnt clauses those 0/1 variables and lifted linear reasons. With the sums
    * beside Binpacking, bench_19_5 under a fixed search reaches its optimum 0 in 103 s, where
-   * Binpacking alone stays at 28 and the decomposition alone at 13 after 120 s.
+   * Binpacking alone stays at 28 and the decomposition alone at 13 after 120 s. The sums are the
+   * load decomposition that P. Shaw, "A constraint for bin packing", CP 2004, strengthens.
    */
   private boolean binPackingSums() {
     String mode = System.getProperty("org.jacop.fz.binPackingSums", "lcg").toLowerCase();
