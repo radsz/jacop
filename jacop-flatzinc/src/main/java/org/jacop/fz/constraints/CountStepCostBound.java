@@ -192,17 +192,27 @@ public final class CountStepCostBound {
     Map<List<IntVar>, List<Counted>> arrays = new LinkedHashMap<>();
     Map<IntVar, Step> byCount = new IdentityHashMap<>();
     Map<IntVar, IntVar> termOf = new IdentityHashMap<>();
+    // a count with two step costs (fixed counts and costs may be one shared variable) is left out
+    Map<IntVar, Boolean> ambiguous = new IdentityHashMap<>();
     for (Map.Entry<IntVar, Step> e : steps.entrySet()) {
       Long w = weights.get(e.getKey());
-      if (w != null && w > 0 && byCount.put(e.getValue().count, e.getValue()) == null) {
-        termOf.put(e.getValue().count, e.getKey());
+      IntVar count = e.getValue().count;
+      if (w == null || w <= 0 || e.getKey().singleton()) {
+        continue;
       }
+      if (byCount.put(count, e.getValue()) != null) {
+        ambiguous.put(count, true);
+      }
+      termOf.put(count, e.getKey());
+    }
+    for (IntVar count : ambiguous.keySet()) {
+      byCount.remove(count);
     }
     for (ASTConstElem c : all) {
       if (c.getName().equals("jacop_count")
           && ((ASTScalarFlatExpr) c.jjtGetChild(1)).getType() == 0) {
         IntVar count = support.getVariable((ASTScalarFlatExpr) c.jjtGetChild(2));
-        Step s = byCount.remove(count);
+        Step s = count.singleton() ? null : byCount.remove(count);
         if (s != null) {
           IntVar term = termOf.get(count);
           List<IntVar> xs = List.of(support.getVarArray((SimpleNode) c.jjtGetChild(0)));

@@ -162,7 +162,7 @@ class CountStepCostFlatzincTest {
   void boundKeepsOptima() throws IOException {
     Random random = new Random(41);
     int bounded = 0;
-    for (int trial = 0; trial < 300; trial++) {
+    for (int trial = 0; trial < Integer.getInteger("countstep.trials", 300); trial++) {
       String model = randomModel(random);
       String out = run(model, true, "-debug");
       bounded += out.contains("% count step cost bound") ? 1 : 0;
