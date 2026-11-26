@@ -172,26 +172,33 @@ public class ElementSetVariable extends AbstractElement
       return;
     }
 
-    IntDomain glb = new IntervalDomain(IntDomain.MIN_INT, IntDomain.MAX_INT);
-    IntDomain lub = new IntervalDomain();
-    IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)
-    for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
-      int position = e.nextElement() - 1 - indexOffset;
+    // a narrower value, fixed by its cardinality for example, excludes more positions (the store
+    // does not re-queue a constraint for its own changes)
+    boolean again;
+    do {
+      long open = AinB.openness(value);
+      IntDomain glb = new IntervalDomain(IntDomain.MIN_INT, IntDomain.MAX_INT);
+      IntDomain lub = new IntervalDomain();
+      IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)
+      for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
+        int position = e.nextElement() - 1 - indexOffset;
 
-      if (!list[position].domain.glb().subtract(value.domain.lub()).isEmpty()
-          || !value.domain.glb().subtract(list[position].domain.lub()).isEmpty()) {
-        if (indexDom.size == 0) {
-          indexDom.unionAdapt(position + 1 + indexOffset);
+        if (!list[position].domain.glb().subtract(value.domain.lub()).isEmpty()
+            || !value.domain.glb().subtract(list[position].domain.lub()).isEmpty()) {
+          if (indexDom.size == 0) {
+            indexDom.unionAdapt(position + 1 + indexOffset);
+          } else {
+            indexDom.addLastElement(position + 1 + indexOffset);
+          }
         } else {
-          indexDom.addLastElement(position + 1 + indexOffset);
+          glb = glb.intersect(list[position].domain.glb());
+          lub.unionAdapt(list[position].domain.lub());
         }
-      } else {
-        glb = glb.intersect(list[position].domain.glb());
-        lub.unionAdapt(list[position].domain.lub());
       }
-    }
-    index.domain.in(store.level, index, indexDom.complement());
-    value.domain.in(store.level, value, glb, lub);
+      index.domain.in(store.level, index, indexDom.complement());
+      value.domain.in(store.level, value, glb, lub);
+      again = !index.singleton() && AinB.openness(value) != open;
+    } while (again);
 
     if (index.singleton()) {
       // index is singleton; value == list[index - 1 - offset]

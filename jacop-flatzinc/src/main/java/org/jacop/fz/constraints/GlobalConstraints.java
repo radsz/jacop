@@ -1145,11 +1145,39 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     IntVar[] occurs = support.getVarArray((SimpleNode) node.jjtGetChild(1));
 
-    int dummy = IntDomain.MAX_INT;
+    // the value of an absent variable: below or above every domain if the range allows it,
+    // otherwise a value no domain holds; without such a value the pairs are posted one by one
+    long min = IntDomain.MAX_INT;
+    long max = IntDomain.MIN_INT;
     for (IntVar v : x) {
-      dummy = Math.min(dummy, v.min());
+      min = Math.min(min, v.min());
+      max = Math.max(max, v.max());
     }
-    dummy--;
+    int dummy;
+    if (min - 1 >= IntDomain.MIN_INT) {
+      dummy = (int) (min - 1);
+    } else if (max + 1 <= IntDomain.MAX_INT) {
+      dummy = (int) (max + 1);
+    } else {
+      IntDomain union = new IntervalDomain();
+      for (IntVar v : x) {
+        union.unionAdapt(v.dom());
+      }
+      IntDomain free = new IntervalDomain(IntDomain.MIN_INT, IntDomain.MAX_INT).subtract(union);
+      if (free.isEmpty()) {
+        for (int i = 0; i < x.length; i++) {
+          for (int j = i + 1; j < x.length; j++) {
+            support.pose(
+                new Or(
+                    new PrimitiveConstraint[] {
+                      new XeqC(occurs[i], 0), new XeqC(occurs[j], 0), new XneqY(x[i], x[j])
+                    }));
+          }
+        }
+        return;
+      }
+      dummy = free.min();
+    }
 
     ArrayList<IntVar> values = new ArrayList<>();
     Set<IntVar> seen = new HashSet<>();
@@ -1167,7 +1195,8 @@ class GlobalConstraints implements ParserTreeConstants {
       if (occurs[i].singleton(1)) {
         values.add(xi);
       } else {
-        IntDomain dom = xi.dom().cloneLight();
+        IntDomain dom = new IntervalDomain();
+        dom.unionAdapt(xi.dom());
         dom.unionAdapt(dummy, dummy);
         IntVar y = new IntVar(store, dom);
         support.pose(new IfThenElse(new XeqC(occurs[i], 1), new XeqY(xi, y), new XeqC(y, dummy)));
@@ -1213,11 +1242,10 @@ class GlobalConstraints implements ParserTreeConstants {
       return;
     }
 
+    // interval by interval: value by value took 15 s for 0..1000000000
     IntervalDomain setImpl = new IntervalDomain();
-    for (ValueEnumeration e = s.valueEnumeration(); e.hasMoreElements(); ) {
-      int val = e.nextElement();
-
-      setImpl.unionAdapt(new IntervalDomain(val, val));
+    for (int i = 0; i < s.noIntervals(); i++) {
+      setImpl.unionAdapt(new IntervalDomain(s.leftElement(i), s.rightElement(i)));
     }
 
     support.pose(new Among(xx, setImpl, vv));
@@ -1300,10 +1328,13 @@ class GlobalConstraints implements ParserTreeConstants {
 
     IntVar[] counter = new IntVar[cover.length];
     for (int i = 0; i < cover.length; i++) {
-      if (low[i] > up[i]) {
+      // a count is in 0..n, whatever bounds beyond JaCoP's range the model gives
+      int min = Math.max(0, low[i]);
+      int max = Math.min(x.length, up[i]);
+      if (min > max) {
         throw Store.failException;
       }
-      counter[i] = new IntVar(store, store.freshVariableId("counter" + i), low[i], up[i]);
+      counter[i] = new IntVar(store, store.freshVariableId("counter" + i), min, max);
     }
 
     poseClosedGcc(x, cover, counter);
@@ -1701,6 +1732,10 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] size = support.getVarArray((SimpleNode) node.jjtGetChild(1));
     int k = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
     boolean strict = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3)) != 0;
+    if (posn.length == 0) {
+      // no boxes (of no dimensions when k = 0): nothing overlaps
+      return;
+    }
 
     int n = posn.length / k;
     IntVar[][] origin = new IntVar[n][k];
@@ -3590,6 +3625,7 @@ class GlobalConstraints implements ParserTreeConstants {
     if (scopeLen.length != rows.length || scenLen.length != prob.length) {
       throw new IllegalArgumentException("jacop_chance_table: arrays of different lengths");
     }
+    checkChanceTable(x.length, scopeLen, scopeFlat, rows, tupleFlat, scenLen, scenFlat, prob);
     int[][] scopes = new int[rows.length][];
     int[][][] tuples = new int[rows.length][][];
     int at = 0;
@@ -3619,6 +3655,45 @@ class GlobalConstraints implements ParserTreeConstants {
       throw new IllegalArgumentException("jacop_chance_table: arrays of the wrong length");
     }
     support.delayedConstraints.add(new ChanceTable(x, scopes, tuples, scenarios, weights, p));
+  }
+
+  // the lengths and indices that chance_table asserts, checked before the arrays are cut by them
+  private static void checkChanceTable(
+      int n,
+      int[] scopeLen,
+      int[] scopeFlat,
+      int[] rows,
+      int[] tupleFlat,
+      int[] scenLen,
+      int[] scenFlat,
+      int[] prob) {
+    long scopes = 0;
+    long tuples = 0;
+    for (int t = 0; t < rows.length; t++) {
+      if (scopeLen[t] < 0 || rows[t] < 0) {
+        throw new IllegalArgumentException("jacop_chance_table: arrays of the wrong length");
+      }
+      scopes += scopeLen[t];
+      tuples += (long) scopeLen[t] * rows[t];
+    }
+    long scenarios = 0;
+    for (int s : scenLen) {
+      if (s < 0) {
+        throw new IllegalArgumentException("jacop_chance_table: arrays of the wrong length");
+      }
+      scenarios += s;
+    }
+    if (scopes != scopeFlat.length || tuples != tupleFlat.length || scenarios != scenFlat.length) {
+      throw new IllegalArgumentException("jacop_chance_table: arrays of the wrong length");
+    }
+    boolean inRange =
+        Arrays.stream(scopeFlat).allMatch(i -> i >= 1 && i <= n)
+            && Arrays.stream(scenFlat).allMatch(t -> t >= 1 && t <= rows.length)
+            && Arrays.stream(prob).allMatch(p -> p >= 0);
+    if (!inRange) {
+      throw new IllegalArgumentException(
+          "jacop_chance_table: a position, a table index or a weight is out of range");
+    }
   }
 
   void gen_jacop_prob_mdd(SimpleNode node) {
@@ -3721,11 +3796,12 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar P = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(4));
 
-    if (Arrays.stream(x).anyMatch(v -> !v.singleton() && (v == W || v == P))
+    if (x.length == 0
+        || Arrays.stream(x).anyMatch(v -> !v.singleton() && (v == W || v == P))
         || mergedBeyondInt(x, weights)
         || mergedBeyondInt(x, profits)) {
       // Knapsack rejects a quantity that is also the capacity or the profit, and it merges the
-      // items of one variable into an item with an int weight and profit
+      // items of one variable into an item with an int weight and profit; it needs an item
       support.pose(new LinearInt(x, weights, "==", W));
       support.pose(new LinearInt(x, profits, "==", P));
       return;
@@ -3809,6 +3885,14 @@ class GlobalConstraints implements ParserTreeConstants {
 
     // JaCoP's library numbers the nodes from 1, as the positions in the balance array. FlatZinc
     // files compiled with older versions of the library number them from the lowest node in arc.
+    if (flow.length == 0) {
+      // no arcs: no node sends or receives a flow, and the cost is 0
+      if (Arrays.stream(balance).anyMatch(b -> b != 0)) {
+        throw Store.failException;
+      }
+      support.pose(new XeqC(cost, 0));
+      return;
+    }
     int minNode = Math.min(1, Arrays.stream(arc).min().getAsInt());
 
     String mode = networkFlowMode();
@@ -4161,6 +4245,10 @@ class GlobalConstraints implements ParserTreeConstants {
 
     IntVar[] load = new IntVar[capacity.length];
     for (int i = 0; i < load.length; i++) {
+      if (capacity[i] < 0) {
+        // even an empty bin exceeds a negative capacity
+        throw Store.failException;
+      }
       load[i] = new IntVar(store, 0, capacity[i]);
     }
 
@@ -4198,6 +4286,10 @@ class GlobalConstraints implements ParserTreeConstants {
     IntDomain[] shape = support.getSetArray((SimpleNode) node.jjtGetChild(3));
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(4));
     IntVar[] kind = support.getVarArray((SimpleNode) node.jjtGetChild(5));
+    if (kind.length == 0) {
+      // no objects: nothing overlaps or leaves the box
+      return;
+    }
 
     // ---- KK, 2023-06-29
     // geost must not have duplicated variables, neither within nor across x and kind
@@ -4207,6 +4299,16 @@ class GlobalConstraints implements ParserTreeConstants {
     all = removeDuplicates(all);
     IntVar[] xx = Arrays.copyOfRange(all, 0, x.length);
     IntVar[] kk = Arrays.copyOfRange(all, x.length, all.length);
+    checkGeostExtents(
+        withBoundingBox ? "jacop_geost_bb" : "jacop_geost",
+        dim,
+        rectSize,
+        rectOffset,
+        shape,
+        xx,
+        kk,
+        withBoundingBox ? support.getIntArray((SimpleNode) node.jjtGetChild(6)) : null,
+        withBoundingBox ? support.getIntArray((SimpleNode) node.jjtGetChild(7)) : null);
 
     ArrayList<Shape> shapes = new ArrayList<>();
 
@@ -4268,20 +4370,142 @@ class GlobalConstraints implements ParserTreeConstants {
       int[] lb = support.getIntArray((SimpleNode) node.jjtGetChild(6));
       int[] ub = support.getIntArray((SimpleNode) node.jjtGetChild(7));
 
-      // geost_bb gives the box as bounds l..u, while Dbox takes an origin and a length
+      // geost_bb gives the box as bounds l..u, while Dbox takes an origin and a length; u - l of
+      // bounds far apart overflowed (l = -2^31 made the box empty and the model fail). Every box
+      // lies within the integers (checkGeostExtents), so the bounds of the box are clamped to the
+      // extent of the boxes
+      int[] origin = new int[dim];
       int[] length = new int[dim];
       for (int j = 0; j < dim; j++) {
-        length[j] = ub[j] - lb[j];
-        if (length[j] < 0 && kind.length > 0) {
+        long low = Long.MAX_VALUE;
+        long high = Long.MIN_VALUE;
+        for (int i = 0; i < kk.length; i++) {
+          low = Math.min(low, (long) xx[i * dim + j].min() + minOffset(rectOffset, dim, j));
+          high =
+              Math.max(high, (long) xx[i * dim + j].max() + maxEnd(rectOffset, rectSize, dim, j));
+        }
+        long l = Math.max(lb[j], low);
+        long u = Math.min(ub[j], high);
+        if (ub[j] < lb[j] || u < l) {
           throw Store.failException;
         }
+        origin[j] = (int) l;
+        length[j] = (int) (u - l);
       }
 
-      InArea constraint2 = new InArea(new Dbox(lb, length), null);
+      InArea constraint2 = new InArea(new Dbox(origin, length), null);
       constraints.add(constraint2);
     }
 
     support.pose(new Geost(objects, constraints, shapes));
+  }
+
+  /**
+   * Checks that the boxes of geost have sizes of at least 0, as Dbox requires (the MiniZinc library
+   * sends other sizes to its decomposition), and that no box of an object reaches beyond the
+   * integers at a position of its domain: Geost computes in int, and a box of size or offset near
+   * 2^31 - 1 made its sweep loop for ever or overlap other boxes. With a bounding box l..u the
+   * kinds whose boxes cannot lie in it are removed first, and the coordinates are narrowed to the
+   * positions where the boxes of some kind lie in it.
+   *
+   * @param lb the lower bounds of the bounding box, or null for none
+   * @param ub its upper bounds
+   */
+  // the least offset of the boxes in dimension j
+  private static long minOffset(int[] rectOffset, int dim, int j) {
+    long m = Long.MAX_VALUE;
+    for (int r = j; r < rectOffset.length; r += dim) {
+      m = Math.min(m, rectOffset[r]);
+    }
+    return m;
+  }
+
+  // the largest offset plus size of the boxes in dimension j
+  private static long maxEnd(int[] rectOffset, int[] rectSize, int dim, int j) {
+    long m = Long.MIN_VALUE;
+    for (int r = j; r < rectOffset.length; r += dim) {
+      m = Math.max(m, (long) rectOffset[r] + rectSize[r]);
+    }
+    return m;
+  }
+
+  private void checkGeostExtents(
+      String name,
+      int dim,
+      int[] rectSize,
+      int[] rectOffset,
+      IntDomain[] shape,
+      IntVar[] x,
+      IntVar[] kind,
+      int[] lb,
+      int[] ub) {
+    for (int r = 0; r < rectSize.length; r++) {
+      if (rectSize[r] < 0) {
+        throw new IllegalArgumentException(
+            name + ": box " + (r / dim + 1) + " has the negative size " + rectSize[r]);
+      }
+    }
+    for (int i = 0; i < kind.length; i++) {
+      if (lb != null) {
+        long[] lo = new long[dim];
+        long[] hi = new long[dim];
+        Arrays.fill(lo, Long.MAX_VALUE);
+        Arrays.fill(hi, Long.MIN_VALUE);
+        for (int s = 1; s <= shape.length; s++) {
+          if (!kind[i].domain.contains(s)) {
+            continue;
+          }
+          long[] from = new long[dim];
+          long[] to = new long[dim];
+          boolean fits = true;
+          for (int k = 0; k < dim; k++) {
+            from[k] = x[i * dim + k].min();
+            to[k] = x[i * dim + k].max();
+            for (ValueEnumeration e = shape[s - 1].valueEnumeration(); e.hasMoreElements(); ) {
+              int j = e.nextElement() - 1;
+              long offset = rectOffset[j * dim + k];
+              from[k] = Math.max(from[k], lb[k] - offset);
+              to[k] = Math.min(to[k], ub[k] - offset - rectSize[j * dim + k]);
+            }
+            fits &= from[k] <= to[k];
+          }
+          if (!fits) {
+            kind[i].domain.inComplement(store.level, kind[i], s);
+            continue;
+          }
+          for (int k = 0; k < dim; k++) {
+            lo[k] = Math.min(lo[k], from[k]);
+            hi[k] = Math.max(hi[k], to[k]);
+          }
+        }
+        for (int k = 0; k < dim && lo[k] <= hi[k]; k++) {
+          IntVar c = x[i * dim + k];
+          c.domain.in(store.level, c, (int) lo[k], (int) hi[k]);
+        }
+      }
+      for (int s = 1; s <= shape.length; s++) {
+        if (!kind[i].domain.contains(s)) {
+          continue;
+        }
+        for (ValueEnumeration e = shape[s - 1].valueEnumeration(); e.hasMoreElements(); ) {
+          int j = e.nextElement() - 1;
+          for (int k = 0; k < dim; k++) {
+            IntVar c = x[i * dim + k];
+            long offset = rectOffset[j * dim + k];
+            if (c.min() + offset < Integer.MIN_VALUE
+                || c.max() + offset + rectSize[j * dim + k] > Integer.MAX_VALUE) {
+              throw new IllegalArgumentException(
+                  name
+                      + ": box "
+                      + (j + 1)
+                      + " of object "
+                      + (i + 1)
+                      + " reaches beyond the integers");
+            }
+          }
+        }
+      }
+    }
   }
 
   void gen_jacop_if_then_else_bool(SimpleNode node) {

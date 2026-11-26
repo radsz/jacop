@@ -485,7 +485,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (node != null && node.getId() == JJTMODELEND) {
         ASTSolveItem solveItem = (ASTSolveItem) node.jjtGetChild(0);
         if (opt.symmetry()) {
-          breakSymmetries(astTree, solveItem, opt);
+          options = opt;
+          untilTimeOut(() -> breakSymmetries(astTree, solveItem, opt));
         }
         search(solveItem, table, opt);
       }
@@ -832,6 +833,167 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     initProbe();
     dictionary = table;
     output = table;
+    // the steps at the root before the search stop at the time-out
+    untilTimeOut(() -> rootSteps(node, opt));
+
+    if (opt.debug()) {
+      failStatistics = new FailConstraintsStatistics(store);
+    }
+
+    store.setDecay(opt.getDecay());
+
+    initNumberConstraints = store.numberConstraints();
+
+    // Get runtime system
+    Runtime runtime = Runtime.getRuntime();
+    long modelMem = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024);
+
+    if (opt.debug()) {
+      printSearchModelDebugInfo(dictionary, modelMem);
+    }
+
+    solveKind = -1;
+
+    int count = node.jjtGetNumChildren();
+    if (count == 1) {
+      searchCountOne(node);
+    } else if (count == 2) {
+      searchCountTwo(opt, node);
+    } else if (count > 2) {
+      searchCountMany(node);
+    } else {
+      throw new IllegalArgumentException(
+          "%% Error: Not recognized structure of solve statement; compilation aborted");
+    }
+  }
+
+  /**
+   * The time-out of the run as given by {@link System#currentTimeMillis()}, for {@link
+   * Store#consistencyUntil(long)}.
+   *
+   * @return the deadline, or 0 when there is no time-out
+   */
+  private long timeOutDeadline() {
+    return options.getTimeOut() > 0
+        ? System.currentTimeMillis() + options.getRemainingTimeOut()
+        : 0;
+  }
+
+  /**
+   * Runs steps at the root, between the model's fixpoint and the search, with the store's
+   * propagation stopping at the time-out: a constraint they post or a value they fix can start a
+   * propagation that converges a step per pass (x = y and x &lt; y over floats move one ulp per
+   * pass) and runs for minutes. A failure at the time-out proves nothing, so the run then ends as a
+   * time-out, whatever the steps concluded from it.
+   *
+   * @param steps the steps, which throw FailException when the model fails
+   * @throws ModelTimeOut when the propagation of a step stopped at the time-out
+   */
+  private void untilTimeOut(Runnable steps) {
+    long deadline = timeOutDeadline();
+    if (deadline == 0 || store.getConsistencyDeadline() != 0) {
+      try {
+        steps.run();
+      } catch (FailException e) {
+        // a deadline set already, or the stop of a portfolio thread, cut the propagation
+        if (store.isConsistencyDeadlinePassed()) {
+          throw new ModelTimeOut();
+        }
+        throw e;
+      }
+      return;
+    }
+    // a millisecond after the time-out: a search of a step stops at the time-out first, and so
+    // knows it timed out
+    store.setConsistencyDeadline(deadline + 1);
+    boolean passed;
+    try {
+      steps.run();
+    } catch (FailException e) {
+      if (store.isConsistencyDeadlinePassed()) {
+        throw new ModelTimeOut();
+      }
+      throw e;
+    } finally {
+      passed = store.isConsistencyDeadlinePassed();
+      store.setConsistencyDeadline(0);
+    }
+    if (passed) {
+      throw new ModelTimeOut();
+    }
+  }
+
+  /**
+   * Propagates the store at the root, stopping at the time-out.
+   *
+   * @return false when the store fails
+   * @throws ModelTimeOut when the propagation stopped at the time-out
+   */
+  private boolean rootConsistency() {
+    if (store.consistencyUntil(timeOutDeadline())) {
+      return true;
+    }
+    if (store.isConsistencyCut()) {
+      throw new ModelTimeOut();
+    }
+    return false;
+  }
+
+  /**
+   * Propagates the store for a dive, a probe or the check of a solution made outside a search,
+   * stopping at the time-out. A failure is then no proof: a dive that fails finds nothing.
+   *
+   * @return false when the store fails or the propagation stopped at the time-out
+   */
+  private boolean diveConsistency() {
+    return store.consistencyUntil(timeOutDeadline());
+  }
+
+  /**
+   * Tells whether the store's propagation is at a fixpoint, which a phase of the front end needs
+   * before it opens a store level of its own: removing that level clears the propagation queue, so
+   * propagation still queued at the root would be lost, and a constraint not yet run (a linear
+   * relaxation, whose first solve is its root solve) would first run above the root instead.
+   *
+   * @return true when no constraint waits for its propagation, or the last propagation stopped at
+   *     the time-out
+   */
+  private boolean propagated() {
+    return !store.hasPendingConstraints() || store.isConsistencyCut();
+  }
+
+  /**
+   * Runs the propagation still queued at the root, before a phase of the front end opens a store
+   * level of its own: removing that level clears the propagation queue, which drops what the root
+   * has not propagated yet, and a constraint not yet run makes its first call above the root (a
+   * linear relaxation takes the bounds of its first solve as the root's for its cuts). Each phase
+   * calls it just before it opens a level, so that a run without such a phase propagates as before.
+   * A failure stays: the store fails every propagation until a level is removed, so a caller that
+   * sees false opens no level, and the search reports the failure. A propagation stopped at the
+   * time-out is no failure: what it left queued waits for the search, which stops at the time-out
+   * too.
+   *
+   * @return false when the root fails
+   */
+  private boolean rootFixpoint() {
+    if (freeSearchBuildOnly) {
+      return true; // the store is the LCG solver's
+    }
+    if (store.isLastConsistencyFailure) {
+      return false;
+    }
+    if (!store.hasPendingConstraints() || store.consistencyUntil(timeOutDeadline())) {
+      return true;
+    }
+    if (store.isConsistencyCut()) {
+      store.isLastConsistencyFailure = false;
+      return true;
+    }
+    return false;
+  }
+
+  /** The steps of {@link #search} at the root, from the side components to the bounds. */
+  private void rootSteps(ASTSolveItem node, Options opt) {
     solveSideComponents(node);
     ObjectivePresolve objective = objectiveRule(node);
     // the last reader of the variable and constraint items
@@ -870,36 +1032,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (DecompositionBound.on() && opt.proof() == null) {
       decompositionBound(node);
-    }
-
-    if (opt.debug()) {
-      failStatistics = new FailConstraintsStatistics(store);
-    }
-
-    store.setDecay(opt.getDecay());
-
-    initNumberConstraints = store.numberConstraints();
-
-    // Get runtime system
-    Runtime runtime = Runtime.getRuntime();
-    long modelMem = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024);
-
-    if (opt.debug()) {
-      printSearchModelDebugInfo(dictionary, modelMem);
-    }
-
-    solveKind = -1;
-
-    int count = node.jjtGetNumChildren();
-    if (count == 1) {
-      searchCountOne(node);
-    } else if (count == 2) {
-      searchCountTwo(opt, node);
-    } else if (count > 2) {
-      searchCountMany(node);
-    } else {
-      throw new IllegalArgumentException(
-          "%% Error: Not recognized structure of solve statement; compilation aborted");
     }
   }
 
@@ -2766,7 +2898,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           postCollectedClauses();
           // a clause false at the root fails here: a restart search would forget the failure of
           // its first run and search again
-          if (!store.consistency()) {
+          if (!rootConsistency()) {
             return false;
           }
         }
@@ -2793,6 +2925,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         fixedSolveType = solveType;
         if (freeSearchFirst(costVar)) {
           return freeSearch.getSolutions() > 0;
+        }
+        if (fixedSearchFirst(label, select, costVar, solveType)) {
+          return numberSolutions > 0;
         }
         return executeLcgSearch(costVar);
       }
@@ -2833,7 +2968,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       store.clearChanged();
       return false;
     }
-    return store.consistency();
+    return rootConsistency();
   }
 
   /**
@@ -3513,6 +3648,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       } else if (worker != null) {
         lcg.setSharedBound(worker::sharedBound);
       }
+    } else if (fixedFirstCost != Integer.MAX_VALUE && !probed) {
+      // the best solution of the annotation's search without learning, which ran first
+      int firstCost = fixedFirstCost;
+      lcgLastCost = firstCost;
+      // no bound: LCG searches as without the first search, and prints only better solutions; with
+      // the bound from the start its search changed (lot-sizing pigment20a 82 s to 163 s, and
+      // city-5-06 not proved in 240 s, against 152-171 s without it)
+      if ("1".equals(options.freeConfig("fixed-first-bound", "0"))) {
+        lcg.setSharedBound(() -> firstCost);
+      }
     } else if (probed) {
       lcgLastCost = probeCost;
       lcg.setSharedBound(
@@ -3539,7 +3684,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     for (IntVar[][] clause : sat.collectedClauses()) {
       lcg.addClause(clause[0], clause[1]);
     }
-    if ((ls != null || scheduled != null || probed || freeFirstValues != null)
+    if ((ls != null
+            || scheduled != null
+            || probed
+            || freeFirstValues != null
+            || fixedFirstCost != Integer.MAX_VALUE)
         && costVar instanceof IntVar cost) {
       // the solution of local search was printed already; the core-guided phase, which ignores
       // the bound, or the first descent, before the bound is taken, can find one no better. The
@@ -3547,6 +3696,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // free search without learning printed before them: it printed 10 again after 10
       lcg.onSolution(
           () -> {
+            fixedFirstLcgBest = Math.min(fixedFirstLcgBest, cost.value());
             if (cost.value() < Math.min(lcgLastCost, bestPrintedCost.get())) {
               printSolution();
             }
@@ -3895,11 +4045,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         worker == null && (free || fixedLabel != null) && !enumerate
             ? slowLcgCheck(costVar, !free)
             : null;
+    Thread firstCheck = fixedFirstMillis > 0 ? fixedFirstCheck(lcg) : null;
     if (lpProbing) {
       linearRelaxation.rememberSearchStart();
       lcg.atRootAfter(lpProbeMs * 1_000_000L, this::resumeRelaxation);
     }
-    lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
+    try {
+      lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
+    } finally {
+      // -n or --gap stops the search by throwing from the solution listener: the check would go on
+      // after the run, printing and keeping the solver
+      if (slowCheck != null) {
+        slowCheck.interrupt();
+      }
+    }
     if (lpProbing) {
       // the probe finished the search: the relaxation was never solved
       linearRelaxation.suspend(false);
@@ -3909,8 +4068,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (lcgProbe > 0 && lcgProbeDelay > 0 && lcg.probePasses > 0) {
       printProbeStatistics(lcg);
     }
+    if (firstCheck != null) {
+      firstCheck.interrupt();
+      firstCheck = null;
+    }
     if (slowCheck != null) {
-      slowCheck.interrupt();
       // a finished virtual thread keeps its task, and the task the solver: free search without
       // learning, which runs in this frame, would keep the solver and its clauses
       slowCheck = null;
@@ -4214,7 +4376,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     lcgStatus = pureSat.solve();
+    if (lcgStatus == CdclSolver.SAT && !rootFixpoint()) {
+      // the store's other constraints fail at the root: no solution
+      lcgStatus = CdclSolver.UNSAT;
+    }
     if (lcgStatus == CdclSolver.SAT) {
+      assert propagated() : "executePureClauseSearch opens a level with propagation queued";
       cnf.fixStore(store);
       printSolution();
     }
@@ -4250,10 +4417,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     int status = solver.solve();
     if (status == CdclSolver.SAT) {
       int level = store.level;
-      if (!cnf.fix(store, solver) || !store.consistency() || !fixRest() || !clausesHold()) {
-        // not a solution of the store: a compilation error, reported, and solved without it
-        FzConsole.printlnErr(
-            "%% clausal model: solution rejected by the store; solving without it");
+      if (!rootFixpoint()) {
+        // the store fails at the root: the search without the compilation reports it
+        return false;
+      }
+      assert propagated() : "executeClausalSearch opens a level with propagation queued";
+      if (!cnf.fix(store, solver) || !diveConsistency() || !fixRest() || !clausesHold()) {
+        // not a solution of the store: a compilation error, reported, and solved without it; a
+        // check stopped at the time-out rejects nothing, and the search then times out
+        if (!store.isConsistencyCut()) {
+          FzConsole.printlnErr(
+              "%% clausal model: solution rejected by the store; solving without it");
+        }
         store.removeLevel(store.level);
         store.setLevel(level);
         return false;
@@ -4273,7 +4448,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     for (Var v : declaredVariables()) {
       if (v instanceof IntVar x && !x.singleton()) {
         x.domain.in(store.level, x, x.min(), x.min());
-        if (!store.consistency()) {
+        if (!diveConsistency()) {
           return false;
         }
       }
@@ -5654,6 +5829,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @return whether a solution was found
    */
   private boolean continueFixedWithoutLcg(Var costVar) {
+    if (fixedFirstOutcome == 3
+        && numberSolutions > 0
+        && costVar instanceof IntVar cost
+        && restartCalculator == null
+        && Double.parseDouble(options.freeConfig("fixed-first-stall", "2")) > 0) {
+      return fixedFirstUntilStall(cost);
+    }
     slowLcg = SlowLcg.of(lcg);
     lcg.release();
     lcg = null;
@@ -5667,7 +5849,404 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (restartCalculator != null) {
       return executeRestartSearch(fixedLabel, fixedSelect, costVar, fixedSolveType);
     }
+    if (numberSolutions > 0 && costVar instanceof IntVar cost) {
+      // LCG gave way after the search without learning that ran first (fixedSearchFirst): the
+      // annotation's search goes on from the root under the best cost printed
+      int best = bestPrintedCost.get();
+      if (best == Integer.MIN_VALUE || best - 1 < cost.min()) {
+        // nothing better is left
+        return true;
+      }
+      if (best - 1 < cost.max()) {
+        cost.domain.inMax(store.level, cost, best - 1);
+      }
+      // the solutions printed before count: the search may find no better one
+      executeNonRestartSearch(fixedLabel, fixedSelect, costVar, fixedSolveType);
+      return true;
+    }
     return executeNonRestartSearch(fixedLabel, fixedSelect, costVar, fixedSolveType);
+  }
+
+  /**
+   * Runs the annotation's search without learning under the best cost after LCG gave way to it
+   * ({@link #fixedFirstCheck}), in a store level lent by the solver, until it goes
+   * fixed-first-stall (2) times as long as it had run, from the start of the search, without a
+   * better solution, and at least fixed-first-stall-min ms (10,000); LCG then goes on under the
+   * best cost to the end. The search without learning finds the same solutions faster at first, but
+   * some models need learning further on: at 600 s it stayed at -514 on cgt 5 h27 (MiniZinc
+   * Challenge 2025, LCG alone -55,276), at 2873 from 14 s on nside EASY_200_50 (2019, LCG proves
+   * 2916 in 27 s) and at 109 on median-string p1_15_20-1 (2019, LCG 106), while on city-position
+   * (2017) it improves until its proof and on liner-sf-repositioning tp7_4 (2019) proved the
+   * optimum at 52 s after 28 s without a better solution, which LCG alone did not in 600 s.
+   *
+   * @param cost the cost variable
+   * @return whether a solution was found
+   */
+  private boolean fixedFirstUntilStall(IntVar cost) {
+    LcgSolver solver = lcg;
+    int best = bestPrintedCost.get();
+    if (best == Integer.MIN_VALUE || best - 1 < cost.min()) {
+      // nothing better is left
+      lcgStatus = CdclSolver.SAT;
+      return true;
+    }
+    double factor = Double.parseDouble(options.freeConfig("fixed-first-stall", "2"));
+    long minimum = Long.parseLong(options.freeConfig("fixed-first-stall-min", "10000"));
+    long start = fixedFirstStart;
+    long[] last = {System.currentTimeMillis()};
+    int[] seen = {best};
+    boolean[] stalled = {false};
+    DepthFirstSearch<T> annotation = fixedLabel;
+    List<DepthFirstSearch<?>> searches = new ArrayList<>();
+    collectSearches(annotation, Collections.newSetFromMap(new IdentityHashMap<>()), searches);
+    ConsistencyListener[] previous = new ConsistencyListener[searches.size()];
+    for (int k = 0; k < previous.length; k++) {
+      DepthFirstSearch<?> search = searches.get(k);
+      ConsistencyListener before = search.getConsistencyListener();
+      previous[k] = before;
+      search.setConsistencyListener(
+          new ConsistencyListener() {
+            @Override
+            public boolean executeAfterConsistency(boolean consistent) {
+              boolean c = before == null ? consistent : before.executeAfterConsistency(consistent);
+              if (!stalled[0]) {
+                long now = System.currentTimeMillis();
+                int b = bestPrintedCost.get();
+                if (b < seen[0]) {
+                  seen[0] = b;
+                  last[0] = now;
+                } else if (now - last[0] > Math.max(minimum, (long) (factor * (last[0] - start)))) {
+                  stalled[0] = true;
+                  setLabelTimeOut(annotation, 0);
+                }
+              }
+              return c;
+            }
+
+            @Override
+            public void setChildrenListeners(ConsistencyListener[] children) {
+              // no children
+            }
+
+            @Override
+            public void setChildrenListeners(ConsistencyListener child) {
+              // no children
+            }
+          });
+    }
+    if (options.debug()) {
+      IO.println("%% the annotation's search without learning under " + best + " until it stalls");
+    }
+    int root = store.level;
+    store.setLevel(root + 1);
+    Runnable giveBack = solver.lend();
+    boolean complete;
+    try {
+      for (IntVar[][] clause : this.sat.collectedClauses()) {
+        store.impose(new BoolClause(clause[0], clause[1]));
+      }
+      if (best - 1 < cost.max()) {
+        cost.domain.inMax(store.level, cost, best - 1);
+      }
+      executeNonRestartSearch(annotation, fixedSelect, cost, fixedSolveType);
+      complete = !labelTimedOut(annotation);
+    } catch (FailException _) {
+      // the clauses and the bound leave no better solution
+      complete = true;
+    } finally {
+      for (int k = 0; k < previous.length; k++) {
+        searches.get(k).setConsistencyListener(previous[k]);
+      }
+      store.removeLevel(root + 1);
+      store.setLevel(root);
+      giveBack.run();
+    }
+    if (complete) {
+      // the search without learning explored the whole tree under the best cost
+      lcgStatus = CdclSolver.SAT;
+      return true;
+    }
+    if (!stalled[0] || options.getRemainingTimeOut() <= 0) {
+      return true;
+    }
+    fixedFirstOutcome = 4;
+    if (options.debug()) {
+      IO.println(
+          "%% search without learning stalled at " + bestPrintedCost.get() + "; LCG goes on");
+    }
+    lcgSlow = false;
+    solver.unstop();
+    int status = solver.minimize(cost);
+    // no better solution than the best printed one: it is optimal
+    lcgStatus = status == CdclSolver.UNKNOWN ? CdclSolver.UNKNOWN : CdclSolver.SAT;
+    return true;
+  }
+
+  private static void collectSearches(
+      DepthFirstSearch<?> label, Set<Search<?>> seen, List<DepthFirstSearch<?>> searches) {
+    if (!seen.add(label)) {
+      return;
+    }
+    searches.add(label);
+    if (label.childSearches != null) {
+      for (Search<? extends Var> child : label.childSearches) {
+        if (child instanceof DepthFirstSearch<?> d) {
+          collectSearches(d, seen, searches);
+        }
+      }
+    }
+  }
+
+  // the time the annotation's search without learning ran before LCG (fixedSearchFirst), in
+  // milliseconds (0 = it did not run), and the best cost it found
+  private long fixedFirstMillis;
+  private int fixedFirstCost = Integer.MAX_VALUE;
+  // the best cost of LCG's own solutions, printed or not: LCG that reached the first search's best
+  // cost goes on (open-stacks problem_15_15: the first search found the optimum 7 at once, and LCG,
+  // which proves it in 7 s, gave way to a proof of 14 s)
+  // the nodes of that search
+  private long fixedFirstNodes;
+  // when that search started, by System.currentTimeMillis()
+  private long fixedFirstStart;
+
+  private volatile int fixedFirstLcgBest = Integer.MAX_VALUE;
+  // the outcome of fixedSearchFirst, for the statistics: 0 not run, 1 it decided the model, 2 LCG
+  // kept, 3 LCG gave way to it
+  private int fixedFirstOutcome;
+
+  private void printFixedFirstStatistics() {
+    if (fixedFirstOutcome > 0 && options.getStatistics()) {
+      // the annotation's search without learning before LCG: it decided the model, LCG went on, or
+      // LCG gave way to it
+      IO.println(
+          "%%%mzn-stat: fixedFirst="
+              + switch (fixedFirstOutcome) {
+                case 1 -> "decided";
+                case 2 -> "lcg";
+                case 4 -> "cp-lcg";
+                default -> "cp";
+              });
+    }
+  }
+
+  /**
+   * Runs the annotation's depth-first search without learning before LCG fixed search on an
+   * optimisation model, for the share fixed-first of the time (default 0.005; 0 = off). LCG then
+   * searches as it would have from the start, printing only solutions better than the best one
+   * printed, and gets fixed-first-lcg (3) times as much time to reach that cost, at least a second
+   * ({@link #fixedFirstCheck}); when it does not, it gives way to the annotation's search without
+   * learning, which goes on from the root under the best cost. Both searches take the decisions of
+   * the annotation, so on a model where learning cuts little they find the same solutions one after
+   * the other, and the one that finds them faster gets further in the same time. On city-position
+   * (MiniZinc Challenge 2017, first_fail on 10 coordinates, an objective of 16 absolute
+   * differences) LCG and the search without learning found the same 589 solutions, LCG in 232 s and
+   * the search without learning in 14 s: LCG makes about 7,000 conflicts a second, each with about
+   * 1,900 propagations of the order literals of domains of a million values, and backjumps one
+   * level a conflict. JaCoP 4.10 proved city-5-05 in 52 s, and 5.0 not in 240 s.
+   *
+   * @param label the annotation's search
+   * @param select its choice points
+   * @param costVar the cost variable
+   * @param solveType the kind of solve item, for the debug output
+   * @return true if the search decided the model (an optimum or no solution proved)
+   */
+  private boolean fixedSearchFirst(
+      DepthFirstSearch<T> label, SelectChoicePoint<T> select, Var costVar, String solveType) {
+    double share = Double.parseDouble(options.freeConfig("fixed-first", "0.005"));
+    if (share <= 0
+        || options.freeSearch()
+        || options.getTimeOut() <= 0
+        || options.portfolioWorker() != null
+        || options.proof() != null
+        || !(costVar instanceof IntVar)
+        || restartCalculator != null
+        || dictionary.onRestart != null
+        || CdclSolver.VIRTUAL_CLOCK
+        || label == null) {
+      return false;
+    }
+    // at most fixed-first-max ms, default 1000: a slice that does not decide the model is paid by
+    // every easy one (freepizza pizza6 at 600 s, a 3 s slice: 2.3 s to 5.4 s), and a second
+    // measured the rates of city-position at 240 s
+    long millis =
+        Math.max(
+            1,
+            Math.min(
+                (long) (share * options.getRemainingTimeOut()),
+                Long.parseLong(options.freeConfig("fixed-first-max", "1000"))));
+    setLabelTimeOut(label, millis);
+    long start = System.nanoTime();
+    int before = numberSolutions;
+    long nodesBefore = labelNodes(label);
+    fixedFirstStart = System.currentTimeMillis();
+    // the clauses kept for the LCG solver, which the store does not hold, in a level of their own
+    int root = store.level;
+    store.setLevel(root + 1);
+    try {
+      for (IntVar[][] clause : sat.collectedClauses()) {
+        store.impose(new BoolClause(clause[0], clause[1]));
+      }
+      executeNonRestartSearch(label, select, costVar, solveType);
+    } finally {
+      store.removeLevel(root + 1);
+      store.setLevel(root);
+    }
+    boolean stopped = labelTimedOut(label);
+    if (!stopped) {
+      fixedFirstOutcome = 1;
+      return true;
+    }
+    resetLabelTimeOut(label);
+    if (numberSolutions > before) {
+      fixedFirstCost = bestPrintedCost.get();
+      fixedFirstMillis = Math.max(1, (System.nanoTime() - start) / 1_000_000L);
+      fixedFirstNodes = labelNodes(label) - nodesBefore;
+    }
+    if (options.debug()) {
+      IO.println(
+          "% fixed search first: "
+              + (numberSolutions - before)
+              + " solutions in "
+              + (System.nanoTime() - start) / 1_000_000L
+              + " ms, best "
+              + (fixedFirstCost == Integer.MAX_VALUE ? "none" : fixedFirstCost));
+    }
+    return false;
+  }
+
+  /** The nodes of the annotation's searches: the label, its child searches and the final ones. */
+  private long labelNodes(DepthFirstSearch<?> label) {
+    Set<Search<?>> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    long nodes = labelNodes(label, seen);
+    if (finalSearch != null) {
+      for (DepthFirstSearch<T> s : finalSearch) {
+        nodes += s == null ? 0 : labelNodes(s, seen);
+      }
+    }
+    if (listSeqSearches != null) {
+      for (Search<T> s : listSeqSearches) {
+        nodes += s instanceof DepthFirstSearch<?> d ? labelNodes(d, seen) : 0;
+      }
+    }
+    return nodes;
+  }
+
+  private static long labelNodes(DepthFirstSearch<?> label, Set<Search<?>> seen) {
+    if (!seen.add(label)) {
+      return 0;
+    }
+    long nodes = label.getNodes();
+    if (label.childSearches != null) {
+      for (Search<? extends Var> child : label.childSearches) {
+        if (child instanceof DepthFirstSearch<?> d) {
+          nodes += labelNodes(d, seen);
+        }
+      }
+    }
+    return nodes;
+  }
+
+  private static void setLabelTimeOut(DepthFirstSearch<?> label, long millis) {
+    label.setTimeOutMilliseconds(millis);
+    if (label.childSearches != null) {
+      for (Search<? extends Var> child : label.childSearches) {
+        if (child instanceof DepthFirstSearch<?> d) {
+          setLabelTimeOut(d, millis);
+        } else {
+          child.setTimeOutMilliseconds(millis);
+        }
+      }
+    }
+  }
+
+  private static boolean labelTimedOut(DepthFirstSearch<?> label) {
+    if (label.timeOutOccured) {
+      return true;
+    }
+    if (label.childSearches != null) {
+      for (Search<? extends Var> child : label.childSearches) {
+        if (child instanceof DepthFirstSearch<?> d && labelTimedOut(d)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /** Clears the time-out of the annotation's search and gives it the time left. */
+  private void resetLabelTimeOut(DepthFirstSearch<?> label) {
+    clearTimeOut(label);
+    setLabelTimeOut(label, Math.max(1, options.getRemainingTimeOut()));
+  }
+
+  private static void clearTimeOut(DepthFirstSearch<?> label) {
+    label.timeOutOccured = false;
+    if (label.childSearches != null) {
+      for (Search<? extends Var> child : label.childSearches) {
+        if (child instanceof DepthFirstSearch<?> d) {
+          clearTimeOut(d);
+        }
+      }
+    }
+  }
+
+  /**
+   * Starts the check of {@link #fixedSearchFirst}: once LCG has searched fixed-first-lcg times as
+   * long as the search without learning ran first, at least a second, LCG gives way to that search
+   * when it found no better solution.
+   *
+   * @param solver the LCG solver
+   * @return the thread of the check
+   */
+  private Thread fixedFirstCheck(LcgSolver solver) {
+    // LCG gets more time than the search without learning had, and at least a second: in its first
+    // tenths of a second the JIT compiles its code (cargo challenge02 at 30 s, a first search of
+    // 0.15 s: LCG found no better solution in as much time in one run of two, and then the
+    // search without learning, which stays at its first solution, took over)
+    long wait =
+        Math.max(
+            (long)
+                (Double.parseDouble(options.freeConfig("fixed-first-lcg", "3")) * fixedFirstMillis),
+            Long.parseLong(options.freeConfig("fixed-first-lcg-min", "1000")));
+    int firstCost = fixedFirstCost;
+    // LCG gives way only when it is much slower per node: at 240 s, the search without learning
+    // ran 6.8 times as many nodes per second in its first second as LCG after it on city-5-06
+    // (MZNC 2017), but 0.5 and 0.7 times on celar graph11 (2013) and mapping mesh_star_mpeg
+    // (2021), where LCG, behind at first, proved the optimum (mapping 13 s against 31 s) or ended
+    // better (celar 450009 against 492506) than after giving way
+    double ratio = Double.parseDouble(options.freeConfig("fixed-first-rate", "3"));
+    double firstRate = (double) fixedFirstNodes / fixedFirstMillis;
+    long decisionsBefore = solver.sat().decisions;
+    long started = System.nanoTime();
+    fixedFirstOutcome = 2;
+    return Thread.ofVirtual()
+        .start(
+            () -> {
+              try {
+                Thread.sleep(wait);
+                double lcgMillis = (double) Math.max(1, (System.nanoTime() - started) / 1_000_000L);
+                double lcgRate = (solver.sat().decisions - decisionsBefore) / lcgMillis;
+                if (options.debug()) {
+                  IO.println(
+                      "% fixed search first: "
+                          + firstRate
+                          + " nodes/ms, LCG "
+                          + lcgRate
+                          + " nodes/ms, best "
+                          + fixedFirstLcgBest);
+                }
+                if (fixedFirstLcgBest > firstCost
+                    && firstRate >= ratio * lcgRate
+                    && !tooLateForFreeSearch(solver)) {
+                  fixedFirstOutcome = 3;
+                  lcgSlow = true;
+                  solver.stop();
+                }
+              } catch (InterruptedException _) {
+                // LCG search ended first
+                Thread.currentThread().interrupt();
+              }
+            });
   }
 
   // the best solution of LCG free search before it gave way to free search without learning
@@ -5886,7 +6465,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // the root's pending propagation first, as in checkSchedule: a level removed with it still
     // queued drops it, and a linear relaxation not solved yet then took its first solve, whose
     // bounds its cuts take as the root's, at the objective fixed below or at a probe of LCG's root
-    if (!store.consistency()) {
+    if (!rootFixpoint()) {
       return null;
     }
     IntVar[] items = packing.binVariables();
@@ -5954,10 +6533,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   /** Whether propagation with the objective at k leaves every item in bins first..first+k-1. */
   private boolean boundsBins(IntVar[] items, IntVar cost, int k, int first) {
     int base = store.level;
+    assert propagated() : "boundsBins opens a level with propagation queued";
     store.setLevel(base + 1);
     try {
       cost.domain.in(store.level, cost, k, k);
-      if (!store.consistency()) {
+      if (!diveConsistency()) {
         return false;
       }
       for (IntVar x : items) {
@@ -6023,10 +6603,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     int base = store.level;
+    assert propagated() : "numberBins opens a level with propagation queued";
     store.setLevel(base + 1);
     try {
       cost.domain.in(store.level, cost, k, k);
-      if (!store.consistency()) {
+      if (!diveConsistency()) {
         return null;
       }
       for (int i : fixedFirst) {
@@ -6066,7 +6647,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         }
         left.get(chosen).merge(w[i], -1, Integer::sum);
         items[i].domain.in(store.level, items[i], value, value);
-        if (!store.consistency()) {
+        if (!diveConsistency()) {
           return null;
         }
       }
@@ -6133,10 +6714,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   /** Fixes x to v at a new level and propagates; on failure removes the level again. */
   private boolean tryValue(IntVar x, int v) {
     int level = store.level;
+    assert propagated() : "tryValue opens a level with propagation queued";
     store.setLevel(level + 1);
     try {
       x.domain.in(store.level, x, v, v);
-      if (store.consistency()) {
+      if (diveConsistency()) {
         return true;
       }
     } catch (FailException e) {
@@ -6186,7 +6768,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     IntVar[] slots = fixedCountSlots(vars);
     countSlotCount = slots.length;
-    if (slots.length == 0) {
+    if (slots.length == 0 || !rootFixpoint()) {
       return null;
     }
     long budget =
@@ -6332,7 +6914,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       printStatisticsOutput(
           (int) lcgSat().decisions,
           (int) lcgSat().conflicts,
-          lcgSat().peakDecisionLevel,
+          lcgSat().peakSearchDepth,
           numberSolutions);
       if (numberSolutions > 0 && costVariable instanceof IntVar) {
         // the cost variable is the negated objective under maximisation
@@ -7046,10 +7628,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       b.extraConstraints(clauses);
     }
+    if (!rootFixpoint()) {
+      return null;
+    }
     localSearch = b.build();
     if (worker != null) {
       worker.onStop(localSearch::stop);
     }
+    assert propagated() : "local search opens a level with propagation queued";
     LocalSearch.Status status = localSearch.solve();
     if (options.debug()) {
       IO.println("% " + localSearch + " " + status);
@@ -7183,25 +7769,26 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // the root's pending propagation first: run at the level of the check, the first
       // consistency of the constraints is undone with it, which left warehouses cap91 (MaxSAT
       // 2024) without its 7 s proof
-      if (!store.consistency()) {
+      if (!rootFixpoint()) {
         return null;
       }
+      assert propagated() : "checkSchedule opens a level with propagation queued";
       store.setLevel(base + 1);
       for (int k = 0; k < starts.length; k++) {
         starts[k].domain.in(store.level, starts[k], start[k], start[k]);
       }
-      if (!store.consistency() || !cost.domain.contains(makespan) || cost.min() != makespan) {
+      if (!diveConsistency() || !cost.domain.contains(makespan) || cost.min() != makespan) {
         return null;
       }
       cost.domain.in(store.level, cost, makespan, makespan);
-      if (!store.consistency() || !collectedClausesPropagate()) {
+      if (!diveConsistency() || !collectedClausesPropagate()) {
         return null;
       }
       if (!smallestValuesAtOnce(hinted)) {
         for (IntVar x : hinted) {
           if (!x.singleton()) {
             x.domain.in(store.level, x, x.min(), x.min());
-            if (!store.consistency() || !collectedClausesPropagate()) {
+            if (!diveConsistency() || !collectedClausesPropagate()) {
               return null;
             }
           }
@@ -7235,6 +7822,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private boolean smallestValuesAtOnce(IntVar[] hinted) {
     int base = store.level;
+    assert propagated() : "smallestValuesAtOnce opens a level with propagation queued";
     store.setLevel(base + 1);
     boolean accepted = false;
     try {
@@ -7243,7 +7831,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           x.domain.in(store.level, x, x.min(), x.min());
         }
       }
-      accepted = store.consistency() && collectedClausesPropagate();
+      accepted = diveConsistency() && collectedClausesPropagate();
     } catch (FailException e) {
       accepted = false;
     }
@@ -7298,7 +7886,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           changed = true;
         }
       }
-      if (changed && !store.consistency()) {
+      if (changed && !diveConsistency()) {
         return false;
       }
     }
@@ -7695,7 +8283,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * FeasibilityPump#HULL_DOMAIN} values, and its distance leaves out the defined variables.
    */
   private Hint pumpHint() {
-    if (!"1".equals(options.freeConfig("pump", "0"))) {
+    if (!"1".equals(options.freeConfig("pump", "0")) || !rootFixpoint()) {
       return null;
     }
     long start = System.currentTimeMillis();
@@ -8217,10 +8805,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (options.getStatistics()) {
       IO.println("%%%mzn-stat: freeFirstSquares=" + squaredObjectiveTerms(costVar));
     }
+    if (!rootFixpoint()) {
+      return false;
+    }
     freeFirstMillis = Math.max(1, (long) (share * options.getRemainingTimeOut()));
     // the clauses kept for the LCG solver are not in the store: they are posted in a level of
     // their own for the search without learning, and removed with it before LCG starts
     int root = store.level;
+    assert propagated() : "freeSearchFirst opens a level with propagation queued";
     store.setLevel(root + 1);
     try {
       for (IntVar[][] clause : sat.collectedClauses()) {
@@ -8552,6 +9144,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (dictionary.onRestart != null) {
       rs.setRestartHook(dictionary.onRestart);
     }
+    // the runs of a hook or of relax and reconstruct are levels of their own: the root's pending
+    // propagation would go with the first
+    if ((relaxVars != null || dictionary.onRestart != null) && !rootFixpoint()) {
+      return false;
+    }
     return rs.labeling();
   }
 
@@ -8645,8 +9242,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @return the probe's answer, or UNKNOWN when it did not finish
    */
   private int freeLpProbe(Var costVar) {
+    if (!rootFixpoint()) {
+      return CdclSolver.UNSAT;
+    }
     // the probe's prunings, such as its objective bound, are undone when it does not finish
     int level = store.level;
+    assert propagated() : "freeLpProbe opens a level with propagation queued";
     store.setLevel(level + 1);
     LcgSolver probe = new LcgSolver(store);
     probe.setSeed(options.getRandomSeed());
@@ -8815,8 +9416,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // without split, where it runs at the level the labeling starts from: the linear relaxation
     // keeps root reduced costs and bounds from there, which the level of a cube would make wrong
     // for the other cubes (a multi-knapsack lost its optimum in 2 runs of 10)
-    if (!store.consistency()) {
-      tree.complete();
+    if (!diveConsistency()) {
+      if (store.isConsistencyCut()) {
+        // stopped at the time-out: the tree is not refuted
+        label.timeOutOccured = true;
+      } else {
+        tree.complete();
+      }
       return false;
     }
     boolean found = false;
@@ -8831,11 +9437,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       boolean closed = false;
       try {
         boolean result = false;
-        if (split.impose(cube)) {
+        if (split.impose(cube, deadline == Long.MAX_VALUE ? 0 : deadline)) {
           result =
               costVar != null
                   ? label.labeling(store, split, costVar)
                   : label.labeling(store, split);
+        } else if (split.cut()) {
+          // the cube stopped at the time-out, unrefuted
+          label.timeOutOccured = true;
         }
         split.retract();
         found |= result;
@@ -8911,6 +9520,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private boolean executeFloatBisection(
       DepthFirstSearch<T> label, SelectChoicePoint<T> select, FloatVar cost) {
+    // each run is a level of its own: the root's pending propagation would go with the first
+    if (!rootFixpoint()) {
+      return false;
+    }
     double[] lo = {cost.min()};
     // the solutions of the first run so far, and the cost of the last one; no bisection in the
     // first run until it crawls
@@ -9009,6 +9622,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         stopAt = listener.solutionsNo() + (step ? 1 : FLOAT_CRAWL + 1);
         listener.setSolutionLimit(Math.min(stopAt, solutionLimit));
       }
+      assert propagated() : "executeFloatBisection opens a level with propagation queued";
       store.setLevel(base + 1);
       try {
         // only the upper bound: with a lower bound too, a run that ends without a solution has to
@@ -9092,10 +9706,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       int solutionLimit) {
     double before = label.getCostValueFloat();
     boolean result = false;
+    assert propagated() : "pointProbe opens a level with propagation queued";
     store.setLevel(base + 1);
     try {
       cost.domain.inMax(store.level, cost, limit);
-      if (store.consistency()) {
+      if (diveConsistency()) {
         double[] point = new double[vars.length];
         for (int i = 0; i < vars.length; i++) {
           point[i] =
@@ -9351,6 +9966,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
      */
     private boolean dive(double limit) {
       boolean found = false;
+      assert propagated() : "dive opens a level with propagation queued";
       store.setLevel(base + 1);
       // a bound that fails at the root fails every dive
       rootFailed = true;
@@ -9358,7 +9974,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         if (limit != Double.MAX_VALUE) {
           cost.domain.inMax(store.level, cost, limit);
         }
-        rootFailed = !store.consistency();
+        rootFailed = !diveConsistency();
+        floatDive.setDeadline(timeOutDeadline());
         if (!rootFailed && floatDive.dive()) {
           if (listener != null) {
             listener.setSolutionLimit(listener.solutionsNo() + 1);
@@ -9517,7 +10134,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         && !timeoutOccurred
         && isSearchComplete()
         && relaxedSearchComplete()
-        && !clampedDomainsHideSolutions()) {
+        && !clampedDomainsCutSolutions()) {
       IO.println(SEPARATOR_LINE);
     } else if (timeoutOccurred) {
       IO.println(TIME_OUT_MSG);
@@ -9562,7 +10179,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * found is still the optimum of the model when only the objective was cut, on its worse side.
    */
   private boolean clampedDomainsKeepOptimum() {
-    if (dictionary.floatDomainsNarrowed()) {
+    if (dictionary.floatDomainsNarrowed() || dictionary.constantBeyondRange()) {
       return false;
     }
     if (!dictionary.domainsClamped()
@@ -9595,8 +10212,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   /** Whether the narrowing of declared domains may hide a solution of a satisfaction problem. */
   private boolean clampedDomainsHideSolutions() {
     return dictionary.floatDomainsNarrowed()
+        || dictionary.constantBeyondRange()
         || dictionary.domainsClamped()
             && !dictionary.clampsHarmless(null, -ClampedBounds.INF, ClampedBounds.INF);
+  }
+
+  // whether the narrowing of declared domains may cut off some of the solutions an enumeration
+  // prints: a solution moved to the end of the range, as for clampedDomainsHideSolutions, is
+  // another one
+  private boolean clampedDomainsCutSolutions() {
+    return dictionary.floatDomainsNarrowed()
+        || dictionary.constantBeyondRange()
+        || dictionary.domainsClamped() && !dictionary.clampsCutNoSolution();
   }
 
   private boolean isSearchComplete() {
@@ -9646,6 +10273,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     printLinearRelaxationStatistics();
     printCostNetworkStatistics();
+    printFixedFirstStatistics();
 
     if (label == null) {
       IO.println("%% =====INTERRUPTED=====\n%% Model not yet posed..");
@@ -10134,7 +10762,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private void handleTrivialSolution() {
     if (!sat.collectedClauses().isEmpty()) {
       postCollectedClauses();
-      if (!store.consistency()) {
+      if (!rootConsistency()) {
         IO.println(clampedDomainsHideSolutions() ? "=====UNKNOWN=====" : "=====UNSATISFIABLE=====");
         throw new TrivialSolution();
       }
@@ -10146,7 +10774,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
 
     if ((options.getAll() || costVariable != null)
-        && (costVariable != null ? clampedDomainsKeepOptimum() : !clampedDomainsHideSolutions())) {
+        && (costVariable != null ? clampedDomainsKeepOptimum() : !clampedDomainsCutSolutions())) {
       IO.println(SEPARATOR_LINE);
     }
 
@@ -10342,6 +10970,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     printLinearRelaxationStatistics();
     printCostNetworkStatistics();
+    printFixedFirstStatistics();
 
     if (lcg != null || pureSat != null) {
       printLcgStatistics(interrupted);
@@ -11024,6 +11653,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return value * dictionary.objectiveScale();
   }
 
+  // the value a solution prints for a float variable fixed to within the precision: the middle of
+  // its interval (FloatInterval.toString), not its lower bound
+  private static double printedValue(FloatVar v) {
+    double mean = (v.min() + v.max()) / 2;
+    return Double.isInfinite(mean) ? v.min() / 2 + v.max() / 2 : mean;
+  }
+
   private void appendCostLineToBuffer(StringBuffer printBuffer) {
     if (costVariable == null) {
       return;
@@ -11032,13 +11668,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (costVariable instanceof IntVar var1) {
         printBuffer.append(MZN_STAT_OBJECTIVE).append(objectiveValue(var1.value())).append("\n");
       } else if (costVariable instanceof FloatVar fv) {
-        printBuffer.append(MZN_STAT_OBJECTIVE).append(fv.value()).append("\n");
+        printBuffer.append(MZN_STAT_OBJECTIVE).append(printedValue(fv)).append("\n");
       }
     } else {
       if (costVariable instanceof IntVar var1) {
         printBuffer.append(MZN_STAT_OBJECTIVE).append(objectiveValue(-var1.value())).append("\n");
       } else if (costVariable instanceof FloatVar fv) {
-        printBuffer.append(MZN_STAT_OBJECTIVE).append(-fv.value()).append("\n");
+        printBuffer.append(MZN_STAT_OBJECTIVE).append(-printedValue(fv)).append("\n");
       }
     }
   }
@@ -11206,6 +11842,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   public int getSolveKind() {
     return solveKind;
+  }
+
+  /**
+   * Makes the run print no answer and no solution from now on: the portfolio this thread belongs to
+   * has returned.
+   */
+  void closeAnswer() {
+    synchronized (answerLock) {
+      answered = true;
+    }
   }
 
   /**

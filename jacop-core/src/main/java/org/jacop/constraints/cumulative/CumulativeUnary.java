@@ -272,7 +272,9 @@ public class CumulativeUnary extends Cumulative {
     // the time-table fail in the next pass
     leaveOutFixedPrefix = doProfile;
     trailLeftOut = doProfile && !possibleZeroTasks;
-    if (leftOut == null) {
+    // the trail of the tasks left out is made at the first call: when the level of that call is
+    // removed, it holds no value any more and is made again
+    if (leftOut == null || leftOut.pointer4Last < 0) {
       initTasks(store);
     }
     collectActiveTasks();
@@ -389,7 +391,7 @@ public class CumulativeUnary extends Cumulative {
       if (timetable == null) {
         timetable = newTimetable();
       }
-      if (leftOut == null) {
+      if (leftOut == null || leftOut.pointer4Last < 0) {
         initTasks(store);
         collectActiveTasks();
       }

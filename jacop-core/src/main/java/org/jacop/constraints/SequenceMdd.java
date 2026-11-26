@@ -162,9 +162,8 @@ public class SequenceMdd extends Constraint
   private int skip;
   private int backoff;
   private boolean pruned;
-  // whether a variable has several roles (an arc and a time, or two times), so that a pass prunes
-  // the inputs it read and must be repeated until nothing changes
-  private final boolean shared;
+  // whether a pass pruned: the pruning changes the diagram of the next pass, so a call repeats its
+  // pass until nothing changes (the store does not wake a constraint for its own pruning)
   private boolean changed;
 
   // layer arrays, allocated at the first call: masks, per-last earliest departures and least costs
@@ -443,22 +442,17 @@ public class SequenceMdd extends Constraint
     this.words = (size + 63) >>> 6;
     this.queueIndex = 4;
     Set<Var> scope = new LinkedHashSet<>(Arrays.asList(arcs));
-    int roles = size;
     for (int i = 0; i < size; i++) {
       if (in[i] != null) {
         scope.add(in[i]);
-        roles++;
       }
       if (out[i] != null) {
         scope.add(out[i]);
-        roles++;
       }
     }
     if (cost != null) {
       scope.add(cost);
-      roles++;
     }
-    this.shared = scope.size() < roles;
     setScope(scope);
   }
 
@@ -689,7 +683,7 @@ public class SequenceMdd extends Constraint
     do {
       changed = false;
       propagate(store);
-    } while (shared && changed);
+    } while (changed);
     backoff = pruned ? 0 : Math.min(2 * backoff + 1, MAX_SKIP);
     skip = backoff;
   }

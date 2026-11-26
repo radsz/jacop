@@ -218,7 +218,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
     while (vals.hasMoreElements()) {
       int sid = vals.nextElement();
       Shape shape = geost.getShape(sid);
-      if (!shape.holes().isEmpty()) {
+      if (!shape.holesFromBoundingBox().isEmpty()) {
         holesExistRef[0] = true;
       }
       Dbox shapeBoundingBox = shape.boundingBox();
@@ -265,13 +265,21 @@ public class ObstacleObjectFrame extends InternalConstraint {
 
   private void updateFrameWithHoles(Dbox domain) {
     clearFrame();
-    updateExtendedHoles();
+    // the frame is computed at a scale of 4 from the origin of the domain: 4 times a coordinate
+    // near IntDomain.MIN_INT or MAX_INT, or a shape far from the origin, leaves the integers
+    int[] base = Arrays.copyOf(domain.origin, obstacle.dimension);
+    updateExtendedHoles(base);
     for (int i = 0; i < obstacle.dimension; i++) {
-      domain.origin[i] = domain.origin[i] * 4 - 1;
+      domain.origin[i] = -1;
       domain.length[i] = domain.length[i] * 4 + 2;
     }
     domain.subtractAll(extendedHoles, frame);
     rescaleFramePieces();
+    for (Dbox piece : frame) {
+      for (int i = 0; i < obstacle.dimension; i++) {
+        piece.origin[i] += base[i];
+      }
+    }
     for (Dbox b : extendedHoles) {
       Dbox.dispatchBox(b);
     }
@@ -305,7 +313,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
     }
   }
 
-  private void updateExtendedHoles() {
+  private void updateExtendedHoles(int[] base) {
 
     /*
      * This can be further improved by updating the extended the holes in the only
@@ -319,7 +327,8 @@ public class ObstacleObjectFrame extends InternalConstraint {
 
       Shape shape = geost.getShape(sid);
 
-      for (Dbox hole : shape.holes()) {
+      Dbox shapeBoundingBox = shape.boundingBox();
+      for (Dbox hole : shape.holesFromBoundingBox()) {
         // define coverable domain
         Dbox extendedHole = Dbox.newBox(obstacle.dimension);
         int[] holeDomOrigin = extendedHole.origin;
@@ -328,8 +337,10 @@ public class ObstacleObjectFrame extends InternalConstraint {
         // preserve scaling by 4
         for (int i = 0; i < obstacle.dimension; i++) {
           IntVar coordVar = obstacle.coords[i];
-          holeDomOrigin[i] = 4 * coordVar.min() + hole.origin[i];
-          holeDomSize[i] = 4 * coordVar.max() + hole.length[i] - 4 * coordVar.min();
+          holeDomOrigin[i] =
+              (int) (4 * ((long) coordVar.min() + shapeBoundingBox.origin[i] - base[i]))
+                  + hole.origin[i];
+          holeDomSize[i] = 4 * (coordVar.max() - coordVar.min()) + hole.length[i];
         }
 
         extendedHoles.add(extendedHole);

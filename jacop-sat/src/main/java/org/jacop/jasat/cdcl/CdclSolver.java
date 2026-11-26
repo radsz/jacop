@@ -635,6 +635,12 @@ public final class CdclSolver {
    */
   public int peakDecisionLevel;
 
+  /**
+   * Statistics: the most decisions of the search on the trail at once, the levels of the
+   * assumptions left out, so that it never exceeds {@link #decisions}.
+   */
+  public int peakSearchDepth;
+
   /** Number of learnt clause database reductions so far. */
   public long reductions;
 
@@ -3466,6 +3472,9 @@ public final class CdclSolver {
         external.notifyTopDecision(toDimacs(next));
       }
       newSearchLevel();
+      if (decisionLevel - assumptionLevels > peakSearchDepth) {
+        peakSearchDepth = decisionLevel - assumptionLevels;
+      }
       assign(next, NO_REASON);
     }
   }

@@ -587,17 +587,14 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   }
 
   /**
-   * Checks entailment of a relation. Under a wrapper the tree may be stale (see {@link
-   * #resyncWhenReified()}), so the bounds of the weighted sum are computed from the domains.
+   * Checks entailment of a relation. The bounds of the weighted sum are computed from the domains:
+   * under a wrapper the tree may be stale (see {@link #resyncWhenReified()}), and the lookahead
+   * bounds of a node are not updated when its pruned bounds do not tighten.
    *
    * @param rel the relation type to check entailment for.
    * @return whether the relation holds for all values in the domains.
    */
   private boolean checkReifiedEntailment(byte rel) {
-
-    if (!reified()) {
-      return entailed(rel);
-    }
 
     if (rel == LT || rel == GT || rel == NE) {
       Integer comparison = compareWhenGround();
@@ -610,16 +607,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
       }
     }
 
-    double lb = 0;
-    double ub = 0;
-    for (int i = 0; i < list.length; i++) {
-      FloatDomain term =
-          FloatDomain.mulBounds(list[i].min(), list[i].max(), weights[i], weights[i]);
-      FloatDomain total = FloatDomain.addBounds(lb, ub, term.min(), term.max());
-      lb = total.min();
-      ub = total.max();
-    }
-    return entailed(rel, lb, ub);
+    return entailed(rel);
   }
 
   @Override
@@ -632,10 +620,23 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     return checkReifiedEntailment(NEG_REL[relationType]);
   }
 
+  /**
+   * Whether the relation holds over the bounds of the weighted sum, computed from the domains with
+   * outward rounding. The lookahead bounds of the tree are not used: a node keeps them only when
+   * its pruned bounds tighten, so they can lag behind the domains.
+   */
   private boolean entailed(byte rel) {
 
-    BoundsVarValue b = (BoundsVarValue) linearTree.root.bound.value();
-    return entailed(rel, b.lb, b.ub);
+    double lb = 0;
+    double ub = 0;
+    for (int i = 0; i < list.length; i++) {
+      FloatDomain term =
+          FloatDomain.mulBounds(list[i].min(), list[i].max(), weights[i], weights[i]);
+      FloatDomain total = FloatDomain.addBounds(lb, ub, term.min(), term.max());
+      lb = total.min();
+      ub = total.max();
+    }
+    return entailed(rel, lb, ub);
   }
 
   private boolean entailed(byte rel, double lb, double ub) {

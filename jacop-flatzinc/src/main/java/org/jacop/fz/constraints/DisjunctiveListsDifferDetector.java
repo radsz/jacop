@@ -255,10 +255,11 @@ public class DisjunctiveListsDifferDetector implements ParserTreeConstants {
     }
   }
 
-  // x and y when the linear constraint is a * x - a * y (!=) 0
+  // x and y when the linear constraint is a * x - a * y (!=) 0; -a[1] is taken in long, since
+  // -Integer.MIN_VALUE wraps to itself and [MIN_VALUE, MIN_VALUE] weighs x + y
   private IntVar[] linearDifference(ASTConstElem node) {
     int[] a = support.getIntArray(child(node, 0));
-    if (a == null || a.length != 2 || a[0] == 0 || a[0] != -a[1]) {
+    if (a == null || a.length != 2 || a[0] == 0 || a[0] != -(long) a[1]) {
       return null;
     }
     IntVar[] x = support.getVarArray(child(node, 1));

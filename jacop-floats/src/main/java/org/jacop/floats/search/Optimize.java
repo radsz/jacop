@@ -143,10 +143,20 @@ public class Optimize<T extends Var> {
       log.info("% Checking interval " + f);
     }
 
+    // the choice goes in a level of its own, so that the other branch can take it back: imposed
+    // next to it, its negation failed at once and the costs above the choice were never searched
+    int level = store.level;
+    store.setLevel(level + 1);
     store.impose(choice);
     boolean result = minimize();
 
-    if (!result) {
+    if (result) {
+      // the level the search left open, then the level of the choice
+      store.removeLevel(store.level);
+      store.setLevel(store.level - 1);
+    } else {
+      store.removeLevel(level + 1);
+      store.setLevel(level);
       if (printInfo) {
         log.info("% No solution");
         FloatInterval f = new FloatInterval(FloatDomain.next(((PlteqC) choice).c), cost.max());

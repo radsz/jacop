@@ -90,6 +90,12 @@ public class PneqQ extends AbstractPeqQ implements Copyable<PneqQ> {
   }
 
   @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    // notConsistency intersects the domains of p and q, on any change of either
+    return IntDomain.ANY;
+  }
+
+  @Override
   public String toString() {
     return id() + " : PneqQ(" + p + ", " + q + " )";
   }

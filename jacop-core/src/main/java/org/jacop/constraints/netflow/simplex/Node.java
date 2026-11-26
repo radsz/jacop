@@ -50,7 +50,7 @@ public final class Node {
   public final Arc[] adjacencyList;
 
   /** The potential (or dual variable) of the network simplex. */
-  public int potential;
+  public long potential;
 
   /** Balance of the last feasible flow. */
   public int balance;

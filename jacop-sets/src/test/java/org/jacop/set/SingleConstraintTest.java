@@ -43,6 +43,7 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.In;
+import org.jacop.constraints.Not;
 import org.jacop.constraints.Reified;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -55,6 +56,9 @@ import org.jacop.lcg.EntryList;
 import org.jacop.set.SetImposeGroundingHarness.Case;
 import org.jacop.set.SetImposeGroundingHarness.Spec;
 import org.jacop.set.constraints.AdiffBeqC;
+import org.jacop.set.constraints.AdisjointB;
+import org.jacop.set.constraints.AeqS;
+import org.jacop.set.constraints.AinB;
 import org.jacop.set.constraints.AintersectBeqC;
 import org.jacop.set.constraints.AleB;
 import org.jacop.set.constraints.AllDisjoint;
@@ -71,6 +75,7 @@ import org.jacop.set.constraints.Match;
 import org.jacop.set.constraints.PartitionSet;
 import org.jacop.set.constraints.SetMirror;
 import org.jacop.set.constraints.SumWeightedSet;
+import org.jacop.set.constraints.XeqA;
 import org.jacop.set.constraints.XinA;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetDomain;
@@ -1323,5 +1328,129 @@ class SingleConstraintTest {
       assertThat(store.consistency()).isTrue();
       assertThat(calls[0]).as("event " + event).isGreaterThan(before);
     }
+  }
+
+  private static SetVar setVar(Store store, String name, int[] glb, int[] lub) {
+    return new SetVar(store, name, new BoundSetDomain(dom(glb), dom(lub)));
+  }
+
+  private static void propagateAtNextLevel(Store store, Runnable decision) {
+    store.setLevel(store.level + 1);
+    decision.run();
+    assertThat(store.consistency()).isTrue();
+  }
+
+  /** XeqA: the element of the glb of a is the value of x, as a fresh store finds. */
+  @Test
+  void xeqAFixesXToTheElementOfTheGlb() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", dom(1, 2, 4));
+    SetVar a = setVar(store, "a", new int[] {2}, new int[] {1, 2});
+    store.impose(new XeqA(x, a));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.singleton(2)).isTrue();
+    assertThat(a.domain.singleton(dom(2))).isTrue();
+  }
+
+  /**
+   * Not(XinA): x loses the elements of the glb of a, and then the value it is left with is out of
+   * a.
+   */
+  @Test
+  void notXinARemovesTheLastValueOfXFromA() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", dom(1, 5));
+    SetVar a = setVar(store, "a", new int[] {5}, new int[] {1, 5});
+    store.impose(new Not(new XinA(x, a)));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.singleton(1)).isTrue();
+    assertThat(a.domain.singleton(dom(5))).isTrue();
+  }
+
+  /**
+   * Reified(AltB) with b = 0 (rewritten to the negation) is woken by a change of the glb: 1 in a
+   * leaves b no value but the empty set before a.
+   */
+  @Test
+  void reifiedAltBIsWokenByGlbEventsWhenFalse() {
+    Store store = new Store();
+    SetVar a = setVar(store, "a", new int[] {}, new int[] {1, 4});
+    SetVar b = setVar(store, "b", new int[] {}, new int[] {4});
+    IntVar r = new IntVar(store, "r", 0, 1);
+    store.impose(new Reified(new AltB(a, b), r));
+    assertThat(store.consistency()).isTrue();
+    propagateAtNextLevel(store, () -> r.domain.in(store.level, r, 0, 0));
+    propagateAtNextLevel(store, () -> a.domain.inGlb(store.level, a, 1));
+    assertThat(b.domain.singleton(dom())).isTrue();
+  }
+
+  /** Reified(AeqS) with b = 0 is woken by a change of the lub before a is ground. */
+  @Test
+  void reifiedAeqSIsWokenByLubEventsWhenFalse() {
+    Store store = new Store();
+    SetVar a = setVar(store, "a", new int[] {}, new int[] {1, 5});
+    IntVar r = new IntVar(store, "r", 0, 1);
+    store.impose(new Reified(new AeqS(a, dom(5)), r));
+    assertThat(store.consistency()).isTrue();
+    propagateAtNextLevel(store, () -> r.domain.in(store.level, r, 0, 0));
+    propagateAtNextLevel(store, () -> a.domain.inLubComplement(store.level, a, 1));
+    assertThat(a.domain.singleton(dom())).isTrue();
+  }
+
+  /** SumWeightedSet prunes a again once the bounds of the total weight have narrowed. */
+  @Test
+  void sumWeightedSetPrunesAgainAfterNarrowingTheTotal() {
+    Store store = new Store();
+    SetVar a = setVar(store, "a", new int[] {}, new int[] {-1, 0});
+    IntVar total = new IntVar(store, "total", dom(0, 7, 9, 10));
+    store.impose(new SumWeightedSet(a, new int[] {0, 3}, new int[] {3, 1}, total));
+    assertThat(store.consistency()).isTrue();
+    assertThat(total.singleton(0)).isTrue();
+    assertThat(a.domain.singleton(dom())).isTrue();
+  }
+
+  /** AinB: a cardinality that fixes b prunes the lub of a again. */
+  @Test
+  void ainBPrunesAgainWhenTheCardinalityFixesB() {
+    Store store = new Store();
+    SetVar a = setVar(store, "a", new int[] {}, new int[] {1, 2, 3, 5});
+    SetVar b = setVar(store, "b", new int[] {3}, new int[] {2, 3, 5});
+    store.impose(new AinB(a, b));
+    assertThat(store.consistency()).isTrue();
+    propagateAtNextLevel(store, () -> b.domain.inCardinality(store.level, b, 0, 2));
+    propagateAtNextLevel(store, () -> a.domain.inGlb(store.level, a, 2));
+    assertThat(b.domain.singleton(dom(2, 3))).isTrue();
+    assertThat(a.domain.lub().contains(5)).isFalse();
+  }
+
+  /** AdisjointB: a cardinality that fixes b prunes a again. */
+  @Test
+  void adisjointBPrunesAgainWhenTheCardinalityFixesB() {
+    Store store = new Store();
+    SetVar a = setVar(store, "a", new int[] {}, new int[] {1, 5});
+    SetVar b = setVar(store, "b", new int[] {}, new int[] {1, 4, 5});
+    store.impose(new AdisjointB(a, b));
+    assertThat(store.consistency()).isTrue();
+    propagateAtNextLevel(store, () -> b.domain.inCardinality(store.level, b, 2, 3));
+    propagateAtNextLevel(store, () -> a.domain.inGlb(store.level, a, 1));
+    assertThat(b.domain.singleton(dom(4, 5))).isTrue();
+    assertThat(a.domain.singleton(dom(1))).isTrue();
+  }
+
+  /** ElementSetVariable: a value fixed by its cardinality excludes more positions of the index. */
+  @Test
+  void elementSetVariablePrunesTheIndexAgainAfterFixingTheValue() {
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", dom(2, 4));
+    SetVar[] list = {
+      setVar(store, "s1", new int[] {3}, new int[] {3}),
+      setVar(store, "s2", new int[] {}, new int[] {}),
+      setVar(store, "s3", new int[] {}, new int[] {})
+    };
+    SetVar value = new SetVar(store, "value", new BoundSetDomain(dom(), dom(1, 2, 3), dom(1, 3)));
+    store.impose(new ElementSetVariable(index, list, value, 1));
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.domain.singleton(dom(3))).isTrue();
+    assertThat(index.singleton(2)).isTrue();
   }
 }

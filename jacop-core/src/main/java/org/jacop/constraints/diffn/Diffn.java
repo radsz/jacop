@@ -1007,8 +1007,15 @@ public class Diffn extends Nooverlap {
                 r.getOrigin(dim),
                 new IntervalDomain(startExcluded[0], e.date() - 1));
           }
-          IntervalDomain update = new IntervalDomain(IntDomain.MIN_INT, startExcluded[0] - 1);
-          update.unionAdapt(e.date(), IntDomain.MAX_INT);
+          // the date of an end can lie one past IntDomain.MAX_INT, and a start of the excluded
+          // origins at IntDomain.MIN_INT leaves nothing below them
+          IntervalDomain update = new IntervalDomain();
+          if (startExcluded[0] > IntDomain.MIN_INT) {
+            update.unionAdapt(IntDomain.MIN_INT, startExcluded[0] - 1);
+          }
+          if (e.date() <= IntDomain.MAX_INT) {
+            update.unionAdapt(e.date(), IntDomain.MAX_INT);
+          }
           r.getOrigin(dim).domain.in(store.level, r.getOrigin(dim), update);
           if (DEBUG_NARR) {
             log.debug(DEBUG_ARROW, r.getOrigin(dim));
