@@ -13484,4 +13484,28 @@ class SingleConstraintTest extends TestHelper {
       assertThat(counts[0]).as("end %d", end).isEqualTo(counts[1]).isEqualTo(8);
     }
   }
+
+  @Test
+  void geostKeepsShapesWithHolesApartNearTheEndOfTheIntegerRange() {
+    // the frame of an object whose shape has holes was computed at 4 times its coordinates,
+    // which left the integers for boxes reaching beyond MAX_INT + 2 or below MIN_INT - 1: cells
+    // -1 and 2..4 of objects at MAX_INT - 2 and MAX_INT overlap at MAX_INT + 2, and were accepted
+    int[][][] shapes = {{{-1, 1}, {2, 3}}};
+    int top = IntDomain.MAX_INT;
+    long[] counts =
+        geostLineCounts(new int[] {top - 9, top - 9}, new int[] {top, top}, shapes, null);
+    assertThat(counts[0]).isEqualTo(counts[1]).isEqualTo(20);
+    int bottom = IntDomain.MIN_INT;
+    shapes = new int[][][] {{{-3, 3}, {0, 1}}};
+    counts =
+        geostLineCounts(
+            new int[] {bottom, bottom}, new int[] {bottom + 9, bottom + 9}, shapes, null);
+    assertThat(counts[0]).isEqualTo(counts[1]).isEqualTo(42);
+    // the holes of a shape far from the origin were computed at 4 times its offsets
+    shapes = new int[][][] {{{600_000_000, 1}, {600_000_003, 1}}};
+    counts =
+        geostLineCounts(
+            new int[] {bottom, bottom}, new int[] {bottom + 5, bottom + 5}, shapes, null);
+    assertThat(counts[0]).isEqualTo(counts[1]).isEqualTo(24);
+  }
 }
