@@ -56,6 +56,7 @@ import org.jacop.lcg.EntryList;
 import org.jacop.set.SetImposeGroundingHarness.Case;
 import org.jacop.set.SetImposeGroundingHarness.Spec;
 import org.jacop.set.constraints.AdiffBeqC;
+import org.jacop.set.constraints.AeqS;
 import org.jacop.set.constraints.AintersectBeqC;
 import org.jacop.set.constraints.AleB;
 import org.jacop.set.constraints.AllDisjoint;
@@ -1379,5 +1380,18 @@ class SingleConstraintTest {
     propagateAtNextLevel(store, () -> r.domain.in(store.level, r, 0, 0));
     propagateAtNextLevel(store, () -> a.domain.inGlb(store.level, a, 1));
     assertThat(b.domain.singleton(dom())).isTrue();
+  }
+
+  /** Reified(AeqS) with b = 0 is woken by a change of the lub before a is ground. */
+  @Test
+  void reifiedAeqSIsWokenByLubEventsWhenFalse() {
+    Store store = new Store();
+    SetVar a = setVar(store, "a", new int[] {}, new int[] {1, 5});
+    IntVar r = new IntVar(store, "r", 0, 1);
+    store.impose(new Reified(new AeqS(a, dom(5)), r));
+    assertThat(store.consistency()).isTrue();
+    propagateAtNextLevel(store, () -> r.domain.in(store.level, r, 0, 0));
+    propagateAtNextLevel(store, () -> a.domain.inLubComplement(store.level, a, 1));
+    assertThat(a.domain.singleton(dom())).isTrue();
   }
 }
