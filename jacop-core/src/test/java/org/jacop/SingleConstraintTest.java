@@ -13508,4 +13508,37 @@ class SingleConstraintTest extends TestHelper {
             new int[] {bottom, bottom}, new int[] {bottom + 5, bottom + 5}, shapes, null);
     assertThat(counts[0]).isEqualTo(counts[1]).isEqualTo(24);
   }
+
+  @Test
+  void geostKeepsAnAreaForBoxesBeyondTheEndOfTheIntegerRange() {
+    // an allowed area gave IntDomain.MIN_INT and MAX_INT as its extreme infeasible points, so it
+    // was filtered out for an object whose boxes all lie beyond MAX_INT: the box of height 2 at
+    // y + 2 left the area y < MAX_INT + 3 at y = MAX_INT
+    int top = IntDomain.MAX_INT;
+    for (int low = top - 1; low <= top; low++) {
+      Store store = new Store();
+      IntVar y = new IntVar(store, "y", low, top);
+      List<GeostObject> objects =
+          List.of(
+              new GeostObject(
+                  0,
+                  new IntVar[] {new IntVar(store, "x", 0, 0), y},
+                  new IntVar(store, 0, 0),
+                  new IntVar(store, 0, 0),
+                  new IntVar(store, 1, 1),
+                  new IntVar(store, 1, 1)));
+      Dbox area = new Dbox(new int[] {-5, top - 3}, new int[] {10, 6});
+      store.impose(
+          new Geost(
+              objects,
+              List.of(new NonOverlapping(objects, new int[] {0, 1, 2}), new InArea(area, null)),
+              List.of(new Shape(0, new int[] {0, 2}, new int[] {1, 2}))));
+      if (low == top) {
+        assertThat(store.consistency()).isFalse();
+      } else {
+        assertThat(store.consistency()).isTrue();
+        assertThat(y.dom().toString()).isEqualTo(String.valueOf(top - 1));
+      }
+    }
+  }
 }
