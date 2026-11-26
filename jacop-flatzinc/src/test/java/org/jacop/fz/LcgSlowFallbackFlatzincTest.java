@@ -335,6 +335,70 @@ class LcgSlowFallbackFlatzincTest {
     checkOptimum(out);
   }
 
+  // a partition of 13 vertices into at most 3 classes minimising the sum of pseudo-random weights
+  // of the pairs in one class, as the community-detection models of the MiniZinc Challenge, on
+  // which LCG makes conflicts
+  private static String pairCost() {
+    int n = 13;
+    StringBuilder s = new StringBuilder();
+    StringBuilder cs = new StringBuilder();
+    StringBuilder ws = new StringBuilder();
+    StringBuilder vs = new StringBuilder();
+    for (int i = 1; i <= n; i++) {
+      s.append("var 1..3: x").append(i).append(":: output_var;\n");
+    }
+    long seed = 7;
+    int lo = 0;
+    int hi = 0;
+    for (int i = 1; i <= n; i++) {
+      for (int j = i + 1; j <= n; j++) {
+        seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+        int w = (int) (seed % 201) - 100;
+        lo += Math.min(0, w);
+        hi += Math.max(0, w);
+        String b = "b" + i + "_" + j;
+        s.append("var bool: ").append(b).append(";\nvar 0..1: v").append(b).append(";\n");
+        cs.append("constraint int_eq_reif(x").append(i).append(",x").append(j).append(',');
+        cs.append(b).append(");\nconstraint bool2int(").append(b).append(",v").append(b);
+        cs.append(");\n");
+        ws.append(w).append(',');
+        vs.append('v').append(b).append(',');
+      }
+    }
+    s.append("var ").append(lo).append("..").append(hi).append(": cost:: output_var;\n");
+    s.append(cs);
+    s.append("constraint int_lin_eq([").append(ws).append("-1],[").append(vs);
+    s.append("cost],0);\nsolve minimize cost;\n");
+    return s.toString();
+  }
+
+  private static int lastCost(String out) {
+    Matcher m = Pattern.compile("cost = (-?\\d+);").matcher(out);
+    int cost = Integer.MAX_VALUE;
+    while (m.find()) {
+      cost = Integer.parseInt(m.group(1));
+    }
+    return cost;
+  }
+
+  @Test
+  void fastLcgGivesWayWhenLearningCutsLittle() throws IOException {
+    // LCG is fast enough, but every search counts as weak learning (jump below 1000, any LBD) and
+    // no window shows progress (a gain of the whole cost): it gives way at the first check with a
+    // solution, and free search without learning proves the optimum
+    String weak =
+        "lcg-slow-rate=0.001,lcg-slow-literal=0,lcg-slow-at=0.05,lcg-slow-stall=0.01,"
+            + "lcg-slow-gain=1,lcg-slow-bound-gain=1,lcg-opt-jump=1000,lcg-opt-lbd=0,maxsat=0,"
+            + "lns=0";
+    String handed = run(pairCost(), weak);
+    String kept = run(pairCost(), weak + ",lcg-opt-probe=off");
+    assertTrue(handed.contains("lcgWeak=true"), handed);
+    assertTrue(!kept.contains("lcgSlowConflicts="), kept);
+    // the optimum, which LCG alone proves in about 2 s
+    assertTrue(handed.contains("=========="), handed);
+    assertEquals(-798, lastCost(handed), handed);
+  }
+
   @Test
   void satisfactionProbeTellsWeakLearning() {
     // costas-array 17: conflicts at depth 22 jump back 1.17 levels, LBD 11

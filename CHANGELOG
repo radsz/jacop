@@ -9189,13 +9189,32 @@ Version 5.0 (unreleased)
    and Cepek, Constraints 2005). MiniZinc Challenge 2014 stochastic-fjsp
    fjsp-a1-s3 under fd: 452 after 600 s -> optimum 207 proved in 15 s.
 
+510. LCG free search (-f) of an optimisation model that is fast enough for
+   the speed check (lcg-slow-rate) now also gives way to free search
+   without learning at that check when learning cuts its tree little: its
+   conflicts jump back fewer than 1.3 levels with an LBD of at least 0.35
+   times their depth (the test of the satisfaction probe; --free-config
+   lcg-opt-jump, lcg-opt-lbd) and it stopped improving (lcg-slow-stall,
+   lcg-slow-gain). lcg-opt-probe=report only prints the test as
+   lcgOptProbe, off turns it off; -s prints lcgWeak. On the MiniZinc
+   Challenge 2017 community-detection instances, whose objective is a sum
+   of pair weights of about 10,000 kept in a window of 10 to 103 values,
+   LCG jumps back 1.05 to 1.3 levels and free search without learning
+   makes about 100 times its nodes per second: at 600 s, two runs each,
+   Sampson.s10.k3 is proved in 65 and 68 s (base: 111 s and not proved),
+   mexican.s26.k4 ends at 48 instead of 42, dolphin.s62.k3 at 67 and 71
+   instead of 45 and 65, Strike.s2.k8 and s6.k5 are unchanged. The test
+   holds on 3 of the 187 optimisation instances of the wide set, and the
+   wide-quick set at 240 s gives way on none.
+
 513. Free search does not drop the runs of the default search of a
    satisfaction model without a search annotation after 50,000 conflicts
-   (510): the drop was measured on annotated models and on optimisation
-   models only. On XCSP CSPs, which have no annotation, it lost
-   PegSolitaireTable-english-3-3-0 (2025, solved in 20 s before, unsolved
-   at 30 s) and SportsScheduling-dummy-14 (2022, 71 s before, unsolved at
-   90 s) in the default mode.
+   (510, the annotation drop): the drop was measured on annotated models
+   and on optimisation models only. On XCSP CSPs, which have no
+   annotation, it lost three instances in the default mode, which are
+   back at 90 s: SportsScheduling-dummy-14 (2022, unsolved -> 47-87 s),
+   PegSolitaireTable-english-3-3-0 (2025, 32 -> 18.5 s) and
+   Primes-20-40-3-5 (2023, unsolved -> 52 s).
 
 Version 4.11
 =============
