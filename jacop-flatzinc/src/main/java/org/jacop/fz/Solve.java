@@ -1005,8 +1005,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   /**
    * Posts the cost network bound when its root bound is above the bound the objective already has
-   * at the root (from the linear relaxation, for example), or always with
-   * -Dorg.jacop.cfn.gate=false.
+   * at the root (from the linear relaxation, for example) and the network has at most
+   * -Dorg.jacop.cfn.maxTerms cost terms (default 500), or always with -Dorg.jacop.cfn.gate=false. A
+   * reason of the bound cites the domains of the whole network, so on large networks (frequency
+   * assignment with thousands of terms) explanations grow twentyfold while the bound stays far
+   * below the optimum.
    */
   private void imposeCostNetworkBound() {
     CostNetworkBound b = costNetworkBound;
@@ -1017,7 +1020,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     long before = b.maximize() ? -(long) z.max() : z.min();
     b.prepare(store);
     if (!Boolean.parseBoolean(System.getProperty("org.jacop.cfn.gate", "true"))
-        || b.rootBound > before) {
+        || b.rootBound > before
+            && costNetworkDetector.terms <= Integer.getInteger("org.jacop.cfn.maxTerms", 500)) {
       store.impose(b);
       costNetworkPosted = true;
     }
@@ -3584,7 +3588,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // solution in 300 s on some seeds and are solved in 28 to 125 s; 28 instances where no
       // solution comes early, 240 s, two seeds: solved 25 -> 29, total time 8,486 -> 7,416 s.
       // Not for satisfaction under the default search of a model without an annotation (CHANGELOG
-      // 513), which none of the 28 was: the XCSP CSPs PegSolitaireTable-english-3-3-0 and
+      // 515), which none of the 28 was: the XCSP CSPs PegSolitaireTable-english-3-3-0 and
       // SportsScheduling-dummy-14, solved in 20 and 71 s with its turns, were unsolved in 30 and
       // 90 s without them
       lcg.setAnnotationDrop(

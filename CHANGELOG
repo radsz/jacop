@@ -9189,7 +9189,36 @@ Version 5.0 (unreleased)
    and Cepek, Constraints 2005). MiniZinc Challenge 2014 stochastic-fjsp
    fjsp-a1-s3 under fd: 452 after 600 s -> optimum 207 proved in 15 s.
 
-510. LCG free search (-f) of an optimisation model that is fast enough for
+510. CostNetworkBound (entry 320) is on by default. The FlatZinc front end
+   builds the cost function network of an objective that sums unary and
+   binary cost tables (weighted CSP: protein design, frequency assignment)
+   and posts the bound when its root bound is above the bound the objective
+   has after the linear relaxation and the network has at most 500 cost
+   terms (-Dorg.jacop.cfn.maxTerms): a reason of the bound cites the whole
+   network, and on the CELAR networks of 1034 to 3417 terms explanations
+   grew from 8 to 144 atoms for a bound below 1 % of the optimum, so
+   solutions got worse. MiniZinc Challenge 2018 proteindesign12
+   1HZ5.12p.9aa.usingEref_self_x is proved in 12 s instead of more than
+   600 s (8 s instead of 477 s under -f). On the 46 celar, spot5 and
+   proteindesign12 instances where a network is built, at 600 s: default
+   search 9 -> 18 proved (proteindesign12 4 -> 13 of 15, 0.07 of the time
+   where both prove), -f 31 -> 36 (proteindesign12 9 -> 13, 0.18 of the
+   time); spot5 unchanged, celar within its seed spread. On the wide set 48 of
+   187 optimisation instances build a network (4.5 s of detection in all,
+   at most 0.5 s on one); the bound is posted only on proteindesign12.
+   -Dorg.jacop.fz.costNetwork=false turns it off.
+
+511. The FlatZinc front end removes int_ne and int_lin_ne constraints that
+   the declared domains already satisfy (disjoint domains, a fixed side
+   outside the other domain, a constant outside the range of the sum)
+   before the detectors run, and IntensionTableDetector looks output
+   variables up in a set. gfd-schedule n180f7d50m30k18 drops 15,040 of
+   its 15,041 disequalities and its set-up takes 3.7 s instead of 4.4 s;
+   on the 20 gfd-schedule Challenge instances and 2 cryptanalysis ones
+   free search totals -19 % at 600 s, fixed search the same. -Dorg.jacop.fz.entailedDisequalities=false
+   keeps them.
+
+512. LCG free search (-f) of an optimisation model that is fast enough for
    the speed check (lcg-slow-rate) now also gives way to free search
    without learning at that check when learning cuts its tree little: its
    conflicts jump back fewer than 1.3 levels with an LBD of at least 0.35
@@ -9207,7 +9236,41 @@ Version 5.0 (unreleased)
    holds on 3 of the 187 optimisation instances of the wide set, and the
    wide-quick set at 240 s gives way on none.
 
-513. Free search does not drop the runs of the default search of a
+513. Opt-in variable-bound MIR of the Gomory rows of the linear relaxation
+   (-Dorg.jacop.lp.vbGomory=true). The exact slack Gomory separator, which
+   aggregates the rows by an integer scaling of a row of the basis inverse
+   with the row slacks as integer columns, also builds the complemented MIR
+   of that aggregation with the variable bounds x <= a u and x >= a u
+   substituted (H. Marchand and L. A. Wolsey, Aggregation and mixed integer
+   rounding to solve MIPs, Operations Research 49(3), 2001; R. E. Gomory,
+   An algorithm for integer solutions to linear programs, 1963), and
+   substitutes the slacks back by their rows. It counts in lpVbCuts. The
+   relative progress a cut round must make to go on is now a property,
+   -Dorg.jacop.lp.cutProgress (default 0.01). On MiniZinc Challenge 2023
+   unit-commitment L10 the root cut bound goes from 1,698,000 to 1,699,000
+   (1,700,500 with cutProgress 0.0005, cutRoundsMax 100 and
+   cutExtraSeconds 20; the HiGHS root reaches 1,702,500). 600 s bounds with
+   clauseRows and vbMir on in both: L10 1,696,315 -> 1,697,495 (-f) and
+   1,695,410 -> 1,696,915 (default), L12 1,419,720 -> 1,433,245 (-f) and
+   1,418,835 -> 1,434,205 (default). On the 41 instances whose relaxation
+   the flags of 503 change, 600 s: -f 26 -> 27 solved (physician-scheduling
+   instance10-duplicated_0.23 proved in 332 s), total time 0.960; default
+   the same 26 solved, total 0.998.
+
+514. Opt-in -Dorg.jacop.lp.columnRows=true: when the linear relaxation has
+   more rows than its share, every further row over columns already in the
+   relaxation goes to the tail of rows the sparse simplex tries last, not
+   only the clause rows of 503. MiniZinc Challenge 2017 routing-flexible
+   drops the reified leg-length and direction rows of the path: GCM_0005
+   root bound 10,509 -> 46,529 (cut bound 50,926; optimum 76,514), GCM_0006
+   9,628 -> 66,473 proved in 91 s at 600 s (default; base no proof), 59 ->
+   20 s under -f. 2024 cable-tree-wiring A041 default bound 375,450 ->
+   630,395. 2023 unit-commitment L12 bound 1,328,295 -> 1,303,645 (default)
+   and 1,348,290 -> 1,321,165 (-f). On the 39 instances whose relaxation it
+   changes, 600 s: default one more solved (GCM_0006), total time 0.949;
+   -f the same solved, total time 0.968.
+
+515. Free search does not drop the runs of the default search of a
    satisfaction model without a search annotation after 50,000 conflicts
    (510, the annotation drop): the drop was measured on annotated models
    and on optimisation models only. On XCSP CSPs, which have no

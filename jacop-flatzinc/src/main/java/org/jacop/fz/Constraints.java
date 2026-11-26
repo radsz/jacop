@@ -75,6 +75,7 @@ import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
 import org.jacop.fz.constraints.DisjunctiveListsDifferDetector;
 import org.jacop.fz.constraints.ElementTableDetector;
 import org.jacop.fz.constraints.EnforcementInliner;
+import org.jacop.fz.constraints.EntailedDisequalities;
 import org.jacop.fz.constraints.ExactCoverDetector;
 import org.jacop.fz.constraints.GiantTourDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
@@ -171,6 +172,24 @@ public class Constraints implements ParserTreeConstants {
   void setOptions(Options options) {
     support.options = options;
     debug = options.debug();
+  }
+
+  /**
+   * Removes the disequalities that the declared domains already satisfy, before {@link
+   * #generateAllConstraints} and its detectors scan them; see {@link EntailedDisequalities}.
+   *
+   * @param astTree the model
+   */
+  void removeEntailedDisequalities(SimpleNode astTree) {
+    // with clamped domains a disequality true over the clamped domain need not be true over the
+    // declared one
+    if (!EntailedDisequalities.enabled() || dictionary.domainsClamped()) {
+      return;
+    }
+    int entailed = new EntailedDisequalities(support).remove(astTree);
+    if (support.options.debug() && entailed > 0) {
+      FzConsole.println("% " + entailed + " disequalities true by the domains removed");
+    }
   }
 
   void generateAllConstraints(SimpleNode astTree) throws Throwable {
@@ -589,7 +608,7 @@ public class Constraints implements ParserTreeConstants {
       // Solve imposes once the objective is known; it reads the model as it is
       if (CostNetworkDetector.enabled() && options.proof() == null) {
         CostNetworkDetector costNetwork = new CostNetworkDetector(support);
-        costNetwork.collect(astTree);
+        costNetwork.collect(astTree, replaced);
         dictionary.costNetwork = costNetwork;
       }
 
