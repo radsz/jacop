@@ -9267,4 +9267,23 @@ class FlatzincFrontEndTest {
     assertEquals(2150, out.split("----------\n", -1).length - 1, out);
   }
 
+  @Test
+  void alldifferentDifferencesReadNoSumOfMinValueWeightsAsADifference() throws IOException {
+    // -2147483648 * (x0 + x1) + t = 0 says t = 2^31 * (x0 + x1), so x0 + x1 = 0 and t = 0; read
+    // as t = 2^31 * (x0 - x1), x0 != x1 of the all-different removed t = 0: no solution of 24
+    StringBuilder model = new StringBuilder();
+    for (int i = 0; i < 5; i++) {
+      model.append("var -2..2: x").append(i).append(" :: output_var;\n");
+    }
+    model.append("var -3..3: t :: output_var;\n");
+    for (int i = 0; i < 5; i++) {
+      for (int j = i + 1; j < 5; j++) {
+        model.append("constraint int_ne(x").append(i).append(",x").append(j).append(");\n");
+      }
+    }
+    model.append("constraint int_lin_eq([-2147483648,-2147483648,1],[x0,x1,t],0);\n");
+    model.append("solve satisfy;\n");
+    String out = run(model.toString(), "-a", "--lcg", "off")[0];
+    assertEquals(24, out.split("----------\n", -1).length - 1, out);
+  }
 }
