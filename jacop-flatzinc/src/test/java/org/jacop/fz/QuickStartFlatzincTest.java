@@ -146,7 +146,7 @@ class QuickStartFlatzincTest {
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     PrintStream originalOut = System.out;
     String[] args = {"-f", "--lcg", "on", "-a", "-s", "-t", "20000", fzn.toString()};
-    // the build sets org.jacop.fz.quickStartWork to 0 for every test (pom.xml): restore it after
+    // the quick start is off by default: restore the property afterwards
     String previous = System.setProperty("org.jacop.fz.quickStartWork", Long.toString(work));
     try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8)) {
       System.setOut(capture);

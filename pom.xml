@@ -1767,10 +1767,6 @@ setup to run configuration. -->
                              optimal solutions is printed last, depends on the machine
                              (fair_split_into_3_groups); LpProbeFlatzincTest sets its own -->
                         <org.jacop.fz.lpProbe>0</org.jacop.fz.lpProbe>
-                        <!-- the quick start of free search on small models solves most test models
-                             before the parts of free search that the tests are about;
-                             QuickStartFlatzincTest sets its own -->
-                        <org.jacop.fz.quickStartWork>0</org.jacop.fz.quickStartWork>
                     </systemPropertyVariables>
                     <!-- same stack size as fzn-jacop: deep searches recurse once per decision;
                          Mockito's inline mock maker is loaded as an agent at start up, since the

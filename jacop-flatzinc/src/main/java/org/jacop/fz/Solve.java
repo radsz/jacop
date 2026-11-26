@@ -8585,8 +8585,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // -Dorg.jacop.fz.quickStartWork=n: under free search, a small model is first searched for this
   // much work of the SAT solver (propagated literals and the propagators' work) by a plain LCG
   // solver of its own, without the set-up of free search (local search, root probing, hints, the
-  // core-guided phase); 0 is off. -Dorg.jacop.fz.quickStart=ms caps its time
-  private final long quickStartWork = Long.getLong("org.jacop.fz.quickStartWork", 2_000_000);
+  // core-guided phase); 0 is off (the default). -Dorg.jacop.fz.quickStart=ms caps its time. With
+  // 2,000,000 and 1,000 ms, on 397 MiniZinc Challenge instances that -f solves in under 5 s (JVM
+  // with AOT cache), the 114 that it finished took 147 s instead of 190 s, the 88 it did not finish
+  // 363 s instead of 275 s, and the set 1,575 s instead of 1,476 s, while 55 instead of 51 runs
+  // ended under 1 s and 167 instead of 150 under 2 s (osolpro benchmarks/quick-start); zephyrus of
+  // the MiniZinc Challenge 2019 takes 0.65-0.80 s instead of 0.84-1.46 s
+  private final long quickStartWork = Long.getLong("org.jacop.fz.quickStartWork", 0);
 
   private final long quickStartMs = Long.getLong("org.jacop.fz.quickStart", 1_000);
 
@@ -8735,6 +8740,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     quick.detach();
     store.removeLevel(level + 1);
     store.setLevel(level);
+    for (LinearRelaxation r : relaxations) {
+      // woken again, as resumeRelaxation does: a relaxation not solved yet takes the level of its
+      // first solve as its root, which must be the root of the search, not a node of it (it pruned
+      // the optimum there: QuickStartFlatzincTest)
+      store.addChanged(r);
+    }
     // the work of the solvers counts the store's consistency calls
     store.numberConsistencyCalls = calls;
     numberSolutions = solutions;
