@@ -3592,11 +3592,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           Integer.parseInt(options.freeConfig("lcg-literal-runs", "1")),
           Integer.parseInt(options.freeConfig("lcg-literal-runs-solved", "6")));
       // no solution after 50,000 conflicts: the turns of the annotation give way to the literals
-      // and
-      // activity branching (CHANGELOG 507). amaze2 2012-07-04, 06-29 and 03-08 found no solution in
-      // 300 s on some seeds and are solved in 28 to 125 s; 28 instances where no solution comes
-      // early, 240 s, two seeds: solved 25 -> 29, total time 8,486 -> 7,416 s
-      lcg.setAnnotationDrop(Long.parseLong(options.freeConfig("lcg-annotation-drop", "50000")));
+      // and activity branching (CHANGELOG 510). amaze2 2012-07-04, 06-29 and 03-08 found no
+      // solution in 300 s on some seeds and are solved in 28 to 125 s; 28 instances where no
+      // solution comes early, 240 s, two seeds: solved 25 -> 29, total time 8,486 -> 7,416 s.
+      // Not for satisfaction under the default search of a model without an annotation (jacop
+      // #942), which none of the 28 was: the XCSP CSPs PegSolitaireTable-english-3-3-0 and
+      // SportsScheduling-dummy-14, solved in 20 and 71 s with its turns, were unsolved in 30 and
+      // 90 s without them
+      lcg.setAnnotationDrop(
+          annotatedSearch == null && costVar == null
+              ? 0
+              : Long.parseLong(options.freeConfig("lcg-annotation-drop", "50000")));
       if (!LcgSolver.CHAIN_LIMIT_SET) {
         // short bound-literal chains (CHANGELOG 311): multi-agent-graph-coverage proofs about 2x
         // faster, two paired 600 s rounds 6/0 and 4/2 families better/worse with one more proof;
