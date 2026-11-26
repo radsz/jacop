@@ -716,4 +716,17 @@ class XcspReaderTest {
     String out = competitionOutput(xml);
     assertTrue(out.contains("s UNSATISFIABLE"), out);
   }
+
+  /**
+   * The power of a base that can only be 0 is 1 when the exponent is 0: the result was given the
+   * domain 0..0, so the instance was unsatisfiable.
+   */
+  @Test
+  void powerOfZeroToTheZeroIsOne() throws IOException {
+    String xml =
+        "<instance format=\"XCSP3\" type=\"CSP\"><variables><var id=\"x\"> 0 1 3 </var></variables>"
+            + "<constraints><intension> eq(pow(0,x),1) </intension></constraints></instance>";
+    String out = competitionOutput(xml);
+    assertTrue(out.contains("s SATISFIABLE") && out.contains("<values> 0 </values>"), out);
+  }
 }
