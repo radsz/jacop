@@ -851,6 +851,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       dictionary.costNetwork = null;
     }
 
+    if (ObjectiveBlockBound.on() && opt.proof() == null) {
+      objectiveBlockBound(node);
+    }
+
     if (opt.lp()) {
       imposeLinearRelaxation(node);
     }
@@ -908,15 +912,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (k == 0 || !(kind.jjtGetChild(0) instanceof ASTSolveExpr expr) || !store.consistency()) {
       return;
     }
-    IntVar objective =
-        switch (expr.getType()) {
-          case 0 -> dictionary.getVariable(expr.getIdent());
-          case 1 -> {
-            IntVar[] a = dictionary.getVariableArray(expr.getIdent());
-            yield a == null ? null : a[expr.getIndex()];
-          }
-          default -> null;
-        };
+    IntVar objective = objectiveVariable(expr);
     if (objective == null) {
       return;
     }
@@ -937,6 +933,36 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   // what the decomposition bound did, for the statistics
   private DecompositionBound.Outcome decomposition;
+
+  // what the objective block bounds did, for the statistics
+  private ObjectiveBlockBound.Outcome blockBound;
+
+  /**
+   * Bounds the parts of a linear objective that belong to loosely coupled blocks of the model by
+   * their least costs, see {@link ObjectiveBlockBound}.
+   *
+   * @param node the solve item.
+   */
+  private void objectiveBlockBound(ASTSolveItem node) {
+    if (!(node.jjtGetChild(node.jjtGetNumChildren() - 1) instanceof ASTSolveKind kind)) {
+      return;
+    }
+    int k = getKind(kind.getKind());
+    if (k == 0 || !(kind.jjtGetChild(0) instanceof ASTSolveExpr expr) || !store.consistency()) {
+      return;
+    }
+    IntVar objective = objectiveVariable(expr);
+    if (objective == null) {
+      return;
+    }
+    List<Var> order = new ArrayList<>();
+    for (int i = 0; i < node.jjtGetNumChildren() - 1; i++) {
+      annotationVariables((SimpleNode) node.jjtGetChild(i), order);
+    }
+    blockBound =
+        ObjectiveBlockBound.run(
+            store, sat.collectedClauses(), objective, k == 2, order, options.getTimeOut());
+  }
 
   // the cost network bound (-Dorg.jacop.fz.costNetwork=true), for the statistics
   private CostNetworkBound costNetworkBound;
@@ -1223,6 +1249,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   /** Prints what the decomposition bound did. */
   private void printDecompositionStatistics() {
+    ObjectiveBlockBound.Outcome b = blockBound;
+    if (b != null && options.searchStatistics()) {
+      IO.println(
+          "%%%mzn-stat: blockBoundBlocks="
+              + b.blocks()
+              + "\n%%%mzn-stat: blockBoundBounded="
+              + b.bounded()
+              + "\n%%%mzn-stat: blockBoundUncopied="
+              + b.uncopied()
+              + "\n%%%mzn-stat: blockBoundRaised="
+              + b.raised()
+              + "\n%%%mzn-stat: blockBoundTime="
+              + b.millis() / 1000.0);
+    }
     DecompositionBound.Outcome o = decomposition;
     if (o == null || !options.searchStatistics()) {
       return;
