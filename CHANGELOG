@@ -9189,6 +9189,24 @@ Version 5.0 (unreleased)
    and Cepek, Constraints 2005). MiniZinc Challenge 2014 stochastic-fjsp
    fjsp-a1-s3 under fd: 452 after 600 s -> optimum 207 proved in 15 s.
 
+515. The FlatZinc front end multiplies a linear row by a variable that
+   the model multiplies with every variable of the row, and posts the
+   product row as a redundant linear constraint (FactoredRowDetector,
+   -Dorg.jacop.fz.factoredRows=false turns it off): from
+   sum(i) a[i] * x[i] <= b and z[i] = x[i] * m (int_times) with m >= 0
+   it posts sum(i) a[i] * z[i] <= b * m (an equality for an equality
+   row, reversed for m <= 0). This is the first level of the
+   reformulation-linearization technique (Sherali and Adams, SIAM J.
+   Discrete Math. 1990; Sherali and Tuncbilek, J. Global Optim. 1992)
+   over the products the model already has. In cutting stock models
+   with a pattern per stock piece it gives the linear relaxation the
+   material bound s * sum(m) >= sum(p) size[p] * demand[p]. MiniZinc
+   Challenge 2019 stack-cuttingstock under -f at 240 s: d5 and d14
+   proved in 3.4-3.5 s (none proved in 240 s before; 900-975 s in the
+   2019 replay), d7 and d8, open in the 2019 Challenge, proved optimal
+   (31, 58) in 8-10 s, d3 5.0 -> 1.1 s; hoist-benchmark PU_3_8_5 under
+   fd 125 -> 6.5 s.
+
 Version 4.11
 =============
 
