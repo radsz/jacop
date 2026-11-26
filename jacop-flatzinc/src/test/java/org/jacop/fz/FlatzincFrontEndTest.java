@@ -8807,4 +8807,19 @@ class FlatzincFrontEndTest {
       assertTrue(out.endsWith("==========\n"), out);
     }
   }
+
+  @Test
+  void stockingCostWithAPeriodBelowTheIntegersPrintsNoSolution() throws IOException {
+    // order 1 produced at -2^31 for a due date of 1 costs 2^31 + 1 > 30; due - x wrapped in int,
+    // and x2 = 1, x3 = 3, k = 0 was printed as a solution
+    String model =
+        "var 0..3: x2 :: output_var;\nvar 0..3: x3 :: output_var;\nvar 0..30: k :: output_var;\n"
+            + "constraint jacop_stocking_cost([-2147483648, x2, x3], [1, 2, 3], [1, 1, 1], k, 1);\n"
+            + "solve satisfy;\n";
+    for (String lcg : new String[] {"on", "off"}) {
+      String out = run(model, "-a", "--lcg", lcg)[0];
+      assertFalse(out.contains("----------"), out);
+      assertTrue(out.contains("=====UNKNOWN====="), out);
+    }
+  }
 }

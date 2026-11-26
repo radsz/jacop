@@ -13647,4 +13647,25 @@ class SingleConstraintTest extends TestHelper {
     counts = networkFlowCounts(new int[] {2, -2}, arcs, 2, -m - 1, m);
     assertThat(counts[0]).isEqualTo(counts[1]).isEqualTo(0);
   }
+
+  @Test
+  void stockingCostComputesTheCostOfAProducedOrderInLong() {
+    // due - x of a produced order wrapped in int for a due date near Integer.MAX_VALUE (or an x
+    // below MIN_INT, a FlatZinc constant): the cost of order 0 at -5, due at 2^31 - 1, became
+    // negative and assignments of cost 2^31 + 4 were accepted with cost 0..30
+    for (int x0 : new int[] {-5, 0, 3}) {
+      Store store = new Store();
+      IntVar[] x = {
+        new IntVar(store, "x0", x0, x0),
+        new IntVar(store, "x1", 0, 3),
+        new IntVar(store, "x2", 0, 3)
+      };
+      IntVar cost = new IntVar(store, "cost", 0, 30);
+      store.impose(
+          new StockingCost(x, new int[] {Integer.MAX_VALUE, 2, 3}, new int[] {1, 1, 1}, cost, 1));
+      assertThat(store.consistency() && noOfAllSolutions(store, x, new IntVar[] {cost}) > 0)
+          .as("x0 = %d", x0)
+          .isFalse();
+    }
+  }
 }
