@@ -377,4 +377,85 @@ class PortfolioOneParseTest {
                 .toList());
     return new String[] {Integer.toString(status), out.toString(StandardCharsets.UTF_8), err};
   }
+
+  // a Golomb ruler of 10 marks within 65: the root of its linear relaxation (a dense simplex of a
+  // few thousand pivots, then rounds of cuts) takes about a second, and no thread solves it in 1 s
+  private static String golombRuler() {
+    int marks = 10;
+    int length = 65;
+    StringBuilder vars = new StringBuilder();
+    StringBuilder constraints = new StringBuilder();
+    for (int i = 0; i < marks; i++) {
+      vars.append("var 0..").append(length).append(": g").append(i).append(" :: output_var;\n");
+    }
+    constraints.append("constraint int_eq(g0, 0);\n");
+    for (int i = 0; i + 1 < marks; i++) {
+      constraints
+          .append("constraint int_lt(g")
+          .append(i)
+          .append(", g")
+          .append(i + 1)
+          .append(");\n");
+    }
+    java.util.List<String> d = new java.util.ArrayList<>();
+    for (int i = 0; i < marks; i++) {
+      for (int j = i + 1; j < marks; j++) {
+        String v = "d" + i + "_" + j;
+        vars.append("var 1..").append(length).append(": ").append(v).append(";\n");
+        constraints.append(
+            "constraint int_lin_eq([1, -1, -1], [g" + j + ", g" + i + ", " + v + "], 0);\n");
+        d.add(v);
+      }
+    }
+    for (int a = 0; a < d.size(); a++) {
+      for (int b = a + 1; b < d.size(); b++) {
+        constraints.append("constraint int_ne(" + d.get(a) + ", " + d.get(b) + ");\n");
+      }
+    }
+    return vars + constraints.toString() + "solve minimize g" + (marks - 1) + ";\n";
+  }
+
+  @Test
+  void aThreadStillRunningPrintsNothingAfterTheRunReturns() throws Exception {
+    // the portfolio waits for its threads only until 300 ms after the time-out; a thread then
+    // still in the root of its linear relaxation printed =====UNKNOWN===== and the time-out line
+    // later, into whatever stdout was by then: in process, into the output of the next run
+    Path fzn = write(golombRuler());
+    PrintStream originalOut = System.out;
+    PrintStream originalErr = System.err;
+    // time-outs that fall at different points of the root
+    for (int timeOut = 350; timeOut <= 850; timeOut += 100) {
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      ByteArrayOutputStream after = new ByteArrayOutputStream();
+      int printed;
+      try (PrintStream o = new PrintStream(out, true, StandardCharsets.UTF_8);
+          PrintStream a = new PrintStream(after, true, StandardCharsets.UTF_8)) {
+        System.setOut(o);
+        System.setErr(o);
+        try {
+          new Fz2jacop()
+              .callMain(
+                  new String[] {
+                    "-p", "3", "--lcg", "on", "-t", Integer.toString(timeOut), fzn.toString()
+                  });
+        } finally {
+          printed = out.size();
+          // what comes next, as another run in this JVM would see it
+          System.setOut(a);
+          System.setErr(a);
+        }
+        Thread.sleep(1500);
+      } finally {
+        System.setOut(originalOut);
+        System.setErr(originalErr);
+      }
+      String text = out.toString(StandardCharsets.UTF_8);
+      assertEquals(printed, out.size(), text);
+      assertEquals("", after.toString(StandardCharsets.UTF_8), text);
+      // one answer: a solution or =====UNKNOWN=====, at the time-out
+      assertEquals(
+          1, count(text, "=====UNKNOWN=====") + Math.min(1, count(text, "----------")), text);
+      assertEquals(0, count(text, "=====UNSATISFIABLE=====") + count(text, "=========="), text);
+    }
+  }
 }

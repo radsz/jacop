@@ -11317,6 +11317,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
+   * Makes the run print no answer and no solution from now on: the portfolio this thread belongs to
+   * has returned.
+   */
+  void closeAnswer() {
+    synchronized (answerLock) {
+      answered = true;
+    }
+  }
+
+  /**
    * Prints the answer of the run (the kept solution, the status and the statistics) unless it was
    * printed already: the shutdown hook of a run with -s prints it while the search still runs, and
    * the search must then not print a second answer after it.
