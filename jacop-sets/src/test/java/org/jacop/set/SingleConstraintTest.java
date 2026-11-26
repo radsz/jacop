@@ -56,6 +56,7 @@ import org.jacop.lcg.EntryList;
 import org.jacop.set.SetImposeGroundingHarness.Case;
 import org.jacop.set.SetImposeGroundingHarness.Spec;
 import org.jacop.set.constraints.AdiffBeqC;
+import org.jacop.set.constraints.AdisjointB;
 import org.jacop.set.constraints.AeqS;
 import org.jacop.set.constraints.AinB;
 import org.jacop.set.constraints.AintersectBeqC;
@@ -1420,5 +1421,19 @@ class SingleConstraintTest {
     propagateAtNextLevel(store, () -> a.domain.inGlb(store.level, a, 2));
     assertThat(b.domain.singleton(dom(2, 3))).isTrue();
     assertThat(a.domain.lub().contains(5)).isFalse();
+  }
+
+  /** AdisjointB: a cardinality that fixes b prunes a again. */
+  @Test
+  void adisjointBPrunesAgainWhenTheCardinalityFixesB() {
+    Store store = new Store();
+    SetVar a = setVar(store, "a", new int[] {}, new int[] {1, 5});
+    SetVar b = setVar(store, "b", new int[] {}, new int[] {1, 4, 5});
+    store.impose(new AdisjointB(a, b));
+    assertThat(store.consistency()).isTrue();
+    propagateAtNextLevel(store, () -> b.domain.inCardinality(store.level, b, 2, 3));
+    propagateAtNextLevel(store, () -> a.domain.inGlb(store.level, a, 1));
+    assertThat(b.domain.singleton(dom(4, 5))).isTrue();
+    assertThat(a.domain.singleton(dom(1))).isTrue();
   }
 }
