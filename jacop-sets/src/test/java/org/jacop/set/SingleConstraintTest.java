@@ -71,6 +71,7 @@ import org.jacop.set.constraints.Match;
 import org.jacop.set.constraints.PartitionSet;
 import org.jacop.set.constraints.SetMirror;
 import org.jacop.set.constraints.SumWeightedSet;
+import org.jacop.set.constraints.XeqA;
 import org.jacop.set.constraints.XinA;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetDomain;
@@ -1323,5 +1324,27 @@ class SingleConstraintTest {
       assertThat(store.consistency()).isTrue();
       assertThat(calls[0]).as("event " + event).isGreaterThan(before);
     }
+  }
+
+  private static SetVar setVar(Store store, String name, int[] glb, int[] lub) {
+    return new SetVar(store, name, new BoundSetDomain(dom(glb), dom(lub)));
+  }
+
+  private static void propagateAtNextLevel(Store store, Runnable decision) {
+    store.setLevel(store.level + 1);
+    decision.run();
+    assertThat(store.consistency()).isTrue();
+  }
+
+  /** XeqA: the element of the glb of a is the value of x, as a fresh store finds. */
+  @Test
+  void xeqAFixesXToTheElementOfTheGlb() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", dom(1, 2, 4));
+    SetVar a = setVar(store, "a", new int[] {2}, new int[] {1, 2});
+    store.impose(new XeqA(x, a));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.singleton(2)).isTrue();
+    assertThat(a.domain.singleton(dom(2))).isTrue();
   }
 }
