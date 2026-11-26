@@ -1079,4 +1079,26 @@ class SingleConstraintTest {
     FloatVar y = new FloatVar(store, "y", -1.7e308, -1.7e308);
     assertThat(x + " " + y).isEqualTo("x = 1.7E308 y = -1.7E308");
   }
+
+  /**
+   * Reified(PneqQ, b) with b = 0 (rewritten to p = q) is woken by a bound of q before q is ground,
+   * so p follows it.
+   */
+  @Test
+  void reifiedPneqQKeepsPEqualToQWhenFalse() {
+    Store store = new Store();
+    FloatVar p = new FloatVar(store, "p", -6.5, 44.8);
+    FloatVar q = new FloatVar(store, "q", -0.25, 0.5);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new PneqQ(p, q), b));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    b.domain.in(1, b, 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(p.max()).isEqualTo(0.5);
+    store.setLevel(2);
+    q.domain.in(2, q, -0.25, 0.125);
+    assertThat(store.consistency()).isTrue();
+    assertThat(p.max()).isEqualTo(0.125);
+  }
 }
