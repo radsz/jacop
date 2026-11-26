@@ -20,16 +20,19 @@ import org.junit.jupiter.api.Test;
 class ColumnRowsTest {
 
   private final boolean saved = LinearRelaxation.columnRowsOn;
+  private final boolean savedTail = LinearRelaxation.CLAUSE_ROWS;
 
   @AfterEach
   void restore() {
     LinearRelaxation.columnRowsOn = saved;
+    LinearRelaxation.CLAUSE_ROWS = savedTail;
   }
 
   // a path of n legs from 0 to k on a line, each leg of length max - min of its two ends, and
   // reified comparisons of the inner points that take the share; the root bound of the relaxation
   private static double rootBound(int n, int k, boolean columnRows) {
     LinearRelaxation.columnRowsOn = columnRows;
+    LinearRelaxation.CLAUSE_ROWS = columnRows;
     Store store = new Store();
     IntVar[] x = new IntVar[n + 1];
     for (int i = 0; i <= n; i++) {

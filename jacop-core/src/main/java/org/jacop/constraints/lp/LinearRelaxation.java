@@ -245,10 +245,14 @@ public class LinearRelaxation extends Constraint
   private static final boolean POOL_CUTS = Boolean.getBoolean("org.jacop.lp.poolCuts");
   // whether the clause rows over columns already in the relaxation that are past the share of the
   // further rows are tried after them (fitsSimplex, addExtraRows)
-  static final boolean CLAUSE_ROWS = Boolean.getBoolean("org.jacop.lp.clauseRows");
   // whether every further row over columns already in the relaxation that is past the share goes
   // to that tail, not the clause rows alone (fitsSimplex)
   static boolean columnRowsOn = Boolean.getBoolean("org.jacop.lp.columnRows");
+
+  // whether the relaxation keeps that tail at all (org.jacop.lp.clauseRows or columnRows)
+  @SuppressWarnings("java:S3008")
+  static boolean CLAUSE_ROWS = Boolean.getBoolean("org.jacop.lp.clauseRows") || columnRowsOn;
+
   // whether the MIR cuts of the rows also substitute variable bounds x <= a u, x >= a u
   // (MirCut.ofVariableBounds)
   static boolean vbMirOn = Boolean.getBoolean("org.jacop.lp.vbMir");
@@ -1728,7 +1732,7 @@ public class LinearRelaxation extends Constraint
                 + first
                 + (bySparse && leading.isEmpty() ? encoded : 0)
             : Long.MAX_VALUE;
-    List<LinearForm> tail = CLAUSE_ROWS || columnRowsOn ? new ArrayList<>() : null;
+    List<LinearForm> tail = CLAUSE_ROWS ? new ArrayList<>() : null;
     if (!fitsSimplex(localForms, candidates, simplex, auto, share, own, further, tail)
         && objective != null) {
       // not all fit: after the value encodings, the rows nearest to the objective first, since rows
@@ -1787,7 +1791,7 @@ public class LinearRelaxation extends Constraint
           ahead += near.contains(f) ? 0 : 1;
         }
         long nearShare = Math.max(share, (long) first + near.size() + ahead);
-        List<LinearForm> sparseTail = CLAUSE_ROWS || columnRowsOn ? new ArrayList<>() : null;
+        List<LinearForm> sparseTail = CLAUSE_ROWS ? new ArrayList<>() : null;
         fitsSimplex(localForms, sorted, Simplex.SPARSE, true, nearShare, own, sparse, sparseTail);
         if (localForms.size() + near.size() <= sparseMaxRows
             && containsAll(sparse, near)
@@ -2692,35 +2696,21 @@ public class LinearRelaxation extends Constraint
     int counted = 0;
     boolean fitted = true;
     for (LinearForm f : candidates) {
-      int added = 0;
-      for (IntVar v : f.vars()) {
-        added += vars.contains(v) ? 0 : 1;
-      }
+      int added = newColumns(vars, f);
       boolean ownShare = own.contains(f);
-      if (simplex == Simplex.DENSE
-          ? (rows + 1) * (rows + 1 + vars.size() + added + 1) > MAX_TABLEAU
-          : nonzeros + f.vars().length > MAX_NONZEROS
-              || denseCap && vars.size() + added > Math.max(SPARSE_MAX_COLUMNS, columns)) {
+      if (overLimit(simplex, rows, nonzeros, vars.size() + added, f, denseCap, columns)) {
         return false;
       }
-      if (denseCap && simplex != Simplex.DENSE && !ownShare && counted >= share) {
-        // a clause row over columns the relaxation has already adds no column: with
-        // org.jacop.lp.clauseRows it goes to the tail, tried after the others (unit commitment
-        // L10: 2,668 of them past the share, among them every x + not x = 1 of the commitments,
-        // and without them the relaxation as a MIP has the optimum 1,633,000 instead of 1,703,450);
-        // with org.jacop.lp.columnRows every row over such columns does (MiniZinc Challenge 2017
-        // routing-flexible GCM_0005: the rows of the leg lengths, max and min of the node
-        // coordinates, came past the share and the root bound was 10,509; with them 46,529)
-        if (tail != null && added == 0 && (columnRowsOn || ClauseSimplification.isClause(f))) {
-          tail.add(f);
-          nonzeros += f.vars().length;
-          fitted = false;
-          continue;
-        }
-        if (own.isEmpty() && tail == null) {
-          return false;
-        }
-        // the share of the others is full: the rows with a share of their own may still come
+      boolean pastShare = denseCap && simplex != Simplex.DENSE && !ownShare && counted >= share;
+      int place = place(f, added, pastShare, own, tail);
+      if (place == FAIL_ROW) {
+        return false;
+      }
+      if (place == TAIL_ROW) {
+        tail.add(f);
+        nonzeros += f.vars().length;
+      }
+      if (place != TAKE_ROW) {
         fitted = false;
         continue;
       }
@@ -2731,6 +2721,57 @@ public class LinearRelaxation extends Constraint
       nonzeros += f.vars().length;
     }
     return fitted;
+  }
+
+  // the places of a further row in fitsSimplex
+  private static final int TAKE_ROW = 0;
+  private static final int TAIL_ROW = 1;
+  private static final int SKIP_ROW = 2;
+  private static final int FAIL_ROW = 3;
+
+  // the columns of the row that the relaxation does not have yet
+  private static int newColumns(Set<IntVar> vars, LinearForm f) {
+    int added = 0;
+    for (IntVar v : f.vars()) {
+      added += vars.contains(v) ? 0 : 1;
+    }
+    return added;
+  }
+
+  // whether a further row of the given length makes the relaxation over the size of its simplex
+  private static boolean overLimit(
+      Simplex simplex,
+      long rows,
+      long nonzeros,
+      long width,
+      LinearForm f,
+      boolean denseCap,
+      int columns) {
+    if (simplex == Simplex.DENSE) {
+      return (rows + 1) * (rows + 1 + width + 1) > MAX_TABLEAU;
+    }
+    return nonzeros + f.vars().length > MAX_NONZEROS
+        || denseCap && width > Math.max(SPARSE_MAX_COLUMNS, columns);
+  }
+
+  // where a further row goes: taken, to the tail, left out, or the relaxation does not fit
+  private static int place(
+      LinearForm f, int added, boolean pastShare, Set<LinearForm> own, List<LinearForm> tail) {
+    if (!pastShare) {
+      return TAKE_ROW;
+    }
+    // a clause row over columns the relaxation has already adds no column: with
+    // org.jacop.lp.clauseRows it goes to the tail, tried after the others (unit commitment
+    // L10: 2,668 of them past the share, among them every x + not x = 1 of the commitments,
+    // and without them the relaxation as a MIP has the optimum 1,633,000 instead of 1,703,450);
+    // with org.jacop.lp.columnRows every row over such columns does (MiniZinc Challenge 2017
+    // routing-flexible GCM_0005: the rows of the leg lengths, max and min of the node
+    // coordinates, came past the share and the root bound was 10,509; with them 46,529)
+    if (tail != null && added == 0 && (columnRowsOn || ClauseSimplification.isClause(f))) {
+      return TAIL_ROW;
+    }
+    // the share of the others is full: the rows with a share of their own may still come
+    return own.isEmpty() && tail == null ? FAIL_ROW : SKIP_ROW;
   }
 
   /**
