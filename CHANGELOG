@@ -9189,6 +9189,34 @@ Version 5.0 (unreleased)
    and Cepek, Constraints 2005). MiniZinc Challenge 2014 stochastic-fjsp
    fjsp-a1-s3 under fd: 452 after 600 s -> optimum 207 proved in 15 s.
 
+513. Three gaps of the 2019 MiniZinc Challenge replay are closed.
+   (a) A permutation with an assignment cost whose cycles are at most K
+   long (labels cycle[i] = cycle[succ[i]] and bin_packing(K, cycle,
+   unit weights), kidney-exchange) gets the cycle formulation of
+   Abraham, Blum and Sandholm (EC 2007) and Roth, Sonmez and Unver
+   (American Economic Review 2007) for K <= 4 and at most 20,000 cycles:
+   a 0/1 variable per cycle, one cycle per vertex, succ[i] and the cost
+   as sums of them, posted as redundant linear rows. The bound of
+   3_20_0.25_2 goes from 1275 (assignment) to the optimum 1008; the five
+   2019 instances are proved in 1.6-2.3 s with -f (8-14 s before,
+   Chuffed 0.7-2.4 s) and 1.4-3.3 s in the default search (2.4-10 s).
+   -Dorg.jacop.fz.boundedCycles=false turns it off.
+   (b) Elements over constant arrays whose index is defined by
+   int_lin_eq from two to four variables (a lookup in a multi-dimensional
+   array, liner-sf-repositioning) become one table over the defining
+   variables and the looked-up values when the index occurs nowhere
+   else, as the multi-dimensional element of Gecode and the element
+   expansion of the CP-SAT presolve (Perron, Didier and Gay, CP 2023).
+   -Dorg.jacop.fz.linearIndexElement=false turns it off.
+   (c) Lazy clause generation explains x = y + k (and its mirror) by the
+   values in both root domains only: a disentailment over 0..100000
+   against three values was given the generic reason of 998 atoms,
+   now 5. liner-sf fm3_3 -f 40 s -> 8-39 s (Chuffed 9.4 s), tp7_4 600 s
+   default unproved -> proved in 480-505 s.
+   Of the 240 wide-set instances (a) and (b) fire on 4; at 600 s none is
+   worse. Wide-quick at 240 s is unchanged (-f total 0.978 without the
+   seed-noisy work-task-variation, default 1.004).
+
 Version 4.11
 =============
 
