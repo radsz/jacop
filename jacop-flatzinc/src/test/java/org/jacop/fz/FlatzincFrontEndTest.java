@@ -8602,4 +8602,32 @@ class FlatzincFrontEndTest {
             + "solve satisfy;\n",
         "jacop_geost: box 1 has the negative size -1");
   }
+
+  @Test
+  void lcgPeakDepthCountsDecisionsOnly() throws IOException {
+    // peakDepth counted the level of the assumptions as well, nodes only the decisions: a 0/1
+    // knapsack solved by one decision printed nodes=1 and peakDepth=2
+    int[] w = {25, 47, 44, 18, 33, 48, 40, 50, 47, 14, 48, 10, 40, 26};
+    int[] v = {45, 24, 22, 55, 40, 44, 45, 40, 35, 50, 19, 24, 50, 19};
+    StringBuilder model = new StringBuilder();
+    StringJoiner xs = new StringJoiner(",");
+    StringJoiner ws = new StringJoiner(",");
+    StringJoiner vs = new StringJoiner(",");
+    for (int i = 0; i < w.length; i++) {
+      model.append("var 0..1: x").append(i).append(" :: output_var;\n");
+      xs.add("x" + i);
+      ws.add(String.valueOf(w[i]));
+      vs.add(String.valueOf(v[i]));
+    }
+    model
+        .append("var 0..1000: obj :: output_var;\n")
+        .append("constraint int_lin_le([" + ws + "],[" + xs + "],245);\n")
+        .append("constraint int_lin_eq([" + vs + ",-1],[" + xs + ",obj],0);\n")
+        .append("solve maximize obj;\n");
+    for (String[] options : new String[][] {{"--lcg", "on", "-f", "-s"}, {"--lcg", "on", "-s"}}) {
+      String out = run(model.toString(), options)[0];
+      assertTrue(out.contains("obj = 353;\n"), out);
+      assertTrue(statistic(out, "peakDepth") <= statistic(out, "nodes"), out);
+    }
+  }
 }

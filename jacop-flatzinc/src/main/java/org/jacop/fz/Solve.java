@@ -6424,7 +6424,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       printStatisticsOutput(
           (int) lcgSat().decisions,
           (int) lcgSat().conflicts,
-          lcgSat().peakDecisionLevel,
+          lcgSat().peakSearchDepth,
           numberSolutions);
       if (numberSolutions > 0 && costVariable instanceof IntVar) {
         // the cost variable is the negated objective under maximisation
