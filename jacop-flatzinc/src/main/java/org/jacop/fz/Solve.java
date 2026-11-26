@@ -8536,6 +8536,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           });
     }
     if (quickStartLpProbe && quickStartTakes(costVar)) {
+      quickStarted = true;
       // on a small model the probe is the quick start: it takes the quick start's work, and at
       // least its own time if that comes first
       probe
@@ -8611,8 +8612,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         : quickStartMs;
   }
 
+  // whether the quick start ran: once, at the first LCG search (free search can come back to LCG
+  // search after a hand-over, with the trail of its solver on the store)
+  private boolean quickStarted;
+
   private boolean quickStartTakes(Var costVar) {
-    return quickStartWork > 0
+    return !quickStarted
+        && quickStartWork > 0
         && quickStartMs > 0
         && options.freeSearch()
         && !enumerating(costVar)
@@ -8636,9 +8642,22 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @return the answer of the quick start, or UNKNOWN when it did not finish
    */
   private int quickStart(Var costVar) {
+    quickStarted = true;
     long start = System.nanoTime();
     long millis = quickStartMillis();
+    // the relaxations do not take part: free search reads the state of the relaxation that the root
+    // solved (its bound, solution and cuts), and a quick start that solved it again under its own
+    // bounds changed that: travelling-thief 2023 n20_k20 then took 6.5-7 s instead of 5 s even
+    // with a quick start that stopped at once
+    List<LinearRelaxation> relaxations = new ArrayList<>();
+    for (LinearRelaxation r : new LinearRelaxation[] {linearRelaxation, refutation}) {
+      if (r != null && !r.isSuspended()) {
+        r.suspend(true);
+        relaxations.add(r);
+      }
+    }
     int level = store.level;
+    long calls = store.numberConsistencyCalls;
     store.setLevel(level + 1);
     LcgSolver quick = new LcgSolver(store);
     quick.setSeed(options.getRandomSeed());
@@ -8681,6 +8700,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       throw e;
     } finally {
       lcg = null;
+      for (LinearRelaxation r : relaxations) {
+        r.suspend(false);
+      }
       StringBuffer held = quickStartHeld;
       quickStartHeld = null;
       if (finished && held.length() > 0 && options.getAll()) {
@@ -8713,6 +8735,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     quick.detach();
     store.removeLevel(level + 1);
     store.setLevel(level);
+    // the work of the solvers counts the store's consistency calls
+    store.numberConsistencyCalls = calls;
     numberSolutions = solutions;
     solutionFound = found;
     bestPrintedCost.set(best);
