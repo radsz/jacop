@@ -1129,4 +1129,32 @@ class SingleConstraintTest {
     // z = x + y has solutions with y inside its interval
     assertThat(c.notSatisfied()).isFalse();
   }
+
+  /**
+   * Optimize bisects the cost: when the lower half of the cost had no solution, the other branch
+   * imposed the negation of the choice next to the choice itself, failed at once, and minimize
+   * returned false with a cost that was not the least: z = x * x - 3 * x - 1 over [1, 5] is least,
+   * -3.25, at x = 1.5, and the first solution, x = 1, costs -3.
+   */
+  @Test
+  void floatOptimizeSearchesTheCostsAboveAChoiceWithoutSolution() {
+    double precision = FloatDomain.precision();
+    FloatDomain.setPrecision(1e-6);
+    try {
+      Store store = new Store();
+      FloatVar x = new FloatVar(store, "x", 1, 5);
+      FloatVar v = new FloatVar(store, "v", -1e6, 1e6);
+      FloatVar z = new FloatVar(store, "z", -1e6, 1e6);
+      store.impose(new PmulQeqR(x, x, v));
+      store.impose(new LinearFloat(new FloatVar[] {z, v, x}, new double[] {-1, 1, -3}, "==", 1));
+      DepthFirstSearch<FloatVar> search = new DepthFirstSearch<>();
+      SplitSelectFloat<FloatVar> select = new SplitSelectFloat<>(store, new FloatVar[] {x}, null);
+      org.jacop.floats.search.Optimize<FloatVar> optimize =
+          new org.jacop.floats.search.Optimize<>(store, search, select, z);
+      assertThat(optimize.minimize()).isTrue();
+      assertThat(optimize.getFinalCost().min()).isCloseTo(-3.25, offset(1e-4));
+    } finally {
+      FloatDomain.setPrecision(precision);
+    }
+  }
 }
