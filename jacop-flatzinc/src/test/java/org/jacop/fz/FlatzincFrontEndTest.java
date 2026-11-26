@@ -8822,4 +8822,21 @@ class FlatzincFrontEndTest {
       assertTrue(out.contains("=====UNKNOWN====="), out);
     }
   }
+
+  @Test
+  void nvalueWithAConstantBeyondTheIntegersReportsUnknown() throws IOException {
+    // Values restricted the constant 536870910 to 536870910..MAX_INT, an empty interval, and an
+    // assertion failed (IllegalStateException) instead of the failure the constant leads to
+    for (String c : new String[] {"536870910", "2147483647"}) {
+      String model =
+          "var 0..3: x2 :: output_var;\nvar 0..3: x3 :: output_var;\nvar 1..4: n :: output_var;\n"
+              + "constraint jacop_nvalue(n, ["
+              + c
+              + ", x2, x3]);\nsolve satisfy;\n";
+      for (String lcg : new String[] {"on", "off"}) {
+        String out = run(model, "-a", "--lcg", lcg)[0];
+        assertTrue(out.contains("=====UNKNOWN====="), out);
+      }
+    }
+  }
 }
