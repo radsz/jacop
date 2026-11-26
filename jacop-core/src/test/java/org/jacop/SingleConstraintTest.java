@@ -13244,4 +13244,33 @@ class SingleConstraintTest extends TestHelper {
     chain.impose(new SeqPrecedeChain(y, new int[] {0, 1, Integer.MAX_VALUE}));
     assertThat(noOfAllSolutions(chain, y)).isEqualTo(136);
   }
+
+  @Test
+  public void smallDenseDomainInAValueSetBeyondTheIntegers() {
+    // a set of values reaching 2^31 - 1, such as the counted values of CountValues, narrowed a
+    // small dense domain at MIN_INT with distances beyond an int: ArrayIndexOutOfBoundsException
+    Store store = new Store();
+    IntVar v = new IntVar(store, "v", IntDomain.MIN_INT, IntDomain.MIN_INT + 3);
+    IntervalDomain set = new IntervalDomain(IntDomain.MIN_INT + 1, IntDomain.MIN_INT + 2);
+    set.unionAdapt(2147483645, Integer.MAX_VALUE);
+    v.domain.in(0, v, set);
+    assertThat(v.dom().toString()).isEqualTo("{-536870909..-536870908}");
+    IntVar w = new IntVar(store, "w", IntDomain.MIN_INT, IntDomain.MIN_INT + 3);
+    assertThatThrownBy(() -> w.domain.in(0, w, new IntervalDomain(2147483645, Integer.MAX_VALUE)))
+        .isInstanceOf(FailException.class);
+
+    Store count = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(count, "x" + i, IntDomain.MIN_INT, IntDomain.MIN_INT + 3);
+    }
+    IntVar top = new IntVar(count, "top", 0, 3);
+    IntVar low = new IntVar(count, "low", 2, 2);
+    IntVar zero = new IntVar(count, "zero", 0, 3);
+    count.impose(
+        new CountValues(
+            x, new IntVar[] {top, low, zero}, new int[] {Integer.MAX_VALUE, IntDomain.MIN_INT, 0}));
+    // two x are MIN_INT and the third one is none of the counted values: 3 * 3 solutions
+    assertThat(noOfAllSolutions(count, x, new IntVar[] {top, low, zero})).isEqualTo(9);
+  }
 }
