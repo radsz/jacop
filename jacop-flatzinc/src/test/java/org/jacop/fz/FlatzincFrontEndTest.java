@@ -8472,4 +8472,18 @@ class FlatzincFrontEndTest {
         "--presolve",
         "on");
   }
+
+  @Test
+  void diffnHandleProbingStopsAPropagationAtTheTimeOut() {
+    // the probes of the presence handles of a non-strict diffn_k propagated without a deadline:
+    // the probe a = 0 ran for minutes in process
+    assertEndsAtTheTimeOut(
+        "predicate jacop_diffn_k(array [int] of var int: posn, array [int] of var int: size,"
+            + " int: k, bool: strict);\n"
+            + "var 0..1: a :: output_var;\nvar 0..2: l;\nvar 0..2: m;\nvar bool: b;\n"
+            + "var 0.0..1.0: f;\nvar 0.0..1.0: g;\narray [1..6] of var 0..3: p;\n"
+            + "constraint int_eq_reif(a, 0, b);\nconstraint float_eq_reif(f, g, b);\n"
+            + "constraint float_lt_reif(f, g, b);\n"
+            + "constraint jacop_diffn_k(p, [a, l, m, 1, 1, 1], 3, false);\nsolve satisfy;\n");
+  }
 }

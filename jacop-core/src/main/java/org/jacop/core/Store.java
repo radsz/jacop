@@ -314,6 +314,9 @@ public class Store {
   /** It specifies that consistencyDeadline has passed. */
   private boolean consistencyDeadlinePassed;
 
+  /** It specifies that the last call of {@link #consistencyUntil(long)} stopped at a deadline. */
+  private boolean consistencyCut;
+
   /** Set by {@link #interrupt()}: the deadline stays passed. */
   private volatile boolean interrupted;
 
@@ -908,6 +911,48 @@ public class Store {
    */
   public boolean isConsistencyDeadlinePassed() {
     return consistencyDeadlinePassed;
+  }
+
+  /**
+   * It propagates as {@link #consistency()} does, but stops at the given deadline, or at the
+   * earlier one {@link #setConsistencyDeadline(long)} has set: a decision or a probe made outside a
+   * search can then not overrun a time-out when bounds converge a step per pass. The deadline holds
+   * for this call only. A false result proves an inconsistency only when {@link
+   * #isConsistencyCut()} is false after it.
+   *
+   * @param deadline the deadline as given by {@link System#currentTimeMillis()}, or 0 for none.
+   * @return true if the store is consistent, false if it failed or stopped at a deadline.
+   */
+  public boolean consistencyUntil(long deadline) {
+    long previous = consistencyDeadline;
+    if (deadline <= 0 || previous > 0 && previous <= deadline) {
+      // the deadline set already comes first
+      boolean consistent = consistency();
+      consistencyCut = !consistent && previous > 0 && consistencyDeadlinePassed;
+      return consistent;
+    }
+    boolean passed = consistencyDeadlinePassed;
+    consistencyDeadline = deadline;
+    consistencyDeadlinePassed = false;
+    boolean consistent = false;
+    try {
+      consistent = consistency();
+    } finally {
+      consistencyCut = !consistent && consistencyDeadlinePassed;
+      consistencyDeadline = interrupted ? 1 : previous;
+      consistencyDeadlinePassed = passed;
+    }
+    return consistent;
+  }
+
+  /**
+   * It specifies whether the last call of {@link #consistencyUntil(long)} failed because of a
+   * deadline, which proves nothing about the store.
+   *
+   * @return true if that call stopped at a deadline.
+   */
+  public boolean isConsistencyCut() {
+    return consistencyCut;
   }
 
   private boolean consistencyDeadlinePassed() {

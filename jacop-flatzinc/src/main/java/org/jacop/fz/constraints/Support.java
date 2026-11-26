@@ -1264,7 +1264,8 @@ public class Support implements ParserTreeConstants {
    * @return false if probing proved the model inconsistent.
    */
   public boolean probeDiffnKHandles() {
-    return nonStrictDiffnK.isEmpty() || new DiffnKHandleProbing(store).probe(nonStrictDiffnK);
+    return nonStrictDiffnK.isEmpty()
+        || new DiffnKHandleProbing(store, timeOutDeadline()).probe(nonStrictDiffnK);
   }
 
   void poseAlldistinctConstraints() {
@@ -1802,6 +1803,18 @@ public class Support implements ParserTreeConstants {
       activeOther = true;
     }
     return c;
+  }
+
+  /**
+   * The time-out of the run as given by {@link System#currentTimeMillis()}, for {@link
+   * Store#consistencyUntil(long)}.
+   *
+   * @return the deadline, or 0 when there is no time-out
+   */
+  public long timeOutDeadline() {
+    return options != null && options.getTimeOut() > 0
+        ? System.currentTimeMillis() + options.getRemainingTimeOut()
+        : 0;
   }
 
   /**
