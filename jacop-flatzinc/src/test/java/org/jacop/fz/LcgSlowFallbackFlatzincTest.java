@@ -697,6 +697,21 @@ class LcgSlowFallbackFlatzincTest {
   }
 
   @Test
+  void fixedOptimisationWithoutSolutionGivesWayAtItsShare() throws IOException {
+    // fixed search of an optimisation model that has no solution: LCG, however fast, gives way at
+    // its share of the time (here at once) to the annotation's search without learning, which
+    // explores the whole tree
+    String model = pigeonsInputOrder().replace(" satisfy;", " minimize p1;");
+    String config = "lcg-slow-rate=0.001,lcg-slow-literal=0,lcg-slow-at=0.0001,lcg-fixed-unsolved=";
+    String out = runFixed(model, config + "0.0001");
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+    assertTrue(out.contains("lcgFixedLate=true"), out);
+    String kept = runFixed(model, config + "0");
+    assertTrue(kept.contains("=====UNSATISFIABLE====="), kept);
+    assertFalse(kept.contains("lcgFixedLate=true"), kept);
+  }
+
+  @Test
   void fixedSatisfactionGoesOnWithLcgAfterTheTaste() throws IOException {
     // never kept: the search without learning stops after the taste and LCG, given back its
     // solver, proves the model unsatisfiable

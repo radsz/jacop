@@ -5036,6 +5036,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (tooLateForFreeSearch(solver)) {
       return false;
     }
+    if (unsolvedOnly && !solutionFound && fixedUnsolvedLate(now)) {
+      lcgFixedLate = true;
+      lcgSlowUnsolved = true;
+      lcgSlow = true;
+      solver.stop();
+      return false;
+    }
     boolean weak = false;
     if (solver.sat().conflicts
         >= slowRate(solver.sat().conflicts, solver.sat().learntLiterals, rate, perLiteral)
@@ -5045,7 +5052,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // per node, and it stopped making progress
       weak = !unsolvedOnly && optimisationLearningCutsLittle(solver, now) && solutionFound;
       if (!weak || "report".equals(options.freeConfig("lcg-opt-probe", "on"))) {
-        return false;
+        // fixed search without a solution is checked again until its share of the time ends
+        return unsolvedOnly && !solutionFound && fixedUnsolvedShare() > 0;
       }
     }
     long cost = bestPrintedCost.get();
@@ -5540,6 +5548,37 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return rate;
     }
     return Math.max(rate, perLiteral * learntLiterals / conflicts);
+  }
+
+  // set when LCG fixed search gave way without a solution at its share of the time, for the
+  // statistics
+  private volatile boolean lcgFixedLate;
+
+  /**
+   * The share of the time limit after which LCG fixed search (without -f) without a solution gives
+   * way to the search of the annotation without learning, however many conflicts it makes
+   * (lcg-fixed-unsolved, 0 turns it off).
+   */
+  private double fixedUnsolvedShare() {
+    return Double.parseDouble(options.freeConfig("lcg-fixed-unsolved", "0.2"));
+  }
+
+  /**
+   * Whether LCG fixed search still without a solution has had its share of the time limit ({@link
+   * #fixedUnsolvedShare}). Under the annotation a conflict backtracks about one decision whatever
+   * learning cuts, so learning cannot be told useless by how far it jumps; but a search that found
+   * nothing in a fifth of the time is better left to the annotation's search without learning, at
+   * many times the nodes per second. On Sampson.s10.k3 (MiniZinc Challenge 2017
+   * community-detection, input_order and indomain_min on the vertices' communities) LCG makes about
+   * 3,000 conflicts/s and finds no solution in 1200 s, while the same search without learning
+   * proves the optimum in 56 s.
+   *
+   * @param now the time of the check (CdclSolver.now of the LCG solver)
+   * @return true if LCG should give way now
+   */
+  private boolean fixedUnsolvedLate(long now) {
+    double share = fixedUnsolvedShare();
+    return share > 0 && now - lcgStart >= share * options.getTimeOut() * 1_000_000L;
   }
 
   /**
@@ -10438,6 +10477,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 ? "\n%%%mzn-stat: nogoods=" + nf.format(freeSearch.getNogoods())
                 : "")
             + peakMemory()
+            // LCG fixed search gave way without a solution at its share of the time
+            + (lcgFixedLate ? "\n%%%mzn-stat: lcgFixedLate=true" : "")
             + (options.searchStatistics() ? searchStatistics() : "")
             + "\n%%%mzn-stat-end");
 
