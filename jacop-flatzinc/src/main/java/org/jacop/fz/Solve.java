@@ -8535,7 +8535,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             }
           });
     }
-    probe.sat().setDeadline(probe.sat().now() + lpProbeMs * 1_000_000L);
+    if (quickStartTakes(costVar)) {
+      // on a small model the probe is the quick start: it takes the quick start's work, and at
+      // least its own time if that comes first
+      probe
+          .sat()
+          .setDeadline(probe.sat().now() + Math.max(lpProbeMs, quickStartMillis()) * 1_000_000L);
+      probe.sat().setWorkLimit(QUICK_START_WORK);
+      if (options.getStatistics()) {
+        IO.println("%%%mzn-stat: quickStart=lp-probe");
+      }
+    } else {
+      probe.sat().setDeadline(probe.sat().now() + lpProbeMs * 1_000_000L);
+    }
     lcg = probe;
     int answer;
     try {
@@ -8569,13 +8581,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return CdclSolver.UNKNOWN;
   }
 
-  // -Dorg.jacop.fz.quickStart=ms: under free search, a small model is first searched for at most
-  // this long (and quickStartConflicts conflicts) by a plain LCG solver of its own, without the
-  // set-up of free search (local search, root probing, hints, the core-guided phase); 0 is off
-  private static final long QUICK_START_MS = Long.getLong("org.jacop.fz.quickStart", 300);
+  // -Dorg.jacop.fz.quickStartWork=n: under free search, a small model is first searched for this
+  // much work of the SAT solver (propagated literals and the propagators' work) by a plain LCG
+  // solver of its own, without the set-up of free search (local search, root probing, hints, the
+  // core-guided phase); 0 is off. -Dorg.jacop.fz.quickStart=ms caps its time
+  private static final long QUICK_START_WORK =
+      Long.getLong("org.jacop.fz.quickStartWork", 2_000_000);
 
-  private static final long QUICK_START_CONFLICTS =
-      Long.getLong("org.jacop.fz.quickStartConflicts", 2_000);
+  private static final long QUICK_START_MS = Long.getLong("org.jacop.fz.quickStart", 1_000);
 
   // -Dorg.jacop.fz.quickStartSize=n: the most variables and constraints of the store together for
   // the quick start
@@ -8586,8 +8599,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // its solutions that are no better
   private int quickStartPrinted = Integer.MAX_VALUE;
 
+  // the time of the quick start: QUICK_START_MS, at most a twentieth of the time left
+  private long quickStartMillis() {
+    return options.getTimeOut() > 0
+        ? Math.min(QUICK_START_MS, options.getRemainingTimeOut() / 20)
+        : QUICK_START_MS;
+  }
+
   private boolean quickStartTakes(Var costVar) {
-    return QUICK_START_MS > 0
+    return QUICK_START_WORK > 0
+        && QUICK_START_MS > 0
         && options.freeSearch()
         && !enumerating(costVar)
         && options.portfolioWorker() == null
@@ -8600,21 +8621,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   /**
    * The quick start of free search on a small model: a plain LCG solver of its own searches for
-   * org.jacop.fz.quickStart ms (at most org.jacop.fz.quickStartConflicts conflicts), before free
-   * search sets up its local search, root probing, hints and core-guided phase, which take about
-   * half a second on models that the plain solver finishes in a tenth of it (zephyrus and
-   * stochastic-vrp of the MiniZinc Challenge 2019). When it does not finish, the store is as before
-   * and free search runs as without it; it prints only solutions better than those of the quick
-   * start.
+   * org.jacop.fz.quickStartWork work (at most org.jacop.fz.quickStart ms), before free search sets
+   * up its local search, root probing, hints and core-guided phase. That set-up took about half a
+   * second on models that the plain solver finishes in a fifth of it (zephyrus and stochastic-vrp
+   * of the MiniZinc Challenge 2019, 0.4 to 1.2 million of work). When it does not finish, the store
+   * is as before and free search runs as without it; it prints only solutions better than those of
+   * the quick start.
    *
    * @return the answer of the quick start, or UNKNOWN when it did not finish
    */
   private int quickStart(Var costVar) {
     long start = System.nanoTime();
-    long millis = QUICK_START_MS;
-    if (options.getTimeOut() > 0) {
-      millis = Math.min(millis, options.getRemainingTimeOut() / 20);
-    }
+    long millis = quickStartMillis();
     int level = store.level;
     store.setLevel(level + 1);
     LcgSolver quick = new LcgSolver(store);
@@ -8635,7 +8653,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           });
     }
     quick.sat().setDeadline(quick.sat().now() + Math.max(1, millis) * 1_000_000L);
-    quick.sat().setConflictLimit(QUICK_START_CONFLICTS);
+    quick.sat().setWorkLimit(QUICK_START_WORK);
     lcg = quick;
     int answer;
     try {
@@ -8650,6 +8668,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + (finished ? "finished" : "unfinished")
               + "\n%%%mzn-stat: quickStartConflicts="
               + quick.sat().conflicts
+              + "\n%%%mzn-stat: quickStartWork="
+              + quick.sat().work()
               + "\n%%%mzn-stat: quickStartTime="
               + (System.nanoTime() - start) / 1e9
               + "\n");
