@@ -619,7 +619,7 @@ class LcgSlowFallbackFlatzincTest {
   }
 
   private void defaultSearchOfSatisfactionKeepsItsTurnsBody() throws IOException {
-    // CHANGELOG 515: under -f the annotation's runs are dropped after 5 conflicts without a
+    // CHANGELOG 517: under -f the annotation's runs are dropped after 5 conflicts without a
     // solution when the model has a search annotation, not the default search of a satisfaction
     // model without one, with or without -f (the XCSP CSPs PegSolitaireTable-english-3-3-0 and
     // SportsScheduling-dummy-14 were lost by dropping it)

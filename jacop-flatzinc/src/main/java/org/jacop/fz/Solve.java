@@ -3588,7 +3588,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // solution in 300 s on some seeds and are solved in 28 to 125 s; 28 instances where no
       // solution comes early, 240 s, two seeds: solved 25 -> 29, total time 8,486 -> 7,416 s.
       // Not for satisfaction under the default search of a model without an annotation (CHANGELOG
-      // 515), which none of the 28 was: the XCSP CSPs PegSolitaireTable-english-3-3-0 and
+      // 517), which none of the 28 was: the XCSP CSPs PegSolitaireTable-english-3-3-0 and
       // SportsScheduling-dummy-14, solved in 20 and 71 s with its turns, were unsolved in 30 and
       // 90 s without them
       lcg.setAnnotationDrop(
@@ -6424,6 +6424,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.deferredAtoms
             + "\n%%%mzn-stat: lcgLiftedLiterals="
             + lcg.liftedLiterals
+            + "\n%%%mzn-stat: lcgValueLiterals="
+            + lcg.valueLiterals
             + "\n%%%mzn-stat: lcgBoundLiterals="
             + lcg.boundLiterals
             + "\n%%%mzn-stat: lcgEqualityLiterals="
@@ -6891,6 +6893,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     fs.mainBranchingFirst(true);
   }
 
+  /**
+   * The time the check of the model's own lex-leader constraints may take: at most 10 s, and a
+   * twentieth of the time left (flener_et_al_15_350_100 of opd takes 3 s for 363 of them).
+   */
+  private long modelLexCheck() {
+    long check = 10_000_000_000L;
+    if (options.getTimeOut() > 0) {
+      check = Math.min(check, options.getRemainingTimeOut() * 1_000_000L / 20);
+    }
+    return check;
+  }
+
   // the share of the time left for the scheduling search that runs without ls
   private static final double AUTO_LS_SHARE = 0.5;
 
@@ -6912,9 +6926,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             && costVar instanceof IntVar
             && !"0".equals(options.freeConfig("ls-auto", "1"));
     // the task starts are decision variables: only their constraints are looked at
+    boolean schedule =
+        auto
+            && (ScheduleResources.hasResource(searchVars.getIntVars())
+                || ScheduleResources.hasPermutation(searchVars.getIntVars()));
+    // or the model's own lex-leader constraints are a symmetry of it: local search leaves them to
+    // the canonicalizer, where free search with them finds poor solutions (opd 2017
+    // flener_et_al_15_350_100: 30, ls 25, best 24); ls-lex=0 turns that off
     if (auto
-        && !ScheduleResources.hasResource(searchVars.getIntVars())
-        && !ScheduleResources.hasPermutation(searchVars.getIntVars())) {
+        && !schedule
+        && !(symmetry != null
+            && symmetry.hasModelLex()
+            && !"0".equals(options.freeConfig("ls-lex", "1"))
+            && !"0".equals(options.freeConfig("ls-sym", "1"))
+            && symmetry.canonicalizerWithModelLex(modelLexCheck()) != null
+            && symmetry.modelLexForLs() > 0)) {
       return null;
     }
     double share = auto ? AUTO_LS_SHARE : Double.parseDouble(given == null ? "0" : given);
@@ -6934,11 +6960,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         LocalSearch.builder(store)
             .order(order.toArray(new IntVar[0]))
             .defined(dictionary.definedVariables)
+            // the block sums of sums split under LCG: a move changes the whole sum at once
+            .substituted(splitSums())
             .timeLimit(Duration.ofMillis(budget))
             .patience(
                 Duration.ofMillis(
                     Long.parseLong(options.freeConfig("ls-patience", auto ? "5000" : "1000"))))
-            .scheduleOnly(auto)
+            .scheduleOnly(schedule)
             .jump(!"walk".equals(options.freeConfig("ls-moves", "fj")))
             .permutations(!"0".equals(options.freeConfig("ls-perm", "1")))
             .scheduling(scheduleKinds(options.freeConfig("ls-sched", "ns+n4")))
@@ -6952,7 +6980,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .seed(options.getRandomSeed());
     if (symmetry != null && !"0".equals(options.freeConfig("ls-sym", "1"))) {
       // solutions are moved onto symmetric ones that the symmetry breaking constraints accept
-      SymmetryCanonicalizer canonical = symmetry.canonicalizer();
+      // with the model's own lex-leader constraints whose symmetry holds
+      SymmetryCanonicalizer canonical = symmetry.canonicalizerWithModelLex(modelLexCheck());
       if (!canonical.constraints().isEmpty()) {
         b.symmetry(canonical.constraints(), canonical);
       }
@@ -7758,6 +7787,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + localSearch.getRejected()
         + "\n%%%mzn-stat: lsCanonicalized="
         + localSearch.getCanonicalized()
+        + "\n%%%mzn-stat: lsModelLex="
+        + (symmetry == null ? 0 : symmetry.modelLexForLs())
         + "\n%%%mzn-stat: lsConstraints="
         + counts[0]
         + "/"
