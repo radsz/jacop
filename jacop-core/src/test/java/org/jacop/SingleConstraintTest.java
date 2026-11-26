@@ -13790,4 +13790,26 @@ class SingleConstraintTest extends TestHelper {
           .isEqualTo(counts[0]);
     }
   }
+
+  @Test
+  void diffnPrunesAnOriginWhoseExcludedValuesReachTheEndOfTheIntegerRange() {
+    // the sweep removed the origins from a start up to the date of an end, and that date is one
+    // past IntDomain.MAX_INT for a rectangle ending there: the domain built for the pruning was
+    // malformed and the search threw. Every rectangle has its origin at (x, x); the first two are
+    // the same 1 x 2 rectangle, so no x is a solution, as the brute force says.
+    int top = IntDomain.MAX_INT;
+    long expected = 0;
+    for (long v = top - 2; v <= top; v++) {
+      // rectangles 0 and 1 overlap unless one ends before the other starts in some dimension
+      boolean apart = v + 1 <= v || v + 2 <= v;
+      expected += apart ? 1 : 0;
+    }
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", top - 2, top);
+    IntVar one = new IntVar(store, 1, 1);
+    IntVar two = new IntVar(store, 2, 2);
+    store.impose(
+        new Diffn(new IntVar[][] {{x, x, one, two}, {x, x, one, two}, {x, x, one, one}}, true));
+    assertThat(countInOrder(store, x)).isEqualTo((int) expected);
+  }
 }
