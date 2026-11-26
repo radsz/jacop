@@ -652,6 +652,16 @@ public class Tables {
   }
 
   /**
+   * Tells whether the rows of the model keep every narrowed domain within JaCoP's range, so that an
+   * enumeration of the narrowed model finds every solution.
+   *
+   * @return true if the narrowing cut off no solution.
+   */
+  boolean clampsCutNoSolution() {
+    return clampedBounds != null && clampedBounds.noSolutionCut();
+  }
+
+  /**
    * Tells whether a declared domain was narrowed to JaCoP's integer range. The search then covers
    * only part of the model: its solutions are solutions of the model, but a completed search proves
    * neither unsatisfiability nor, unless only the objective lost values worse than a solution

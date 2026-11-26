@@ -9618,7 +9618,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         && !timeoutOccurred
         && isSearchComplete()
         && relaxedSearchComplete()
-        && !clampedDomainsHideSolutions()) {
+        && !clampedDomainsCutSolutions()) {
       IO.println(SEPARATOR_LINE);
     } else if (timeoutOccurred) {
       IO.println(TIME_OUT_MSG);
@@ -9699,6 +9699,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         || dictionary.constantBeyondRange()
         || dictionary.domainsClamped()
             && !dictionary.clampsHarmless(null, -ClampedBounds.INF, ClampedBounds.INF);
+  }
+
+  // whether the narrowing of declared domains may cut off some of the solutions an enumeration
+  // prints: a solution moved to the end of the range, as for clampedDomainsHideSolutions, is
+  // another one
+  private boolean clampedDomainsCutSolutions() {
+    return dictionary.floatDomainsNarrowed()
+        || dictionary.constantBeyondRange()
+        || dictionary.domainsClamped() && !dictionary.clampsCutNoSolution();
   }
 
   private boolean isSearchComplete() {
@@ -10248,7 +10257,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
 
     if ((options.getAll() || costVariable != null)
-        && (costVariable != null ? clampedDomainsKeepOptimum() : !clampedDomainsHideSolutions())) {
+        && (costVariable != null ? clampedDomainsKeepOptimum() : !clampedDomainsCutSolutions())) {
       IO.println(SEPARATOR_LINE);
     }
 

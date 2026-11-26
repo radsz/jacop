@@ -8717,4 +8717,22 @@ class FlatzincFrontEndTest {
             "off")[0];
     assertTrue(out.contains("----------"), out);
   }
+
+  @Test
+  void anEnumerationOfANarrowedModelIsCompleteOnlyWhenNoSolutionIsCut() throws IOException {
+    // x in 536870908..536870911 is narrowed to ..536870909: the solutions 536870910 and
+    // 536870911 were cut, but -a printed "==========", since a solution moved to the end of the
+    // range is one for satisfiability; an enumeration misses the moved ones
+    String cut =
+        "var 536870908..536870911: x :: output_var;\nconstraint int_lt(1, x);\nsolve satisfy;\n";
+    String kept = "var 0..1073741824: x :: output_var;\nconstraint int_le(x, 3);\nsolve satisfy;\n";
+    for (String lcg : new String[] {"on", "off"}) {
+      String out = run(cut, "-a", "--lcg", lcg)[0];
+      assertEquals(2, out.split("----------", -1).length - 1, out);
+      assertFalse(out.contains("=========="), out);
+      out = run(kept, "-a", "--lcg", lcg)[0];
+      assertEquals(4, out.split("----------", -1).length - 1, out);
+      assertTrue(out.endsWith("==========\n"), out);
+    }
+  }
 }
