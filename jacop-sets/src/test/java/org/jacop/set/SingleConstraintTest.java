@@ -1363,4 +1363,21 @@ class SingleConstraintTest {
     assertThat(x.singleton(1)).isTrue();
     assertThat(a.domain.singleton(dom(5))).isTrue();
   }
+
+  /**
+   * Reified(AltB) with b = 0 (rewritten to the negation) is woken by a change of the glb: 1 in a
+   * leaves b no value but the empty set before a.
+   */
+  @Test
+  void reifiedAltBIsWokenByGlbEventsWhenFalse() {
+    Store store = new Store();
+    SetVar a = setVar(store, "a", new int[] {}, new int[] {1, 4});
+    SetVar b = setVar(store, "b", new int[] {}, new int[] {4});
+    IntVar r = new IntVar(store, "r", 0, 1);
+    store.impose(new Reified(new AltB(a, b), r));
+    assertThat(store.consistency()).isTrue();
+    propagateAtNextLevel(store, () -> r.domain.in(store.level, r, 0, 0));
+    propagateAtNextLevel(store, () -> a.domain.inGlb(store.level, a, 1));
+    assertThat(b.domain.singleton(dom())).isTrue();
+  }
 }
