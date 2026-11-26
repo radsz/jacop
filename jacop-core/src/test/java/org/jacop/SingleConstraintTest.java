@@ -77,6 +77,7 @@ import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.And;
 import org.jacop.constraints.AndBoolSimple;
 import org.jacop.constraints.AndBoolVector;
+import org.jacop.constraints.ArcTimes;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.ArgMaxMonotone;
 import org.jacop.constraints.ArgMin;
@@ -14182,6 +14183,52 @@ class SingleConstraintTest extends TestHelper {
             .as("a = %d, b = %d", a, b)
             .isEqualTo(Math.abs(a - b) >= 2 ? 1 : 0);
       }
+    }
+  }
+
+  @Test
+  void arcTimesWhoseFirstCallWasUndoneChecksEveryNodeAgain() {
+    // the first call removes the successors that a node's earliest time cannot reach; later calls
+    // look only at the nodes whose times changed, so when its level was removed a successor ruled
+    // out by fixed times came back for good
+    Random random = new Random(20261126);
+    for (int t = 0; t < 300; t++) {
+      Store store = new Store();
+      int n = 3;
+      IntVar[] x = new IntVar[n];
+      IntVar[] time = new IntVar[n];
+      for (int v = 0; v < n; v++) {
+        x[v] = new IntVar(store, "x" + v, 1, n);
+        int fixed = random.nextInt(5);
+        time[v] =
+            random.nextBoolean()
+                ? new IntVar(store, "t" + v, fixed, fixed)
+                : new IntVar(store, "t" + v, 0, 4);
+      }
+      long[][] lag = new long[n][n];
+      for (int v = 0; v < n; v++) {
+        for (int w = 0; w < n; w++) {
+          lag[v][w] = random.nextInt(4) - 1;
+        }
+      }
+      IntVar[] vars = Arrays.copyOf(x, 2 * n);
+      System.arraycopy(time, 0, vars, n, n);
+      int expected =
+          bruteForce(
+                  vars,
+                  s -> {
+                    for (int v = 0; v < n; v++) {
+                      int w = s[v] - 1;
+                      if (s[n + w] < s[n + v] + lag[v][w]) {
+                        return false;
+                      }
+                    }
+                    return true;
+                  })
+              .size();
+      store.impose(new ArcTimes(x, 1, time, lag));
+      firstCallAboveTheRoot(store, vars, random);
+      assertThat(countInOrder(store, vars)).as("instance %d", t).isEqualTo(expected);
     }
   }
 }
