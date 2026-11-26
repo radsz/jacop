@@ -247,6 +247,7 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.LinearForm;
+import org.jacop.search.ConsistencyListener;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMax;
 import org.jacop.search.IndomainMin;
@@ -12514,9 +12515,10 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     store.setLevel(1);
     vars[3].domain.in(1, vars[3], 0, 1);
-    store.raiseLevelBeforeConsistency = true;
+    // the changes of level 1 reach the constraint first at level 2, as when the store raised its
+    // level before consistency
+    store.setLevel(2);
     assertThat(store.consistency()).isTrue();
-    assertThat(store.level).isEqualTo(2);
     backToRoot(store);
     assertThat(noOfAllSolutions(store, vars)).isEqualTo(expected);
   }
@@ -14314,5 +14316,62 @@ class SingleConstraintTest extends TestHelper {
       }
     }
     assertThat(notAtFixpoint).isZero();
+  }
+
+  @Test
+  void constraintImposedInAConsistencyListenerLeavesTheSearchLevelsIntact() {
+    // Alldistinct asks the store to raise its level before its first consistency; imposed with
+    // consistency at a leaf of a search, the store raised the level under the search, which then
+    // made its next decisions at that level and never removed them: x1 = 0 came back after
+    // x1 != 0 and the rejected leaf (0, 0) was found as a solution
+    Store store = new Store();
+    IntVar[] x = new IntVar[2];
+    for (int i = 0; i < 2; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 2);
+    }
+    boolean[] imposed = {false};
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.setConsistencyListener(
+        new ConsistencyListener() {
+          @Override
+          public boolean executeAfterConsistency(boolean consistent) {
+            if (!consistent || imposed[0] || Arrays.stream(x).anyMatch(v -> !v.singleton())) {
+              return consistent;
+            }
+            imposed[0] = true;
+            try {
+              store.imposeWithConsistency(new Alldistinct(x));
+            } catch (FailException e) {
+              return false;
+            }
+            return true;
+          }
+
+          @Override
+          public void setChildrenListeners(ConsistencyListener[] children) {}
+
+          @Override
+          public void setChildrenListeners(ConsistencyListener child) {}
+        });
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(true);
+    search.setAssignSolution(false);
+    search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()));
+    Set<String> found = new HashSet<>();
+    for (int i = 1; i <= search.getSolutionListener().solutionsNo(); i++) {
+      found.add(
+          Arrays.stream(search.getSolutionListener().getSolution(i))
+              .map(d -> String.valueOf(((IntDomain) d).value()))
+              .collect(Collectors.joining(",")));
+    }
+    assertThat(imposed[0]).isTrue();
+    // every tuple but the rejected leaf (0, 0), each once
+    assertThat(search.getSolutionListener().solutionsNo()).isEqualTo(8);
+    assertThat(found).hasSize(8).doesNotContain("0,0");
+    assertThat(store.level).isZero();
+    for (IntVar v : x) {
+      assertThat(v.dom().eq(new IntervalDomain(0, 2))).as(v.toString()).isTrue();
+    }
   }
 }

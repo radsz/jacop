@@ -1053,7 +1053,11 @@ public class Store {
 
     if (raiseLevelBeforeConsistency) {
       raiseLevelBeforeConsistency = false;
-      setLevel(level + 1);
+      // above the root a search keeps track of the level itself and removes only the levels it
+      // set, so a level raised here would keep its changes after the search backtracks
+      if (level == 0) {
+        setLevel(level + 1);
+      }
     }
 
     if (undoneRunsSize > 0) {
