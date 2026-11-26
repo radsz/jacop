@@ -245,10 +245,24 @@ public class LinearRelaxation extends Constraint
   private static final boolean POOL_CUTS = Boolean.getBoolean("org.jacop.lp.poolCuts");
   // whether the clause rows over columns already in the relaxation that are past the share of the
   // further rows are tried after them (fitsSimplex, addExtraRows)
-  static final boolean CLAUSE_ROWS = Boolean.getBoolean("org.jacop.lp.clauseRows");
+  // whether every further row over columns already in the relaxation that is past the share goes
+  // to that tail, not the clause rows alone (fitsSimplex)
+  static boolean columnRowsOn = Boolean.getBoolean("org.jacop.lp.columnRows");
+
+  // whether the relaxation keeps that tail at all (org.jacop.lp.clauseRows or columnRows)
+  @SuppressWarnings("java:S3008")
+  static boolean CLAUSE_ROWS = Boolean.getBoolean("org.jacop.lp.clauseRows") || columnRowsOn;
+
   // whether the MIR cuts of the rows also substitute variable bounds x <= a u, x >= a u
   // (MirCut.ofVariableBounds)
-  static final boolean VB_MIR = Boolean.getBoolean("org.jacop.lp.vbMir");
+  static boolean vbMirOn = Boolean.getBoolean("org.jacop.lp.vbMir");
+  // whether the Gomory rows also get the MIR cuts with variable bounds substituted
+  static boolean vbGomoryOn = Boolean.getBoolean("org.jacop.lp.vbGomory");
+
+  // whether the first cut round reads the variable bounds of the rows (for vbMir or vbGomory)
+  @SuppressWarnings("java:S3008")
+  static boolean VB_MIR = vbMirOn || vbGomoryOn;
+
   // the variable bounds of the rows, read once at the first cut round
   private MirCut.VariableBounds variableBounds;
   private boolean variableBoundsRead;
@@ -634,7 +648,8 @@ public class LinearRelaxation extends Constraint
   private static final long CUT_EXTRA_NANOS =
       (long) (Double.parseDouble(System.getProperty("org.jacop.lp.cutExtraSeconds", "1")) * 1e9);
   // an extra round must move the bound by this share of what the rounds before it moved it
-  private static final double CUT_PROGRESS = 0.01;
+  private static final double CUT_PROGRESS =
+      Double.parseDouble(System.getProperty("org.jacop.lp.cutProgress", "0.01"));
   private static final int CUTS_PER_ROUND = Integer.getInteger("org.jacop.lp.cutsPerRound", 50);
   private static final int MAX_SOURCES = 100;
 
@@ -2681,32 +2696,21 @@ public class LinearRelaxation extends Constraint
     int counted = 0;
     boolean fitted = true;
     for (LinearForm f : candidates) {
-      int added = 0;
-      for (IntVar v : f.vars()) {
-        added += vars.contains(v) ? 0 : 1;
-      }
+      int added = newColumns(vars, f);
       boolean ownShare = own.contains(f);
-      if (simplex == Simplex.DENSE
-          ? (rows + 1) * (rows + 1 + vars.size() + added + 1) > MAX_TABLEAU
-          : nonzeros + f.vars().length > MAX_NONZEROS
-              || denseCap && vars.size() + added > Math.max(SPARSE_MAX_COLUMNS, columns)) {
+      if (overLimit(simplex, rows, nonzeros, (long) vars.size() + added, f, denseCap, columns)) {
         return false;
       }
-      if (denseCap && simplex != Simplex.DENSE && !ownShare && counted >= share) {
-        // a clause row over columns the relaxation has already adds no column: with
-        // org.jacop.lp.clauseRows it goes to the tail, tried after the others (unit commitment
-        // L10: 2,668 of them past the share, among them every x + not x = 1 of the commitments,
-        // and without them the relaxation as a MIP has the optimum 1,633,000 instead of 1,703,450)
-        if (tail != null && added == 0 && ClauseSimplification.isClause(f)) {
-          tail.add(f);
-          nonzeros += f.vars().length;
-          fitted = false;
-          continue;
-        }
-        if (own.isEmpty() && tail == null) {
-          return false;
-        }
-        // the share of the others is full: the rows with a share of their own may still come
+      boolean pastShare = denseCap && simplex != Simplex.DENSE && !ownShare && counted >= share;
+      int place = place(f, added, pastShare, own, tail);
+      if (place == FAIL_ROW) {
+        return false;
+      }
+      if (place == TAIL_ROW) {
+        tail.add(f);
+        nonzeros += f.vars().length;
+      }
+      if (place != TAKE_ROW) {
         fitted = false;
         continue;
       }
@@ -2717,6 +2721,57 @@ public class LinearRelaxation extends Constraint
       nonzeros += f.vars().length;
     }
     return fitted;
+  }
+
+  // the places of a further row in fitsSimplex
+  private static final int TAKE_ROW = 0;
+  private static final int TAIL_ROW = 1;
+  private static final int SKIP_ROW = 2;
+  private static final int FAIL_ROW = 3;
+
+  // the columns of the row that the relaxation does not have yet
+  private static int newColumns(Set<IntVar> vars, LinearForm f) {
+    int added = 0;
+    for (IntVar v : f.vars()) {
+      added += vars.contains(v) ? 0 : 1;
+    }
+    return added;
+  }
+
+  // whether a further row of the given length makes the relaxation over the size of its simplex
+  private static boolean overLimit(
+      Simplex simplex,
+      long rows,
+      long nonzeros,
+      long width,
+      LinearForm f,
+      boolean denseCap,
+      int columns) {
+    if (simplex == Simplex.DENSE) {
+      return (rows + 1) * (rows + 1 + width + 1) > MAX_TABLEAU;
+    }
+    return nonzeros + f.vars().length > MAX_NONZEROS
+        || denseCap && width > Math.max(SPARSE_MAX_COLUMNS, columns);
+  }
+
+  // where a further row goes: taken, to the tail, left out, or the relaxation does not fit
+  private static int place(
+      LinearForm f, int added, boolean pastShare, Set<LinearForm> own, List<LinearForm> tail) {
+    if (!pastShare) {
+      return TAKE_ROW;
+    }
+    // a clause row over columns the relaxation has already adds no column: with
+    // org.jacop.lp.clauseRows it goes to the tail, tried after the others (unit commitment
+    // L10: 2,668 of them past the share, among them every x + not x = 1 of the commitments,
+    // and without them the relaxation as a MIP has the optimum 1,633,000 instead of 1,703,450);
+    // with org.jacop.lp.columnRows every row over such columns does (MiniZinc Challenge 2017
+    // routing-flexible GCM_0005: the rows of the leg lengths, max and min of the node
+    // coordinates, came past the share and the root bound was 10,509; with them 46,529)
+    if (tail != null && added == 0 && (columnRowsOn || ClauseSimplification.isClause(f))) {
+      return TAIL_ROW;
+    }
+    // the share of the others is full: the rows with a share of their own may still come
+    return own.isEmpty() && tail == null ? FAIL_ROW : SKIP_ROW;
   }
 
   /**
@@ -5291,111 +5346,176 @@ public class LinearRelaxation extends Constraint
   private boolean slackGomory(
       long[] lambda, int basic, double[] value, long[] lo, long[] hi, List<MirCut> found) {
     int n = lp.columns();
-    int m = lambda.length;
-    long[] coef = new long[n];
-    int slacks = 0;
     try {
-      for (int i = 0; i < m; i++) {
-        long l = lambda[i];
-        if (l == 0) {
-          continue;
-        }
-        slacks++;
-        int[] cs = rowColumns[i];
-        long[] ws = rowWeights[i];
-        for (int k = 0; k < cs.length; k++) {
-          coef[cs[k]] = Math.addExact(coef[cs[k]], Math.multiplyExact(l, ws[k]));
-        }
+      SlackRow row = slackRow(lambda, value, lo, hi);
+      if (row == null) {
+        return true;
       }
-      int size = slacks;
-      for (long c : coef) {
-        size += c != 0 ? 1 : 0;
-      }
-      int[] columns = new int[size];
-      long[] weights = new long[size];
-      long[] xlo = Arrays.copyOf(lo, n + m);
-      long[] xhi = Arrays.copyOf(hi, n + m);
-      double[] xv = Arrays.copyOf(value, n + m);
-      int q = 0;
-      for (int j = 0; j < n; j++) {
-        if (coef[j] != 0) {
-          columns[q] = j;
-          weights[q++] = coef[j];
-        }
-      }
-      for (int i = 0; i < m; i++) {
-        if (lambda[i] == 0) {
-          continue;
-        }
-        long least = 0;
-        long most = 0;
-        double v = 0;
-        int[] cs = rowColumns[i];
-        long[] ws = rowWeights[i];
-        for (int k = 0; k < cs.length; k++) {
-          long a = Math.multiplyExact(ws[k], lo[cs[k]]);
-          long b = Math.multiplyExact(ws[k], hi[cs[k]]);
-          least = Math.addExact(least, Math.min(a, b));
-          most = Math.addExact(most, Math.max(a, b));
-          v += ws[k] * value[cs[k]];
-        }
-        xlo[n + i] = hasLo[i] ? Math.max(least, rowLo[i]) : least;
-        xhi[n + i] = hasHi[i] ? Math.min(most, rowHi[i]) : most;
-        if (xlo[n + i] > xhi[n + i]) {
-          return true;
-        }
-        xv[n + i] = v;
-        columns[q] = n + i;
-        weights[q++] = -lambda[i];
-      }
+      int size = row.columns.length;
       long[] neg = new long[size];
       for (int k = 0; k < size; k++) {
-        neg[k] = Math.negateExact(weights[k]);
+        neg[k] = Math.negateExact(row.weights[k]);
       }
-      for (long[] w : new long[][] {weights, neg}) {
-        long[] g = MirCut.raw(columns, w, 0, xv, xlo, xhi, GOMORY_DIVISOR ? coef[basic] : 0);
-        if (g == null) {
-          continue;
-        }
-        // the slacks replaced by their rows: g_s s_i = g_s a_i x
-        long[] cut = new long[n];
-        for (int k = 0; k < size; k++) {
-          if (g[k] == 0) {
-            continue;
-          }
-          int c = columns[k];
-          if (c < n) {
-            cut[c] = Math.addExact(cut[c], g[k]);
-          } else {
-            int[] cs = rowColumns[c - n];
-            long[] ws = rowWeights[c - n];
-            for (int t = 0; t < cs.length; t++) {
-              cut[cs[t]] = Math.addExact(cut[cs[t]], Math.multiplyExact(g[k], ws[t]));
-            }
-          }
-        }
-        int nz = 0;
-        for (long c : cut) {
-          nz += c != 0 ? 1 : 0;
-        }
-        int[] cc = new int[nz];
-        long[] cw = new long[nz];
-        for (int j = 0, t = 0; j < n; j++) {
-          if (cut[j] != 0) {
-            cc[t] = j;
-            cw[t++] = cut[j];
-          }
-        }
-        MirCut c = MirCut.finish(cc, cw, g[size], value, lo, hi, true);
+      for (long[] w : new long[][] {row.weights, neg}) {
+        long[] g =
+            MirCut.raw(
+                row.columns, w, 0, row.xv, row.xlo, row.xhi, GOMORY_DIVISOR ? row.coef[basic] : 0);
+        MirCut c = g == null ? null : overRows(row.columns, g, g[size], n, value, lo, hi);
         if (c != null) {
           found.add(c);
         }
+      }
+      if (vbGomoryOn && variableBounds != null) {
+        vbGomory(row, neg, n, value, lo, hi, found);
       }
     } catch (ArithmeticException _) {
       // no cut from this row at this scale
       return false;
     }
     return true;
+  }
+
+  // the integer equality of a row of the basis inverse over the columns and the slacks of the rows
+  // (columns n + i), with the values and bounds of both
+  private static final class SlackRow {
+    // the columns and slacks of the equality, and their weights
+    final int[] columns;
+    final long[] weights;
+    // the LP values and the bounds of the columns and slacks
+    final double[] xv;
+    final long[] xlo;
+    final long[] xhi;
+    // the weights of the columns alone
+    final long[] coef;
+
+    SlackRow(int size, long[] coef, double[] value, long[] lo, long[] hi, int length) {
+      this.columns = new int[size];
+      this.weights = new long[size];
+      this.coef = coef;
+      this.xv = Arrays.copyOf(value, length);
+      this.xlo = Arrays.copyOf(lo, length);
+      this.xhi = Arrays.copyOf(hi, length);
+    }
+  }
+
+  // the equality of lambda over the columns and slacks; null when a slack has no value
+  private SlackRow slackRow(long[] lambda, double[] value, long[] lo, long[] hi) {
+    int n = lp.columns();
+    int m = lambda.length;
+    long[] coef = new long[n];
+    int size = 0;
+    for (int i = 0; i < m; i++) {
+      if (lambda[i] != 0) {
+        size++;
+        addRow(coef, lambda[i], i);
+      }
+    }
+    for (long c : coef) {
+      if (c != 0) {
+        size++;
+      }
+    }
+    SlackRow row = new SlackRow(size, coef, value, lo, hi, n + m);
+    int q = 0;
+    for (int j = 0; j < n; j++) {
+      if (coef[j] != 0) {
+        row.columns[q] = j;
+        row.weights[q++] = coef[j];
+      }
+    }
+    for (int i = 0; i < m; i++) {
+      if (lambda[i] == 0) {
+        continue;
+      }
+      if (!slackRange(i, n, value, lo, hi, row)) {
+        return null;
+      }
+      row.columns[q] = n + i;
+      row.weights[q++] = -lambda[i];
+    }
+    return row;
+  }
+
+  // adds l times row i to coef
+  private void addRow(long[] coef, long l, int i) {
+    int[] cs = rowColumns[i];
+    long[] ws = rowWeights[i];
+    for (int k = 0; k < cs.length; k++) {
+      coef[cs[k]] = Math.addExact(coef[cs[k]], Math.multiplyExact(l, ws[k]));
+    }
+  }
+
+  // the value and bounds of the slack of row i (column n + i); false when its interval is empty
+  private boolean slackRange(int i, int n, double[] value, long[] lo, long[] hi, SlackRow row) {
+    long[] xlo = row.xlo;
+    long[] xhi = row.xhi;
+    long least = 0;
+    long most = 0;
+    double v = 0;
+    int[] cs = rowColumns[i];
+    long[] ws = rowWeights[i];
+    for (int k = 0; k < cs.length; k++) {
+      long a = Math.multiplyExact(ws[k], lo[cs[k]]);
+      long b = Math.multiplyExact(ws[k], hi[cs[k]]);
+      least = Math.addExact(least, Math.min(a, b));
+      most = Math.addExact(most, Math.max(a, b));
+      v += ws[k] * value[cs[k]];
+    }
+    xlo[n + i] = hasLo[i] ? Math.max(least, rowLo[i]) : least;
+    xhi[n + i] = hasHi[i] ? Math.min(most, rowHi[i]) : most;
+    row.xv[n + i] = v;
+    return xlo[n + i] <= xhi[n + i];
+  }
+
+  // the MIR cuts of the equality, both ways, with variable bounds substituted
+  // (MirCut.ofVariableBounds)
+  private void vbGomory(
+      SlackRow row, long[] neg, int n, double[] value, long[] lo, long[] hi, List<MirCut> found) {
+    for (long[] w : new long[][] {row.weights, neg}) {
+      try {
+        MirCut v =
+            MirCut.ofVariableBounds(row.columns, w, 0, row.xv, row.xlo, row.xhi, variableBounds);
+        MirCut c = v == null ? null : overRows(v.columns, v.weights, v.rhs, n, value, lo, hi);
+        if (c != null) {
+          found.add(c);
+          vbCuts++;
+        }
+      } catch (ArithmeticException _) {
+        // no cut with the variable bounds from this row at this scale
+      }
+    }
+  }
+
+  // the cut sum g_k x_k <= rhs over columns and slacks (columns n + i) with the slacks replaced by
+  // their rows: g_s s_i = g_s a_i x
+  private MirCut overRows(
+      int[] columns, long[] g, long rhs, int n, double[] value, long[] lo, long[] hi) {
+    long[] cut = new long[n];
+    for (int k = 0; k < columns.length; k++) {
+      int c = columns[k];
+      if (c < n) {
+        cut[c] = Math.addExact(cut[c], g[k]);
+      } else if (g[k] != 0) {
+        addRow(cut, g[k], c - n);
+      }
+    }
+    int nz = 0;
+    for (long c : cut) {
+      if (c != 0) {
+        nz++;
+      }
+    }
+    int[] cc = new int[nz];
+    long[] cw = new long[nz];
+    int t = 0;
+    for (int j = 0; j < n; j++) {
+      if (cut[j] != 0) {
+        cc[t] = j;
+        cw[t] = cut[j];
+        t++;
+      }
+    }
+    return MirCut.finish(cc, cw, rhs, value, lo, hi, true);
   }
 
   /**
@@ -6275,7 +6395,7 @@ public class LinearRelaxation extends Constraint
       mir(unitRows[i], value, lo, hi, found);
     }
     labelled(found, unitBefore, "mir");
-    if (variableBounds != null && !coversOnly) {
+    if (vbMirOn && variableBounds != null && !coversOnly) {
       int vbBefore = found.size();
       for (Aggregate row : unitRows) {
         vbMir(row, value, lo, hi, found, variableBounds);
