@@ -388,8 +388,6 @@ public final class ShiftExplanation {
     }
   }
 
-  // target value u, or its source counterpart (u - k, or k - u for a mirror), is out before the
-  // position
   /**
    * Returns the least target value u, from {@code from} on, that is in the target's root domain and
    * whose counterpart is in the source's root domain; a value without both was never possible and
@@ -469,6 +467,8 @@ public final class ShiftExplanation {
     return u;
   }
 
+  // target value u, or its source counterpart (u - k, or k - u for a mirror), is out before the
+  // position
   private static boolean excluded(
       AtomicTrail trail,
       int position,

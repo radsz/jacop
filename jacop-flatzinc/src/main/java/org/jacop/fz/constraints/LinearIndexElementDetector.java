@@ -70,6 +70,8 @@ import org.jacop.fz.SimpleNode;
  * element constraints over the values of an affine index done by the presolve of CP-SAT (L. Perron,
  * F. Didier and S. Gay, The CP-SAT-LP Solver, CP 2023, LIPIcs 280, 3:1-3:2).
  *
+ * <p>An index defined from one variable alone is left to the element.
+ *
  * <p>The system property {@code org.jacop.fz.linearIndexElement=false} turns it off.
  *
  * @author Radoslaw Szymanek
@@ -243,15 +245,17 @@ public class LinearIndexElementDetector implements ParserTreeConstants {
     return d.vars()[d.vars().length - 1];
   }
 
-  // int_lin_eq with an element index of coefficient +-1 and at most MAX_TERMS other variables,
-  // whose combinations are few; the index goes last in vars, with coefficient 0
+  // int_lin_eq with an element index of coefficient +-1 and two to MAX_TERMS other variables,
+  // whose combinations are few; the index goes last in vars, with coefficient 0. An index shifted
+  // from one variable stays an element: the table would only copy it (stable-goods 2020 s-d19 lost
+  // its first solution in the default search with 75 such tables).
   private Definition definition(ASTConstElem c, Map<IntVar, List<Element>> elements) {
     if (!c.getName().equals("int_lin_eq")) {
       return null;
     }
     int[] a = support.getIntArray((SimpleNode) c.jjtGetChild(0));
     IntVar[] v = support.getVarArray((SimpleNode) c.jjtGetChild(1));
-    if (a == null || v.length < 2 || v.length > MAX_TERMS + 1) {
+    if (a == null || v.length < 3 || v.length > MAX_TERMS + 1) {
       return null;
     }
     int at = -1;
