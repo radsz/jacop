@@ -446,6 +446,7 @@ setup to run configuration. -->
                                 <include>**/LinearRelaxationCheckTest.java</include>
                                 <include>**/LpProbeFlatzincTest.java</include>
                                 <include>**/DominanceFlatzincTest.java</include>
+                                <include>**/CoveringDominanceFlatzincTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/BinPackingPermutationsFlatzincTest.java</include>
                                 <include>**/SlotDiveFlatzincTest.java</include>
@@ -746,6 +747,7 @@ setup to run configuration. -->
                                 <include>**/LinearRelaxationCheckTest.java</include>
                                 <include>**/LpProbeFlatzincTest.java</include>
                                 <include>**/DominanceFlatzincTest.java</include>
+                                <include>**/CoveringDominanceFlatzincTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/BinPackingPermutationsFlatzincTest.java</include>
                                 <include>**/SlotDiveFlatzincTest.java</include>
@@ -1041,6 +1043,7 @@ setup to run configuration. -->
                                 <include>**/LinearRelaxationCheckTest.java</include>
                                 <include>**/LpProbeFlatzincTest.java</include>
                                 <include>**/DominanceFlatzincTest.java</include>
+                                <include>**/CoveringDominanceFlatzincTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/BinPackingPermutationsFlatzincTest.java</include>
                                 <include>**/SlotDiveFlatzincTest.java</include>
@@ -1334,6 +1337,7 @@ setup to run configuration. -->
                                 <include>**/LinearRelaxationCheckTest.java</include>
                                 <include>**/LpProbeFlatzincTest.java</include>
                                 <include>**/DominanceFlatzincTest.java</include>
+                                <include>**/CoveringDominanceFlatzincTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/BinPackingPermutationsFlatzincTest.java</include>
                                 <include>**/SlotDiveFlatzincTest.java</include>
