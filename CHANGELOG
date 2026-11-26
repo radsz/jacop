@@ -9409,7 +9409,17 @@ Version 5.0 (unreleased)
    changes (split sums under -f): proved 9 -> 10, total 1,376 -> 1,277 s,
    no objective worse.
 
-520. Pseudo-Boolean models: two root deductions that CP-SAT makes and
+521. FlatZinc set-up on big Pseudo-Boolean models is faster, with the same
+   search. The output-variable check used by alias merging is a set
+   instead of a scan of every output array, side components take only
+   their own clauses, LinearOverlapDetector walks the shorter row, the
+   detector gates of #906 read a cached census of constraint kinds and
+   cover ten more detectors, and the XOR pairing and common-subexpression
+   keys avoid boxed maps. PB 2016 set-up: cache-ibm-q-unbounded 40.5 ->
+   24.6 s, ped2.B.recomb1 32.6 -> 17.4 s, atlanta-ip 17.0 -> 11.6 s,
+   simp-nonunif 29.9 -> 22.8 s; wide-quick at 240 s total 1.002.
+
+522. Pseudo-Boolean models: two root deductions that CP-SAT makes and
    JaCoP missed on small PB16 instances (Pseudo-Boolean Competition 2016).
    The XorSystem detector reads an equation modulo 2 whose odd
    coefficients leave one or two variables as what it states: x = parity,

@@ -36,6 +36,7 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.jacop.constraints.LinearInt;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -87,6 +88,8 @@ import org.jacop.fz.SimpleNode;
  * @version 5.0
  */
 public class RegularFlowDetector {
+
+  private static final Set<String> GATE_KINDS = Set.of("jacop_regular");
 
   // the most flow variables the detector creates for one regular constraint
   static final int MAX_ARCS = 50_000;
@@ -164,6 +167,10 @@ public class RegularFlowDetector {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
+    // the flows are of regular constraints: a model without them is not read
+    if (!support.hasConstraint(astTree, GATE_KINDS)) {
+      return;
+    }
     support.forEachConstraint(astTree, this::collect);
     if (regulars.isEmpty() || counts.isEmpty()) {
       return;

@@ -57,6 +57,8 @@ import org.jacop.fz.SimpleNode;
  */
 public class TableScopeMerger implements ParserTreeConstants {
 
+  private static final Set<String> GATE_KINDS = Set.of("jacop_table_int", "jacop_table_bool");
+
   static final long MAX_ROWS = Long.getLong("org.jacop.fz.tableMerge.rows", 2_000_000L);
 
   private final Support support;
@@ -113,6 +115,10 @@ public class TableScopeMerger implements ParserTreeConstants {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
+    // it merges tables: a model without them is not read
+    if (!support.hasConstraint(astTree, GATE_KINDS)) {
+      return;
+    }
     Map<List<Integer>, List<Table>> groups = new LinkedHashMap<>();
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);

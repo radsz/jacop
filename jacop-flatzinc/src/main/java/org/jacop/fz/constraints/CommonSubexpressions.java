@@ -39,7 +39,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
-import java.util.TreeMap;
 import java.util.TreeSet;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
@@ -529,26 +528,64 @@ public class CommonSubexpressions implements ParserTreeConstants {
     return Long.compare((Long) a, (Long) b);
   }
 
-  // the terms of a linear constraint with repeated variables added up, constants as a sum
+  // the terms of a linear constraint with repeated variables added up, constants as a sum: the
+  // variable numbers in increasing order, each with its coefficient, then the constant; in a
+  // primitive array, since boxed terms in a tree map took a quarter of the set-up of each round
+  // on the 1.9 million rows of PB 2006 haplotype simp-nonunif
   private Object linear(int[] c, IntVar[] x) {
-    Map<Long, Long> terms = new TreeMap<>();
+    long[] order = new long[c.length];
+    int n = 0;
     long constant = 0;
     for (int i = 0; i < c.length; i++) {
       if (x[i].singleton()) {
         constant += (long) c[i] * x[i].value();
       } else {
-        terms.merge((Long) token(x[i]), (long) c[i], Long::sum);
+        order[n++] = ((Long) token(x[i]) << 32) | i;
       }
     }
-    terms.values().removeIf(v -> v == 0);
-    // a flat list: the hash code of a map adds up its entries and collides for most sums
-    List<Long> key = new ArrayList<>(2 * terms.size() + 1);
-    for (Map.Entry<Long, Long> t : terms.entrySet()) {
-      key.add(t.getKey());
-      key.add(t.getValue());
+    Arrays.sort(order, 0, n);
+    long[] key = new long[2 * n + 1];
+    int m = 0;
+    for (int k = 0; k < n; k++) {
+      long variable = order[k] >>> 32;
+      int coefficient = c[(int) order[k]];
+      if (m > 0 && key[m - 2] == variable) {
+        key[m - 1] += coefficient;
+      } else {
+        key[m++] = variable;
+        key[m++] = coefficient;
+      }
     }
-    key.add(constant);
-    return key;
+    int kept = 0;
+    for (int k = 0; k < m; k += 2) {
+      if (key[k + 1] != 0) {
+        key[kept++] = key[k];
+        key[kept++] = key[k + 1];
+      }
+    }
+    key[kept++] = constant;
+    return new Terms(Arrays.copyOf(key, kept));
+  }
+
+  /** The terms of a linear constraint as a key, compared by their values. */
+  private static final class Terms {
+    private final long[] values;
+    private final int hash;
+
+    Terms(long[] values) {
+      this.values = values;
+      this.hash = Arrays.hashCode(values);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Terms t && hash == t.hash && Arrays.equals(values, t.values);
+    }
+
+    @Override
+    public int hashCode() {
+      return hash;
+    }
   }
 
   // the constraints in which each variable occurs, over every constraint of the model

@@ -91,8 +91,32 @@ public class XorSystemDetector implements ParserTreeConstants {
   // the longest inequality matched with its opposite into an equation
   static final int MAX_PAIRED_LENGTH = 64;
 
-  // the inequalities over 0/1 variables not yet matched, by their terms
-  private final Map<Map<IntVar, Integer>, Integer> lessEquals = new HashMap<>();
+  // the inequalities over 0/1 variables not yet matched, by a hash of their terms that is linear
+  // in the coefficients, so that the opposite terms have the opposite hash: maps of the terms of
+  // every row as keys took a tenth of the set-up of the 1.9 million rows of PB 2006 haplotype
+  // simp-nonunif; the terms are built only for rows whose hashes meet
+  private final Map<Long, List<Pending>> lessEquals = new HashMap<>();
+
+  /** An inequality over 0/1 variables waiting for its opposite. */
+  private static final class Pending {
+    private final int[] a;
+    private final IntVar[] v;
+    private final int k;
+    private Map<IntVar, Integer> terms;
+
+    Pending(int[] a, IntVar[] v, int k) {
+      this.a = a;
+      this.v = v;
+      this.k = k;
+    }
+
+    Map<IntVar, Integer> terms() {
+      if (terms == null) {
+        terms = XorSystemDetector.terms(a, v);
+      }
+      return terms;
+    }
+  }
 
   private final Support support;
 
@@ -955,30 +979,68 @@ public class XorSystemDetector implements ParserTreeConstants {
     if (a.length != v.length || v.length < 2 || v.length > MAX_PAIRED_LENGTH) {
       return;
     }
-    Map<IntVar, Integer> terms = new HashMap<>();
+    long hash = 0;
     for (int i = 0; i < v.length; i++) {
       if (v[i].min() < 0 || v[i].max() > 1) {
         return;
       }
+      hash += mix(System.identityHashCode(v[i])) * a[i];
+    }
+    int k = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    Map<IntVar, Integer> terms = null;
+    List<Pending> opposites = lessEquals.get(-hash);
+    if (opposites != null) {
+      terms = terms(a, v);
+      Map<IntVar, Integer> negated = new HashMap<>();
+      terms.forEach((x, c) -> negated.put(x, -c));
+      for (int p = 0; p < opposites.size(); p++) {
+        Pending other = opposites.get(p);
+        if (other.terms().equals(negated)) {
+          if (other.k != -k) {
+            break;
+          }
+          opposites.remove(p);
+          if (opposites.isEmpty()) {
+            lessEquals.remove(-hash);
+          }
+          IntVar[] x = terms.keySet().toArray(new IntVar[0]);
+          int[] c = new int[x.length];
+          for (int i = 0; i < x.length; i++) {
+            c[i] = terms.get(x[i]);
+          }
+          pairedRows++;
+          linear(c, x, k);
+          return;
+        }
+      }
+    }
+    List<Pending> same = lessEquals.computeIfAbsent(hash, h -> new ArrayList<>(1));
+    for (Pending other : same) {
+      if (terms == null) {
+        terms = terms(a, v);
+      }
+      if (other.terms().equals(terms)) {
+        // the first of the rows with these terms waits
+        return;
+      }
+    }
+    same.add(new Pending(a, v, k));
+  }
+
+  // the terms of a row, repeated variables added up, without zero coefficients
+  private static Map<IntVar, Integer> terms(int[] a, IntVar[] v) {
+    Map<IntVar, Integer> terms = new HashMap<>();
+    for (int i = 0; i < v.length; i++) {
       terms.merge(v[i], a[i], Integer::sum);
     }
     terms.values().removeIf(c -> c == 0);
-    int k = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
-    Map<IntVar, Integer> negated = new HashMap<>();
-    terms.forEach((x, c) -> negated.put(x, -c));
-    Integer other = lessEquals.get(negated);
-    if (other != null && other == -k) {
-      lessEquals.remove(negated);
-      IntVar[] x = terms.keySet().toArray(new IntVar[0]);
-      int[] c = new int[x.length];
-      for (int i = 0; i < x.length; i++) {
-        c[i] = terms.get(x[i]);
-      }
-      pairedRows++;
-      linear(c, x, k);
-    } else {
-      lessEquals.putIfAbsent(terms, k);
-    }
+    return terms;
+  }
+
+  private static long mix(int h) {
+    long z = (h + 0x9E3779B97F4A7C15L) * 0xBF58476D1CE4E5B9L;
+    z = (z ^ (z >>> 27)) * 0x94D049BB133111EBL;
+    return z ^ (z >>> 31);
   }
 
   /**
