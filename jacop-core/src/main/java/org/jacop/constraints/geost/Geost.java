@@ -1089,6 +1089,11 @@ public class Geost extends Constraint
 
       if (init.begin(store)) {
 
+        // every object is checked, also again when the level of the first call was removed: an
+        // object fixed at imposition is never queued by a change
+        objectQueue.addAll(Arrays.asList(objects));
+        Arrays.fill(pruneIfGrounded, true);
+
         // enforce duration > 0 constraint
 
         for (GeostObject o : objects) {

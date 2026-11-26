@@ -14144,4 +14144,44 @@ class SingleConstraintTest extends TestHelper {
       assertThat(countInOrder(store, vars)).as("instance %d", t).isEqualTo(expected);
     }
   }
+
+  @Test
+  void geostWhoseFirstCallWasUndoneChecksEveryObjectAgain() {
+    // every object is queued at construction and checked by the first call; an object fixed at
+    // imposition is never queued by a change, so when the level of the first call was removed two
+    // fixed overlapping squares were never checked again and the search found a solution
+    for (int a = 0; a < 3; a++) {
+      for (int b = 0; b < 3; b++) {
+        Store store = new Store();
+        List<Shape> shapes = List.of(new Shape(0, new int[] {0, 0}, new int[] {2, 2}));
+        IntVar[] x = {
+          new IntVar(store, "x0", a, a),
+          new IntVar(store, "y0", 0, 0),
+          new IntVar(store, "x1", b, b),
+          new IntVar(store, "y1", 1, 1)
+        };
+        List<GeostObject> objects = new ArrayList<>();
+        for (int i = 0; i < 2; i++) {
+          objects.add(
+              new GeostObject(
+                  i,
+                  new IntVar[] {x[2 * i], x[2 * i + 1]},
+                  new IntVar(store, 0, 0),
+                  new IntVar(store, 0, 0),
+                  new IntVar(store, 1, 1),
+                  new IntVar(store, 1, 1)));
+        }
+        store.impose(
+            new Geost(objects, List.of(new NonOverlapping(objects, new int[] {0, 1})), shapes));
+        store.setLevel(1);
+        store.consistency();
+        store.removeLevel(1);
+        store.setLevel(0);
+        // the squares of side 2 at (a, 0) and (b, 1) overlap unless they are 2 apart
+        assertThat(countInOrder(store, x))
+            .as("a = %d, b = %d", a, b)
+            .isEqualTo(Math.abs(a - b) >= 2 ? 1 : 0);
+      }
+    }
+  }
 }
