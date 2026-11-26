@@ -14704,4 +14704,41 @@ class SingleConstraintTest extends TestHelper {
     assertThat(List.of(x.value(), y.value(), a.value(), b.value(), c.value()))
         .containsExactly(1, 0, 0, 1, 2);
   }
+
+  // With sub_circuit_scc_pruning=false only the dominator pruning checks the circuit, and it is
+  // skipped after calls that prune nothing: a skipped call accepted two cycles, x = [2, 1, 4, 3].
+  @Test
+  void subcircuitWithDominatorPruningOnlyFindsExactlyTheBruteForceSolutions() {
+    Random random = new Random(43);
+    for (int run = 0; run < 400; run++) {
+      Store store = new Store();
+      IntVar[] x = randomSubcircuitVars(store, 1 + random.nextInt(6), random);
+      String instance = "run " + run + " subcircuit " + domainsOf(x);
+      Set<String> expected =
+          bruteForce(x, SingleConstraintTest::isSubcircuit).stream()
+              .map(Arrays::toString)
+              .collect(Collectors.toSet());
+      System.setProperty("sub_circuit_scc_pruning", "false");
+      try {
+        store.impose(new Subcircuit(x));
+      } finally {
+        System.clearProperty("sub_circuit_scc_pruning");
+      }
+
+      Set<String> found = new HashSet<>();
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      search.setSolutionListener(
+          new SimpleSolutionListener<>() {
+            @Override
+            public boolean executeAfterSolution(Search<IntVar> s, SelectChoicePoint<IntVar> sel) {
+              found.add(Arrays.toString(Arrays.stream(x).mapToInt(IntVar::value).toArray()));
+              return super.executeAfterSolution(s, sel);
+            }
+          });
+      search.getSolutionListener().searchAll(true);
+      search.labeling(store, new SimpleSelect<>(x, null, new IndomainRandom<>(run)));
+      assertThat(found).as(instance).isEqualTo(expected);
+    }
+  }
 }

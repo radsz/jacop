@@ -215,9 +215,40 @@ public class Subcircuit extends Alldiff {
       }
     }
 
+    // the dominators alone do not see a second cycle: without the components a fixed assignment
+    // is checked
+    if (!useScc && !singleCycleWhenFixed()) {
+      throw Store.failException;
+    }
+
     if (store.propagationHasOccurred) {
       store.addChanged(this);
     }
+  }
+
+  // false when every successor is fixed and the nodes off their own place form more than one cycle
+  private boolean singleCycleWhenFixed() {
+    int start = -1;
+    int inCircuit = 0;
+    for (int v = 0; v < list.length; v++) {
+      if (!list[v].singleton()) {
+        return true;
+      }
+      if (list[v].value() != v + 1) {
+        start = v;
+        inCircuit++;
+      }
+    }
+    if (inCircuit == 0) {
+      return true;
+    }
+    int length = 0;
+    int v = start;
+    do {
+      v = list[v].value() - 1;
+      length++;
+    } while (v != start && length <= inCircuit);
+    return v == start && length == inCircuit;
   }
 
   @Override
