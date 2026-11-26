@@ -366,6 +366,172 @@ class XcspTableFlatzincTest {
     assertEquals(10, fired);
   }
 
+  /**
+   * Lists that differ written as {@code (a[1] != b[1]) \/ (a[2] != b[2])}, as MiniZinc flattens it
+   * (a clause over half-reified or reified disequalities), become one AllDifferentLists over the
+   * largest clique of lists (ExaminationTimetabling of XCSP 2026: no two events in one room in one
+   * period). Some pairs are left out, some are said by a plain disequality of one position instead,
+   * and in some runs a Boolean of a clause is also used elsewhere, so that its clause must stay.
+   * The solutions must be those of the brute force, with and without LCG.
+   */
+  @Test
+  void listsDifferClausesMatchBruteForce() throws IOException {
+    Random random = new Random(20261120);
+    int fired = 0;
+    for (int run = 0; run < 60; run++) {
+      int[] values = random.nextBoolean() ? new int[] {0, 1} : new int[] {0, 1, 2};
+      int n = 2;
+      int m = 3 + random.nextInt(2);
+      int vars = m * n;
+      int[][] lists = new int[m][n];
+      for (int i = 0; i < m; i++) {
+        for (int k = 0; k < n; k++) {
+          lists[i][k] = i * n + k;
+        }
+      }
+      // 0: clause, 1: plain disequality of position 0, 2: none, 3: plain across positions
+      int[][] kind = new int[m][m];
+      List<int[]> pairs = new ArrayList<>();
+      List<int[]> plain = new ArrayList<>();
+      StringBuilder constraints = new StringBuilder();
+      StringBuilder booleans = new StringBuilder();
+      int b = 0;
+      boolean leak = random.nextInt(4) == 0;
+      int leaked = -1;
+      for (int i = 0; i < m; i++) {
+        for (int j = i + 1; j < m; j++) {
+          int r = random.nextInt(10);
+          kind[i][j] = r < 6 ? 0 : r < 8 ? 1 : r < 9 ? 3 : 2;
+          if (kind[i][j] == 1 || kind[i][j] == 3) {
+            // a plain disequality of one position, or across positions (no edge then)
+            int other = kind[i][j] == 1 ? 0 : 1;
+            plain.add(new int[] {lists[i][0], lists[j][other]});
+            String x = "x" + lists[i][0];
+            String y = "x" + lists[j][other];
+            constraints.append(
+                random.nextBoolean()
+                    ? "constraint int_ne(" + x + "," + y + ");\n"
+                    : "constraint int_lin_ne([1,-1],[" + x + "," + y + "],0);\n");
+          } else if (kind[i][j] == 0) {
+            pairs.add(new int[] {i, j});
+            int first = b;
+            for (int k = 0; k < n; k++) {
+              booleans.append("var bool: b").append(b).append(";\n");
+              String x = "x" + lists[i][k];
+              String y = "x" + lists[j][k];
+              // the Boolean that is also used elsewhere only implies its disequality
+              int form = leak && leaked < 0 && k == 0 ? 0 : random.nextInt(4);
+              constraints.append(
+                  switch (form) {
+                    case 0 -> "constraint int_ne_imp(" + x + "," + y + ",b" + b + ");\n";
+                    case 1 -> "constraint int_ne_reif(" + x + "," + y + ",b" + b + ");\n";
+                    case 2 ->
+                        "constraint int_lin_ne_reif([1,-1],[" + x + "," + y + "],0,b" + b + ");\n";
+                    default ->
+                        "constraint int_lin_ne_imp([1,-1],[" + x + "," + y + "],0,b" + b + ");\n";
+                  });
+              b++;
+            }
+            constraints.append(
+                "constraint bool_clause([b" + first + ",b" + (first + 1) + "],[]);\n");
+            if (leak && leaked < 0) {
+              // b first also says x[i][0] < 1: its clause must stay posted
+              leaked = first;
+              constraints.append(
+                  "constraint int_le_reif(x" + lists[i][0] + ",0,b" + first + ");\n");
+            }
+          }
+        }
+      }
+      Set<String> expected = new TreeSet<>();
+      int leakVar = leaked < 0 ? -1 : leakedVariable(kind, lists, m, leaked);
+      enumerateClauseLists(new int[vars], 0, values, lists, pairs, plain, leakVar, expected);
+      String fzn =
+          header(vars, values)
+                  .replace("predicate jacop_short_table_int", "predicate unused_short_table_int")
+                  .replace(";\narray", ";\n" + booleans + "array")
+              + constraints
+              + "solve satisfy;\n";
+      String message = "run " + run + "\n" + fzn;
+      if (solve(fzn, "-debug").contains("% lists differ clauses:")) {
+        fired++;
+      }
+      assertEquals(expected, solveAll(fzn), message);
+      assertEquals(expected, solveAll(fzn, "--lcg", "off"), message);
+      System.setProperty("org.jacop.fz.listsDifferClauses", "false");
+      try {
+        assertEquals(expected, solveAll(fzn), message);
+      } finally {
+        System.clearProperty("org.jacop.fz.listsDifferClauses");
+      }
+    }
+    assertTrue(fired >= 20, "fired " + fired);
+  }
+
+  // the variable x[i][0] of the pair whose first Boolean is b, the Boolean also says it is <= 0
+  private static int leakedVariable(int[][] kind, int[][] lists, int m, int b) {
+    int count = 0;
+    for (int i = 0; i < m; i++) {
+      for (int j = i + 1; j < m; j++) {
+        if (kind[i][j] == 0) {
+          if (count == b) {
+            return lists[i][0];
+          }
+          count += 2;
+        }
+      }
+    }
+    throw new IllegalStateException();
+  }
+
+  // b0 of the leaked pair: b0 <-> x[v] <= 0 and b0 -> x_i0 != x_j0; b1 -> x_i1 != x_j1; b0 \/ b1
+  private static void enumerateClauseLists(
+      int[] x,
+      int i,
+      int[] values,
+      int[][] lists,
+      List<int[]> pairs,
+      List<int[]> plain,
+      int leakVar,
+      Set<String> out) {
+    if (i == x.length) {
+      for (int[] d : plain) {
+        if (x[d[0]] == x[d[1]]) {
+          return;
+        }
+      }
+      boolean first = true;
+      for (int[] p : pairs) {
+        int[] a = lists[p[0]];
+        int[] c = lists[p[1]];
+        boolean differ0 = x[a[0]] != x[c[0]];
+        boolean differ1 = x[a[1]] != x[c[1]];
+        if (first && leakVar >= 0) {
+          // b0 is fixed by x[leakVar] <= 0; the clause needs b0 or b1
+          boolean b0 = x[leakVar] <= 0;
+          if (b0 && !differ0) {
+            return;
+          }
+          if (!b0 && !differ1) {
+            return;
+          }
+        } else if (!differ0 && !differ1) {
+          return;
+        }
+        first = false;
+      }
+      out.add(
+          Arrays.stream(x)
+              .mapToObj(String::valueOf)
+              .collect(Collectors.joining(", ", "x = array1d(1.." + x.length + ", [", "]);")));
+      return;
+    }
+    for (int v : values) {
+      x[i] = v;
+      enumerateClauseLists(x, i + 1, values, lists, pairs, plain, leakVar, out);
+    }
+  }
+
   @Test
   void numberedPathMatchesBruteForce() throws IOException {
     // a tour numbered 1..k over random arcs (CalvinPuzzle of XCSP 2023) gets a redundant circuit

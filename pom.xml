@@ -473,6 +473,7 @@ setup to run configuration. -->
                                 <include>**/LcgSlowFallbackFlatzincTest.java</include>
                                 <include>**/FreeFirstFlatzincTest.java</include>
                                 <include>**/NValueBlocksFlatzincTest.java</include>
+                                <include>**/EntailedDisequalitiesFlatzincTest.java</include>
                                 <include>**/PureClauseFlatzincTest.java</include>
                                 <include>**/ClausalFlatzincTest.java</include>
                                 <include>**/RootProbingFlatzincTest.java</include>
@@ -769,6 +770,7 @@ setup to run configuration. -->
                                 <include>**/LcgSlowFallbackFlatzincTest.java</include>
                                 <include>**/FreeFirstFlatzincTest.java</include>
                                 <include>**/NValueBlocksFlatzincTest.java</include>
+                                <include>**/EntailedDisequalitiesFlatzincTest.java</include>
                                 <include>**/PureClauseFlatzincTest.java</include>
                                 <include>**/ClausalFlatzincTest.java</include>
                                 <include>**/RootProbingFlatzincTest.java</include>
@@ -1059,6 +1061,7 @@ setup to run configuration. -->
                                 <include>**/LcgSlowFallbackFlatzincTest.java</include>
                                 <include>**/FreeFirstFlatzincTest.java</include>
                                 <include>**/NValueBlocksFlatzincTest.java</include>
+                                <include>**/EntailedDisequalitiesFlatzincTest.java</include>
                                 <include>**/PureClauseFlatzincTest.java</include>
                                 <include>**/ClausalFlatzincTest.java</include>
                                 <include>**/RootProbingFlatzincTest.java</include>
