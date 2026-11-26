@@ -697,18 +697,53 @@ class LcgSlowFallbackFlatzincTest {
   }
 
   @Test
-  void fixedOptimisationWithoutSolutionGivesWayAtItsShare() throws IOException {
-    // fixed search of an optimisation model that has no solution: LCG, however fast, gives way at
-    // its share of the time (here at once) to the annotation's search without learning, which
-    // explores the whole tree
-    String model = pigeonsInputOrder().replace(" satisfy;", " minimize p1;");
-    String config = "lcg-slow-rate=0.001,lcg-slow-literal=0,lcg-slow-at=0.0001,lcg-fixed-unsolved=";
-    String out = runFixed(model, config + "0.0001");
+  void fixedOptimisationTastesTheSearchWithoutLearning() throws IOException {
+    // fixed search of an optimisation model before its first solution tastes the search without
+    // learning as satisfaction does; kept, it proves the model has no solution, or finds and
+    // proves the optimum
+    String pigeons = pigeonsInputOrder().replace(" satisfy;", " minimize p1;");
+    String out = runFixed(pigeons, "lcg-fixed-at=0.0001,lcg-fixed-ratio=-1");
     assertTrue(out.contains("=====UNSATISFIABLE====="), out);
-    assertTrue(out.contains("lcgFixedLate=true"), out);
-    String kept = runFixed(model, config + "0");
-    assertTrue(kept.contains("=====UNSATISFIABLE====="), kept);
-    assertFalse(kept.contains("lcgFixedLate=true"), kept);
+    assertTrue(out.contains("lcgFixedTaste=cp"), out);
+    // with -a, as the MiniZinc Challenge runs optimisation: the improving solutions
+    out = runFixed(pigeonOutside(), "lcg-fixed-at=0.0001,lcg-fixed-ratio=-1", "-a");
+    assertTrue(out.contains("=========="), out);
+    assertTrue(out.contains("lcgFixedTaste=cp"), out);
+    assertTrue(out.contains("p1 = 10;"), out);
+  }
+
+  // the pigeons of pigeonsInputOrder, the first also allowed in a 10th hole, minimising the first
+  // pigeon's hole: in input order every hole of the first pigeon below 10 leaves 9 pigeons in 8
+  // holes, so the only solutions, at the optimum 10, come after them
+  private static String pigeonOutside() {
+    int n = 10;
+    StringBuilder decl = new StringBuilder();
+    StringBuilder cons = new StringBuilder();
+    StringBuilder nonZero = new StringBuilder();
+    StringBuilder ps = new StringBuilder();
+    for (int v = 1 - n; v <= n - 1; v++) {
+      if (v != 0) {
+        nonZero.append(nonZero.isEmpty() ? "" : ",").append(v);
+      }
+    }
+    for (int i = 1; i <= n; i++) {
+      decl.append("var 1..").append(i == 1 ? n : n - 1).append(": p").append(i);
+      decl.append(":: output_var;\n");
+      ps.append(i == 1 ? "" : ",").append('p').append(i);
+    }
+    for (int i = 1; i <= n; i++) {
+      for (int j = i + 1; j <= n; j++) {
+        String d = "d" + i + "_" + j;
+        decl.append("var {").append(nonZero).append("}: ").append(d).append(";\n");
+        cons.append("constraint int_lin_eq([1,-1,-1],[p").append(i).append(",p").append(j);
+        cons.append(",").append(d).append("],0);\n");
+      }
+    }
+    return decl.toString()
+        + cons
+        + "solve :: int_search(["
+        + ps
+        + "], input_order, indomain_min, complete) minimize p1;\n";
   }
 
   @Test
@@ -721,26 +756,20 @@ class LcgSlowFallbackFlatzincTest {
     assertTrue(out.contains("lcgFixedTaste=lcg"), out);
   }
 
-  private String runFixed(String model, String config) throws IOException {
+  private String runFixed(String model, String config, String... extra) throws IOException {
     Path fzn = tmp.resolve("fixed.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);
-    String[] args = {
-      "--lcg",
-      "-s",
-      "--search-statistics",
-      "--lp",
-      "off",
-      "-t",
-      "30000",
-      "--free-config",
-      config,
-      fzn.toString()
+    String[] options = {
+      "--lcg", "-s", "--search-statistics", "--lp", "off", "-t", "30000", "--free-config", config
     };
+    List<String> args = new ArrayList<>(List.of(options));
+    args.addAll(List.of(extra));
+    args.add(fzn.toString());
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     PrintStream originalOut = System.out;
     try (PrintStream capture = new PrintStream(out, true, StandardCharsets.UTF_8)) {
       System.setOut(capture);
-      new Fz2jacop().callMain(args);
+      new Fz2jacop().callMain(args.toArray(new String[0]));
     } finally {
       System.setOut(originalOut);
     }
