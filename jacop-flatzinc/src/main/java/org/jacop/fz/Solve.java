@@ -3318,6 +3318,26 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
+   * Solves the root refutation of a satisfaction model now when nothing woke it at the root (no
+   * domain changed), before JaSAT alone solves a CNF of the model, which does not run it: hole-10
+   * of XCSP 2017 (the pigeon-hole as conflict tables) is refuted here in a few pivots, and
+   * SocialGolfers-08-04-11 of XCSP 2024 in half a second, while JaSAT does not finish either.
+   *
+   * @return false when the refutation proved the model unsatisfiable
+   */
+  private boolean refuteAtRoot() {
+    if (refutation != null && !refutation.solved()) {
+      try {
+        refutation.consistency(store);
+      } catch (FailException e) {
+        lcgStatus = CdclSolver.UNSAT;
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
    * Solves with lazy clause generation: JaSAT searches, the store's constraints propagate and
    * explain their prunings. Solutions are printed when found, with the domains fixed to them.
    */
@@ -3331,9 +3351,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         && options.proof() == null
         && !options.getAll()
         && options.getNumberSolutions() <= 1
-        && options.freeSearch()
-        && executeClausalSearch(clausal)) {
-      return numberSolutions > 0;
+        && options.freeSearch()) {
+      if (!refuteAtRoot()) {
+        return false;
+      }
+      if (executeClausalSearch(clausal)) {
+        return numberSolutions > 0;
+      }
     }
     if (PureClauseModel.enabled()
         && costVar == null
@@ -3351,17 +3375,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       if (refutation != null) {
         ignored.add(refutation);
-        if (!refutation.solved()) {
-          // nothing woke the refutation at the root (no domain changed), and JaSAT will not run it:
-          // solve it now (hole-10 of XCSP 2017, the pigeon-hole as conflict tables, is refuted
-          // here in a few pivots, while JaSAT does not finish)
-          try {
-            refutation.consistency(store);
-          } catch (FailException e) {
-            lcgStatus = CdclSolver.UNSAT;
-            return false;
-          }
-        }
+      }
+      if (!refuteAtRoot()) {
+        return false;
       }
       PureClauseModel cnf =
           PureClauseModel.of(store, sat.collectedClauses(), ignored, this::declaredVariables);
