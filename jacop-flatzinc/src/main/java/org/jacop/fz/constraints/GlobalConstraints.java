@@ -354,6 +354,19 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] d = sdr[1];
     IntVar[] r = sdr[2];
 
+    if (b.min() < 0) {
+      // a running task uses at least 1, so a negative limit holds only while no task runs, as the
+      // limit max(b, 0) does; the propagators take no negative limit
+      IntVar zero = support.dictionary.getConstant(0);
+      if (b.max() <= 0) {
+        b = zero;
+      } else {
+        IntVar limit = new IntVar(support.store, 0, b.max());
+        support.pose(new Max(new IntVar[] {b, zero}, limit));
+        b = limit;
+      }
+    }
+
     if (cumulativeResourceSumWithinCapacity(r, b)) {
       return;
     }
