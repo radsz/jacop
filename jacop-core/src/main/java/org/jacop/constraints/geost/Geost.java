@@ -249,6 +249,13 @@ public class Geost extends Constraint
   final ArrayList<Var> groundedVars;
 
   /**
+   * The variables of groundedVars. The store queues every variable again when it redoes a first
+   * consistency whose level was removed, and a variable already counted as grounded is not counted
+   * again.
+   */
+  private final Set<Var> groundedSet = Collections.newSetFromMap(new IdentityHashMap<>());
+
+  /**
    * If running a complete sweep for each shape is costly, because some shapes may require a
    * significant sweep, even though a weaker bound has already been found. However, to be able to
    * prune shapes, such a costly sweep needs to be done. A tradeoff solution consists in running a
@@ -1826,22 +1833,24 @@ public class Geost extends Constraint
         return;
       }
 
-      o.onGround(v);
-
-      if (DEBUG_OBJECT_GROUNDING) {
-        log.debug("grounding {}", v);
-      }
-
       // the grounded object is swept once more in its final place, also when Geost's own pruning
       // grounds it during consistency: the flag is not restored on backtracking, so it can still
       // be false from a sweep made in another branch
       pruneIfGrounded[o.no] = true;
 
-      if (lastLevelLastVar.stamp() < store.level) {
-        lastLevelLastVar.update(groundedVars.size());
-      }
+      if (groundedSet.add(v)) {
+        o.onGround(v);
 
-      groundedVars.add(v);
+        if (DEBUG_OBJECT_GROUNDING) {
+          log.debug("grounding {}", v);
+        }
+
+        if (lastLevelLastVar.stamp() < store.level) {
+          lastLevelLastVar.update(groundedVars.size());
+        }
+
+        groundedVars.add(v);
+      }
     }
 
     if (inConsistency) {
@@ -1960,6 +1969,7 @@ public class Geost extends Constraint
     for (int i = groundedVars.size() - 1; i >= removeLimit; i--) {
 
       Var v = groundedVars.remove(i);
+      groundedSet.remove(v);
       if (ASSERTS_ENABLED && v == null) {
         throw new IllegalStateException("Assertion failed");
       }

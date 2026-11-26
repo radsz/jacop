@@ -14430,4 +14430,44 @@ class SingleConstraintTest extends TestHelper {
     r[2][0].domain.in(3, r[2][0], 2, 2);
     assertThat(store.consistency()).isFalse();
   }
+
+  @Test
+  void geostRedoingAnUndoneFirstConsistencyCountsAGroundedVariableOnce() {
+    // the store queues every variable again when it redoes a first consistency whose level was
+    // removed; Geost counted the variable just fixed at that level a second time, so object 1
+    // looked ground with y open and the search lost solutions
+    Store store = new Store();
+    IntVar[][] p = new IntVar[3][2];
+    List<GeostObject> objects = new ArrayList<>();
+    for (int i = 0; i < 3; i++) {
+      for (int d = 0; d < 2; d++) {
+        p[i][d] = new IntVar(store, "p" + i + d, 0, 1);
+      }
+      objects.add(
+          new GeostObject(
+              i,
+              p[i],
+              new IntVar(store, "s" + i, 0, 0),
+              new IntVar(store, "t" + i, 0, 0),
+              new IntVar(store, "d" + i, 1, 1),
+              new IntVar(store, "e" + i, 1, 1)));
+    }
+    store.setLevel(1);
+    p[0][0].domain.in(1, p[0][0], 0, 0);
+    store.impose(
+        new Geost(
+            objects,
+            List.of(new NonOverlapping(objects, new int[] {0, 1, 2})),
+            List.of(new Shape(0, new int[] {0, 0}, new int[] {1, 1}))));
+    store.setLevel(2);
+    p[1][0].domain.in(2, p[1][0], 1, 1);
+    assertThat(store.consistency()).isTrue();
+    store.removeLevel(2);
+    store.setLevel(2);
+    p[1][0].domain.in(2, p[1][0], 0, 0);
+    assertThat(store.consistency()).isTrue();
+    // objects 0 and 1 take the two cells of column 0, object 2 either cell of column 1
+    IntVar[] all = Arrays.stream(p).flatMap(Arrays::stream).toArray(IntVar[]::new);
+    assertThat(noOfAllSolutions(store, all)).isEqualTo(4);
+  }
 }
