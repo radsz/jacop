@@ -608,7 +608,7 @@ public class Constraints implements ParserTreeConstants {
       // Solve imposes once the objective is known; it reads the model as it is
       if (CostNetworkDetector.enabled() && options.proof() == null) {
         CostNetworkDetector costNetwork = new CostNetworkDetector(support);
-        costNetwork.collect(astTree);
+        costNetwork.collect(astTree, replaced);
         dictionary.costNetwork = costNetwork;
       }
 

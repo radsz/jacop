@@ -9189,7 +9189,26 @@ Version 5.0 (unreleased)
    and Cepek, Constraints 2005). MiniZinc Challenge 2014 stochastic-fjsp
    fjsp-a1-s3 under fd: 452 after 600 s -> optimum 207 proved in 15 s.
 
-510. The FlatZinc front end removes int_ne and int_lin_ne constraints that
+510. CostNetworkBound (entry 320) is on by default. The FlatZinc front end
+   builds the cost function network of an objective that sums unary and
+   binary cost tables (weighted CSP: protein design, frequency assignment)
+   and posts the bound when its root bound is above the bound the objective
+   has after the linear relaxation and the network has at most 500 cost
+   terms (-Dorg.jacop.cfn.maxTerms): a reason of the bound cites the whole
+   network, and on the CELAR networks of 1034 to 3417 terms explanations
+   grew from 8 to 144 atoms for a bound below 1 % of the optimum, so
+   solutions got worse. MiniZinc Challenge 2018 proteindesign12
+   1HZ5.12p.9aa.usingEref_self_x is proved in 12 s instead of more than
+   600 s (8 s instead of 477 s under -f). On the 46 celar, spot5 and
+   proteindesign12 instances where a network is built, at 600 s: default
+   search 9 -> 18 proved (proteindesign12 4 -> 13 of 15, 0.07 of the time
+   where both prove), -f 31 -> 36 (proteindesign12 9 -> 13, 0.18 of the
+   time); spot5 unchanged, celar within its seed spread. On the wide set 48 of
+   187 optimisation instances build a network (4.5 s of detection in all,
+   at most 0.5 s on one); the bound is posted only on proteindesign12.
+   -Dorg.jacop.fz.costNetwork=false turns it off.
+
+511. The FlatZinc front end removes int_ne and int_lin_ne constraints that
    the declared domains already satisfy (disjoint domains, a fixed side
    outside the other domain, a constant outside the range of the sum)
    before the detectors run, and IntensionTableDetector looks output
@@ -9199,7 +9218,7 @@ Version 5.0 (unreleased)
    free search totals -19 % at 600 s, fixed search the same. -Dorg.jacop.fz.entailedDisequalities=false
    keeps them.
 
-511. LCG free search (-f) of an optimisation model that is fast enough for
+512. LCG free search (-f) of an optimisation model that is fast enough for
    the speed check (lcg-slow-rate) now also gives way to free search
    without learning at that check when learning cuts its tree little: its
    conflicts jump back fewer than 1.3 levels with an LBD of at least 0.35
