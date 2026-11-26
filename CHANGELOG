@@ -9539,6 +9539,16 @@ Version 5.0 (unreleased)
    -Dorg.jacop.lp.subsetCardinalities=false turns the merge off,
    org.jacop.lp.subsetCardinalityLength (default 5) bounds the clauses.
 
+527. FlatZinc parsing and set-up of big models are faster, with the same
+   parse tree. The hot syntactic lookaheads of the FlatZinc grammar
+   (array literal, set literal, array access, packed integer element) are
+   token-kind checks instead of lookahead scans, and three detector passes
+   (DisjunctiveListsDiffer, LinearIndexElement, CountStepCostBound) return
+   at once when the model has none of the constraint kinds they read.
+   Same parse tree on all 4,856 FlatZinc test and PB models. PB 2016
+   simp-nonunif-100_100.10 set-up 29.8 -> 26.5 s (3 runs each); wide-quick
+   at 240 s total 1.006 (noise), PB5 at 600 s total 0.986.
+
 Version 4.11
 =============
 
