@@ -9539,6 +9539,16 @@ Version 5.0 (unreleased)
    -Dorg.jacop.lp.subsetCardinalities=false turns the merge off,
    org.jacop.lp.subsetCardinalityLength (default 5) bounds the clauses.
 
+527. The clausal compilation of satisfaction models (entry 489) leaves
+   models with a difference x - y = d (a linear equality of three terms
+   with coefficients of both signs) over more than 3 values to lazy clause
+   generation (-Dorg.jacop.fz.clausal.sumDomain, default 3). It fires on
+   Costas arrays, NonTransitiveDice and Primes (already over the clause
+   limit) of the 211 XCSP models the compilation took. At 600 s with -f,
+   four runs each, total over costas-array 17 (MZNC 2011) and
+   CostasArray-15..18 (XCSP 2022): 2,417 -> 1,262 s; costas-array 17
+   314-389 -> 61-84 s, CostasArray-16 and -17 lose 11-48 s.
+
 Version 4.11
 =============
 
