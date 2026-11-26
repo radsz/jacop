@@ -1436,4 +1436,21 @@ class SingleConstraintTest {
     assertThat(b.domain.singleton(dom(4, 5))).isTrue();
     assertThat(a.domain.singleton(dom(1))).isTrue();
   }
+
+  /** ElementSetVariable: a value fixed by its cardinality excludes more positions of the index. */
+  @Test
+  void elementSetVariablePrunesTheIndexAgainAfterFixingTheValue() {
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", dom(2, 4));
+    SetVar[] list = {
+      setVar(store, "s1", new int[] {3}, new int[] {3}),
+      setVar(store, "s2", new int[] {}, new int[] {}),
+      setVar(store, "s3", new int[] {}, new int[] {})
+    };
+    SetVar value = new SetVar(store, "value", new BoundSetDomain(dom(), dom(1, 2, 3), dom(1, 3)));
+    store.impose(new ElementSetVariable(index, list, value, 1));
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.domain.singleton(dom(3))).isTrue();
+    assertThat(index.singleton(2)).isTrue();
+  }
 }
