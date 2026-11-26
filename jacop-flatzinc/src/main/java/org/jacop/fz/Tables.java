@@ -49,6 +49,7 @@ import org.jacop.constraints.lp.TimeIndexedBound;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
@@ -291,6 +292,32 @@ public class Tables {
   }
 
   private boolean floatDomainsNarrowed;
+
+  // a constant beyond JaCoP's integer range was given to a constraint where a variable is expected
+  private boolean constantBeyondRange;
+
+  // above 0 while a constraint of the model is translated
+  private int generatingConstraint;
+
+  /**
+   * Tells whether the model gives a constraint a constant beyond JaCoP's integer range where a
+   * variable is expected. A failure then proves no unsatisfiability.
+   *
+   * @return true if such a constant was met.
+   */
+  public boolean constantBeyondRange() {
+    return constantBeyondRange;
+  }
+
+  /**
+   * Marks the translation of a constraint of the model, during which getModelConstant notes a
+   * constant beyond JaCoP's integer range.
+   *
+   * @param generating true when the translation begins, false when it ends
+   */
+  void generatingConstraint(boolean generating) {
+    generatingConstraint += generating ? 1 : -1;
+  }
 
   /**
    * Notes a variable declared without bounds (var int), created over JaCoP's integer range: its
@@ -659,7 +686,7 @@ public class Tables {
    *     to lie within the range.
    */
   public boolean failureMayComeFromNarrowing() {
-    if (floatDomainsNarrowed || boundedDomainsClamped()) {
+    if (floatDomainsNarrowed || constantBeyondRange || boundedDomainsClamped()) {
       return true;
     }
     return !clampedDomains.isEmpty()
@@ -731,11 +758,48 @@ public class Tables {
     IntVar v = constantTable.get(c);
 
     if (v == null) {
-      v = new IntVar(store, c, c);
+      // a SmallDenseDomain within 63 of Integer.MAX_VALUE does not hold its value: a constant
+      // beyond JaCoP's range, such as the constant of a linear row, keeps it in an IntervalDomain
+      v =
+          c < IntDomain.MIN_INT || c > IntDomain.MAX_INT
+              ? new IntVar(store, new IntervalDomain(c, c))
+              : new IntVar(store, c, c);
       constantTable.put(c, v);
     }
 
     return v;
+  }
+
+  /**
+   * Returns a constant integer variable for a constant that the model gives where a variable is
+   * expected. A constant beyond JaCoP's integer range, given to a constraint as it is translated,
+   * is noted: most constraints expect the domains of their variables within the range and may fail
+   * on it, so that a completed search proves neither unsatisfiability nor that all solutions were
+   * found.
+   *
+   * @param c the constant value
+   * @return the constant integer variable
+   */
+  public IntVar getModelConstant(int c) {
+    checkModelConstant(c);
+    return getConstant(c);
+  }
+
+  private void checkModelConstant(int c) {
+    if ((c < IntDomain.MIN_INT || c > IntDomain.MAX_INT)
+        && generatingConstraint > 0
+        && !constantBeyondRange) {
+      constantBeyondRange = true;
+      System.err.println(
+          "%% Warning: the constant "
+              + c
+              + " lies beyond JaCoP's integer range "
+              + IntDomain.MIN_INT
+              + ".."
+              + IntDomain.MAX_INT
+              + " where a variable is expected; a completed search is reported neither as"
+              + " unsatisfiable nor as complete");
+    }
   }
 
   /**
@@ -1349,6 +1413,9 @@ public class Tables {
             a[i] = getConstant(intA[i]);
           }
           constantArrayTable.put(ident, a);
+        }
+        for (int c : intA) {
+          checkModelConstant(c);
         }
       } else {
         return null;

@@ -1062,7 +1062,12 @@ public class Constraints implements ParserTreeConstants {
           method = cf.getClass().getMethod(p, SimpleNode.class);
           generators.put(p, method);
         }
-        method.invoke(cf, node);
+        dictionary.generatingConstraint(true);
+        try {
+          method.invoke(cf, node);
+        } finally {
+          dictionary.generatingConstraint(false);
+        }
 
       } catch (NoSuchMethodException _) {
         throw new IllegalArgumentException(

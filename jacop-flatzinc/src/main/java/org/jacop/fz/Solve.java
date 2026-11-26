@@ -9663,7 +9663,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * found is still the optimum of the model when only the objective was cut, on its worse side.
    */
   private boolean clampedDomainsKeepOptimum() {
-    if (dictionary.floatDomainsNarrowed()) {
+    if (dictionary.floatDomainsNarrowed() || dictionary.constantBeyondRange()) {
       return false;
     }
     if (!dictionary.domainsClamped()
@@ -9696,6 +9696,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   /** Whether the narrowing of declared domains may hide a solution of a satisfaction problem. */
   private boolean clampedDomainsHideSolutions() {
     return dictionary.floatDomainsNarrowed()
+        || dictionary.constantBeyondRange()
         || dictionary.domainsClamped()
             && !dictionary.clampsHarmless(null, -ClampedBounds.INF, ClampedBounds.INF);
   }

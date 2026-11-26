@@ -8671,4 +8671,50 @@ class FlatzincFrontEndTest {
       assertTrue(rest.startsWith("%%%mzn-stat-end\n"), out);
     }
   }
+
+  @Test
+  void constantsBeyondTheIntegersAreNoVariablesWithoutTheirValue() throws IOException {
+    // a constant beyond MAX_INT became a variable c..c, whose SmallDenseDomain above 2^31 - 64
+    // does not contain c: the clausal compilation of int_le(x, 2147483646) and the reified
+    // comparisons, and alldifferent, reported unsatisfiable; where a variable is expected, the
+    // constraints expect domains within the range and may fail (value_precede_chain), which now
+    // proves nothing
+    for (String c :
+        new String[] {
+          "int_le(x, 2147483646)",
+          "int_ne(x, 2147483647)",
+          "int_eq_reif(x, 2147483646, b)",
+          "int_lt_reif(2147483647, x, b)",
+          "int_le_imp(x, -2147483648, b)"
+        }) {
+      String model =
+          "var 0..3: x :: output_var;\nvar bool: b :: output_var;\nconstraint "
+              + c
+              + ";\nsolve satisfy;\n";
+      for (String lcg : new String[] {"on", "off"}) {
+        String out = run(model, "--lcg", lcg)[0];
+        assertTrue(out.contains("----------"), c + " --lcg " + lcg + ": " + out);
+      }
+    }
+    String vars = "var 0..3: x :: output_var;\nvar 0..3: y :: output_var;\nvar 1..4: n;\n";
+    for (String c :
+        new String[] {
+          "jacop_alldiff([2147483647, x, y])",
+          "jacop_value_precede_chain_int([0, 1, 2], [-2147483648, x, y])"
+        }) {
+      for (String lcg : new String[] {"on", "off"}) {
+        String out = run(vars + "constraint " + c + ";\nsolve satisfy;\n", "--lcg", lcg)[0];
+        assertFalse(out.contains("UNSATISFIABLE"), c + " --lcg " + lcg + ": " + out);
+      }
+    }
+    // the constant of a linear row lies beyond the range and is solved as before
+    String out =
+        run(
+            "var 0..536870909: x :: output_var;\nvar 0..536870909: y :: output_var;\n"
+                + "constraint int_lin_eq([1, 1], [x, y], 600000000);\n"
+                + "constraint int_le(500000000, x);\nsolve satisfy;\n",
+            "--lcg",
+            "off")[0];
+    assertTrue(out.contains("----------"), out);
+  }
 }

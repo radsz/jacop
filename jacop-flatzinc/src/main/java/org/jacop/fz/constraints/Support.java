@@ -356,7 +356,7 @@ public class Support implements ParserTreeConstants {
   private IntVar getVariableUnsubstituted(ASTScalarFlatExpr node) {
     if (node.getType() == 0) { // int
       int val = node.getInt();
-      return dictionary.getConstant(val);
+      return dictionary.getModelConstant(val);
     }
     if (node.getType() == 1) { // bool
       int val = node.getInt();
@@ -365,7 +365,7 @@ public class Support implements ParserTreeConstants {
       IntVar int_boolVar = dictionary.getVariable(node);
       if (int_boolVar == null) {
         int bInt = dictionary.getInt(node.getIdent());
-        return dictionary.getConstant(bInt); // new IntVar(store, bInt, bInt);
+        return dictionary.getModelConstant(bInt);
       }
       return int_boolVar;
     } else if (node.getType() == 3) { // array access
@@ -531,7 +531,7 @@ public class Support implements ParserTreeConstants {
     if (ia != null) {
       IntVar[] aa = new IntVar[ia.length];
       for (int i = 0; i < ia.length; i++) {
-        aa[i] = dictionary.getConstant(ia[i]);
+        aa[i] = dictionary.getModelConstant(ia[i]);
       }
       return aa;
     }
