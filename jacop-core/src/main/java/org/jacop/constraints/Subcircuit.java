@@ -281,24 +281,7 @@ public class Subcircuit extends Alldiff {
     }
 
     // the nodes that do not point to themselves must form a single cycle
-    int start = -1;
-    int inCircuit = 0;
-    for (int v = 0; v < list.length; v++) {
-      if (list[v].value() != v + 1) {
-        start = v;
-        inCircuit++;
-      }
-    }
-    if (inCircuit == 0) {
-      return true;
-    }
-    int length = 0;
-    int v = start;
-    do {
-      v = list[v].value() - 1;
-      length++;
-    } while (v != start && length <= inCircuit);
-    return v == start && length == inCircuit;
+    return singleCycleWhenFixed();
   }
 
   @Override
