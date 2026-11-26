@@ -14400,4 +14400,34 @@ class SingleConstraintTest extends TestHelper {
     r[2][0].domain.in(3, r[2][0], 3, 3);
     assertThat(store.consistency()).isFalse();
   }
+
+  @Test
+  void diffnRedoingAnUndoneFirstConsistencyChecksRectanglesFixedEarlier() {
+    // imposed in a search over two overlapping rectangles fixed earlier, Diffn failed at its first
+    // consistency one level up; removing that level cleared its changed rectangles, so the first
+    // consistency redone at the same level skipped both as checked and accepted the overlap
+    Store store = new Store();
+    IntVar[][] r = new IntVar[3][4];
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 4; j++) {
+        r[i][j] = new IntVar(store, "r" + i + j, j < 2 ? 0 : 1, j < 2 ? 3 : 1);
+      }
+    }
+    store.setLevel(1);
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < 2; j++) {
+        r[i][j].domain.in(1, r[i][j], 0, 0);
+      }
+    }
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(2);
+    store.impose(new Diffn(r, true));
+    store.setLevel(3);
+    r[2][0].domain.in(3, r[2][0], 3, 3);
+    assertThat(store.consistency()).isFalse();
+    store.removeLevel(3);
+    store.setLevel(3);
+    r[2][0].domain.in(3, r[2][0], 2, 2);
+    assertThat(store.consistency()).isFalse();
+  }
 }
