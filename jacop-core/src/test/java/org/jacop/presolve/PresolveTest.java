@@ -30,6 +30,7 @@
 package org.jacop.presolve;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayList;
@@ -1141,5 +1142,28 @@ class PresolveTest {
     search.getSolutionListener().searchAll(true);
     search.getSolutionListener().recordSolutions(false);
     search.labeling(store, new SimpleSelect<>(vars, null, new IndomainRandom<>(seed)));
+  }
+
+  @Test
+  void checkingModeTakesAnInterruptedParentForNoViolation() {
+    // a portfolio thread that is no longer needed is stopped by interrupting its loaded store, so
+    // the propagation of the parent that checks a solution fails without checking anything; in
+    // checking mode that was reported as "A solution of the derived store violates the model of
+    // the parent store", which stopped the thread with an exception
+    Store parent = new Store();
+    IntVar[] x = new IntVar[400];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(parent, "x" + i, 0, 1000);
+    }
+    for (int i = 0; i + 1 < x.length; i++) {
+      parent.impose(new XltY(x[i], x[i + 1]));
+    }
+    Derivation d = Presolver.of(parent).keep(x).checking(true).presolve();
+    for (int i = 0; i < x.length; i++) {
+      d.child().impose(new XeqC(d.get(x[i]), i));
+    }
+    assertThat(d.child().consistency()).isTrue();
+    parent.interrupt();
+    assertThatCode(d::returnSolution).doesNotThrowAnyException();
   }
 }
