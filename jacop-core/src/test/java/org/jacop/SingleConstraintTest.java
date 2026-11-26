@@ -14589,4 +14589,32 @@ class SingleConstraintTest extends TestHelper {
       assertThat(store.level).isEqualTo(reference.level);
     }
   }
+
+  @Test
+  void masterSearchAssignsTheLastSolutionOfAnOptimizingChildSearchThatRecordsThem() {
+    // the child search finds several better solutions under one solution of the master; the
+    // master assigned the one a binary search met first, not the last and best one
+    for (boolean masterRecords : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", 0, 1);
+      IntVar y = new IntVar(store, "y", 0, 3);
+      IntVar cost = new IntVar(store, "cost", -4, 3);
+      store.impose(new LinearInt(new IntVar[] {y, x, cost}, new int[] {1, -4, -1}, "==", 0));
+      DepthFirstSearch<IntVar> master = new DepthFirstSearch<>();
+      DepthFirstSearch<IntVar> child = new DepthFirstSearch<>();
+      master.setPrintInfo(false);
+      child.setPrintInfo(false);
+      child.setSelectChoicePoint(new SimpleSelect<>(new IntVar[] {y}, null, new IndomainMax<>()));
+      master.addChildSearch(child);
+      master.getSolutionListener().recordSolutions(masterRecords);
+      child.getSolutionListener().recordSolutions(true);
+      assertThat(
+              master.labeling(
+                  store, new SimpleSelect<>(new IntVar[] {x}, null, new IndomainMin<>()), cost))
+          .isTrue();
+      assertThat(master.getCostValue()).isEqualTo(-4);
+      assertThat(child.getSolutionListener().solutionsNo()).isEqualTo(8);
+      assertThat(List.of(x.value(), y.value(), cost.value())).containsExactly(1, 0, -4);
+    }
+  }
 }

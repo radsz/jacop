@@ -58,9 +58,6 @@ import org.jacop.core.Var;
 @Slf4j
 public class SimpleSolutionListener<T extends Var> implements SolutionListener<T> {
 
-  /** It specifies if the debugging information should be printed. */
-  private static final boolean DEBUG = false;
-
   /**
    * It is executed right after consistency of the current search node. The return code specifies if
    * the search should continue or exit.
@@ -420,37 +417,24 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
       return 0;
     }
 
+    // the last solution under the parent's: an optimizing child improves on the earlier ones
     int left = 0;
     int right = noSolutions - 1;
-
-    int middle = left;
-
-    while (left + 1 < right) {
-
-      if (DEBUG) {
-        log.debug("left {} right {} middle {}", left, right, middle);
-      }
-
-      middle = (left + right) >> 1;
-
-      if (parentSolutionNo[middle] < parentNo) {
-        left = middle;
-      } else if (parentSolutionNo[middle] > parentNo) {
-        right = middle;
+    int last = -1;
+    while (left <= right) {
+      int middle = (left + right) >>> 1;
+      if (parentSolutionNo[middle] <= parentNo) {
+        last = middle;
+        left = middle + 1;
       } else {
-        break;
+        right = middle - 1;
       }
     }
 
-    if (parentSolutionNo[middle] == parentNo) {
-      return middle;
-    } else if (parentSolutionNo[right] == parentNo) {
-      return right;
-    } else if (parentSolutionNo[left] == parentNo) {
-      return left;
-    } else {
-      return -1;
+    if (last >= 0 && parentSolutionNo[last] == parentNo) {
+      return last;
     }
+    return -1;
   }
 
   /**
