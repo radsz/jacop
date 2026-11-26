@@ -275,6 +275,106 @@ class LocalSearchFlatzincTest {
     assertArrayEquals(new int[] {2, 4, 9, 8, 0, 0}, values);
   }
 
+  /**
+   * An optimal design (MiniZinc Challenge opd) of 8 rows and 30 columns with 12 ones per row: the
+   * model orders its rows and columns lexicographically itself. Free search runs local search
+   * without ls, which leaves the 36 lex-leader constraints to the canonicalizer once it has checked
+   * that each swap of two rows or columns, with the products it defines, maps the model onto
+   * itself; under LCG the long sums are split and local search substitutes their block sums.
+   */
+  @Test
+  void modelLexLeadersGoToTheCanonicalizer() throws IOException {
+    int v = 8;
+    int b = 30;
+    int r = 12;
+    StringBuilder model = new StringBuilder();
+    model.append("predicate jacop_lex_lesseq_int(array [int] of var int: x,");
+    model.append("array [int] of var int: y);\n");
+    model.append("var 4..").append(b).append(": objective:: output_var;\n");
+    for (int i = 0; i < v; i++) {
+      for (int j = 0; j < b; j++) {
+        model.append("var 0..1: m").append(i).append('_').append(j).append(":: output_var;\n");
+      }
+    }
+    StringBuilder constraints = new StringBuilder();
+    for (int i = 0; i < v; i++) {
+      constraints.append("constraint int_lin_eq(").append(ones(b)).append(",[");
+      for (int j = 0; j < b; j++) {
+        constraints.append(j > 0 ? "," : "").append('m').append(i).append('_').append(j);
+      }
+      constraints.append("],").append(r).append(");\n");
+      for (int k = i + 1; k < v; k++) {
+        StringBuilder sum = new StringBuilder("[");
+        for (int j = 0; j < b; j++) {
+          String p = "p" + i + "_" + k + "_" + j;
+          model.append("var 0..1: ").append(p).append(":: is_defined_var;\n");
+          constraints.append("constraint int_times(m").append(i).append('_').append(j);
+          constraints.append(",m").append(k).append('_').append(j).append(',').append(p);
+          constraints.append("):: defines_var(").append(p).append(");\n");
+          sum.append(p).append(',');
+        }
+        constraints.append("constraint int_lin_le(").append(ones(b).replace("]", ",-1]"));
+        constraints.append(',').append(sum).append("objective],0);\n");
+      }
+    }
+    for (int i = 0; i + 1 < v; i++) {
+      constraints.append("constraint jacop_lex_lesseq_int([");
+      for (int j = 0; j < b; j++) {
+        constraints.append(j > 0 ? "," : "").append('m').append(i + 1).append('_').append(j);
+      }
+      constraints.append("],[");
+      for (int j = 0; j < b; j++) {
+        constraints.append(j > 0 ? "," : "").append('m').append(i).append('_').append(j);
+      }
+      constraints.append("]);\n");
+    }
+    for (int j = 0; j + 1 < b; j++) {
+      constraints.append("constraint jacop_lex_lesseq_int([");
+      for (int i = 0; i < v; i++) {
+        constraints.append(i > 0 ? "," : "").append('m').append(i).append('_').append(j + 1);
+      }
+      constraints.append("],[");
+      for (int i = 0; i < v; i++) {
+        constraints.append(i > 0 ? "," : "").append('m').append(i).append('_').append(j);
+      }
+      constraints.append("]);\n");
+    }
+    String fzn = model + constraints.toString() + "solve minimize objective;\n";
+    for (String lcg : new String[] {"on", "off"}) {
+      String out =
+          runWithout(
+              fzn,
+              "--symmetry",
+              "on",
+              "--lcg",
+              lcg,
+              "-f",
+              "-a",
+              "-debug",
+              "--search-statistics",
+              "-t",
+              "20000");
+      assertTrue(out.contains("S:LexOrder=" + (v - 1 + b - 1)), out);
+      assertEquals(lcg.equals("on"), out.contains("D:LinearInt="), out);
+      assertFalse(out.contains("lsSolutions=0") || !out.contains("lsSolutions="), out);
+      Matcher m = Pattern.compile("objective = (\\d+);").matcher(out);
+      int last = -1;
+      while (m.find()) {
+        last = Integer.parseInt(m.group(1));
+      }
+      assertEquals(4, last, out);
+      assertTrue(out.contains("=========="), out);
+    }
+  }
+
+  private static String ones(int n) {
+    StringBuilder s = new StringBuilder("[");
+    for (int k = 0; k < n; k++) {
+      s.append(k > 0 ? ",1" : "1");
+    }
+    return s.append(']').toString();
+  }
+
   private static void checkOptimum(String out) {
     List<Integer> costs = new ArrayList<>();
     Matcher m = COST.matcher(out);
@@ -290,12 +390,18 @@ class LocalSearchFlatzincTest {
   }
 
   private String run(String model, String... options) throws IOException {
-    Path fzn = tmp.resolve("run.fzn");
-    Files.writeString(fzn, model, StandardCharsets.UTF_8);
-    String[] args = Arrays.copyOf(options, options.length + 3);
+    String[] args = Arrays.copyOf(options, options.length + 2);
     args[options.length] = "--free-config";
     args[options.length + 1] = "ls=0.5,ls-patience=0";
-    args[options.length + 2] = fzn.toString();
+    return runWithout(model, args);
+  }
+
+  // without --free-config ls
+  private String runWithout(String model, String... options) throws IOException {
+    Path fzn = tmp.resolve("run.fzn");
+    Files.writeString(fzn, model, StandardCharsets.UTF_8);
+    String[] args = Arrays.copyOf(options, options.length + 1);
+    args[options.length] = fzn.toString();
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     PrintStream originalOut = System.out;
     try (PrintStream capture = new PrintStream(out, true, StandardCharsets.UTF_8)) {
