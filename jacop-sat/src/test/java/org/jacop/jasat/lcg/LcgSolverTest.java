@@ -125,6 +125,8 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.jasat.cdcl.CdclSolver;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
 import org.jacop.lcg.ValueIndicator;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMax;
@@ -2365,6 +2367,65 @@ class LcgSolverTest {
     // about 800 since reasons cite the earliest bound beyond a value (shorter searches)
     assertThat(own).isGreaterThan(500);
     assertThat(own).isGreaterThan(20 * generic);
+  }
+
+  /**
+   * An explanation that cites a bound as the removal of one value ({@link
+   * EntryList#addExcludedValue}, precedence reasons) and other bounds of the same variable: x <=
+   * 13, then x <= 11, which removed 12. The bound that stands for x != 12 implies no bound, so x <=
+   * 13 stays, and each kept atom keeps its own removed value when the list is compacted. Before, x
+   * <= 11 counted as the strongest bound and dropped x <= 13, leaving x != 12; and a plain x <= 11
+   * moved into the place of a dropped x != 12 was cited as x != 12.
+   */
+  @Test
+  void droppedImpliedAtomsKeepTheRemovedValues() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 20);
+    IntVar y = new IntVar(store, "y", 1, 20);
+    store.impose(new XlteqY(x, y));
+    LcgSolver solver = new LcgSolver(store);
+    AtomicTrail trail = solver.trail();
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x.domain.inMax(store.level, x, 13);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x.domain.inMax(store.level, x, 11);
+    assertThat(store.consistency()).isTrue();
+    int le13 = -1;
+    int le11 = -1;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.variable(e) == x && trail.kind(e) == AtomicTrail.LE) {
+        if (trail.value(e) == 13) {
+          le13 = e;
+        } else if (trail.value(e) == 11) {
+          le11 = e;
+        }
+      }
+    }
+    assertThat(le13).isNotNegative();
+    assertThat(le11).isNotNegative();
+
+    // x != 12 (cited by x <= 11) and x <= 13: neither implies the other
+    EntryList reason = new EntryList();
+    reason.addExcludedValue(le11, 12);
+    reason.add(le13);
+    solver.dropDominated(reason, null);
+    assertThat(reason.size()).isEqualTo(2);
+    assertThat(reason.get(0)).isEqualTo(le11);
+    assertThat(reason.hasExcludedValue(0)).isTrue();
+    assertThat(reason.excludedValue(0)).isEqualTo(12);
+    assertThat(reason.get(1)).isEqualTo(le13);
+    assertThat(reason.hasExcludedValue(1)).isFalse();
+
+    // x != 14 (cited by x <= 13) is implied by x <= 11, which moves into its place
+    reason = new EntryList();
+    reason.addExcludedValue(le13, 14);
+    reason.add(le11);
+    solver.dropDominated(reason, null);
+    assertThat(reason.size()).isEqualTo(1);
+    assertThat(reason.get(0)).isEqualTo(le11);
+    assertThat(reason.hasExcludedValue(0)).isFalse();
   }
 
   /**
