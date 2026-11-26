@@ -9340,7 +9340,50 @@ Version 5.0 (unreleased)
    changes, 600 s: default one more solved (GCM_0006), total time 0.949;
    -f the same solved, total time 0.968.
 
-518. The FlatZinc front end posts a strict diffn whose rectangles are fixed
+518. Three gaps of the 2019 MiniZinc Challenge replay are closed.
+   (a) A permutation with an assignment cost whose cycles are at most K
+   long (labels cycle[i] = cycle[succ[i]] and bin_packing(K, cycle,
+   unit weights), kidney-exchange) gets the cycle formulation of
+   Abraham, Blum and Sandholm (EC 2007) and Roth, Sonmez and Unver
+   (American Economic Review 2007) for K <= 4 and at most 20,000 cycles:
+   a 0/1 variable per cycle, one cycle per vertex, succ[i] and the cost
+   as sums of them, posted as redundant linear rows. The bound of
+   3_20_0.25_2 goes from 1275 (assignment) to the optimum 1008; the five
+   2019 instances are proved in 1.6-2.3 s with -f (8-14 s before,
+   Chuffed 0.7-2.4 s) and 1.4-3.3 s in the default search (2.4-10 s).
+   -Dorg.jacop.fz.boundedCycles=false turns it off.
+   (b) Elements over constant arrays whose index is defined by
+   int_lin_eq from two to four variables (a lookup in a multi-dimensional
+   array, liner-sf-repositioning) become one table over the defining
+   variables and the looked-up values when the index occurs nowhere
+   else, as the multi-dimensional element of Gecode and the element
+   expansion of the CP-SAT presolve (Perron, Didier and Gay, CP 2023).
+   -Dorg.jacop.fz.linearIndexElement=false turns it off.
+   (c) Lazy clause generation explains x = y + k (and its mirror) by the
+   values in both root domains only: a disentailment over 0..100000
+   against three values was given the generic reason of 998 atoms,
+   now 5. liner-sf fm3_3 -f 40 s -> 8-39 s (Chuffed 9.4 s), tp7_4 600 s
+   default unproved -> proved in 480-505 s.
+   Of the 240 wide-set instances (a) and (b) fire on 4; at 600 s none is
+   worse. Wide-quick at 240 s is unchanged (-f total 0.978 without the
+   seed-noisy work-task-variation, default 1.004).
+
+519. The FlatZinc front end bounds an objective that sums step costs of
+   counts of values in one array (MiniZinc Challenge ptv: passengers
+   per service and station, cost 0 below 265, 10 below 529, ...). For
+   every such array the least cost of its counts over the assignments
+   of the array's variables is found by a branch and bound over the
+   step of each count with a maximum flow check, and posted as
+   objective = sum of the arrays' costs + the other terms, each cost at
+   least its least value: the bound of a separable concave cost over
+   the transportation polytope of the counts (Guisewite and Pardalos,
+   Annals of Operations Research 1990). On ptv pax_period_20_5a the
+   bound is the optimum 50, which is now proved with -f in 18-81 s
+   (never in 1200 s before; CP-SAT 2.3 s, Chuffed stalls at 70); the
+   other four ptv instances are unchanged. It fires on none of the 240
+   wide-set instances. -Dorg.jacop.fz.countStepCost=false turns it off.
+
+520. The FlatZinc front end posts a strict diffn whose rectangles are fixed
    along one axis (origins and lengths, as the time axis of accap) as unary
    resources (CumulativeUnary) over the other axis, one for each maximal set
    of rectangles that overlap along the fixed axis: the maximal cliques of
@@ -9360,7 +9403,7 @@ Version 5.0 (unreleased)
    -Dorg.jacop.fz.diffnFixedAxis=off keeps Diffn; pairs posts the pairwise
    disjunctions of MiniZinc's decomposition instead, both posts both.
 
-519. Lazy clause generation: the reasons of the value precedence
+521. Lazy clause generation: the reasons of the value precedence
    constraint (SeqPrecedeChain, which index-value symmetry breaking posts
    for interchangeable values) cite "x != v" for a value v removed from x
    in place of the bound atom that removed it ([x <= 11] for 12). The
@@ -9377,7 +9420,7 @@ Version 5.0 (unreleased)
    lcgValueLiterals; -Djacop.lcg.valueLiterals=false cites the bounds
    again.
 
-520. Free search on models that order their own rows and columns with
+522. Free search on models that order their own rows and columns with
    lex-leader constraints (MiniZinc Challenge opd): each lex_lesseq(X, Y)
    of the model whose swap of X and Y, with the variables the model
    defines from them (the products of two rows), maps every other
@@ -9409,7 +9452,7 @@ Version 5.0 (unreleased)
    changes (split sums under -f): proved 9 -> 10, total 1,376 -> 1,277 s,
    no objective worse.
 
-521. FlatZinc set-up on big Pseudo-Boolean models is faster, with the same
+523. FlatZinc set-up on big Pseudo-Boolean models is faster, with the same
    search. The output-variable check used by alias merging is a set
    instead of a scan of every output array, side components take only
    their own clauses, LinearOverlapDetector walks the shorter row, the
@@ -9419,7 +9462,7 @@ Version 5.0 (unreleased)
    24.6 s, ped2.B.recomb1 32.6 -> 17.4 s, atlanta-ip 17.0 -> 11.6 s,
    simp-nonunif 29.9 -> 22.8 s; wide-quick at 240 s total 1.002.
 
-522. Pseudo-Boolean models: two root deductions that CP-SAT makes and
+524. Pseudo-Boolean models: two root deductions that CP-SAT makes and
    JaCoP missed on small PB16 instances (Pseudo-Boolean Competition 2016).
    The XorSystem detector reads an equation modulo 2 whose odd
    coefficients leave one or two variables as what it states: x = parity,

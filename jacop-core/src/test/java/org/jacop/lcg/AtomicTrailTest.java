@@ -1941,6 +1941,49 @@ class AtomicTrailTest {
     trail.detach();
   }
 
+  /**
+   * x = y with x over 0..100000 and y over three values spread over it (a cost looked up in an
+   * array): once x has lost those three values the domains are disjoint, and the reason is the
+   * three removals, not every atom of both domains. The values outside y's root domain need no
+   * reason, so the walk over the common range must not give up on its width (liner-sf-repositioning
+   * fm3_3: 998 atoms per reason of its reified equalities).
+   */
+  @Test
+  void disjointWideSparseDomainsCiteOnlyTheRemovals() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 100_000);
+    IntVar y = new IntVar(store, "y", 10, 10);
+    y.addDom(60_000, 60_000);
+    y.addDom(90_000, 90_000);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    for (int v : new int[] {10, 60_000, 90_000}) {
+      x.domain.inComplement(store.level, x, v);
+    }
+    store.setLevel(store.level + 1);
+    x.domain.inMin(store.level, x, 5);
+    EntryList out = new EntryList();
+    assertThat(ShiftExplanation.disjointBefore(trail, trail.size(), x, y, 0, out)).isTrue();
+    List<Integer> values = new ArrayList<>();
+    for (int k = 0; k < out.size(); k++) {
+      int e = out.get(k);
+      if (trail.variable(e) == x && trail.kind(e) == AtomicTrail.NE) {
+        values.add(trail.value(e));
+      }
+    }
+    assertThat(values).containsExactlyInAnyOrder(10, 60_000, 90_000);
+    assertThat(out.size()).isLessThanOrEqualTo(5);
+    // x >= 60001 (60000 is gone) is explained by x != 60000, x != 10 and x >= 5: y has no other
+    // value up to 60000
+    store.setLevel(store.level + 1);
+    x.domain.inMin(store.level, x, 60_000);
+    out.clear();
+    assertThat(ShiftExplanation.explain(trail, trail.lastEntry(x, trail.size()), x, y, 0, out))
+        .isTrue();
+    assertThat(out.size()).isLessThanOrEqualTo(3);
+    trail.detach();
+  }
+
   private static boolean removes(AtomicTrail trail, int e, int v) {
     int a = trail.value(e);
     return switch (trail.kind(e)) {
