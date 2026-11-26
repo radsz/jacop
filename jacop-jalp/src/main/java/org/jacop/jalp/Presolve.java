@@ -545,7 +545,12 @@ final class Presolve {
   // before it moved all the way is moved all the way; one that the candidates before it, moved all
   // the way, would push past the row even with the other columns at their best stays where it is.
   // The number of columns fixed
-  private int stuffing() {
+  int stuffing() {
+    // a pass that fixes nothing charges no work: the work of the LP paces its calls in the search
+    // (LinearRelaxation), and an LP the pass leaves as it was is then solved as before (accap
+    // instance5 119 -> 126 and evm-super-compilation -f lost under the virtual clock, from a scan
+    // that fixed nothing)
+    long opsBefore = ops;
     int found = 0;
     for (int i = 0; i < m; i++) {
       boolean hasLo = rowLo[i] != Double.NEGATIVE_INFINITY;
@@ -553,6 +558,9 @@ final class Presolve {
       if (rowAlive[i] && rowCount[i] >= 2 && hasLo != hasHi) {
         found += stuffRow(i, hasHi ? 1 : -1, hasHi ? rowHi[i] : -rowLo[i]);
       }
+    }
+    if (found == 0) {
+      ops = opsBefore;
     }
     return found;
   }
@@ -686,7 +694,9 @@ final class Presolve {
   // kept ones in turn. The column bounds stay as they are, so the postsolve is that of a dropped
   // row.
   // The number of rows removed
-  private int impliedRows() {
+  int impliedRows() {
+    // a pass that removes nothing charges no work, as in stuffing()
+    long opsBefore = ops;
     if (implLo == null) {
       implLo = new double[n];
       implHi = new double[n];
@@ -704,6 +714,7 @@ final class Presolve {
       }
     }
     if (!any) {
+      ops = opsBefore;
       return 0;
     }
     int found = 0;
@@ -725,6 +736,9 @@ final class Presolve {
         }
         found++;
       }
+    }
+    if (found == 0) {
+      ops = opsBefore;
     }
     return found;
   }
