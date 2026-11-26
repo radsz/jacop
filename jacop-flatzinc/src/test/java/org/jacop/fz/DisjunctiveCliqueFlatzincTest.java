@@ -685,6 +685,129 @@ class DisjunctiveCliqueFlatzincTest {
     }
   }
 
+  /**
+   * A strict diffn with one axis fixed: random fixed origins and lengths (some 0) along one axis,
+   * variable origins and constant or variable lengths (some 0) along the other, the fixed axis
+   * given first or second. Every mode of {@code org.jacop.fz.diffnFixedAxis} must keep exactly the
+   * solutions of the definition {@code x_i + w_i <= x_j \/ x_j + w_j <= x_i \/ y_i + h_i <= y_j \/
+   * y_j + h_j <= y_i}.
+   */
+  @Test
+  void fixedAxisDiffnKeepsAllSolutions() throws IOException {
+    String property = "org.jacop.fz.diffnFixedAxis";
+    Random random = new Random(41);
+    int trials = Integer.getInteger("disjunctiveCliques.trials", 400) / 4;
+    try {
+      for (int trial = 0; trial < trials; trial++) {
+        int n = 3 + random.nextInt(3);
+        int range = 2 + random.nextInt(3);
+        int[] fo = new int[n];
+        int[] fl = new int[n];
+        int[] len = new int[n];
+        List<Integer> varLen = new ArrayList<>();
+        StringBuilder fzn = new StringBuilder();
+        for (int i = 0; i < n; i++) {
+          fo[i] = random.nextInt(5);
+          fl[i] = random.nextInt(4);
+          len[i] = random.nextInt(3);
+          if (random.nextInt(4) == 0) {
+            varLen.add(i);
+          }
+          fzn.append("var 0..").append(range).append(": s").append(i).append(";\n");
+        }
+        for (int i : varLen) {
+          fzn.append("var 0..2: d").append(i).append(":: output_var;\n");
+        }
+        StringBuilder o = new StringBuilder();
+        StringBuilder l = new StringBuilder();
+        StringBuilder fos = new StringBuilder();
+        StringBuilder fls = new StringBuilder();
+        for (int i = 0; i < n; i++) {
+          String sep = i == 0 ? "" : ",";
+          o.append(sep).append('s').append(i);
+          l.append(sep).append(varLen.contains(i) ? "d" + i : String.valueOf(len[i]));
+          fos.append(sep).append(fo[i]);
+          fls.append(sep).append(fl[i]);
+        }
+        fzn.append("array [1..")
+            .append(n)
+            .append("] of var int: s:: output_array([1..")
+            .append(n)
+            .append("]) = [")
+            .append(o)
+            .append("];\n");
+        String fixedOrigins = "[" + fos + "]";
+        String fixedLengths = "[" + fls + "]";
+        String origins = "[" + o + "]";
+        String lengths = "[" + l + "]";
+        String args =
+            random.nextBoolean()
+                ? String.join(",", fixedOrigins, origins, fixedLengths, lengths)
+                : String.join(",", origins, fixedOrigins, lengths, fixedLengths);
+        fzn.append("constraint jacop_diff2_strict(").append(args).append(");\nsolve satisfy;\n");
+        int[] vdIndex = varDurIndex(n, varLen);
+        List<Predicate<int[]>> checks = new ArrayList<>();
+        checks.add(
+            v -> {
+              for (int i = 0; i < n; i++) {
+                for (int j = i + 1; j < n; j++) {
+                  int li = vdIndex[i] >= 0 ? v[vdIndex[i]] : len[i];
+                  int lj = vdIndex[j] >= 0 ? v[vdIndex[j]] : len[j];
+                  boolean apart =
+                      fo[i] + fl[i] <= fo[j]
+                          || fo[j] + fl[j] <= fo[i]
+                          || v[i] + li <= v[j]
+                          || v[j] + lj <= v[i];
+                  if (!apart) {
+                    return false;
+                  }
+                }
+              }
+              return true;
+            });
+        Set<String> expected = new TreeSet<>();
+        enumerateLengths(0, new int[n + varLen.size()], n, range, checks, varLen, expected);
+        for (String mode : List.of("off", "pairs", "unary", "both")) {
+          System.setProperty(property, mode);
+          String out = run(fzn.toString(), "-a");
+          assertEquals(expected, solutions(out), "trial " + trial + " mode " + mode + "\n" + fzn);
+        }
+      }
+    } finally {
+      System.clearProperty(property);
+    }
+  }
+
+  // as enumerate, with the variable lengths in 0..2
+  private static void enumerateLengths(
+      int pos,
+      int[] v,
+      int n,
+      int range,
+      List<Predicate<int[]>> checks,
+      List<Integer> varLen,
+      Set<String> out) {
+    if (pos == v.length) {
+      for (Predicate<int[]> c : checks) {
+        if (!c.test(v)) {
+          return;
+        }
+      }
+      TreeSet<String> lines = new TreeSet<>();
+      lines.add("s = array1d(1.." + n + ", " + Arrays.toString(Arrays.copyOf(v, n)) + ");");
+      for (int k = 0; k < varLen.size(); k++) {
+        lines.add("d" + varLen.get(k) + " = " + v[n + k] + ";");
+      }
+      out.add(String.join(" ", lines));
+      return;
+    }
+    int hi = pos < n ? range : 2;
+    for (int x = 0; x <= hi; x++) {
+      v[pos] = x;
+      enumerateLengths(pos + 1, v, n, range, checks, varLen, out);
+    }
+  }
+
   private String run(String model, String... options) throws IOException {
     return FlatzincTestRunner.run(tmp, model, options);
   }

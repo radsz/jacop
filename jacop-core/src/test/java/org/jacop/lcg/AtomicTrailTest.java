@@ -864,6 +864,86 @@ class AtomicTrailTest {
   }
 
   /**
+   * x * y = z over non-negative ranges (MZNC 2018 train: load times arrival): z >= 1530, then x >=
+   * 75 and y >= 54 raise z to 4050. The bounds of x and y exclude every value of z below 4050, so
+   * the reason is those two bounds; z's own earlier bound would only weaken the learnt clause.
+   */
+  @Test
+  void productBoundReasonLeavesOutTheOwnEarlierBound() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 500);
+    IntVar y = new IntVar(store, "y", 0, 1140);
+    IntVar z = new IntVar(store, "z", 0, 570000);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(new XmulYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    z.domain.inMin(store.level, z, 1530);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x.domain.inMin(store.level, x, 75);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    y.domain.inMin(store.level, y, 54);
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.min()).isEqualTo(4050);
+    int raised = -1;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.variable(e) == z && trail.kind(e) == AtomicTrail.GE && trail.value(e) == 4050) {
+        raised = e;
+      }
+    }
+    assertThat(raised).isNotNegative();
+    EntryList reason = new EntryList();
+    assertThat(trail.explain(raised, reason)).isTrue();
+    assertThat(reason.size()).isEqualTo(2);
+    for (int k = 0; k < reason.size(); k++) {
+      int e = reason.get(k);
+      assertThat(trail.variable(e)).isNotSameAs(z);
+      assertThat(trail.kind(e)).isEqualTo(AtomicTrail.GE);
+      assertThat(trail.value(e)).isEqualTo(trail.variable(e) == x ? 75 : 54);
+    }
+    trail.detach();
+  }
+
+  /**
+   * x + y = z with x fixed to 5 by two bounds, then y >= 10 raises z to 15: the bounds reason is x
+   * >= 5 and y >= 10, without x <= 5, which the shift of the fixed term would cite.
+   */
+  @Test
+  void sumBoundReasonCitesOneBoundOfAFixedTerm() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 20);
+    IntVar y = new IntVar(store, "y", 0, 20);
+    IntVar z = new IntVar(store, "z", 0, 40);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(new XplusYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x.domain.inMin(store.level, x, 5);
+    x.domain.inMax(store.level, x, 5);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    y.domain.inMin(store.level, y, 10);
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.min()).isEqualTo(15);
+    int raised = -1;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.variable(e) == z && trail.kind(e) == AtomicTrail.GE && trail.value(e) == 15) {
+        raised = e;
+      }
+    }
+    assertThat(raised).isNotNegative();
+    EntryList reason = new EntryList();
+    assertThat(trail.explain(raised, reason)).isTrue();
+    assertThat(reason.size()).isEqualTo(2);
+    for (int k = 0; k < reason.size(); k++) {
+      assertThat(trail.kind(reason.get(k))).isEqualTo(AtomicTrail.GE);
+    }
+    trail.detach();
+  }
+
+  /**
    * x * b = z with x in 1..5000 (wordpress): b >= 1, then x != 100 removes 100 from z. Supports of
    * z = 100 are enumerated over b, the narrower factor, so the reason is b >= 1 and x != 100, not
    * the generic one (x is wider than the supports enumerated for it).

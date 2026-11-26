@@ -1005,8 +1005,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   /**
    * Posts the cost network bound when its root bound is above the bound the objective already has
-   * at the root (from the linear relaxation, for example), or always with
-   * -Dorg.jacop.cfn.gate=false.
+   * at the root (from the linear relaxation, for example) and the network has at most
+   * -Dorg.jacop.cfn.maxTerms cost terms (default 500), or always with -Dorg.jacop.cfn.gate=false. A
+   * reason of the bound cites the domains of the whole network, so on large networks (frequency
+   * assignment with thousands of terms) explanations grow twentyfold while the bound stays far
+   * below the optimum.
    */
   private void imposeCostNetworkBound() {
     CostNetworkBound b = costNetworkBound;
@@ -1017,7 +1020,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     long before = b.maximize() ? -(long) z.max() : z.min();
     b.prepare(store);
     if (!Boolean.parseBoolean(System.getProperty("org.jacop.cfn.gate", "true"))
-        || b.rootBound > before) {
+        || b.rootBound > before
+            && costNetworkDetector.terms <= Integer.getInteger("org.jacop.cfn.maxTerms", 500)) {
       store.impose(b);
       costNetworkPosted = true;
     }
@@ -4874,6 +4878,68 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return !tooLateForFreeSearch(solver);
   }
 
+  // set when a fast LCG free search gave way because learning cut its tree too little, for the
+  // statistics
+  private volatile boolean lcgWeak;
+
+  /**
+   * Whether learning cuts the tree of an optimisation free search too little to pay for its cost
+   * per node, by the test of satisfaction searches ({@link #learningCutsLittle}) on the conflicts
+   * so far, with its own thresholds lcg-opt-jump and lcg-opt-lbd (a negative jump turns it off). On
+   * the 2017 community-detection instances of the MiniZinc Challenge, whose objective is a sum of
+   * pair weights of about 10,000 kept within a window of 10 to 103 above a constant, LCG makes
+   * 4,000 conflicts/s, jumps back 1.05 to 1.2 levels a conflict with an LBD of 0.65 to 0.8 times
+   * the depth, and plain CP makes 100 times its nodes per second: at 240 s Sampson.s10.k3 is proved
+   * (10) in 13 s without learning and stays at 6 to 8 with LCG; Strike.s2.k8 is proved in 4 to 8 s
+   * instead of 23 to 245 s; dolphin.s62.k3 reaches 65 instead of 43 to 49.
+   *
+   * @param solver the LCG solver
+   * @param now the time of the check (CdclSolver.now of the LCG solver)
+   * @return true if search without learning should take over once LCG stops making progress
+   */
+  private boolean optimisationLearningCutsLittle(LcgSolver solver, long now) {
+    double maxJump = Double.parseDouble(options.freeConfig("lcg-opt-jump", "1.3"));
+    String mode = options.freeConfig("lcg-opt-probe", "on");
+    if (maxJump <= 0 || "off".equals(mode)) {
+      return false;
+    }
+    CdclSolver sat = solver.sat();
+    long conflicts = sat.conflicts;
+    if (conflicts == 0) {
+      return false;
+    }
+    double level = (double) sat.conflictLevels / conflicts;
+    double jump = (double) sat.backjumpLevels / conflicts;
+    double lbd = (double) sat.lbdSum() / conflicts;
+    boolean weak =
+        learningCutsLittle(
+            conflicts,
+            level,
+            jump,
+            lbd,
+            maxJump,
+            Double.parseDouble(options.freeConfig("lcg-opt-lbd", "0.35")));
+    if (!lcgOptProbePrinted && ("report".equals(mode) || options.searchStatistics())) {
+      // printed once, at the first check that finds LCG fast enough
+      lcgOptProbePrinted = true;
+      IO.println(
+          String.format(
+              Locale.ROOT,
+              "%%%%%%mzn-stat: lcgOptProbe=%.1f,%d,%.2f,%.3f,%.2f,%b,%b",
+              (now - lcgStart) / 1e9,
+              conflicts,
+              level,
+              jump,
+              lbd,
+              weak,
+              solutionFound));
+    }
+    return weak;
+  }
+
+  // whether the first check of an optimisation search's learning was printed
+  private boolean lcgOptProbePrinted;
+
   /**
    * Whether learning cuts the tree of a satisfaction search too little to pay for its cost per
    * node. A conflict whose first-UIP clause jumps back about one level, with an LBD close to the
@@ -4953,12 +5019,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // LCG gives way only with a solution to hand over: without one, the check is made again until
     // LCG has one or is no longer slow. cutstock type16 TEST9 found its first solution with LCG at
     // 37 s and none without
-    if (solver.sat().conflicts
-            >= slowRate(solver.sat().conflicts, solver.sat().learntLiterals, rate, perLiteral)
-                * (now - lcgStart)
-                / 1e9
-        || tooLateForFreeSearch(solver)) {
+    if (tooLateForFreeSearch(solver)) {
       return false;
+    }
+    boolean weak = false;
+    if (solver.sat().conflicts
+        >= slowRate(solver.sat().conflicts, solver.sat().learntLiterals, rate, perLiteral)
+            * (now - lcgStart)
+            / 1e9) {
+      // fast enough; it still gives way when learning cuts the tree too little to pay for its cost
+      // per node, and it stopped making progress
+      weak = !unsolvedOnly && optimisationLearningCutsLittle(solver, now) && solutionFound;
+      if (!weak || "report".equals(options.freeConfig("lcg-opt-probe", "on"))) {
+        return false;
+      }
     }
     long cost = bestPrintedCost.get();
     costs.addLast(new long[] {now, cost});
@@ -4977,6 +5051,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       } else if (coresRising(now)) {
         lcgSlowCoreKeeps++;
       } else {
+        lcgWeak = weak;
         lcgSlow = true;
         sliceInsteadOfHandOver();
         solver.stop();
@@ -6359,6 +6434,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.deferredAtoms
             + "\n%%%mzn-stat: lcgLiftedLiterals="
             + lcg.liftedLiterals
+            + "\n%%%mzn-stat: lcgValueLiterals="
+            + lcg.valueLiterals
             + "\n%%%mzn-stat: lcgBoundLiterals="
             + lcg.boundLiterals
             + "\n%%%mzn-stat: lcgEqualityLiterals="
@@ -6493,6 +6570,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.sat().semanticallyRemoved
             + "\n%%%mzn-stat: lcgSemanticUips="
             + lcg.sat().semanticUips
+            + "\n%%%mzn-stat: lcgDominatedAtoms="
+            + lcg.dominatedAtoms
             + "\n%%%mzn-stat: lcgLowerBoundRuns="
             + lcg.lowerBoundRuns
             + "\n%%%mzn-stat: lcgLowerBoundRaised="
@@ -6826,6 +6905,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     fs.mainBranchingFirst(true);
   }
 
+  /**
+   * The time the check of the model's own lex-leader constraints may take: at most 10 s, and a
+   * twentieth of the time left (flener_et_al_15_350_100 of opd takes 3 s for 363 of them).
+   */
+  private long modelLexCheck() {
+    long check = 10_000_000_000L;
+    if (options.getTimeOut() > 0) {
+      check = Math.min(check, options.getRemainingTimeOut() * 1_000_000L / 20);
+    }
+    return check;
+  }
+
   // the share of the time left for the scheduling search that runs without ls
   private static final double AUTO_LS_SHARE = 0.5;
 
@@ -6847,9 +6938,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             && costVar instanceof IntVar
             && !"0".equals(options.freeConfig("ls-auto", "1"));
     // the task starts are decision variables: only their constraints are looked at
+    boolean schedule =
+        auto
+            && (ScheduleResources.hasResource(searchVars.getIntVars())
+                || ScheduleResources.hasPermutation(searchVars.getIntVars()));
+    // or the model's own lex-leader constraints are a symmetry of it: local search leaves them to
+    // the canonicalizer, where free search with them finds poor solutions (opd 2017
+    // flener_et_al_15_350_100: 30, ls 25, best 24); ls-lex=0 turns that off
     if (auto
-        && !ScheduleResources.hasResource(searchVars.getIntVars())
-        && !ScheduleResources.hasPermutation(searchVars.getIntVars())) {
+        && !schedule
+        && !(symmetry != null
+            && symmetry.hasModelLex()
+            && !"0".equals(options.freeConfig("ls-lex", "1"))
+            && !"0".equals(options.freeConfig("ls-sym", "1"))
+            && symmetry.canonicalizerWithModelLex(modelLexCheck()) != null
+            && symmetry.modelLexForLs() > 0)) {
       return null;
     }
     double share = auto ? AUTO_LS_SHARE : Double.parseDouble(given == null ? "0" : given);
@@ -6869,11 +6972,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         LocalSearch.builder(store)
             .order(order.toArray(new IntVar[0]))
             .defined(dictionary.definedVariables)
+            // the block sums of sums split under LCG: a move changes the whole sum at once
+            .substituted(splitSums())
             .timeLimit(Duration.ofMillis(budget))
             .patience(
                 Duration.ofMillis(
                     Long.parseLong(options.freeConfig("ls-patience", auto ? "5000" : "1000"))))
-            .scheduleOnly(auto)
+            .scheduleOnly(schedule)
             .jump(!"walk".equals(options.freeConfig("ls-moves", "fj")))
             .permutations(!"0".equals(options.freeConfig("ls-perm", "1")))
             .scheduling(scheduleKinds(options.freeConfig("ls-sched", "ns+n4")))
@@ -6887,7 +6992,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .seed(options.getRandomSeed());
     if (symmetry != null && !"0".equals(options.freeConfig("ls-sym", "1"))) {
       // solutions are moved onto symmetric ones that the symmetry breaking constraints accept
-      SymmetryCanonicalizer canonical = symmetry.canonicalizer();
+      // with the model's own lex-leader constraints whose symmetry holds
+      SymmetryCanonicalizer canonical = symmetry.canonicalizerWithModelLex(modelLexCheck());
       if (!canonical.constraints().isEmpty()) {
         b.symmetry(canonical.constraints(), canonical);
       }
@@ -7693,6 +7799,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + localSearch.getRejected()
         + "\n%%%mzn-stat: lsCanonicalized="
         + localSearch.getCanonicalized()
+        + "\n%%%mzn-stat: lsModelLex="
+        + (symmetry == null ? 0 : symmetry.modelLexForLs())
         + "\n%%%mzn-stat: lsConstraints="
         + counts[0]
         + "/"
@@ -9551,6 +9659,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           IO.println("%%%mzn-stat: lcgSlowDeferred=" + lcgSlowDeferred);
           IO.println("%%%mzn-stat: lcgSlowUnsolved=" + lcgSlowUnsolved);
           IO.println("%%%mzn-stat: lcgHopeless=" + lcgHopeless);
+          IO.println("%%%mzn-stat: lcgWeak=" + lcgWeak);
           IO.println("%%%mzn-stat: lcgSlowCoreKeeps=" + lcgSlowCoreKeeps);
         }
       }

@@ -180,8 +180,12 @@ public final class PrecedeChainExplanation {
     return !out;
   }
 
+  /**
+   * Adds why value v is out of x[j]: a bound that removed it may be cited as {@code x[j] != v},
+   * which also holds where x[j] takes another value outside the chain.
+   */
   private void addExcluded(int j, int v, EntryList out) {
-    boolean excluded = trail.excludedBefore(x[j], v, position, out);
+    boolean excluded = trail.excludedValueBefore(x[j], v, position, out);
     assert excluded : x[j] + " still has " + v;
   }
 
@@ -378,7 +382,9 @@ public final class PrecedeChainExplanation {
           for (var e = root.valueEnumeration(); e.hasMoreElements(); ) {
             int u = e.nextElement();
             if (rank(u) < q) {
-              addExcluded(j, u, out);
+              // all of them out: the bounds of a fixed variable say it in two atoms
+              boolean excluded = trail.excludedBefore(x[j], u, position, out);
+              assert excluded : x[j] + " still has " + u;
             }
           }
         }
