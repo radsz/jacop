@@ -13290,4 +13290,23 @@ class SingleConstraintTest extends TestHelper {
       assertThat(noOfAllSolutions(store, x)).as("%d..%d", b[0], b[1]).isEqualTo(b[2]);
     }
   }
+
+  @Test
+  public void argMaxAndArgMinAtTheEndsOfTheIntegers() {
+    // the bounds of ArgMax started at MIN_INT (of ArgMin at MAX_INT) with a strict comparison: when
+    // every variable could be MIN_INT no position was found, and the index was pruned to 0, which
+    // lost the solution with all variables at MIN_INT
+    for (boolean max : new boolean[] {true, false}) {
+      Store store = new Store();
+      int low = max ? IntDomain.MIN_INT : IntDomain.MAX_INT - 3;
+      IntVar[] x = new IntVar[3];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, low, low + 3);
+      }
+      IntVar index = new IntVar(store, "index", 1, 4);
+      store.impose(max ? new ArgMax(x, index) : new ArgMin(x, index));
+      // the index of the first extremum is a function of x: one solution per tuple
+      assertThat(noOfAllSolutions(store, x, new IntVar[] {index})).as("max %b", max).isEqualTo(64);
+    }
+  }
 }
