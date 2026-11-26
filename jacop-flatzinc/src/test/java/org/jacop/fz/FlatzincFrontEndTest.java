@@ -8839,4 +8839,23 @@ class FlatzincFrontEndTest {
       }
     }
   }
+
+  @Test
+  void alldifferentOptWithTheConstantIntegerMaxValueFindsAllSolutions() {
+    // the filter of AlldifferentExcept looped over the values of a domain ending at
+    // Integer.MAX_VALUE with an int, which wrapped: -a never ended. 120 solutions, the 60 with
+    // b3 = true holding the constant 2147483647
+    String model =
+        "var 0..3: x1 :: output_var;\nvar 0..3: x2 :: output_var;\n"
+            + "var bool: b1 :: output_var;\nvar bool: b2 :: output_var;\n"
+            + "var bool: b3 :: output_var;\n"
+            + "constraint jacop_alldifferent_opt([x1, x2, 2147483647], [b1, b2, b3]);\n"
+            + "solve satisfy;\n";
+    for (String lcg : new String[] {"on", "off"}) {
+      String out =
+          assertTimeoutPreemptively(Duration.ofSeconds(60), () -> run(model, "-a", "--lcg", lcg))[
+              0];
+      assertEquals(120, out.split("----------", -1).length - 1, out);
+    }
+  }
 }
