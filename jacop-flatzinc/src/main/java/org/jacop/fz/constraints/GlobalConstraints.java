@@ -1145,11 +1145,39 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     IntVar[] occurs = support.getVarArray((SimpleNode) node.jjtGetChild(1));
 
-    int dummy = IntDomain.MAX_INT;
+    // the value of an absent variable: below or above every domain if the range allows it,
+    // otherwise a value no domain holds; without such a value the pairs are posted one by one
+    long min = IntDomain.MAX_INT;
+    long max = IntDomain.MIN_INT;
     for (IntVar v : x) {
-      dummy = Math.min(dummy, v.min());
+      min = Math.min(min, v.min());
+      max = Math.max(max, v.max());
     }
-    dummy--;
+    int dummy;
+    if (min - 1 >= IntDomain.MIN_INT) {
+      dummy = (int) (min - 1);
+    } else if (max + 1 <= IntDomain.MAX_INT) {
+      dummy = (int) (max + 1);
+    } else {
+      IntDomain union = new IntervalDomain();
+      for (IntVar v : x) {
+        union.unionAdapt(v.dom());
+      }
+      IntDomain free = new IntervalDomain(IntDomain.MIN_INT, IntDomain.MAX_INT).subtract(union);
+      if (free.isEmpty()) {
+        for (int i = 0; i < x.length; i++) {
+          for (int j = i + 1; j < x.length; j++) {
+            support.pose(
+                new Or(
+                    new PrimitiveConstraint[] {
+                      new XeqC(occurs[i], 0), new XeqC(occurs[j], 0), new XneqY(x[i], x[j])
+                    }));
+          }
+        }
+        return;
+      }
+      dummy = free.min();
+    }
 
     ArrayList<IntVar> values = new ArrayList<>();
     Set<IntVar> seen = new HashSet<>();
@@ -1167,7 +1195,8 @@ class GlobalConstraints implements ParserTreeConstants {
       if (occurs[i].singleton(1)) {
         values.add(xi);
       } else {
-        IntDomain dom = xi.dom().cloneLight();
+        IntDomain dom = new IntervalDomain();
+        dom.unionAdapt(xi.dom());
         dom.unionAdapt(dummy, dummy);
         IntVar y = new IntVar(store, dom);
         support.pose(new IfThenElse(new XeqC(occurs[i], 1), new XeqY(xi, y), new XeqC(y, dummy)));

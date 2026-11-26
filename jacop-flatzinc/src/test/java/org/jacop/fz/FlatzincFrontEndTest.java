@@ -8858,4 +8858,64 @@ class FlatzincFrontEndTest {
       assertEquals(120, out.split("----------", -1).length - 1, out);
     }
   }
+
+  @Test
+  void alldifferentOptWithDomainsAtTheEndsOfTheIntegerRangeFindsAllSolutions() throws IOException {
+    // the value for an absent variable was one below the smallest value, beyond IntDomain.MIN_INT
+    // for a domain starting there: the model was rejected. Solution counts by brute force: the
+    // value above the domains (33), a value between them (56), and no free value (15)
+    int lo = IntDomain.MIN_INT;
+    int hi = IntDomain.MAX_INT;
+    String[] models = {
+      "var "
+          + lo
+          + ".."
+          + (lo + 2)
+          + ": x1 :: output_var;\nvar "
+          + lo
+          + ".."
+          + (lo + 2)
+          + ": x2 :: output_var;\n"
+          + "var bool: b1 :: output_var;\nvar bool: b2 :: output_var;\n"
+          + "constraint jacop_alldifferent_opt([x1, x2], [b1, b2]);\nsolve satisfy;\n",
+      "var {"
+          + lo
+          + ", "
+          + (lo + 1)
+          + "}: x1 :: output_var;\nvar {"
+          + (hi - 1)
+          + ", "
+          + hi
+          + "}: x2 :: output_var;\n"
+          + "var {"
+          + lo
+          + ", "
+          + hi
+          + "}: x3 :: output_var;\n"
+          + "var bool: b1 :: output_var;\nvar bool: b2 :: output_var;\nvar bool: b3 :: output_var;\n"
+          + "constraint jacop_alldifferent_opt([x1, x2, x3], [b1, b2, b3]);\nsolve satisfy;\n",
+      "var "
+          + lo
+          + ".."
+          + hi
+          + ": x1 :: output_var;\nvar {"
+          + lo
+          + ", "
+          + hi
+          + "}: x2 :: output_var;\n"
+          + "var bool: b1 :: output_var;\nvar bool: b2 :: output_var;\n"
+          + "constraint jacop_alldifferent_opt([x1, x2], [b1, b2]);\n"
+          + "constraint int_le(x1, "
+          + (lo + 1)
+          + ");\nsolve satisfy;\n"
+    };
+    int[] expected = {33, 56, 15};
+    for (int m = 0; m < models.length; m++) {
+      for (String lcg : new String[] {"on", "off"}) {
+        String out = run(models[m], "-a", "--lcg", lcg)[0];
+        assertTrue(out.contains("=========="), out);
+        assertEquals(expected[m], out.split("----------", -1).length - 1, out);
+      }
+    }
+  }
 }
