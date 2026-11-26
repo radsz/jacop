@@ -13668,4 +13668,35 @@ class SingleConstraintTest extends TestHelper {
           .isFalse();
     }
   }
+
+  @Test
+  void amongVarCountsValuesOfSetsSpanningTheIntegerRange() {
+    // the counts per value of the set were kept in arrays as long as the span of the values, about
+    // 13 GB for a set holding IntDomain.MIN_INT and IntDomain.MAX_INT; they are now as long as the
+    // number of values. Solution count by brute force.
+    int[][] doms = {
+      {-1, 0, 1}, {0, 1, IntDomain.MAX_INT}, {IntDomain.MIN_INT, 1, IntDomain.MAX_INT}, {0, 2}
+    };
+    int expected = 0;
+    for (int x0 : doms[0]) {
+      for (int x1 : doms[1]) {
+        for (int s : doms[2]) {
+          int count = (x0 == s ? 1 : 0) + (x1 == s ? 1 : 0);
+          for (int n : doms[3]) {
+            expected += count == n ? 1 : 0;
+          }
+        }
+      }
+    }
+    Store store = new Store();
+    IntVar[] v = new IntVar[doms.length];
+    for (int i = 0; i < doms.length; i++) {
+      v[i] = new IntVar(store, "v" + i, new IntervalDomain());
+      for (int value : doms[i]) {
+        v[i].addDom(value, value);
+      }
+    }
+    store.impose(new AmongVar(new IntVar[] {v[0], v[1]}, new IntVar[] {v[2]}, v[3]));
+    assertThat(countInOrder(store, v)).isEqualTo(expected);
+  }
 }
