@@ -246,9 +246,10 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
           differs.put(aVar(node, 2), new IntVar[] {aVar(node, 0), aVar(node, 1)});
       case "int_lin_ne_imp", "int_lin_ne_reif" -> {
         int[] a = support.getIntArray(child(node, 0));
+        // -a[1] in long: [MIN_VALUE, MIN_VALUE] weighs x + y, not x - y
         if (a != null
             && a.length == 2
-            && a[0] == -a[1]
+            && a[0] == -(long) a[1]
             && a[0] != 0
             && support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2)) == 0) {
           IntVar[] x = support.getVarArray(child(node, 1));

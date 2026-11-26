@@ -9014,4 +9014,41 @@ class FlatzincFrontEndTest {
     // brute force: p in -1..1 and q in 0..1 with p_i + p_j != 0 or q_i != q_j for every pair
     assertEquals(124, out.split("----------\n", -1).length - 1, out);
   }
+
+  @Test
+  void optionalUnaryReadsNoSumOfMinValueWeightsAsADisequality() throws IOException {
+    // s_i + 2 <= s_j \/ s_j + 2 <= s_i \/ b with b -> m_i + m_j != 0, written with the weights
+    // [-2147483648, -2147483648]: the precedences never hold over 0..1, the last literal always
+    // does over 1..2, so all 64 assignments are solutions; read as m_i != m_j it posted unary
+    // resources with optional tasks that left none
+    StringBuilder model = new StringBuilder();
+    for (int i = 0; i < 3; i++) {
+      model.append("var 0..1: s").append(i).append(" :: output_var;\n");
+      model.append("var 1..2: m").append(i).append(" :: output_var;\n");
+    }
+    for (int b = 0; b < 9; b++) {
+      model.append("var bool: b").append(b).append(";\n");
+    }
+    int b = 0;
+    for (int i = 0; i < 3; i++) {
+      for (int j = i + 1; j < 3; j++) {
+        model.append("constraint int_lin_le_imp([1,-1],[s" + i + ",s" + j + "],-2,b" + b + ");\n");
+        model.append(
+            "constraint int_lin_le_imp([1,-1],[s" + j + ",s" + i + "],-2,b" + (b + 1) + ");\n");
+        model.append("constraint int_lin_ne_imp([-2147483648,-2147483648],[m" + i + ",m" + j);
+        model.append("],0,b").append(b + 2).append(");\n");
+        model.append(
+            "constraint bool_clause([b" + b + ",b" + (b + 1) + ",b" + (b + 2) + "],[]);\n");
+        b += 3;
+      }
+    }
+    model.append("solve satisfy;\n");
+    System.setProperty("org.jacop.fz.agreementCount", "false");
+    try {
+      String out = run(model.toString(), "-a", "--lcg", "off")[0];
+      assertEquals(64, out.split("----------\n", -1).length - 1, out);
+    } finally {
+      System.clearProperty("org.jacop.fz.agreementCount");
+    }
+  }
 }
