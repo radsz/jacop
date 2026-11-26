@@ -260,23 +260,6 @@ class LcgSlowFallbackFlatzincTest {
   }
 
   @Test
-  void slowerLcgMustGainMoreToGoOn() {
-    // at the slow rate or faster the gain is lcg-slow-gain itself
-    assertEquals(0.005, Solve.scaledGain(0.005, 300, 300, 20), 1e-12);
-    assertEquals(0.005, Solve.scaledGain(0.005, 300, 900, 20), 1e-12);
-    // ten times slower: ten times the gain (accap 2019 instance8 with unary resources, 30
-    // conflicts a second, improved by about 3 % per window and kept its slot to the end)
-    assertEquals(0.05, Solve.scaledGain(0.005, 300, 30, 20), 1e-12);
-    double gain = Solve.scaledGain(0.005, 300, 30, 20);
-    assertFalse(
-        Solve.stillProgressing(
-            100_000_000_000L, 15_000_000_000L, gain, Long.MIN_VALUE, 1960, 1900));
-    // capped at lcg-slow-gain-scale, and 1 turns the scaling off
-    assertEquals(0.1, Solve.scaledGain(0.005, 300, 0, 20), 1e-12);
-    assertEquals(0.005, Solve.scaledGain(0.005, 300, 30, 1), 1e-12);
-  }
-
-  @Test
   void slowLcgGoesOnWhileItMakesProgress() {
     long s = 1_000_000_000L;
     long none = Long.MIN_VALUE;

@@ -265,9 +265,6 @@ public class Options {
                 lcg-slow-gain of itself; default 0.05), lcg-slow-gain=<share> (default 0.005),
                 lcg-slow-bound-gain=<share> (a bound raise in the window counts when it
                 closes this share of the gap to the best cost, default 0.0005),
-                lcg-slow-gain-scale=<factor> (a slow LCG must gain lcg-slow-gain times
-                how many times it is slower than lcg-slow-rate, up to this factor, default 20;
-                1 = lcg-slow-gain alone),
                 lcg-core=<share> (with --lcg and a linear objective: share of the time for
                 core-guided search before branch and bound, default 0.5, 0.1 with
                 objective cost variables; 0 = off),
