@@ -256,6 +256,24 @@ class FloatPropagationFuzzTest {
   @MethodSource("cases")
   void propagationKeepsEverySolution(String name, Case c) {
     long seed = SEED * 1_000_003L + name.hashCode();
+    double precision = FloatDomain.precision();
+    FloatDomain.setPrecision(PRECISION);
+    try {
+      keepsEverySolution(name, c, seed);
+    } finally {
+      FloatDomain.setPrecision(precision);
+    }
+  }
+
+  /**
+   * The precision of float domains in {@link #propagationKeepsEverySolution}: a coarse one, as a
+   * float_search annotation sets it, makes wide intervals singletons.
+   */
+  private static final double PRECISION =
+      Double.parseDouble(
+          System.getProperty("floats.fuzz.precision", String.valueOf(FloatDomain.precision())));
+
+  private static void keepsEverySolution(String name, Case c, long seed) {
     assertTimeoutPreemptively(
         Duration.ofMinutes(5),
         () -> {
@@ -394,7 +412,7 @@ class FloatPropagationFuzzTest {
     double best = found ? search.getCostValueFloat() : Double.POSITIVE_INFINITY;
     for (Witness w : t.witnesses) {
       // the cost of a solution is the middle of a singleton interval, at most the precision wide
-      double slack = step + FloatDomain.precision();
+      double slack = step + FloatDomain.precision() + ULP_SLACK * Math.ulp(w.hi()[cost]);
       if (agrees(t, w) && best > w.hi()[cost] + slack) {
         return "minimising "
             + vars[cost].id()
@@ -484,7 +502,16 @@ class FloatPropagationFuzzTest {
      */
     Iv[] widened(double[] x) {
       Iv[] box = points(x);
-      BigDecimal p = new BigDecimal(FloatDomain.precision());
+      // a relation is decided in doubles at the magnitude of its largest coordinate (x + y = x
+      // holds for |y| below the ulp of x), so the slack is at least a few ulps of that magnitude
+      double largest = 0;
+      for (int i = 0; i < c.isFloat().length; i++) {
+        if (c.isFloat()[i]) {
+          largest = Math.max(largest, Math.abs(x[i]));
+        }
+      }
+      BigDecimal p =
+          new BigDecimal(Math.max(FloatDomain.precision(), ULP_SLACK * Math.ulp(largest)));
       for (int i = 0; i < c.isFloat().length; i++) {
         if (c.isFloat()[i]) {
           box[i] = Iv.of(box[i].lo().subtract(p), box[i].hi().add(p));
@@ -951,6 +978,23 @@ class FloatPropagationFuzzTest {
    * interval narrower than the precision is one value, and propagation stops narrowing at the
    * precision, so the box counts as holding a solution that lies within the precision of it.
    */
+  /**
+   * The slack of a relation over float variables: the precision, or a few ulps of the largest
+   * magnitude among the float variables, at which the relation is decided in doubles.
+   */
+  private static double slack(Trial t) {
+    double largest = 0;
+    for (Var v : t.vars) {
+      if (v instanceof FloatVar f) {
+        largest = Math.max(largest, Math.max(Math.abs(f.min()), Math.abs(f.max())));
+      }
+    }
+    return Math.max(FloatDomain.precision(), ULP_SLACK * Math.ulp(largest));
+  }
+
+  /** Ulps of the largest magnitude of a relation that its decision in doubles may be off by. */
+  private static final int ULP_SLACK = 16;
+
   private static String checkGround(Trial t, String where) {
     Iv[] box = new Iv[t.vars.length];
     for (int i = 0; i < box.length; i++) {
@@ -958,7 +1002,7 @@ class FloatPropagationFuzzTest {
         box[i] = Iv.of(v.value());
       } else {
         FloatVar f = (FloatVar) t.vars[i];
-        BigDecimal p = new BigDecimal(FloatDomain.precision());
+        BigDecimal p = new BigDecimal(slack(t));
         box[i] = Iv.of(new BigDecimal(f.min()).subtract(p), new BigDecimal(f.max()).add(p));
       }
     }
@@ -2139,6 +2183,302 @@ class FloatPropagationFuzzTest {
                 new ElementFloatVariable(
                     iv(v[0]), new FloatVar[] {fv(v[1]), fv(v[2]), fv(v[3])}, fv(v[4])),
             false));
+    cases.addAll(repeatedCases());
+    cases.addAll(scaledCases(cases));
+    return cases;
+  }
+
+  /** Whether a box of one variable is the point 0 (1), excludes 0 (-1) or cannot tell (0). */
+  private static int onlyZero(Iv[] x) {
+    return x[0].isPoint() && x[0].lo().signum() == 0 ? 1 : x[0].containsZero() ? 0 : -1;
+  }
+
+  /** One variable at several positions of the scope, beyond x*x, x+x, x/x and x+x-y. */
+  static List<Case> repeatedCases() {
+    List<Case> cases = new ArrayList<>();
+    double[] a2 = r(-10, -10);
+    double[] b2 = r(10, 10);
+    Iv zero = Iv.of(0);
+    Iv one = Iv.of(1);
+    cases.add(
+        function(
+            "PminusQeqR x-x",
+            kinds(F, F),
+            a2,
+            b2,
+            1,
+            x -> 0,
+            x -> zero,
+            v -> new PminusQeqR(fv(v[0]), fv(v[0]), fv(v[1])),
+            true));
+    cases.add(
+        function(
+            "PplusQeqR x+y=x",
+            kinds(F, F),
+            a2,
+            b2,
+            1,
+            x -> 0,
+            x -> zero,
+            v -> new PplusQeqR(fv(v[0]), fv(v[1]), fv(v[0])),
+            true));
+    cases.add(
+        function(
+            "PminusQeqR x-y=x",
+            kinds(F, F),
+            a2,
+            b2,
+            1,
+            x -> 0,
+            x -> zero,
+            v -> new PminusQeqR(fv(v[0]), fv(v[1]), fv(v[0])),
+            true));
+    cases.add(
+        function(
+            "PminusQeqR y-x=x",
+            kinds(F, F),
+            r(-5, -10),
+            r(5, 10),
+            1,
+            x -> 2 * x[0],
+            x -> mul(x[0], Iv.of(2)),
+            v -> new PminusQeqR(fv(v[1]), fv(v[0]), fv(v[0])),
+            true));
+    cases.add(
+        function(
+            "PmulQeqR x*y=x",
+            kinds(F, F),
+            a2,
+            b2,
+            1,
+            x -> 1,
+            x -> x[0].containsZero() ? Iv.ALL : one,
+            v -> new PmulQeqR(fv(v[0]), fv(v[1]), fv(v[0])),
+            false));
+    cases.add(
+        function(
+            "PdivQeqR x/y=x",
+            kinds(F, F),
+            a2,
+            b2,
+            1,
+            x -> 1,
+            x -> x[0].containsZero() ? Iv.ALL : one,
+            v -> new PdivQeqR(fv(v[0]), fv(v[1]), fv(v[0])),
+            false));
+    cases.add(
+        function(
+            "PdivQeqR y/x=x",
+            kinds(F, F),
+            r(-3, -10),
+            r(3, 10),
+            1,
+            x -> x[0] == 0 ? Double.NaN : x[0] * x[0],
+            x -> pow(x[0], 2),
+            v -> new PdivQeqR(fv(v[1]), fv(v[0]), fv(v[0])),
+            false));
+    cases.add(
+        function(
+            "Max x,y,x",
+            kinds(F, F, F),
+            r(-10, -10, -10),
+            r(10, 10, 10),
+            2,
+            x -> Math.max(x[0], x[1]),
+            x -> max(new Iv[] {x[0], x[1]}),
+            v -> new Max(new FloatVar[] {fv(v[0]), fv(v[1]), fv(v[0])}, fv(v[2])),
+            false));
+    cases.add(
+        predicate(
+            "Max x,y = x",
+            kinds(F, F),
+            a2,
+            b2,
+            x -> le(x[1], x[0]),
+            v -> new Max(new FloatVar[] {fv(v[0]), fv(v[1])}, fv(v[0])),
+            false));
+    cases.add(
+        function(
+            "Min x,y,x",
+            kinds(F, F, F),
+            r(-10, -10, -10),
+            r(10, 10, 10),
+            2,
+            x -> Math.min(x[0], x[1]),
+            x -> min(new Iv[] {x[0], x[1]}),
+            v -> new Min(new FloatVar[] {fv(v[0]), fv(v[1]), fv(v[0])}, fv(v[2])),
+            false));
+    cases.add(
+        predicate(
+            "AbsPeqR x=x",
+            kinds(F),
+            r(-10),
+            r(10),
+            x ->
+                x[0].lo() != null && x[0].lo().signum() >= 0
+                    ? 1
+                    : x[0].hi() != null && x[0].hi().signum() < 0 ? -1 : 0,
+            v -> new AbsPeqR(fv(v[0]), fv(v[0])),
+            false));
+    cases.add(
+        predicate(
+            "ExpPeqR x=x",
+            kinds(F),
+            r(-10),
+            r(10),
+            x -> -1,
+            v -> new ExpPeqR(fv(v[0]), fv(v[0])),
+            false));
+    cases.add(
+        predicate(
+            "LnPeqR x=x",
+            kinds(F),
+            r(-10),
+            r(10),
+            x -> -1,
+            v -> new LnPeqR(fv(v[0]), fv(v[0])),
+            false));
+    cases.add(
+        predicate(
+            "SinPeqR x=x",
+            kinds(F),
+            r(-10),
+            r(10),
+            FloatPropagationFuzzTest::onlyZero,
+            v -> new SinPeqR(fv(v[0]), fv(v[0])),
+            false));
+    cases.add(
+        predicate(
+            "AsinPeqR x=x",
+            kinds(F),
+            r(-10),
+            r(10),
+            FloatPropagationFuzzTest::onlyZero,
+            v -> new AsinPeqR(fv(v[0]), fv(v[0])),
+            false));
+    cases.add(
+        predicate(
+            "AtanPeqR x=x",
+            kinds(F),
+            r(-10),
+            r(10),
+            FloatPropagationFuzzTest::onlyZero,
+            v -> new AtanPeqR(fv(v[0]), fv(v[0])),
+            false));
+    cases.add(
+        predicate(
+            "SinhPeqR x=x",
+            kinds(F),
+            r(-10),
+            r(10),
+            FloatPropagationFuzzTest::onlyZero,
+            v -> new HyperbolicPeqR(fv(v[0]), HyperbolicPeqR.Function.SINH, fv(v[0])),
+            false));
+    cases.add(
+        predicate(
+            "TanhPeqR x=x",
+            kinds(F),
+            r(-10),
+            r(10),
+            FloatPropagationFuzzTest::onlyZero,
+            v -> new HyperbolicPeqR(fv(v[0]), HyperbolicPeqR.Function.TANH, fv(v[0])),
+            false));
+    cases.add(
+        predicate(
+            "CoshPeqR x=x",
+            kinds(F),
+            r(-10),
+            r(10),
+            x -> -1,
+            v -> new HyperbolicPeqR(fv(v[0]), HyperbolicPeqR.Function.COSH, fv(v[0])),
+            false));
+    cases.add(
+        predicate(
+            "TanPeqR x=x",
+            kinds(F),
+            r(-1.5),
+            r(1.5),
+            FloatPropagationFuzzTest::onlyZero,
+            v -> new TanPeqR(fv(v[0]), fv(v[0])),
+            false));
+    for (String rel : new String[] {"==", "!=", "<", "<=", ">", ">="}) {
+      int holds = rel.equals("==") || rel.endsWith("=") && !rel.equals("!=") ? 1 : -1;
+      cases.add(
+          predicate(
+              "Pcomp x " + rel + " x",
+              kinds(F),
+              r(-10),
+              r(10),
+              x -> holds,
+              v ->
+                  switch (rel) {
+                    case "==" -> new PeqQ(fv(v[0]), fv(v[0]));
+                    case "!=" -> new PneqQ(fv(v[0]), fv(v[0]));
+                    case "<" -> new PltQ(fv(v[0]), fv(v[0]));
+                    case "<=" -> new PlteqQ(fv(v[0]), fv(v[0]));
+                    case ">" -> new PgtQ(fv(v[0]), fv(v[0]));
+                    default -> new PgteqQ(fv(v[0]), fv(v[0]));
+                  },
+              true));
+    }
+    return cases;
+  }
+
+  /** Factors the ranges of some cases are scaled by: subnormal, tiny, huge and near overflow. */
+  private static final double[] SCALES = {1e-310, 1e-160, 1e150, 1e300};
+
+  /**
+   * The cases whose relation holds at any magnitude (rational operations, abs, sqrt, comparisons,
+   * linear rows, max and min) over the float ranges scaled by each of {@link #SCALES}; sin and atan
+   * too, for the reduction of huge arguments and arguments near 0.
+   */
+  static List<Case> scaledCases(List<Case> singles) {
+    List<Case> cases = new ArrayList<>();
+    for (Case c : singles) {
+      String n = c.name();
+      boolean scalable =
+          n.startsWith("Pplus")
+              || n.startsWith("Pminus")
+              || n.startsWith("PmulQ")
+              || n.startsWith("PdivQ")
+              || n.startsWith("AbsPeqR")
+              || n.equals("SqrtPeqR")
+              || n.equals("SinPeqR")
+              || n.equals("AtanPeqR")
+              || n.startsWith("PeqQ")
+              || n.startsWith("PneqQ")
+              || n.startsWith("PltQ")
+              || n.startsWith("PlteqQ")
+              || n.startsWith("LinearFloat") && n.contains(" var ")
+              || n.startsWith("SumFloat")
+              || n.startsWith("Max")
+              || n.startsWith("Min");
+      if (!scalable) {
+        continue;
+      }
+      for (double scale : SCALES) {
+        double[] lo = c.lo().clone();
+        double[] hi = c.hi().clone();
+        for (int i = 0; i < lo.length; i++) {
+          if (c.isFloat()[i]) {
+            lo[i] *= scale;
+            hi[i] *= scale;
+          }
+        }
+        cases.add(
+            new Case(
+                n + " scaled " + scale,
+                c.isFloat(),
+                lo,
+                hi,
+                c.fix(),
+                c.enclose(),
+                c.holds(),
+                c.build(),
+                c.primitive(),
+                c.dep()));
+      }
+    }
     return cases;
   }
 

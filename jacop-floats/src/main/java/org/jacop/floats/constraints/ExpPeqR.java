@@ -155,6 +155,10 @@ public class ExpPeqR extends Constraint
         throw new InternalException("Floating-point overflow in constraint " + this);
       }
       pMin = FloatDomain.down(pMin);
+    } else if (q.min() > 0) {
+      // q.min() is the smallest subnormal, whose step outside is 0: its logarithm, within an ulp,
+      // two ulps lower
+      pMin = FloatDomain.down(FloatDomain.down(Math.log(q.min())));
     } else if (q.max() > 0) {
       pMin = FloatDomain.MIN_FLOAT;
     } else {

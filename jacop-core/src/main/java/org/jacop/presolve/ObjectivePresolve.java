@@ -48,7 +48,8 @@ import org.jacop.core.ValueEnumeration;
  * Objective presolve: a linear objective is rewritten so that its bounds see the exactly-one
  * structure of the model, and the rewritten objective is returned as a redundant linear equation.
  *
- * <p>Two steps, after CP-SAT's {@code ExpandObjective} and {@code ShiftObjectiveWithExactlyOnes}:
+ * <p>Three steps, the first and last after CP-SAT's {@code ExpandObjective} and {@code
+ * ShiftObjectiveWithExactlyOnes}:
  *
  * <ol>
  *   <li><b>Expansion.</b> Starting from the equation that defines the objective variable, every
@@ -62,6 +63,12 @@ import org.jacop.core.ValueEnumeration;
  *       defines r as {@code sum(b)}. A variable without a definition of its own is replaced by an
  *       equal variable that has one ({@code bool2int}, {@code bool_eq}, or a 0/1 variable x and the
  *       literal of x = 1).
+ *   <li><b>Contraction.</b> For a disjunction {@code r <-> or(b)} whose literals exclude each other
+ *       (as for expansion, or because they share an at-most-one set {@code sum(b) <= 1} or an
+ *       exactly-one set) and all have the same cost c in the expression, {@code sum(c * b) = c *
+ *       r}: the literals are replaced by r. On the MiniZinc Challenge 2026 kitchen model the cost
+ *       of each fixture placed becomes a cost per used segment, which CP-SAT's presolve also finds
+ *       (Perron, Didier and Gay, The CP-SAT-LP Solver, CP 2023).
  *   <li><b>Shifting.</b> For a set of 0/1 variables of which exactly one is 1 (a linear equation
  *       {@code sum(b) = 1}, or the literals {@code b_v <-> x = v} for every value v of a variable
  *       x), {@code sum(c_v * b_v) = m + sum((c_v - m) * b_v)} with m the smallest cost of the set
@@ -73,9 +80,10 @@ import org.jacop.core.ValueEnumeration;
  * <p>The equation {@code objective = expanded and shifted expression} holds in every solution of
  * the model, since it is derived from the model's own equations, so imposing it keeps every
  * solution; it is useful with all solutions and with counting too. It is returned only when
- * shifting tightens the bound of the expression in the direction of optimisation. With the other
- * equations, exactly-one sets and counts it is equivalent to the equation defining the objective,
- * so the caller may drop that one ({@link #definitionVariables()}).
+ * shifting tightens the bound of the expression in the direction of optimisation or contraction
+ * shortens it. With the other equations, exactly-one sets and counts it is equivalent to the
+ * equation defining the objective, so the caller may drop that one ({@link
+ * #definitionVariables()}).
  *
  * <p>All variables are read at their current domains, which should be at a fixpoint.
  *
@@ -83,6 +91,13 @@ import org.jacop.core.ValueEnumeration;
  * @version 5.0
  */
 public final class ObjectivePresolve implements Rule {
+
+  /**
+   * Whether disjunctions are contracted; {@code -Dorg.jacop.presolve.objectiveContraction=false}
+   * turns it off.
+   */
+  static final boolean CONTRACTION =
+      !"false".equals(System.getProperty("org.jacop.presolve.objectiveContraction"));
 
   /** Largest number of terms an expanded objective may have. */
   static final int MAX_TERMS = 100_000;
@@ -124,10 +139,16 @@ public final class ObjectivePresolve implements Rule {
   private final List<Equation> equations = new ArrayList<>();
   private final Map<IntVar, Equation> definitions = new IdentityHashMap<>();
   private final List<IntVar[]> exactlyOnes = new ArrayList<>();
+  // the equation each exactly-one set of exactlyOnes comes from
+  private final Map<IntVar[], Equation> exactlyOneEquations = new IdentityHashMap<>();
+  // the equation defining the objective in the current reformulation, which the caller may drop
+  private Equation definition;
   private final Map<IntVar, Map<Integer, IntVar>> encodings = new LinkedHashMap<>();
   private final List<Count> counts = new ArrayList<>();
   private final List<Element> elements = new ArrayList<>();
   private final List<Or> ors = new ArrayList<>();
+  private final List<Or> exclusiveOrs = new ArrayList<>();
+  private final List<IntVar[]> atMostOnes = new ArrayList<>();
   private final List<IntVar[]> allDifferents = new ArrayList<>();
   private final Map<IntVar, List<IntVar>> equals = new IdentityHashMap<>();
 
@@ -175,6 +196,7 @@ public final class ObjectivePresolve implements Rule {
 
   private int expanded;
   private int shifted;
+  private int contracted;
   private LinearInt imposed;
   private IntVar[] definitionVariables;
   private final List<IntVar> costVariables = new ArrayList<>();
@@ -216,7 +238,9 @@ public final class ObjectivePresolve implements Rule {
         unit = coefs[i] == rhs && vars[i].min() >= 0 && vars[i].max() <= 1;
       }
       if (unit) {
-        exactlyOnes.add(vars.clone());
+        IntVar[] set = vars.clone();
+        exactlyOnes.add(set);
+        exactlyOneEquations.put(set, e);
       }
     }
   }
@@ -289,6 +313,23 @@ public final class ObjectivePresolve implements Rule {
   }
 
   /**
+   * Adds an at-most-one set: at most one of the 0/1 variables is 1 in every solution, as stated by
+   * {@code sum(b) <= 1}. Literals of a disjunction ({@link #addOr(IntVar, IntVar[])}) that share
+   * such a set, directly or through equal variables ({@link #addEquality(IntVar, IntVar)}), exclude
+   * each other.
+   *
+   * @param b the 0/1 variables.
+   */
+  public void addAtMostOne(IntVar[] b) {
+    for (IntVar v : b) {
+      if (v.min() < 0 || v.max() > 1) {
+        return;
+      }
+    }
+    atMostOnes.add(b.clone());
+  }
+
+  /**
    * Adds a count: {@code n} is the number of variables of x that take the value. When every
    * variable of x that can take the value has a value literal for it, the count becomes the
    * equation {@code n = sum(literals)} that defines n, unless another equation defines n already.
@@ -318,6 +359,16 @@ public final class ObjectivePresolve implements Rule {
    */
   public int shifted() {
     return shifted;
+  }
+
+  /**
+   * Returns the number of disjunctions whose literals were replaced by the disjunction in the last
+   * {@link #reformulate()}.
+   *
+   * @return the number of contractions.
+   */
+  public int contracted() {
+    return contracted;
   }
 
   /**
@@ -419,6 +470,7 @@ public final class ObjectivePresolve implements Rule {
   private LinearInt reformulate(Store store, List<Constraint> elements) {
     expanded = 0;
     shifted = 0;
+    contracted = 0;
     definitionVariables = null;
     costVariables.clear();
     if (objective.singleton()) {
@@ -427,7 +479,7 @@ public final class ObjectivePresolve implements Rule {
     addCountEquations();
     addElementEquations();
     addOrEquations();
-    Equation definition = objectiveDefinition();
+    definition = objectiveDefinition();
     if (definition == null) {
       return null;
     }
@@ -446,6 +498,9 @@ public final class ObjectivePresolve implements Rule {
     if (!expand(expression, constant)) {
       return null;
     }
+    if (CONTRACTION) {
+      contract(expression);
+    }
 
     try {
       long before = bound(expression, constant[0]);
@@ -453,7 +508,8 @@ public final class ObjectivePresolve implements Rule {
         shift(expression, constant, set);
       }
       long after = bound(expression, constant[0]);
-      if (shifted == 0 || (minimize ? after <= before : after >= before)) {
+      boolean tighter = shifted > 0 && (minimize ? after > before : after < before);
+      if (!tighter && contracted == 0) {
         return null;
       }
     } catch (ArithmeticException _) {
@@ -600,12 +656,26 @@ public final class ObjectivePresolve implements Rule {
         }
       }
     }
+    Map<IntVar, List<Integer>> atMostOneOf = new IdentityHashMap<>();
+    List<IntVar[]> sets = new ArrayList<>(atMostOnes);
+    sets.addAll(exactlyOnesBesideDefinition());
+    for (int g = 0; g < sets.size(); g++) {
+      for (IntVar b : sets.get(g)) {
+        List<Integer> groups = atMostOneOf.computeIfAbsent(b, k -> new ArrayList<>());
+        if (groups.isEmpty() || groups.getLast() != g) {
+          groups.add(g);
+        }
+      }
+    }
     for (Or or : ors) {
-      if (definitions.containsKey(or.r)
-          || or.r.singleton()
+      if (or.r.singleton()
           || or.literals.length < 2
           || or.literals.length + 1 > MAX_TERMS
-          || !exclusive(or, variableOf, valueOf, groupsOf)) {
+          || !exclusive(or, variableOf, valueOf, groupsOf, atMostOneOf)) {
+        continue;
+      }
+      exclusiveOrs.add(or);
+      if (definitions.containsKey(or.r)) {
         continue;
       }
       IntVar[] vars = new IntVar[or.literals.length + 1];
@@ -622,30 +692,113 @@ public final class ObjectivePresolve implements Rule {
   }
 
   /**
-   * True if the literals of the disjunction are distinct 0/1 variables and at most one can be 1.
+   * True if the literals of the disjunction are distinct 0/1 variables and at most one can be 1:
+   * every two of them are value literals of one variable for different values, of one value for
+   * variables of an all-different constraint, or share an at-most-one set.
    */
-  private static boolean exclusive(
+  private boolean exclusive(
       Or or,
       Map<IntVar, IntVar> variableOf,
       Map<IntVar, Integer> valueOf,
-      Map<IntVar, List<Integer>> groupsOf) {
+      Map<IntVar, List<Integer>> groupsOf,
+      Map<IntVar, List<Integer>> atMostOneOf) {
     IntVar[] b = or.literals;
+    List<List<Integer>> sets = new ArrayList<>(b.length);
     for (int i = 0; i < b.length; i++) {
-      IntVar xi = variableOf.get(b[i]);
-      if (xi == null || b[i] == or.r || b[i].min() < 0 || b[i].max() > 1) {
+      if (b[i] == or.r || b[i].min() < 0 || b[i].max() > 1) {
         return false;
       }
+      sets.add(atMostOneSets(b[i], atMostOneOf));
+      IntVar xi = variableOf.get(b[i]);
       for (int j = 0; j < i; j++) {
+        if (b[i] == b[j]) {
+          return false;
+        }
         IntVar xj = variableOf.get(b[j]);
-        boolean sameValue = valueOf.get(b[i]).equals(valueOf.get(b[j]));
-        boolean excluded =
-            b[i] != b[j] && (xi == xj ? !sameValue : sameValue && allDifferent(xi, xj, groupsOf));
+        boolean excluded = shareSet(sets.get(i), sets.get(j));
+        if (!excluded && xi != null && xj != null) {
+          boolean sameValue = valueOf.get(b[i]).equals(valueOf.get(b[j]));
+          excluded = xi == xj ? !sameValue : sameValue && allDifferent(xi, xj, groupsOf);
+        }
         if (!excluded) {
           return false;
         }
       }
     }
     return true;
+  }
+
+  /** The at-most-one sets of b and of the variables equal to it. */
+  private List<Integer> atMostOneSets(IntVar b, Map<IntVar, List<Integer>> atMostOneOf) {
+    List<Integer> sets = new ArrayList<>(atMostOneOf.getOrDefault(b, List.of()));
+    for (IntVar e : equals.getOrDefault(b, List.of())) {
+      sets.addAll(atMostOneOf.getOrDefault(e, List.of()));
+    }
+    return sets;
+  }
+
+  private static boolean shareSet(List<Integer> a, List<Integer> b) {
+    for (Integer g : a) {
+      if (b.contains(g)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Replaces the literals of an exclusive disjunction {@code r <-> or(b)} by r when every literal
+   * has the same cost in the expression: then {@code r = sum(b)}, so {@code sum(c * b) = c * r}. A
+   * literal's term may be on the literal or on a variable equal to it. The expression keeps its
+   * value in every solution with fewer terms, which bounds reasoning and explanations of lazy
+   * clause generation see as one cost per disjunction, as CP-SAT's presolve does when it replaces
+   * an exactly-one set by its literals.
+   */
+  private void contract(Map<IntVar, Long> expression) {
+    for (Or or : exclusiveOrs) {
+      IntVar[] terms = new IntVar[or.literals.length];
+      Long cost = null;
+      boolean same = true;
+      for (int i = 0; i < terms.length && same; i++) {
+        IntVar t = termOf(expression, or.literals[i]);
+        same = t != null && (cost == null || cost.equals(expression.get(t)));
+        terms[i] = t;
+        cost = same ? expression.get(t) : cost;
+      }
+      if (!same || distinctCount(terms) != terms.length || expression.containsKey(or.r)) {
+        continue;
+      }
+      for (IntVar t : terms) {
+        expression.remove(t);
+      }
+      expression.put(or.r, cost);
+      contracted++;
+    }
+  }
+
+  /** The variable of the expression that holds b's term: b, or a variable equal to it. */
+  private IntVar termOf(Map<IntVar, Long> expression, IntVar b) {
+    if (expression.containsKey(b)) {
+      return b;
+    }
+    IntVar found = null;
+    for (IntVar e : equals.getOrDefault(b, List.of())) {
+      if (expression.containsKey(e) && e.min() >= 0 && e.max() <= 1) {
+        if (found != null && found != e) {
+          return null;
+        }
+        found = e;
+      }
+    }
+    return found;
+  }
+
+  private static int distinctCount(IntVar[] vars) {
+    Map<IntVar, Boolean> seen = new IdentityHashMap<>();
+    for (IntVar v : vars) {
+      seen.put(v, Boolean.TRUE);
+    }
+    return seen.size();
   }
 
   private static boolean allDifferent(IntVar x, IntVar y, Map<IntVar, List<Integer>> groupsOf) {
@@ -819,9 +972,23 @@ public final class ObjectivePresolve implements Rule {
     return null;
   }
 
+  /**
+   * The explicit exactly-one sets but that of the objective's defining equation: the caller may
+   * replace that equation by the reformulated one, which then must not rest on it.
+   */
+  private List<IntVar[]> exactlyOnesBesideDefinition() {
+    List<IntVar[]> sets = new ArrayList<>();
+    for (IntVar[] set : exactlyOnes) {
+      if (exactlyOneEquations.get(set) != definition) {
+        sets.add(set);
+      }
+    }
+    return sets;
+  }
+
   /** The explicit exactly-one sets, then the value literals of variables encoded on all values. */
   private List<IntVar[]> exactlyOneSets() {
-    List<IntVar[]> sets = new ArrayList<>(exactlyOnes);
+    List<IntVar[]> sets = exactlyOnesBesideDefinition();
     for (Map.Entry<IntVar, Map<Integer, IntVar>> e : encodings.entrySet()) {
       IntVar[] literals = literals(e.getKey(), e.getValue());
       if (literals.length > 0) {

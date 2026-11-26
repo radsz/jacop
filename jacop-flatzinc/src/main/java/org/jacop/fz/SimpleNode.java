@@ -7,9 +7,16 @@ package org.jacop.fz;
 /** Simple AST node for flatzinc parser. */
 public class SimpleNode implements Node, Cloneable {
 
+  // no parent: a node does not reach its parent, so a node another structure keeps reaches its own
+  // children only, not the items of the whole model; and 4 bytes more took the 7.8 million scalar
+  // expressions of XCSP 2022 RoomMate-sr0700 from 32 to 40 bytes each
   protected final int id;
-  protected Node parent;
-  protected Node[] children;
+  // the child of a node with one child (most annotations, annotation expressions and constraint
+  // items without annotations), the array of the children of a node with more, or null: an array
+  // of one child cost 24 bytes of each of about 5 million such nodes of XCSP 2022 RoomMate-sr0700.
+  // An array literal whose elements are all int literals keeps their values in an int array here,
+  // see the method packedInts.
+  protected Object children;
 
   /**
    * Constructs a simple node with the specified id.
@@ -33,7 +40,7 @@ public class SimpleNode implements Node, Cloneable {
   }
 
   /**
-   * Copies this node alone: its children and its parent are the ones of this node.
+   * Copies this node alone: its children are the ones of this node.
    *
    * @return the copy
    * @throws CloneNotSupportedException never, the class is cloneable
@@ -49,7 +56,7 @@ public class SimpleNode implements Node, Cloneable {
    * portfolio build from one tree. The values of the nodes (identifiers, numbers, lists) are
    * shared, since nothing changes them after parsing.
    *
-   * @return the copy, without a parent
+   * @return the copy
    */
   public SimpleNode copy() {
     SimpleNode c;
@@ -58,20 +65,22 @@ public class SimpleNode implements Node, Cloneable {
     } catch (CloneNotSupportedException e) {
       throw new IllegalStateException(e);
     }
-    c.parent = null;
-    if (children != null) {
-      c.children = new Node[children.length];
-      for (int i = 0; i < children.length; i++) {
-        if (children[i] instanceof SimpleNode child) {
-          SimpleNode d = child.copy();
-          d.parent = c;
-          c.children[i] = d;
-        } else {
-          c.children[i] = children[i];
-        }
+    if (children instanceof Node[] all) {
+      Node[] copied = new Node[all.length];
+      for (int i = 0; i < all.length; i++) {
+        copied[i] = copyOf(all[i]);
       }
+      c.children = copied;
+    } else if (children instanceof int[] values) {
+      c.children = values;
+    } else if (children instanceof Node only) {
+      c.children = copyOf(only);
     }
     return c;
+  }
+
+  private static Node copyOf(Node child) {
+    return child instanceof SimpleNode node ? node.copy() : child;
   }
 
   /** {@inheritDoc} */
@@ -84,36 +93,132 @@ public class SimpleNode implements Node, Cloneable {
     // Optional lifecycle hook; no action needed for this node type.
   }
 
-  /** {@inheritDoc} */
+  /**
+   * Does not keep the parent: a node does not reach its parent (see {@link #jjtGetParent}).
+   *
+   * @param n the parent
+   */
   public void jjtSetParent(Node n) {
-    parent = n;
+    // the parent is not kept
   }
 
-  /** {@inheritDoc} */
+  /**
+   * Not supported: a node does not keep its parent, so that a node another structure keeps reaches
+   * its own children only and every node is 4 bytes smaller.
+   *
+   * @return never
+   * @throws UnsupportedOperationException always
+   */
   public Node jjtGetParent() {
-    return parent;
+    throw new UnsupportedOperationException("parse tree nodes do not keep their parent");
   }
 
   /** {@inheritDoc} */
   public void jjtAddChild(Node n, int i) {
-    if (children == null) {
-      children = new Node[i + 1];
-    } else if (i >= children.length) {
-      Node[] c = new Node[i + 1];
-      System.arraycopy(children, 0, c, 0, children.length);
-      children = c;
+    unpack();
+    if (children == null && i == 0) {
+      children = n;
+      return;
     }
-    children[i] = n;
+    Node[] all;
+    if (children instanceof Node[] array && i < array.length) {
+      all = array;
+    } else {
+      all = new Node[Math.max(jjtGetNumChildren(), i + 1)];
+      if (children instanceof Node[] array) {
+        System.arraycopy(array, 0, all, 0, array.length);
+      } else if (children != null) {
+        all[0] = (Node) children;
+      }
+    }
+    all[i] = n;
+    children = all;
   }
 
   /** {@inheritDoc} */
   public Node jjtGetChild(int i) {
-    return children[i];
+    if (children instanceof Node[] all) {
+      return all[i];
+    }
+    if (children instanceof int[] values) {
+      ASTScalarFlatExpr literal = intLiteral(values[i]);
+      literal.jjtSetParent(this);
+      return literal;
+    }
+    if (i != 0 || children == null) {
+      throw new ArrayIndexOutOfBoundsException(i);
+    }
+    return (Node) children;
   }
 
   /** {@inheritDoc} */
   public int jjtGetNumChildren() {
-    return children == null ? 0 : children.length;
+    if (children instanceof Node[] all) {
+      return all.length;
+    }
+    if (children instanceof int[] values) {
+      return values.length;
+    }
+    return children == null ? 0 : 1;
+  }
+
+  /**
+   * Drops the child at a position, which keeps its place: the number of children stays.
+   *
+   * @param i the position of the child
+   */
+  void releaseChild(int i) {
+    unpack();
+    if (children instanceof Node[] all) {
+      all[i] = null;
+    } else if (i == 0 && children != null) {
+      children = new Node[1];
+    } else {
+      throw new ArrayIndexOutOfBoundsException(i);
+    }
+  }
+
+  /**
+   * Keeps only the children that a test accepts, in their order; the others are removed and the
+   * number of children shrinks.
+   *
+   * @param keep the test of a child
+   */
+  public void retainChildren(java.util.function.Predicate<Node> keep) {
+    int n = jjtGetNumChildren();
+    if (n == 0) {
+      return;
+    }
+    unpack();
+    Node[] all = children instanceof Node[] array ? array : new Node[] {(Node) children};
+    Node[] kept = new Node[n];
+    int k = 0;
+    for (Node child : all) {
+      if (keep.test(child)) {
+        kept[k++] = child;
+      }
+    }
+    if (k == n) {
+      return;
+    }
+    if (k == 0) {
+      children = null;
+    } else if (k == 1) {
+      children = kept[0];
+    } else {
+      children = java.util.Arrays.copyOf(kept, k);
+    }
+  }
+
+  /** Drops every child, which keeps its place: the number of children stays. */
+  void releaseChildren() {
+    if (children instanceof int[]) {
+      // packed int literals are no nodes: a node is made only when a child is read
+      return;
+    }
+    for (int i = 0; i < jjtGetNumChildren(); i++) {
+      releaseChild(i);
+    }
   }
 
   /* You can override these two methods in subclasses of SimpleNode to
@@ -148,12 +253,10 @@ public class SimpleNode implements Node, Cloneable {
    */
   public void dump(String prefix) {
     FzConsole.println(toString(prefix));
-    if (children != null) {
-      for (Node child : children) {
-        SimpleNode n = (SimpleNode) child;
-        if (n != null) {
-          n.dump(prefix + " ");
-        }
+    for (int i = 0; i < jjtGetNumChildren(); i++) {
+      SimpleNode n = (SimpleNode) jjtGetChild(i);
+      if (n != null) {
+        n.dump(prefix + " ");
       }
     }
   }
@@ -165,6 +268,51 @@ public class SimpleNode implements Node, Cloneable {
    */
   public int getId() {
     return id;
+  }
+
+  /**
+   * The values of the children of an array literal whose elements are all int literals, which the
+   * parser keeps in one array instead of one node each. Its children are then made on each {@link
+   * #jjtGetChild(int)}: a new int literal node each time, which nothing may change.
+   *
+   * @return the values of the children, or null when the children are nodes
+   */
+  public int[] packedInts() {
+    return children instanceof int[] values ? values : null;
+  }
+
+  /**
+   * It sets the children of an array literal to int literals.
+   *
+   * @param values the values of the int literals, in order
+   */
+  void setPackedInts(int[] values) {
+    children = values;
+  }
+
+  // the packed children as nodes, before a change of the children
+  private void unpack() {
+    if (children instanceof int[] values) {
+      Node[] all = new Node[values.length];
+      for (int i = 0; i < values.length; i++) {
+        all[i] = intLiteral(values[i]);
+        all[i].jjtSetParent(this);
+      }
+      children = all;
+    }
+  }
+
+  /**
+   * An int literal node without a parent.
+   *
+   * @param value the value
+   * @return the node
+   */
+  static ASTScalarFlatExpr intLiteral(int value) {
+    ASTScalarFlatExpr literal = new ASTScalarFlatExpr(ParserTreeConstants.JJTSCALARFLATEXPR);
+    literal.setType(0);
+    literal.setInt(value);
+    return literal;
   }
 
   /** Removes all child nodes. */

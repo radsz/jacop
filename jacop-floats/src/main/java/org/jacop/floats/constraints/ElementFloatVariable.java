@@ -152,7 +152,10 @@ public class ElementFloatVariable extends AbstractElement
 
     if (value.singleton() && index.singleton()) {
       FloatVar v = list[index.value() - 1 - indexOffset];
-      v.domain.in(store.level, v, value.value(), value.value());
+      // a singleton float interval is up to the precision wide: v keeps the whole of it, not
+      // only its lower end, which v may not contain
+      v.domain.in(store.level, v, value.domain);
+      value.domain.in(store.level, value, v.domain);
       removeConstraint();
       return;
     }

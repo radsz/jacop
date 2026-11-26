@@ -163,6 +163,12 @@ public final class CoreSearch {
    */
   public boolean termsBySpanRatio;
 
+  /**
+   * Statistics: whether the terms of the sums replace the sums, although they span more levels, as
+   * narrow terms of at most {@link #NARROW_SPAN} levels each that are not all 0-1.
+   */
+  public boolean narrowTerms;
+
   /** Statistics: groups of soft literals relaxed at once as at most one of them false. */
   public long amoGroups;
 
@@ -279,23 +285,35 @@ public final class CoreSearch {
     // fewer levels, up to SPAN_RATIO times fewer: the root propagation of a long run tightens the
     // sums beyond their terms' bounds. On MaxSAT Evaluation 2024's xai-mindset2 iris, 564 0-1 terms
     // in 4 sums of 525 levels at -t 60 s (1,061 levels each at -t 3 s), the cores had 3 assumptions
-    // on the sums and a bound of 49 of 87 after 240 s; on the terms the optimum is proved in 4 s
+    // on the sums and a bound of 49 of 87 after 240 s; on the terms the optimum is proved in 4 s.
+    // Narrow terms, of at most NARROW_SPAN levels each, are taken the same way: on neighbours
+    // (MiniZinc Challenge 2018, 28 cells of 1..5 in 5 blocks) the blocks spanned 86 levels and the
+    // cells 90, so the cores went to the blocks, where each raised the bound by one on a single
+    // block: neighbours7 took 436 s; on the cells the cores mix the cells, 263 s, and
+    // neightbours-new-20 (2021) is proved in 102 s instead of not in 600 s
     long termSpan = span(lcg, terms);
     long blockSpan = span(lcg, blocks);
     boolean zeroOne = zeroOne(lcg, terms);
-    if (termSpan > (zeroOne ? SPAN_RATIO : 1) * blockSpan) {
+    boolean narrow = !zeroOne && narrow(lcg, terms);
+    if (termSpan > (zeroOne || narrow ? SPAN_RATIO : 1) * blockSpan) {
       CoreSearch search = new CoreSearch(lcg, objective, blocks, blocksConstant);
       return search.startProof(blockDefinitions) ? search : null;
     }
     CoreSearch search = new CoreSearch(lcg, objective, terms, constant[0]);
     search.termsBySpanRatio = termSpan > blockSpan;
+    search.narrowTerms = narrow && termSpan > blockSpan;
     if (!search.startProof(definitions)) {
       return null;
     }
     if (!terms.equals(blocks)) {
       // grouped now, as before #313's rework: the probes then have the time of the whole run, not
       // the share of the phase (spot5 28: 58 groups and a proof in 7 s, against 6 groups)
-      search.addTermSofts();
+      // the soft literals of a large objective take seconds (traveling-tppv circ20inonbal: 1.3 s
+      // past -t 10 s): past the solver's deadline there is no core-guided phase, unless a proof
+      // has the lines of the soft literals already
+      if (!search.addTermSofts(search.proof == null ? search.sat.deadline() : Long.MAX_VALUE)) {
+        return null;
+      }
       search.group();
     }
     return search;
@@ -325,6 +343,21 @@ public final class CoreSearch {
     }
     hardenedAtGroup = hardened;
     return relaxAtMostOnes();
+  }
+
+  // -Djacop.lcg.coreNarrowSpan=N: terms of at most N levels each replace the sums of a split
+  // objective as 0-1 terms do, up to SPAN_RATIO times more levels; 1 restores 0-1 terms only
+  static final int NARROW_SPAN = Integer.getInteger("jacop.lcg.coreNarrowSpan", 8);
+
+  /** Whether each term's variable spans at most {@link #NARROW_SPAN} levels. */
+  private static boolean narrow(LcgSolver lcg, Map<Integer, Long> terms) {
+    for (int t : terms.keySet()) {
+      IntVar x = lcg.variable(t);
+      if ((long) x.max() - x.min() > NARROW_SPAN) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /** Whether each term's variable spans at most one level. */
@@ -556,7 +589,7 @@ public final class CoreSearch {
     }
     if (threshold < 0) {
       if (!grouped) {
-        addTermSofts();
+        addTermSofts(Long.MAX_VALUE);
       }
       if (!grouped && !group()) {
         return lcg.bestObjective() == Long.MAX_VALUE ? CdclSolver.UNSAT : CdclSolver.SAT;
@@ -625,8 +658,9 @@ public final class CoreSearch {
         probe(unit.term, unit.level, phaseLimit);
       } else if (OBJECTIVE_PROBE && cores >= nextObjectiveProbe && slowCores()) {
         long before = sat.work();
+        long clock = sat.now();
         boolean feasible = probeObjective(phaseLimit);
-        discount(sat.work() - before);
+        discount(sat.work() - before, sat.now() - clock);
         if (!feasible) {
           return CdclSolver.SAT; // no solution better than the best one
         }
@@ -707,10 +741,14 @@ public final class CoreSearch {
    * example observations that cannot share an instrument. Both covers are computed, and the one
    * with the larger bound is kept. Returns false when the solver is unsatisfiable at the root.
    */
-  private void addTermSofts() {
+  private boolean addTermSofts(long deadline) {
     for (int t = 0; t < termVar.length; t++) {
+      if ((t & 255) == 255 && sat.now() > deadline) {
+        return false; // some terms have no soft literal: the search is not to be used
+      }
       addTermSoft(t, 1, termWeight[t]);
     }
+    return true;
   }
 
   private boolean relaxAtMostOnes() {
@@ -1216,6 +1254,11 @@ public final class CoreSearch {
   private long markWork = -1;
   private long markBound;
 
+  /** The lower bound at the last {@link #mark}. */
+  long markBound() {
+    return markBound;
+  }
+
   /** Marks the solver's work and the lower bound now, from which {@link #canReach} measures. */
   void mark() {
     markWork = sat.work();
@@ -1445,9 +1488,14 @@ public final class CoreSearch {
    * stopped as stalled at 214, three below the optimum that its cores prove two cores later (lost
    * in 4 of 4 runs at 120 s).
    */
-  private void discount(long work) {
+  private void discount(long work, long nanos) {
     if (work <= 0) {
       return;
+    }
+    if (GIVE_BACK) {
+      lcg.giveBack(work, nanos);
+    } else if (sat.workLimit() != Long.MAX_VALUE) {
+      sat.setWorkLimit(sat.workLimit() + work);
     }
     if (startWork >= 0) {
       startWork += work;
@@ -1458,10 +1506,12 @@ public final class CoreSearch {
     if (markWork >= 0) {
       markWork += work;
     }
-    if (sat.workLimit() != Long.MAX_VALUE) {
-      sat.setWorkLimit(sat.workLimit() + work);
-    }
   }
+
+  // -Djacop.lcg.coreGiveBack=false: the work left out of the phase extends only its current work
+  // limit, not its clock nor the limit the phase gets once it has a solution of its own
+  static final boolean GIVE_BACK =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.coreGiveBack", "true"));
 
   /** Whether every soft literal was assumed and a solution was found under all of them. */
   boolean exhausted() {
@@ -1563,6 +1613,7 @@ public final class CoreSearch {
     if (lcg.coreExhaust() <= 0
         || size < 2
         || lastTotalizer == null
+        || SKIP_AT_BEST && lowerBound >= lcg.boundObjective()
         || patience > 0 && exhaustMisses >= patience * (1 + exhaustedOutputs)) {
       return true;
     }
@@ -1578,9 +1629,11 @@ public final class CoreSearch {
         sat.setConflictLimit(
             Math.min(lcg.conflictCap(), Math.min(phaseLimit, cap < 0 ? Long.MAX_VALUE : cap)));
         long before = sat.work();
+        long clock = sat.now();
         long workLimit = sat.workLimit();
         sat.setWorkLimit(testWorkLimit(before, workLimit));
         int[] failed;
+        long bestBefore = lcg.bestObjective();
         try {
           failed =
               lcg.solveUnder(-s.lit) == CdclSolver.UNSAT
@@ -1588,6 +1641,9 @@ public final class CoreSearch {
                   : new int[] {0, 0};
         } finally {
           sat.setWorkLimit(workLimit);
+        }
+        if (lcg.bestObjective() < bestBefore) {
+          exhaustSolutions++;
         }
         // an empty core: unsatisfiable without assumptions
         open = failed.length != 0;
@@ -1602,12 +1658,20 @@ public final class CoreSearch {
           // a test that proved nothing leaves the phase its work
           long work = sat.work() - before;
           exhaustDiscounted += work;
-          discount(work);
+          discount(work, sat.now() - clock);
         }
       }
     }
     return open;
   }
+
+  /** Statistics: exhaustion tests that found a better solution. */
+  public long exhaustSolutions;
+
+  // -Djacop.lcg.coreExhaustAtBest=true: exhaustion also tests the outputs of a core that brought
+  // the lower bound to the best solution, which the phase then proves optimal without them
+  private static final boolean SKIP_AT_BEST =
+      !Boolean.parseBoolean(System.getProperty("jacop.lcg.coreExhaustAtBest", "false"));
 
   /** The work limit of an exhaustion test that starts at the given work. */
   private long testWorkLimit(long now, long workLimit) {

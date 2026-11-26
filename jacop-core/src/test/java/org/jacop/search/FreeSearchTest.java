@@ -62,12 +62,15 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.search.free.DomWdeg;
+import org.jacop.search.free.FrbaDom;
 import org.jacop.search.free.FreeSearch;
 import org.jacop.search.free.FreeSearch.Status;
 import org.jacop.search.free.IndomainBoundImpact;
 import org.jacop.search.free.IndomainLastSolution;
 import org.jacop.search.free.LastConflict;
+import org.jacop.search.free.PickDom;
 import org.jacop.search.free.RestartNoGoods;
+import org.jacop.search.free.RoundRobinSelect;
 import org.jacop.search.free.SearchMonitor;
 import org.jacop.search.free.SharedSolution;
 import org.jacop.search.lns.AdaptiveLns;
@@ -345,6 +348,30 @@ class FreeSearchTest {
           DomWdeg chs = new DomWdeg(concat(m), phase, DomWdeg.Weighting.CHS);
           LastConflict lc = new LastConflict(chs, phase, 1);
           return new Branching(lc, phase, chs, lc);
+        },
+        m -> {
+          IndomainLastSolution phase = new IndomainLastSolution(concat(m), new IndomainMin<>());
+          PickDom pick = new PickDom(concat(m), phase);
+          return new Branching(pick, phase, pick);
+        },
+        m -> {
+          IndomainLastSolution phase = new IndomainLastSolution(concat(m), new IndomainMax<>());
+          FrbaDom frba = new FrbaDom(concat(m), phase);
+          LastConflict lc = new LastConflict(frba, phase, 1);
+          return new Branching(lc, phase, frba, lc);
+        },
+        m -> {
+          // the round robin of ACE-rr, a heuristic per run, each learning from every run
+          IndomainLastSolution phase = new IndomainLastSolution(concat(m), new IndomainMin<>());
+          RoundRobinSelect rr =
+              new RoundRobinSelect(
+                  List.of(
+                      new DomWdeg(concat(m), phase, DomWdeg.Weighting.CACD),
+                      new PickDom(concat(m), phase, 0),
+                      new FrbaDom(concat(m), phase)),
+                  1);
+          LastConflict lc = new LastConflict(rr, phase, 1);
+          return new Branching(lc, phase, rr, lc);
         });
   }
 
@@ -638,6 +665,38 @@ class FreeSearchTest {
   }
 
   @Test
+  void roundRobinGivesEveryHeuristicItsRuns() {
+    // pigeonhole: 7 pigeons in 6 holes takes many runs of 1 failure to refute
+    Store store = new Store();
+    IntVar[] p = new IntVar[7];
+    for (int i = 0; i < p.length; i++) {
+      p[i] = new IntVar(store, "p" + i, 1, 6);
+    }
+    for (int i = 0; i < p.length; i++) {
+      for (int j = i + 1; j < p.length; j++) {
+        store.impose(new XneqY(p[i], p[j]));
+      }
+    }
+    PickDom pick = new PickDom(p, new IndomainMin<>());
+    RoundRobinSelect rr =
+        new RoundRobinSelect(
+            List.of(
+                new DomWdeg(p, new IndomainMin<>(), DomWdeg.Weighting.CACD),
+                pick,
+                new FrbaDom(p, new IndomainMin<>())),
+            2);
+    FreeSearch search =
+        FreeSearch.builder(store, rr).monitor(rr).restarts(new LubyCalculator(1)).build();
+    assertEquals(Status.UNSATISFIABLE, search.solve());
+    for (int i = 0; i < 3; i++) {
+      assertTrue(rr.runs(i) >= 2, rr.toString());
+    }
+    assertTrue(Math.abs(rr.runs(0) - rr.runs(2)) <= 2, rr.toString());
+    // pick/dom learned from the failures of all runs, through the store's domain tracker
+    assertTrue(store.domainTracker == pick);
+  }
+
+  @Test
   void limitsStopTheSearchWithoutAProof() {
     Random rnd = new Random(4);
     for (int k = 0; k < INSTANCES; k++) {
@@ -905,6 +964,72 @@ class FreeSearchTest {
     // the nogoods are removed with the search; the store has its domains back
     assertEquals(6, p[0].getSize());
     assertEquals(0, store.countWatches());
+  }
+
+  @Test
+  void resumedSearchKeepsItsNogoodsAndProvesUnsatisfiability() {
+    // eight pigeons, seven holes, searched in slices of 2 ms of the virtual clock each: a fresh
+    // search would start its proof again in every slice, the resumed one goes on with the nogoods
+    // of the earlier slices and of the runs their limit stopped
+    Store store = new Store();
+    IntVar[] p = new IntVar[8];
+    for (int i = 0; i < p.length; i++) {
+      p[i] = new IntVar(store, "p" + i, 0, 6);
+    }
+    for (int i = 0; i < p.length; i++) {
+      for (int j = i + 1; j < p.length; j++) {
+        store.impose(new XneqY(p[i], p[j]));
+      }
+    }
+    FreeSearch search =
+        FreeSearch.builder(store, new SimpleSelect<>(p, null, new IndomainMin<>()))
+            .restarts(new LubyCalculator(2))
+            .nogoodsFromRestarts(true)
+            .virtualClock(true)
+            .build();
+    Status status = Status.UNKNOWN;
+    int slices = 0;
+    while (status == Status.UNKNOWN && slices < 5000) {
+      status = search.resume(0, 2);
+      slices++;
+      // each slice leaves the store as it found it
+      assertEquals(7, p[0].getSize());
+      assertEquals(0, store.countWatches());
+    }
+    assertEquals(Status.UNSATISFIABLE, status);
+    assertTrue(slices > 1, "the proof took one slice");
+  }
+
+  @Test
+  void resumedSearchInSlicesMatchesBruteForce() {
+    Random rnd = new Random(11);
+    for (int k = 0; k < INSTANCES; k++) {
+      Instance instance = Instance.random(rnd);
+      boolean sat = instance.bruteForce()[0] > 0;
+      for (var branching : branchings()) {
+        Model model = new Model(instance);
+        int[] found = {0};
+        FreeSearch search =
+            branching
+                .apply(model)
+                .builder(model.store)
+                .restarts(new LubyCalculator(1))
+                .nogoodsFromRestarts(true)
+                .virtualClock(true)
+                .onSolution(
+                    s -> {
+                      model.checkSolution();
+                      found[0]++;
+                    })
+                .build();
+        Status status = Status.UNKNOWN;
+        for (int slice = 0; status == Status.UNKNOWN && slice < 100_000; slice++) {
+          status = search.resume(0, 1);
+        }
+        assertEquals(sat ? Status.SATISFIED : Status.UNSATISFIABLE, status, instance.toString());
+        assertEquals(sat ? 1 : 0, found[0], instance.toString());
+      }
+    }
   }
 
   @Test

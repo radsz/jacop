@@ -651,6 +651,47 @@ class AtomicTrailTest {
   }
 
   @Test
+  void booleanVariablesAreNumberedWithoutABoxedMap() throws ReflectiveOperationException {
+    // the trail kept an identity map from every Boolean variable to a boxed number, though each
+    // variable keeps its number itself: 11 MB of the 413 MB of MiniZinc Challenge 2010 rcpsp_max
+    // psp_ubo500_33 during LCG search
+    Store store = new Store();
+    BooleanVar[] b = new BooleanVar[100];
+    for (int i = 0; i < b.length; i++) {
+      b[i] = new BooleanVar(store, "b" + i);
+    }
+    AtomicTrail trail = new AtomicTrail(store);
+    int[] ids = new int[b.length];
+    for (int i = 0; i < b.length; i++) {
+      ids[i] = trail.id(b[i]);
+    }
+    java.lang.reflect.Field map = AtomicTrail.class.getDeclaredField("booleanIds");
+    map.setAccessible(true);
+    assertThat((java.util.Map<?, ?>) map.get(trail)).isEmpty();
+    assertThat(Arrays.stream(ids).distinct().count()).isEqualTo(b.length);
+    // a second trail takes some variables over; both keep their numbers when they alternate
+    AtomicTrail other = new AtomicTrail(store);
+    int[] otherIds = new int[b.length];
+    for (int i = 0; i < b.length; i += 2) {
+      otherIds[i] = other.id(b[i]);
+    }
+    for (int round = 0; round < 3; round++) {
+      for (int i = 0; i < b.length; i++) {
+        assertThat(trail.id(b[i])).isEqualTo(ids[i]);
+      }
+      for (int i = 0; i < b.length; i += 2) {
+        assertThat(other.id(b[i])).isEqualTo(otherIds[i]);
+      }
+    }
+    // a variable first numbered by the second trail gets a new number there, not a taken one
+    int fresh = other.id(b[1]);
+    for (int i = 0; i < b.length; i += 2) {
+      assertThat(fresh).isNotEqualTo(otherIds[i]);
+    }
+    assertThat(trail.id(b[1])).isEqualTo(ids[1]);
+  }
+
+  @Test
   void entryMarksAreFreshForEveryCallAndCoverThePosition() {
     AtomicTrail trail = new AtomicTrail(new Store());
     int first = trail.newEntryMark(10);
@@ -820,6 +861,86 @@ class AtomicTrailTest {
     }
     x.refreshBounds();
     return x;
+  }
+
+  /**
+   * x * y = z over non-negative ranges (MZNC 2018 train: load times arrival): z >= 1530, then x >=
+   * 75 and y >= 54 raise z to 4050. The bounds of x and y exclude every value of z below 4050, so
+   * the reason is those two bounds; z's own earlier bound would only weaken the learnt clause.
+   */
+  @Test
+  void productBoundReasonLeavesOutTheOwnEarlierBound() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 500);
+    IntVar y = new IntVar(store, "y", 0, 1140);
+    IntVar z = new IntVar(store, "z", 0, 570000);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(new XmulYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    z.domain.inMin(store.level, z, 1530);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x.domain.inMin(store.level, x, 75);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    y.domain.inMin(store.level, y, 54);
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.min()).isEqualTo(4050);
+    int raised = -1;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.variable(e) == z && trail.kind(e) == AtomicTrail.GE && trail.value(e) == 4050) {
+        raised = e;
+      }
+    }
+    assertThat(raised).isNotNegative();
+    EntryList reason = new EntryList();
+    assertThat(trail.explain(raised, reason)).isTrue();
+    assertThat(reason.size()).isEqualTo(2);
+    for (int k = 0; k < reason.size(); k++) {
+      int e = reason.get(k);
+      assertThat(trail.variable(e)).isNotSameAs(z);
+      assertThat(trail.kind(e)).isEqualTo(AtomicTrail.GE);
+      assertThat(trail.value(e)).isEqualTo(trail.variable(e) == x ? 75 : 54);
+    }
+    trail.detach();
+  }
+
+  /**
+   * x + y = z with x fixed to 5 by two bounds, then y >= 10 raises z to 15: the bounds reason is x
+   * >= 5 and y >= 10, without x <= 5, which the shift of the fixed term would cite.
+   */
+  @Test
+  void sumBoundReasonCitesOneBoundOfAFixedTerm() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 20);
+    IntVar y = new IntVar(store, "y", 0, 20);
+    IntVar z = new IntVar(store, "z", 0, 40);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(new XplusYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x.domain.inMin(store.level, x, 5);
+    x.domain.inMax(store.level, x, 5);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    y.domain.inMin(store.level, y, 10);
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.min()).isEqualTo(15);
+    int raised = -1;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.variable(e) == z && trail.kind(e) == AtomicTrail.GE && trail.value(e) == 15) {
+        raised = e;
+      }
+    }
+    assertThat(raised).isNotNegative();
+    EntryList reason = new EntryList();
+    assertThat(trail.explain(raised, reason)).isTrue();
+    assertThat(reason.size()).isEqualTo(2);
+    for (int k = 0; k < reason.size(); k++) {
+      assertThat(trail.kind(reason.get(k))).isEqualTo(AtomicTrail.GE);
+    }
+    trail.detach();
   }
 
   /**
@@ -1820,6 +1941,49 @@ class AtomicTrailTest {
     trail.detach();
   }
 
+  /**
+   * x = y with x over 0..100000 and y over three values spread over it (a cost looked up in an
+   * array): once x has lost those three values the domains are disjoint, and the reason is the
+   * three removals, not every atom of both domains. The values outside y's root domain need no
+   * reason, so the walk over the common range must not give up on its width (liner-sf-repositioning
+   * fm3_3: 998 atoms per reason of its reified equalities).
+   */
+  @Test
+  void disjointWideSparseDomainsCiteOnlyTheRemovals() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 100_000);
+    IntVar y = new IntVar(store, "y", 10, 10);
+    y.addDom(60_000, 60_000);
+    y.addDom(90_000, 90_000);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    for (int v : new int[] {10, 60_000, 90_000}) {
+      x.domain.inComplement(store.level, x, v);
+    }
+    store.setLevel(store.level + 1);
+    x.domain.inMin(store.level, x, 5);
+    EntryList out = new EntryList();
+    assertThat(ShiftExplanation.disjointBefore(trail, trail.size(), x, y, 0, out)).isTrue();
+    List<Integer> values = new ArrayList<>();
+    for (int k = 0; k < out.size(); k++) {
+      int e = out.get(k);
+      if (trail.variable(e) == x && trail.kind(e) == AtomicTrail.NE) {
+        values.add(trail.value(e));
+      }
+    }
+    assertThat(values).containsExactlyInAnyOrder(10, 60_000, 90_000);
+    assertThat(out.size()).isLessThanOrEqualTo(5);
+    // x >= 60001 (60000 is gone) is explained by x != 60000, x != 10 and x >= 5: y has no other
+    // value up to 60000
+    store.setLevel(store.level + 1);
+    x.domain.inMin(store.level, x, 60_000);
+    out.clear();
+    assertThat(ShiftExplanation.explain(trail, trail.lastEntry(x, trail.size()), x, y, 0, out))
+        .isTrue();
+    assertThat(out.size()).isLessThanOrEqualTo(3);
+    trail.detach();
+  }
+
   private static boolean removes(AtomicTrail trail, int e, int v) {
     int a = trail.value(e);
     return switch (trail.kind(e)) {
@@ -2738,5 +2902,72 @@ class AtomicTrailTest {
     }
     assertThat(cited).contains(hole);
     trail.detach();
+  }
+
+  /**
+   * Random dives of bound changes, single removals and intersections with domains with holes, and
+   * backtracks over one or several levels: after every step the shadow of every variable is its
+   * domain. The shadows follow the atoms on the trail instead of copying the domains.
+   */
+  @Test
+  void shadowsFollowTheDomainsThroughChangesAndBacktracks() {
+    Random rnd = new Random(7);
+    for (int run = 0; run < 300; run++) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[4];
+      for (int k = 0; k < x.length; k++) {
+        int lo = rnd.nextInt(20) - 10;
+        x[k] = new IntVar(store, "x" + k, lo, lo + 5 + rnd.nextInt(k == 3 ? 200 : 40));
+        for (int h = rnd.nextInt(4); h > 0; h--) {
+          int v = x[k].min() + 1 + rnd.nextInt(x[k].max() - x[k].min() - 1);
+          x[k].domain.subtractAdapt(v);
+          x[k].refreshBounds();
+        }
+      }
+      AtomicTrail trail = new AtomicTrail(store);
+      int base = store.level;
+      for (int step = 0; step < 60; step++) {
+        if (store.level > base && rnd.nextInt(4) == 0) {
+          int to = base + 1 + rnd.nextInt(store.level - base);
+          boolean deferred = rnd.nextBoolean();
+          if (deferred) {
+            trail.beginBacktrack();
+          }
+          for (int l = store.level; l >= to; l--) {
+            store.removeLevel(l);
+          }
+          store.setLevel(to - 1);
+          if (deferred) {
+            trail.endBacktrack();
+          }
+        } else {
+          store.setLevel(store.level + 1);
+          IntVar y = x[rnd.nextInt(x.length)];
+          int v = y.min() + rnd.nextInt(y.max() - y.min() + 1);
+          try {
+            switch (rnd.nextInt(4)) {
+              case 0 -> y.domain.inMin(store.level, y, v);
+              case 1 -> y.domain.inMax(store.level, y, v);
+              case 2 -> y.domain.inComplement(store.level, y, v);
+              default -> {
+                int lo = y.min() + rnd.nextInt(3);
+                IntervalDomain d = new IntervalDomain(lo, Math.max(lo, y.max() - rnd.nextInt(3)));
+                for (int h = rnd.nextInt(5); h > 0 && d.getSize() > 2; h--) {
+                  d.subtractAdapt(d.min() + 1 + rnd.nextInt(d.max() - d.min() - 1));
+                }
+                y.domain.in(store.level, y, d);
+              }
+            }
+          } catch (FailException e) {
+            store.removeLevel(store.level);
+            store.setLevel(store.level - 1);
+          }
+        }
+        for (IntVar y : x) {
+          trail.checkShadow(y);
+        }
+      }
+      trail.detach();
+    }
   }
 }

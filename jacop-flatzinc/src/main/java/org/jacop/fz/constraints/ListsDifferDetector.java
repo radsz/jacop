@@ -70,6 +70,8 @@ import org.jacop.fz.SimpleNode;
  */
 public class ListsDifferDetector implements ParserTreeConstants {
 
+  private static final Set<String> GATE_KINDS = Set.of("jacop_short_table_int");
+
   private final Support support;
 
   private static final IntVar[][] NO_LISTS = new IntVar[0][];
@@ -103,36 +105,6 @@ public class ListsDifferDetector implements ParserTreeConstants {
     return replaced;
   }
 
-  /** A list of variables compared by identity. */
-  private record VarList(IntVar[] vars) {
-    @Override
-    public boolean equals(Object o) {
-      if (!(o instanceof VarList(IntVar[] v)) || v.length != vars.length) {
-        return false;
-      }
-      for (int i = 0; i < vars.length; i++) {
-        if (v[i] != vars[i]) {
-          return false;
-        }
-      }
-      return true;
-    }
-
-    @Override
-    public int hashCode() {
-      int h = 1;
-      for (IntVar x : vars) {
-        h = 31 * h + System.identityHashCode(x);
-      }
-      return h;
-    }
-
-    @Override
-    public String toString() {
-      return Arrays.toString(vars);
-    }
-  }
-
   /**
    * It scans the constraint items of the model, posts the lists-differ tables as AllDifferentLists
    * and records them as replaced.
@@ -140,6 +112,10 @@ public class ListsDifferDetector implements ParserTreeConstants {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
+    // the differences are short tables: a model without them is not read
+    if (!support.hasConstraint(astTree, GATE_KINDS)) {
+      return;
+    }
     Map<VarList, Integer> ids = new LinkedHashMap<>();
     List<int[]> pairs = new ArrayList<>();
     List<SimpleNode> nodes = new ArrayList<>();

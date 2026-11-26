@@ -58,6 +58,9 @@ public final class FzConsole {
    * @param line the line to print
    */
   public static void printlnErr(Object line) {
-    System.err.println(line);
+    // the threads of a portfolio report an error in the model once for all of them
+    if (Portfolio.firstReport(String.valueOf(line))) {
+      System.err.println(line);
+    }
   }
 }

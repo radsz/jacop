@@ -107,6 +107,66 @@ class LcgSlowFallbackFlatzincTest {
     checkOptimum(out);
   }
 
+  // a Golomb ruler of 9 marks below 81, shortest 44: LCG finds solutions within a tenth of a
+  // second, and proves the optimum alone in about 3 s, long after its speed check
+  private static String golomb() {
+    int n = 9;
+    StringBuilder vars = new StringBuilder();
+    StringBuilder cons = new StringBuilder();
+    StringBuilder ds = new StringBuilder();
+    for (int i = 1; i <= n; i++) {
+      vars.append("var 0..80: m").append(i).append(":: output_var;\n");
+    }
+    cons.append("constraint int_eq(m1,0);\n");
+    for (int i = 1; i < n; i++) {
+      cons.append("constraint int_lt(m").append(i).append(",m").append(i + 1).append(");\n");
+    }
+    for (int i = 1; i <= n; i++) {
+      for (int j = i + 1; j <= n; j++) {
+        String d = "d" + i + "_" + j;
+        vars.append("var 1..80: ").append(d).append(";\n");
+        cons.append("constraint int_lin_eq([1,-1,-1],[m")
+            .append(j)
+            .append(",m")
+            .append(i)
+            .append(',')
+            .append(d)
+            .append("],0);\n");
+        ds.append(ds.length() == 0 ? "" : ",").append(d);
+      }
+    }
+    cons.append("constraint jacop_alldiff([").append(ds).append("]);\n");
+    cons.append("constraint int_lt(d1_2,d").append(n - 1).append('_').append(n).append(");\n");
+    return vars + cons.toString() + "solve minimize m" + n + ";\n";
+  }
+
+  @Test
+  void optimumProvedAcrossOptimisationSlices() throws IOException {
+    // LCG gives way with a solution at its speed check, free search without learning runs in
+    // slices of a store level the solver lends, and LCG gets the search back under the best cost.
+    // The core-guided phase is off: a core found since the last speed check keeps a slow LCG, and
+    // whether one falls between two checks depends on the timing.
+    String out =
+        run(
+            golomb(),
+            "lcg-slow-rate=1000000000,lcg-slow-at=0.01,lcg-slow-stall=0,maxsat=0,lcg-core=0,"
+                + "lcg-cop-slices=1");
+    Matcher slices = Pattern.compile("lcgCopSlices=(\\d+)").matcher(out);
+    assertTrue(slices.find(), out);
+    assertTrue(Long.parseLong(slices.group(1)) >= 1, out);
+    List<Integer> costs = new ArrayList<>();
+    Matcher m = Pattern.compile("m9 = (\\d+);").matcher(out);
+    while (m.find()) {
+      costs.add(Integer.parseInt(m.group(1)));
+    }
+    assertTrue(costs.size() > 1, out);
+    for (int k = 1; k < costs.size(); k++) {
+      assertTrue(costs.get(k) < costs.get(k - 1), out);
+    }
+    assertEquals(44, costs.get(costs.size() - 1), out);
+    assertTrue(out.contains("=========="), out);
+  }
+
   @Test
   void solverThatGaveWayIsNotKept() {
     // free search keeps only the conflicts, deadline and clock of the LCG solver that gave way: the
@@ -219,6 +279,26 @@ class LcgSlowFallbackFlatzincTest {
   }
 
   @Test
+  void theWindowSeesSolutionsFoundBeforeTheFirstCheck() {
+    long s = 1_000_000_000L;
+    int noCost = Integer.MAX_VALUE;
+    // the checks sample the best cost from the first one on: a cost improved from 4,100 to 3,900
+    // at 20 s, and the check at 24 s, whose only sample was 3,900, saw no gain over its 12 s
+    // window (celar graph11, MiniZinc Challenge 2013, gave way and ended at 13,387, not 3,080)
+    List<long[]> improvements = List.of(new long[] {5 * s, noCost}, new long[] {20 * s, 4_100});
+    long before = Solve.costAt(improvements, 12 * s, 3_900);
+    assertEquals(4_100, before);
+    assertTrue(Solve.stillProgressing(24 * s, 12 * s, 0.005, Long.MIN_VALUE, before, 3_900));
+    assertFalse(Solve.stillProgressing(24 * s, 12 * s, 0.005, Long.MIN_VALUE, 3_900, 3_900));
+    // the first solution inside the window
+    assertEquals(noCost, Solve.costAt(improvements, 4 * s, 3_900));
+    // nothing improved since the start of the window: the sampled cost
+    assertEquals(3_900, Solve.costAt(improvements, 21 * s, 3_900));
+    // a sample taken after the improvement inside the window was already the higher cost
+    assertEquals(4_500, Solve.costAt(improvements, 12 * s, 4_500));
+  }
+
+  @Test
   void aBoundRaiseCountsOnlyWhenItClosesAShareOfTheGap() {
     // CVRPLIB X-n110-k13: the bound rose from 4 to 5 against a best cost of 59,211
     assertFalse(Solve.boundClosesGap(4, 5, 0.005, 59_211));
@@ -255,6 +335,70 @@ class LcgSlowFallbackFlatzincTest {
     checkOptimum(out);
   }
 
+  // a partition of 13 vertices into at most 3 classes minimising the sum of pseudo-random weights
+  // of the pairs in one class, as the community-detection models of the MiniZinc Challenge, on
+  // which LCG makes conflicts
+  private static String pairCost() {
+    int n = 13;
+    StringBuilder s = new StringBuilder();
+    StringBuilder cs = new StringBuilder();
+    StringBuilder ws = new StringBuilder();
+    StringBuilder vs = new StringBuilder();
+    for (int i = 1; i <= n; i++) {
+      s.append("var 1..3: x").append(i).append(":: output_var;\n");
+    }
+    long seed = 7;
+    int lo = 0;
+    int hi = 0;
+    for (int i = 1; i <= n; i++) {
+      for (int j = i + 1; j <= n; j++) {
+        seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+        int w = (int) (seed % 201) - 100;
+        lo += Math.min(0, w);
+        hi += Math.max(0, w);
+        String b = "b" + i + "_" + j;
+        s.append("var bool: ").append(b).append(";\nvar 0..1: v").append(b).append(";\n");
+        cs.append("constraint int_eq_reif(x").append(i).append(",x").append(j).append(',');
+        cs.append(b).append(");\nconstraint bool2int(").append(b).append(",v").append(b);
+        cs.append(");\n");
+        ws.append(w).append(',');
+        vs.append('v').append(b).append(',');
+      }
+    }
+    s.append("var ").append(lo).append("..").append(hi).append(": cost:: output_var;\n");
+    s.append(cs);
+    s.append("constraint int_lin_eq([").append(ws).append("-1],[").append(vs);
+    s.append("cost],0);\nsolve minimize cost;\n");
+    return s.toString();
+  }
+
+  private static int lastCost(String out) {
+    Matcher m = Pattern.compile("cost = (-?\\d+);").matcher(out);
+    int cost = Integer.MAX_VALUE;
+    while (m.find()) {
+      cost = Integer.parseInt(m.group(1));
+    }
+    return cost;
+  }
+
+  @Test
+  void fastLcgGivesWayWhenLearningCutsLittle() throws IOException {
+    // LCG is fast enough, but every search counts as weak learning (jump below 1000, any LBD) and
+    // no window shows progress (a gain of the whole cost): it gives way at the first check with a
+    // solution, and free search without learning proves the optimum
+    String weak =
+        "lcg-slow-rate=0.001,lcg-slow-literal=0,lcg-slow-at=0.05,lcg-slow-stall=0.01,"
+            + "lcg-slow-gain=1,lcg-slow-bound-gain=1,lcg-opt-jump=1000,lcg-opt-lbd=0,maxsat=0,"
+            + "lns=0";
+    String handed = run(pairCost(), weak);
+    String kept = run(pairCost(), weak + ",lcg-opt-probe=off");
+    assertTrue(handed.contains("lcgWeak=true"), handed);
+    assertTrue(!kept.contains("lcgSlowConflicts="), kept);
+    // the optimum, which LCG alone proves in about 2 s
+    assertTrue(handed.contains("=========="), handed);
+    assertEquals(-798, lastCost(handed), handed);
+  }
+
   @Test
   void satisfactionProbeTellsWeakLearning() {
     // costas-array 17: conflicts at depth 22 jump back 1.17 levels, LBD 11
@@ -274,6 +418,11 @@ class LcgSlowFallbackFlatzincTest {
 
   @Test
   void satisfactionSolvedAfterGivingWay() throws IOException {
+    // lazy clause generation is under test: the model is not compiled to clauses
+    ClausalOff.run(this::satisfactionSolvedAfterGivingWayBody);
+  }
+
+  private void satisfactionSolvedAfterGivingWayBody() throws IOException {
     // 40 queens (8 are solved before LCG starts); lcg-sat-at=0 gives way after LCG's root
     // propagation, and search without learning
     // must print a solution of the model
@@ -311,6 +460,276 @@ class LcgSlowFallbackFlatzincTest {
         assertTrue(q[i] != q[j] && Math.abs(q[i] - q[j]) != j - i, out);
       }
     }
+  }
+
+  @Test
+  void satisfactionSolvedInASliceWithoutLearning() throws IOException {
+    // 40 queens with a clause that only the SAT solver holds under LCG: exactly one of q1 and q2 is
+    // at most 20. The probe fires at its first conflicts (any jump counts as weak) and search
+    // without learning gets a thousand times LCG's time, so it finds the solution in its slice,
+    // where the clauses must be posted in the store
+    int n = 40;
+    StringBuilder s = new StringBuilder();
+    for (int i = 1; i <= n; i++) {
+      s.append("var 1..").append(n).append(": q").append(i).append(":: output_var;\n");
+    }
+    s.append("var bool: b1;\nvar bool: b2;\n");
+    for (int i = 1; i <= n; i++) {
+      for (int j = i + 1; j <= n; j++) {
+        s.append("constraint int_ne(q").append(i).append(", q").append(j).append(");\n");
+        for (int d : new int[] {j - i, i - j}) {
+          s.append("constraint int_lin_ne([1, -1], [q")
+              .append(i)
+              .append(", q")
+              .append(j)
+              .append("], ")
+              .append(d)
+              .append(");\n");
+        }
+      }
+    }
+    s.append("constraint int_le_reif(q1, 20, b1);\n");
+    s.append("constraint int_le_reif(q2, 20, b2);\n");
+    s.append("constraint bool_clause([b1, b2], []);\n");
+    s.append("constraint bool_clause([], [b1, b2]);\n");
+    s.append("solve satisfy;\n");
+    String out =
+        runSatisfaction(
+            s.toString(),
+            "lcg-sat-at=0.0001,lcg-sat-jump=1000,lcg-sat-lbd=0,lcg-sat-cp-share=1000");
+    // LCG may find the solution before its first conflict, when the probe cannot fire yet
+    assertFalse(out.contains("lcgSlowUnsolved"), out);
+    int[] q = new int[n + 1];
+    for (int i = 1; i <= n; i++) {
+      Matcher m = Pattern.compile("q" + i + " = (\\d+);").matcher(out);
+      assertTrue(m.find(), out);
+      q[i] = Integer.parseInt(m.group(1));
+    }
+    for (int i = 1; i <= n; i++) {
+      for (int j = i + 1; j <= n; j++) {
+        assertTrue(q[i] != q[j] && Math.abs(q[i] - q[j]) != j - i, out);
+      }
+    }
+    assertTrue(q[1] <= 20 != q[2] <= 20, out);
+  }
+
+  @Test
+  void satisfactionProvedUnsatisfiableAcrossSlices() throws IOException {
+    // lazy clause generation is under test: the model is not compiled to clauses
+    ClausalOff.run(this::satisfactionProvedUnsatisfiableAcrossSlicesBody);
+  }
+
+  private void satisfactionProvedUnsatisfiableAcrossSlicesBody() throws IOException {
+    // 9 pigeons in 8 holes, each difference a variable without 0, which presolve does not read as
+    // an all-different: the proof needs search. Slices of 1 ms of search without learning
+    // alternate with LCG from the first probe, and the answer must be unsatisfiable whichever of
+    // them finishes
+    int n = 9;
+    StringBuilder decl = new StringBuilder();
+    StringBuilder cons = new StringBuilder();
+    StringBuilder nonZero = new StringBuilder();
+    for (int v = 2 - n; v <= n - 2; v++) {
+      if (v != 0) {
+        nonZero.append(nonZero.isEmpty() ? "" : ",").append(v);
+      }
+    }
+    for (int i = 1; i <= n; i++) {
+      decl.append("var 1..").append(n - 1).append(": p").append(i).append(":: output_var;\n");
+    }
+    for (int i = 1; i <= n; i++) {
+      for (int j = i + 1; j <= n; j++) {
+        String d = "d" + i + "_" + j;
+        decl.append("var {").append(nonZero).append("}: ").append(d).append(";\n");
+        cons.append("constraint int_lin_eq([1,-1,-1],[p").append(i).append(",p").append(j);
+        cons.append(",").append(d).append("],0);\n");
+      }
+    }
+    String out =
+        runSatisfaction(
+            decl.toString() + cons + "solve satisfy;\n",
+            "lcg-sat-at=0.0001,lcg-sat-jump=1000,lcg-sat-lbd=0,lcg-sat-cp-share=0.0001");
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+    assertFalse(out.contains("----------"), out);
+    assertTrue(out.contains("lcgSatSlices="), out);
+  }
+
+  // n queens, the columns searched in input order, smallest row first
+  private static String queensInputOrder(int n) {
+    StringBuilder s = new StringBuilder();
+    StringBuilder qs = new StringBuilder();
+    for (int i = 1; i <= n; i++) {
+      s.append("var 1..").append(n).append(": q").append(i).append(":: output_var;\n");
+      qs.append(i == 1 ? "" : ",").append('q').append(i);
+    }
+    for (int i = 1; i <= n; i++) {
+      for (int j = i + 1; j <= n; j++) {
+        s.append("constraint int_ne(q").append(i).append(", q").append(j).append(");\n");
+        for (int d : new int[] {j - i, i - j}) {
+          s.append("constraint int_lin_ne([1, -1], [q")
+              .append(i)
+              .append(", q")
+              .append(j)
+              .append("], ")
+              .append(d)
+              .append(");\n");
+        }
+      }
+    }
+    s.append("solve :: int_search([").append(qs).append("], input_order, indomain_min, complete)");
+    s.append(" satisfy;\n");
+    return s.toString();
+  }
+
+  // 10 pigeons in 9 holes as in satisfactionProvedUnsatisfiableAcrossSlices, searched in input
+  // order
+  private static String pigeonsInputOrder() {
+    int n = 10;
+    StringBuilder decl = new StringBuilder();
+    StringBuilder cons = new StringBuilder();
+    StringBuilder nonZero = new StringBuilder();
+    StringBuilder ps = new StringBuilder();
+    for (int v = 2 - n; v <= n - 2; v++) {
+      if (v != 0) {
+        nonZero.append(nonZero.isEmpty() ? "" : ",").append(v);
+      }
+    }
+    for (int i = 1; i <= n; i++) {
+      decl.append("var 1..").append(n - 1).append(": p").append(i).append(":: output_var;\n");
+      ps.append(i == 1 ? "" : ",").append('p').append(i);
+    }
+    for (int i = 1; i <= n; i++) {
+      for (int j = i + 1; j <= n; j++) {
+        String d = "d" + i + "_" + j;
+        decl.append("var {").append(nonZero).append("}: ").append(d).append(";\n");
+        cons.append("constraint int_lin_eq([1,-1,-1],[p").append(i).append(",p").append(j);
+        cons.append(",").append(d).append("],0);\n");
+      }
+    }
+    return decl.toString()
+        + cons
+        + "solve :: int_search(["
+        + ps
+        + "], input_order, indomain_min, complete) satisfy;\n";
+  }
+
+  @Test
+  void defaultSearchOfSatisfactionKeepsItsTurns() throws IOException {
+    // lazy clause generation is under test: the model is not compiled to clauses
+    ClausalOff.run(this::defaultSearchOfSatisfactionKeepsItsTurnsBody);
+  }
+
+  private void defaultSearchOfSatisfactionKeepsItsTurnsBody() throws IOException {
+    // #942: under -f the annotation's runs are dropped after 5 conflicts without a
+    // solution when the model has a search annotation, not the default search of a satisfaction
+    // model without one, with or without -f (the XCSP CSPs PegSolitaireTable-english-3-3-0 and
+    // SportsScheduling-dummy-14 were lost by dropping it)
+    String annotated = pigeonsInputOrder();
+    String withAnnotation = runAnnotationDrop(annotated, "-f");
+    assertTrue(withAnnotation.contains("=====UNSATISFIABLE====="), withAnnotation);
+    assertTrue(withAnnotation.contains("lcgAnnotationDropped=1"), withAnnotation);
+    String plain = annotated.substring(0, annotated.indexOf("solve ")) + "solve satisfy;\n";
+    for (String mode : new String[] {"-f", "--lcg"}) {
+      String without = runAnnotationDrop(plain, mode);
+      assertTrue(without.contains("=====UNSATISFIABLE====="), without);
+      assertTrue(without.contains("restarts="), without);
+      assertFalse(without.contains("restarts=0\n"), mode + "\n" + without);
+      assertTrue(without.contains("lcgAnnotationDropped=0"), mode + "\n" + without);
+    }
+  }
+
+  private String runAnnotationDrop(String model, String mode) throws IOException {
+    Path fzn = tmp.resolve("drop.fzn");
+    Files.writeString(fzn, model, StandardCharsets.UTF_8);
+    String[] args = {
+      "--lcg",
+      mode,
+      "-s",
+      "--search-statistics",
+      "--lp",
+      "off",
+      "-t",
+      "30000",
+      "--free-config",
+      "lcg-annotation-drop=5",
+      fzn.toString()
+    };
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+    try (PrintStream capture = new PrintStream(out, true, StandardCharsets.UTF_8)) {
+      System.setOut(capture);
+      new Fz2jacop().callMain(args);
+    } finally {
+      System.setOut(originalOut);
+    }
+    return out.toString(StandardCharsets.UTF_8);
+  }
+
+  private static void checkQueens(String out, int n) {
+    int[] q = new int[n + 1];
+    for (int i = 1; i <= n; i++) {
+      Matcher m = Pattern.compile("q" + i + " = (\\d+);").matcher(out);
+      assertTrue(m.find(), out);
+      q[i] = Integer.parseInt(m.group(1));
+    }
+    for (int i = 1; i <= n; i++) {
+      for (int j = i + 1; j <= n; j++) {
+        assertTrue(q[i] != q[j] && Math.abs(q[i] - q[j]) != j - i, out);
+      }
+    }
+  }
+
+  @Test
+  void fixedSatisfactionKeepsTheSearchWithoutLearning() throws IOException {
+    // fixed search: the taste at its first decisions, kept whatever the positions (ratio -1), must
+    // print a solution of the model from the search without learning, which runs on to the end
+    String out = runFixed(queensInputOrder(20), "lcg-fixed-at=0.0001,lcg-fixed-ratio=-1");
+    checkQueens(out, 20);
+    assertTrue(out.contains("lcgFixedTaste=cp"), out);
+  }
+
+  @Test
+  void fixedSatisfactionProvedUnsatisfiableWithoutLearning() throws IOException {
+    // the search without learning kept explores the whole tree: unsatisfiable
+    String out = runFixed(pigeonsInputOrder(), "lcg-fixed-at=0.0001,lcg-fixed-ratio=-1");
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+    assertFalse(out.contains("----------"), out);
+    assertTrue(out.contains("lcgFixedTaste=cp"), out);
+  }
+
+  @Test
+  void fixedSatisfactionGoesOnWithLcgAfterTheTaste() throws IOException {
+    // never kept: the search without learning stops after the taste and LCG, given back its
+    // solver, proves the model unsatisfiable
+    String out = runFixed(pigeonsInputOrder(), "lcg-fixed-at=0.0001,lcg-fixed-ratio=1e300");
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+    assertFalse(out.contains("----------"), out);
+    assertTrue(out.contains("lcgFixedTaste=lcg"), out);
+  }
+
+  private String runFixed(String model, String config) throws IOException {
+    Path fzn = tmp.resolve("fixed.fzn");
+    Files.writeString(fzn, model, StandardCharsets.UTF_8);
+    String[] args = {
+      "--lcg",
+      "-s",
+      "--search-statistics",
+      "--lp",
+      "off",
+      "-t",
+      "30000",
+      "--free-config",
+      config,
+      fzn.toString()
+    };
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+    try (PrintStream capture = new PrintStream(out, true, StandardCharsets.UTF_8)) {
+      System.setOut(capture);
+      new Fz2jacop().callMain(args);
+    } finally {
+      System.setOut(originalOut);
+    }
+    return out.toString(StandardCharsets.UTF_8);
   }
 
   private String runSatisfaction(String model, String config) throws IOException {

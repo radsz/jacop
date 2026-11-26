@@ -30,6 +30,7 @@
 
 package org.jacop.fz;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -43,6 +44,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
+import org.jacop.constraints.Constraint;
 import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.SeqPrecedeChain;
@@ -131,8 +133,9 @@ final class SymmetryBreaking implements ParserTreeConstants {
   static final boolean SETS = !FALSE.equals(System.getProperty("org.jacop.fz.symmetrySets"));
 
   /**
-   * The most element vertices that set variables add to the graph; the set variables met after that
-   * keep a colour of their own.
+   * The most element vertices that set variables add to the graph, and the most Booleans their
+   * channels may make (one per value between the smallest and the largest element of an upper
+   * bound); the set variables met after that keep a colour of their own.
    */
   static final int MAX_SET_ELEMENTS = 200_000;
 
@@ -516,6 +519,12 @@ final class SymmetryBreaking implements ParserTreeConstants {
   // the constraints posted, as their kind and variables, for added()
   private final List<String> postedKinds = new ArrayList<>();
   private final List<IntVar[][]> postedVariables = new ArrayList<>();
+
+  /** The length above which an array is read once however many constraints share it. */
+  private static final int SHARED_ARRAY = 64;
+
+  private static final Atom[] NO_ATOMS = new Atom[0];
+
   // the constraints posted with their symmetries, for local search
   private final SymmetryCanonicalizer canonicalizer = new SymmetryCanonicalizer();
   // the atoms of each named array, read once: a table of a hundred thousand tuples is often an
@@ -710,6 +719,16 @@ final class SymmetryBreaking implements ParserTreeConstants {
       // a form of argument the front end reads elsewhere; the model is left as it is
       return new Outcome(0, 0, 0, true, String.valueOf(e.getMessage()));
     }
+    if (MODEL_LEX_LS) {
+      for (Item item : items) {
+        if (lexPair(item).length > 0) {
+          // checked when local search asks for them, see canonicalizerWithModelLex
+          pendingItems = items;
+          pendingObjective = goal;
+          break;
+        }
+      }
+    }
 
     // the lex-leader order: the variables of the search annotation, then the others as the model
     // first uses them
@@ -720,9 +739,10 @@ final class SymmetryBreaking implements ParserTreeConstants {
         ranked.add(iv);
       }
     }
+    Set<Atom[]> readArrays = Collections.newSetFromMap(new IdentityHashMap<>());
     for (Item item : items) {
       for (Atom[] arg : item.args()) {
-        for (Atom a : arg) {
+        for (Atom a : unread(arg, readArrays)) {
           if (a.aVar() != null && seen.add(a.aVar())) {
             ranked.add(a.aVar());
           }
@@ -1595,10 +1615,11 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
     }
     Map<Object, Integer> ids = new IdentityHashMap<>();
+    Map<Contents, Integer> contents = new HashMap<>();
     Set<String> keys = new HashSet<>();
     for (Item item : items) {
       if (!lexItems.contains(item)) {
-        keys.add(itemKey(item, null, ids));
+        keys.add(itemKey(item, null, ids, contents));
       }
     }
     for (IntVar[][] pair : pairs) {
@@ -1619,12 +1640,371 @@ final class SymmetryBreaking implements ParserTreeConstants {
         return null;
       }
       for (Item item : items) {
-        if (!lexItems.contains(item) && !keys.contains(itemKey(item, sigma, ids))) {
+        if (!lexItems.contains(item) && !keys.contains(itemKey(item, sigma, ids, contents))) {
           return null;
         }
       }
     }
     return new ModelLex(Arrays.asList(longest), lexItems);
+  }
+
+  /**
+   * Whether the model's own lex-leader constraints whose symmetry is verified are left to the
+   * canonicalizer of local search (org.jacop.fz.symmetryModelLexLs, default true).
+   */
+  static final boolean MODEL_LEX_LS =
+      !FALSE.equals(System.getProperty("org.jacop.fz.symmetryModelLexLs"));
+
+  // stands for the variable left out of a constraint's key, in modelLexSymmetries
+  private static final IntVar WILDCARD = new IntVar(new Store(), "symmetryWildcard", 0, 0);
+
+  // constraints with at most this many variables may define a variable a symmetry moves
+  private static final int DEFINITION_VARS = 4;
+
+  /** The model lex-leader constraints given to the canonicalizer by {@link #modelLexSymmetries}. */
+  private int modelLexForLs;
+
+  // the model, kept while its lex-leader constraints are not checked for local search
+  private List<Item> pendingItems;
+  private IntVar pendingObjective;
+
+  /**
+   * Gives local search the model's own lex-leader constraints {@code X <=lex Y} whose swap of X and
+   * Y is a symmetry of the rest of the model, such as the row and column orders of the incidence
+   * matrix of an optimal design (MiniZinc Challenge opd). Local search may then leave them out, as
+   * it leaves out the symmetry breaking constraints posted here, and the canonicalizer moves a
+   * solution onto a symmetric one that satisfies them; the lex-leader constraints of a matrix's
+   * rows and columns together admit a doubly lexical order of any 0/1 matrix (A. Lubiw, Doubly
+   * lexical orderings of matrices, SIAM J. Comput. 16, 1987). The swap also moves the variables
+   * that constraints define from the swapped ones (the products of two rows), found by matching
+   * each constraint whose image is missing with one that differs in one variable only. Nothing is
+   * posted; search is unchanged.
+   */
+  private void modelLexSymmetries(List<Item> items, IntVar objective, long maxNanos) {
+    List<Integer> lexAt = new ArrayList<>();
+    List<IntVar[][]> pairs = new ArrayList<>();
+    for (int k = 0; k < items.size(); k++) {
+      IntVar[][] pair = lexPair(items.get(k));
+      if (pair.length > 0) {
+        lexAt.add(k);
+        pairs.add(pair);
+      }
+    }
+    if (pairs.isEmpty()) {
+      return;
+    }
+    long end = clock.getAsLong() + Math.max(0, maxNanos);
+    Set<Integer> lexSet = new HashSet<>(lexAt);
+    Map<Object, Integer> ids = new IdentityHashMap<>();
+    Map<Contents, Integer> contents = new HashMap<>();
+    Set<String> keys = new HashSet<>();
+    // the constraints of each variable, and the keys of small ones with one variable left out
+    Map<IntVar, List<Integer>> incident = new IdentityHashMap<>();
+    Map<String, List<int[]>> wild = new HashMap<>();
+    List<List<IntVar>> varsOf = new ArrayList<>();
+    for (int k = 0; k < items.size(); k++) {
+      Item item = items.get(k);
+      List<IntVar> vars = new ArrayList<>();
+      Set<IntVar> distinct = Collections.newSetFromMap(new IdentityHashMap<>());
+      for (Atom[] arg : item.args()) {
+        for (Atom a : arg) {
+          if (a.aVar() != null && distinct.add(a.aVar())) {
+            vars.add(a.aVar());
+          }
+        }
+      }
+      varsOf.add(vars);
+      if (lexSet.contains(k)) {
+        continue;
+      }
+      for (IntVar v : vars) {
+        incident.computeIfAbsent(v, x -> new ArrayList<>()).add(k);
+      }
+      keys.add(itemKey(item, null, ids, contents));
+      if (vars.size() <= DEFINITION_VARS) {
+        for (int i = 0; i < vars.size(); i++) {
+          String key = itemKey(item, Map.of(vars.get(i), WILDCARD), ids, contents);
+          wild.computeIfAbsent(key, x -> new ArrayList<>()).add(new int[] {k, i});
+        }
+      }
+      if (clock.getAsLong() > end) {
+        return;
+      }
+    }
+    List<Constraint> posted = new ArrayList<>();
+    List<Map<IntVar, IntVar>> sigmas = new ArrayList<>();
+    List<Integer> at = new ArrayList<>();
+    for (int p = 0; p < pairs.size(); p++) {
+      Constraint lex = postedLex(pairs.get(p)[0], pairs.get(p)[1]);
+      if (lex == null) {
+        return;
+      }
+      Map<IntVar, IntVar> sigma =
+          swapSymmetry(
+              pairs.get(p),
+              objective,
+              items,
+              lexSet,
+              keys,
+              incident,
+              wild,
+              varsOf,
+              ids,
+              contents,
+              end);
+      if (sigma == null) {
+        // local search evaluates them all: moving solutions with some of them only would break
+        // the others
+        return;
+      }
+      sigmas.add(sigma);
+      posted.add(lex);
+      at.add(p);
+    }
+    for (int q = 0; q < posted.size(); q++) {
+      Map<IntVar, IntVar> sigma = sigmas.get(q);
+      IntVar[] from = sigma.keySet().toArray(new IntVar[0]);
+      IntVar[] to = new IntVar[from.length];
+      for (int j = 0; j < from.length; j++) {
+        to[j] = sigma.get(from[j]);
+      }
+      IntVar[][] pair = pairs.get(at.get(q));
+      canonicalizer.lex(posted.get(q), pair[0], pair[1], false, from, to);
+    }
+    modelLexForLs = posted.size();
+  }
+
+  /** The LexOrder the front end posted for X <=lex Y, or null. */
+  private Constraint postedLex(IntVar[] x, IntVar[] y) {
+    Set<IntVar> onlyX = Collections.newSetFromMap(new IdentityHashMap<>());
+    Set<IntVar> both = Collections.newSetFromMap(new IdentityHashMap<>());
+    onlyX.addAll(Arrays.asList(x));
+    both.addAll(Arrays.asList(x));
+    both.addAll(Arrays.asList(y));
+    Set<IntVar> onlyY = Collections.newSetFromMap(new IdentityHashMap<>());
+    onlyY.addAll(Arrays.asList(y));
+    onlyY.removeAll(onlyX);
+    onlyX.removeAll(Arrays.asList(y));
+    for (IntVar v : x) {
+      if (v.singleton()) {
+        continue;
+      }
+      for (Constraint c : v.dom().constraints()) {
+        if (!(c instanceof LexOrder)) {
+          continue;
+        }
+        boolean inside = true;
+        boolean hasX = false;
+        boolean hasY = false;
+        for (Var a : c.arguments()) {
+          inside &= a instanceof IntVar iv && both.contains(iv);
+          hasX |= a instanceof IntVar iv && onlyX.contains(iv);
+          hasY |= a instanceof IntVar iv && onlyY.contains(iv);
+        }
+        if (inside && hasX && hasY) {
+          return c;
+        }
+      }
+      return null;
+    }
+    return null;
+  }
+
+  /**
+   * The swap of X and Y extended to the variables the constraints define from them, when it maps
+   * every constraint of the model but the lex-leader ones onto one of them and keeps the domains
+   * and the objective; null otherwise.
+   */
+  @SuppressWarnings("java:S107")
+  private Map<IntVar, IntVar> swapSymmetry(
+      IntVar[][] pair,
+      IntVar objective,
+      List<Item> items,
+      Set<Integer> lexSet,
+      Set<String> keys,
+      Map<IntVar, List<Integer>> incident,
+      Map<String, List<int[]>> wild,
+      List<List<IntVar>> varsOf,
+      Map<Object, Integer> ids,
+      Map<Contents, Integer> contents,
+      long end) {
+    Map<IntVar, IntVar> sigma = new IdentityHashMap<>();
+    IntVar[] x = pair[0];
+    IntVar[] y = pair[1];
+    for (int i = 0; i < x.length; i++) {
+      if (x[i] == y[i]) {
+        continue;
+      }
+      IntVar a = sigma.get(x[i]);
+      IntVar b = sigma.get(y[i]);
+      if (a != null && a != y[i] || b != null && b != x[i]) {
+        return null;
+      }
+      sigma.put(x[i], y[i]);
+      sigma.put(y[i], x[i]);
+    }
+    if (sigma.isEmpty() || objective != null && sigma.containsKey(objective)) {
+      return null;
+    }
+    // first the small constraints, which may define the image of a variable; the others are
+    // checked once all images are known
+    ArrayDeque<Integer> queue = new ArrayDeque<>();
+    Set<Integer> queued = new HashSet<>();
+    for (IntVar v : sigma.keySet()) {
+      enqueueSmall(v, incident, varsOf, queue, queued);
+    }
+    while (!queue.isEmpty()) {
+      if (clock.getAsLong() > end) {
+        return null;
+      }
+      int k = queue.poll();
+      queued.remove(k);
+      Item item = items.get(k);
+      if (keys.contains(itemKey(item, sigma, ids, contents))) {
+        continue;
+      }
+      // a constraint that defines a variable: its image defines the image of that variable
+      IntVar from = null;
+      IntVar image = null;
+      for (IntVar v : varsOf.get(k)) {
+        if (sigma.containsKey(v)) {
+          continue;
+        }
+        sigma.put(v, WILDCARD);
+        String key = itemKey(item, sigma, ids, contents);
+        sigma.remove(v);
+        for (int[] match : wild.getOrDefault(key, List.of())) {
+          IntVar w = varsOf.get(match[0]).get(match[1]);
+          if (w != v && !sigma.containsKey(w) && w.dom().eq(v.dom())) {
+            from = v;
+            image = w;
+            break;
+          }
+        }
+        if (from != null) {
+          break;
+        }
+      }
+      if (from == null || from == objective || image == objective) {
+        return null;
+      }
+      sigma.put(from, image);
+      sigma.put(image, from);
+      enqueueSmall(from, incident, varsOf, queue, queued);
+      enqueueSmall(image, incident, varsOf, queue, queued);
+      if (queued.add(k)) {
+        queue.add(k);
+      }
+    }
+    Set<Integer> done = new HashSet<>();
+    for (IntVar v : sigma.keySet()) {
+      for (int k : incident.getOrDefault(v, List.of())) {
+        if (clock.getAsLong() > end) {
+          return null;
+        }
+        if (done.add(k)
+            && varsOf.get(k).size() > DEFINITION_VARS
+            && !fixedLinear(items.get(k), sigma)
+            && !keys.contains(itemKey(items.get(k), sigma, ids, contents))) {
+          return null;
+        }
+      }
+    }
+    for (Map.Entry<IntVar, IntVar> e : sigma.entrySet()) {
+      if (!e.getKey().dom().eq(e.getValue().dom())) {
+        return null;
+      }
+    }
+    return sigma;
+  }
+
+  private static void enqueueSmall(
+      IntVar v,
+      Map<IntVar, List<Integer>> incident,
+      List<List<IntVar>> varsOf,
+      ArrayDeque<Integer> queue,
+      Set<Integer> queued) {
+    for (int k : incident.getOrDefault(v, List.of())) {
+      if (varsOf.get(k).size() <= DEFINITION_VARS && queued.add(k)) {
+        queue.add(k);
+      }
+    }
+  }
+
+  /**
+   * Whether a linear constraint is mapped onto itself: sigma moves its variables among its terms
+   * with equal coefficients, so the long sums of a model need no key.
+   */
+  private static boolean fixedLinear(Item item, Map<IntVar, IntVar> sigma) {
+    if (!item.name().startsWith("int_lin_") && !item.name().startsWith("bool_lin_")) {
+      return false;
+    }
+    Atom[][] args = item.args();
+    if (args.length < 3 || args[0].length != args[1].length) {
+      return false;
+    }
+    Map<IntVar, Integer> coef = new IdentityHashMap<>();
+    for (int i = 0; i < args[1].length; i++) {
+      if (args[1][i].aVar() != null) {
+        if (!args[0][i].isInt() || coef.put(args[1][i].aVar(), args[0][i].value()) != null) {
+          return false;
+        }
+      }
+    }
+    for (int a = 2; a < args.length; a++) {
+      for (Atom atom : args[a]) {
+        if (atom.aVar() != null && sigma.containsKey(atom.aVar())) {
+          return false;
+        }
+      }
+    }
+    for (Map.Entry<IntVar, Integer> e : coef.entrySet()) {
+      IntVar image = sigma.get(e.getKey());
+      if (image != null && !e.getValue().equals(coef.get(image))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Returns the canonicalizer, with the model's own lex-leader constraints whose symmetry is
+   * verified added to it the first time (see {@link #modelLexSymmetries}).
+   *
+   * @param maxNanos the longest time the check of the model's lex-leader constraints takes
+   * @return the canonicalizer.
+   */
+  SymmetryCanonicalizer canonicalizerWithModelLex(long maxNanos) {
+    if (pendingItems != null) {
+      List<Item> items = pendingItems;
+      pendingItems = null;
+      try {
+        modelLexSymmetries(items, pendingObjective, maxNanos);
+      } catch (Unsupported | IllegalArgumentException | ClassCastException e) {
+        // the model's lex-leader constraints stay with local search
+      }
+    }
+    return canonicalizer;
+  }
+
+  /**
+   * Returns whether the model has lex-leader constraints of its own that may be left to the
+   * canonicalizer: not checked yet, or found to be a symmetry of the model.
+   *
+   * @return true when {@link #canonicalizerWithModelLex} may add lex-leader constraints
+   */
+  boolean hasModelLex() {
+    return pendingItems != null || modelLexForLs > 0;
+  }
+
+  /**
+   * Returns how many of the model's lex-leader constraints local search leaves to the
+   * canonicalizer.
+   *
+   * @return the number
+   */
+  int modelLexForLs() {
+    return modelLexForLs;
   }
 
   /** The vectors X and Y of a constraint {@code X <=lex Y} on integer variables, or none. */
@@ -1672,20 +2052,38 @@ final class SymmetryBreaking implements ParserTreeConstants {
    * A key of a constraint with its integer variables renamed by sigma (null for none), the same for
    * two constraints that differ only in an order of arguments that the constraint may permute.
    */
-  private static String itemKey(Item item, Map<IntVar, IntVar> sigma, Map<Object, Integer> ids) {
+  private static String itemKey(
+      Item item,
+      Map<IntVar, IntVar> sigma,
+      Map<Object, Integer> ids,
+      Map<Contents, Integer> contents) {
     Atom[][] args = item.args();
+    Spec spec = SPECS.get(item.name());
     String[][] atoms = new String[args.length][];
+    String[] parts = new String[args.length];
     for (int a = 0; a < args.length; a++) {
+      if (args[a].length >= CONSTANT_ARRAY_KEY && !inBag(spec, a)) {
+        // an array of constants is keyed once by its contents: a table of four million tuples
+        // on 728 constraints (Benzenoide, XCSP 2023) made a key of 70 MB for each of them
+        Integer id = ids.get(args[a]);
+        if (id == null) {
+          id =
+              allConstant(args[a])
+                  ? contents.computeIfAbsent(new Contents(args[a]), k -> contents.size())
+                  : -1;
+          ids.put(args[a], id);
+        }
+        if (id >= 0) {
+          parts[a] = (item.array()[a] ? "[" : "") + "K" + id;
+          continue;
+        }
+      }
       atoms[a] = new String[args[a].length];
       for (int i = 0; i < args[a].length; i++) {
         atoms[a][i] = atomKey(args[a][i], sigma, ids);
       }
-    }
-    String[] parts = new String[args.length];
-    for (int a = 0; a < args.length; a++) {
       parts[a] = (item.array()[a] ? "[" : "") + String.join(",", atoms[a]);
     }
-    Spec spec = SPECS.get(item.name());
     if (spec != null) {
       for (int[] bag : spec.bags) {
         if (bag[bag.length - 1] >= args.length) {
@@ -1725,6 +2123,32 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
     }
     return item.name() + "(" + String.join("|", parts) + ")";
+  }
+
+  // arrays of constants at least this long are keyed by their contents in itemKey
+  private static final int CONSTANT_ARRAY_KEY = 64;
+
+  private static boolean inBag(Spec spec, int argument) {
+    if (spec == null) {
+      return false;
+    }
+    for (int[] bag : spec.bags) {
+      for (int b : bag) {
+        if (b == argument) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private static boolean allConstant(Atom[] atoms) {
+    for (Atom atom : atoms) {
+      if (!atom.isConstant()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private static String atomKey(Atom atom, Map<IntVar, IntVar> sigma, Map<Object, Integer> ids) {
@@ -1775,6 +2199,26 @@ final class SymmetryBreaking implements ParserTreeConstants {
   }
 
   /**
+   * Returns the array, or no atoms when it is longer than {@link #SHARED_ARRAY} and was read
+   * before: an array shared by many constraints (the diagram of thousands of MDDs) is read once.
+   */
+  private static Atom[] unread(Atom[] arg, Set<Atom[]> read) {
+    return arg.length > SHARED_ARRAY && !read.add(arg) ? NO_ATOMS : arg;
+  }
+
+  /**
+   * Returns the array, or no atoms when it is longer than {@link #SHARED_ARRAY} and holds only
+   * parameters, which a constraint sharing it with many others reads in vain.
+   */
+  private static Atom[] withVariables(Atom[] arg, Map<Atom[], Atom[]> seen) {
+    if (arg.length <= SHARED_ARRAY) {
+      return arg;
+    }
+    return seen.computeIfAbsent(
+        arg, k -> Arrays.stream(k).allMatch(atom -> atom.aVar() == null) ? NO_ATOMS : k);
+  }
+
+  /**
    * Finds the value spaces of the model: the integer variables joined by constraints that only
    * compare their values. A space with a variable that is used as a number anywhere, or that is the
    * objective or a Boolean, is not one.
@@ -1786,6 +2230,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
     if (objective != null) {
       numeric.add(objective);
     }
+    Map<Atom[], Atom[]> parameterArrays = new IdentityHashMap<>();
     for (Item item : items) {
       ValueSpec spec = valueSpec(item);
       boolean[] shared = new boolean[item.args().length];
@@ -1796,7 +2241,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
       IntVar first = null;
       for (int a = 0; a < item.args().length; a++) {
-        for (Atom atom : item.args()[a]) {
+        for (Atom atom : withVariables(item.args()[a], parameterArrays)) {
           IntVar x = atom.aVar();
           if (x == null) {
             continue;
@@ -3182,6 +3627,9 @@ final class SymmetryBreaking implements ParserTreeConstants {
     Map<SetVar, Integer> setValueSpaces = Map.of();
     private final Map<Long, Integer> setValueVertex = new HashMap<>();
     private int setElements;
+    // the Booleans that channelling the set variables with element vertices may make, one per
+    // value from the smallest to the largest element of each upper bound
+    private long setBooleans;
 
     Graph(IntVar objective, Map<IntVar, Integer> spaceOf) {
       this.objective = objective;
@@ -3472,8 +3920,10 @@ final class SymmetryBreaking implements ParserTreeConstants {
         }
         SetDomain d = s.dom();
         int free = d.lub().getSize() - d.glb().getSize();
-        if (setElements + free <= MAX_SET_ELEMENTS) {
+        long span = d.lub().isEmpty() ? 0 : (long) d.lub().max() - d.lub().min() + 1;
+        if (setElements + free <= MAX_SET_ELEMENTS && setBooleans + span <= MAX_SET_ELEMENTS) {
           setElements += free;
+          setBooleans += span;
           Integer space = setValueSpaces.get(s);
           // in a set value space the edges to the value vertices tell the bounds
           v =

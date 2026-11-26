@@ -32,6 +32,7 @@ package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -39,6 +40,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.BiConsumer;
@@ -104,6 +106,7 @@ import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SubcircuitCost;
 import org.jacop.constraints.SumBool;
+import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SymmetricAlldifferent;
 import org.jacop.constraints.SymmetricGCC;
 import org.jacop.constraints.TableCliques;
@@ -123,6 +126,7 @@ import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusClteqZ;
+import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.cumulative.Cumulative;
@@ -206,10 +210,11 @@ class GlobalConstraints implements ParserTreeConstants {
   // the tasks of the cumulative constraints read so far, see taskKey
   private final Set<List<IntVar>> cumulativeTasks = new HashSet<>();
 
-  // Tables over at most TableCliques.MAX_ARITY variables with the same tuples (after the filtering
-  // by the domains) share one tuple array, the reformulation of the table and, through the first
-  // HybridTable posted for them, the bit-sets built from the tuples. Models such as CrazyFrog post
-  // one large binary table on a thousand pairs of variables.
+  // Tables with the same tuples (after the filtering by the domains) share one tuple array, the
+  // reformulation of the table and, through the first HybridTable posted for them, the bit-sets
+  // built from the tuples. Models such as CrazyFrog post one large binary table on a thousand pairs
+  // of variables, and pigeonsPlus (XCSP 2017) one table of 5.8 million rows on eight lists of eight
+  // variables, which ran out of 4 GB when each table had its own tuples and cells.
   private final Map<TableTuples, int[][]> internedTables = new HashMap<>();
   private final Map<int[][], HybridTable> tableByTuples = new IdentityHashMap<>();
   private final Map<int[][], TableReformulation.Result> reformulations = new IdentityHashMap<>();
@@ -467,7 +472,7 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   private boolean cumulativeResourceSumWithinCapacity(IntVar[] r, IntVar b) {
-    int resSum = 0;
+    long resSum = 0;
     for (IntVar v : r) {
       resSum += v.max();
     }
@@ -789,14 +794,22 @@ class GlobalConstraints implements ParserTreeConstants {
   // and dominance reasons of Subcircuit it does not. The decomposition does not state that the
   // successors differ, and --proof implies -b, which leaves out the implied Alldistinct, so the
   // all-different is posted here: without it two nodes could share a successor (tpp and mario
-  // proved optima below the true ones).
+  // proved optima below the true ones). The successors leave the positions open, and only fixed
+  // positions rule out a second cycle, so the positions are search variables: a search that is not
+  // lazy clause generation (-a, or the hand-over after a slow LCG) labelled the successors alone
+  // and accepted two cycles (mario_t_hard_5 proved 4482 with nodes 1 and 2 on a cycle of their
+  // own).
   private void subcircuit(IntVar[] v) {
     if (support.options.proof() == null) {
       support.pose(new Subcircuit(v));
       return;
     }
-    for (Constraint c : Subcircuit.decomposition(store, v)) {
+    IntVar[] position = new IntVar[v.length];
+    for (Constraint c : Subcircuit.decomposition(store, v, position)) {
       support.pose(c);
+    }
+    for (IntVar p : position) {
+      support.dictionary.addSearchVar(p);
     }
     support.pose(new Alldiff(v));
   }
@@ -811,6 +824,12 @@ class GlobalConstraints implements ParserTreeConstants {
     subcircuit(v);
     addImpliedAlldistinct(v);
     if (support.options.proof() == null) {
+      if (Arrays.asList(v).contains(cost)) {
+        // SubcircuitCost needs a cost apart from the successors
+        IntVar copy = new IntVar(store, cost.dom().cloneLight());
+        support.pose(new XeqY(cost, copy));
+        cost = copy;
+      }
       support.pose(new SubcircuitCost(v, costs, cost));
       return;
     }
@@ -1284,7 +1303,7 @@ class GlobalConstraints implements ParserTreeConstants {
       if (low[i] > up[i]) {
         throw Store.failException;
       }
-      counter[i] = new IntVar(store, "counter" + i, low[i], up[i]);
+      counter[i] = new IntVar(store, store.freshVariableId("counter" + i), low[i], up[i]);
     }
 
     poseClosedGcc(x, cover, counter);
@@ -1388,6 +1407,9 @@ class GlobalConstraints implements ParserTreeConstants {
     for (ValueEnumeration e = union.valueEnumeration(); e.hasMoreElements(); ) {
       gccCounter[k++] = counterOf.get(e.nextElement());
     }
+    if (support.options.proof() != null) {
+      CardinalityDetector.separateCounters(support, xs, gccCounter);
+    }
     support.pose(new GCC(xs, gccCounter));
   }
 
@@ -1411,8 +1433,132 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] lx = support.getVarArray((SimpleNode) node.jjtGetChild(2));
     IntVar[] ly = support.getVarArray((SimpleNode) node.jjtGetChild(3));
 
+    if (diffnFixedAxis(x, y, lx, ly) || diffnFixedAxis(y, x, ly, lx)) {
+      return;
+    }
     support.pose(diffn(x, y, lx, ly, true));
     diffnProjections.add(new IntVar[][] {x, y, lx, ly});
+  }
+
+  /**
+   * How a strict diffn with one axis fixed (origins and lengths) is posted, from {@code
+   * org.jacop.fz.diffnFixedAxis}: {@code off} keeps the Diffn global; {@code pairs} posts, for each
+   * two rectangles that overlap along the fixed axis, the disjunction that they are apart along the
+   * other ({@code o_i + l_i <= o_j \/ o_j + l_j <= o_i}, as MiniZinc's decomposition does); {@code
+   * unary} posts a unary resource over the other axis for each maximal set of rectangles that
+   * overlap along the fixed axis (the maximal cliques of an interval graph, Gilmore and Hoffman, "A
+   * characterization of comparability graphs and of interval graphs", Canadian Journal of
+   * Mathematics 16, 1964), the default; {@code both} posts both. Rectangles of length 0 along
+   * either axis are kept apart pairwise, as a unary resource lets them sit inside another task.
+   *
+   * @return the mode
+   */
+  private static String diffnFixedAxisMode() {
+    return System.getProperty("org.jacop.fz.diffnFixedAxis", "unary");
+  }
+
+  /**
+   * Posts a strict diffn whose rectangles are fixed along one axis ({@code fo}, {@code fl}) as
+   * constraints along the other ({@code o}, {@code l}), see {@link #diffnFixedAxisMode()}. Once the
+   * fixed axis is known, rectangles that do not overlap along it never meet, and the others are
+   * exactly the pairs of tasks of a disjunctive scheduling problem along the other axis. Under lazy
+   * clause generation the failures of Diffn are explained by the bounds of all rectangles, while
+   * each pair or unary resource explains its own. On the 15 accap instances of the MiniZinc
+   * Challenge (2019, 2022, 2024), 300 s, unary resources give better objectives with default search
+   * on 10 and worse on 3, and free search proves 11 instead of 9 in 1,449 s instead of 2,443 s.
+   *
+   * @return false when the constraint is not of this kind or the mode is off (nothing posted)
+   */
+  private boolean diffnFixedAxis(IntVar[] fo, IntVar[] o, IntVar[] fl, IntVar[] l) {
+    String mode = diffnFixedAxisMode();
+    boolean pairs = "pairs".equals(mode) || "both".equals(mode);
+    boolean unary = "unary".equals(mode) || "both".equals(mode);
+    if (!pairs && !unary || support.options.proof() != null) {
+      return false;
+    }
+    if (fo.length < 2
+        || !allVarGround(fo)
+        || !allVarGround(fl)
+        || negativeMin(fl)
+        || negativeMin(l)) {
+      return false;
+    }
+    int n = fo.length;
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        long si = fo[i].value();
+        long sj = fo[j].value();
+        // a unary resource lets a task of length 0 sit inside another, a strict diffn does not
+        if (si < sj + fl[j].value()
+            && sj < si + fl[i].value()
+            && (pairs || !inCliques(fl[i], l[i]) || !inCliques(fl[j], l[j]))) {
+          poseApart(o[i], l[i], o[j], l[j]);
+        }
+      }
+    }
+    if (unary) {
+      poseFixedAxisCliques(fo, o, fl, l);
+    }
+    return true;
+  }
+
+  // the rectangles the unary resources of poseFixedAxisCliques cover: positive lengths on both axes
+  private static boolean inCliques(IntVar fixedLength, IntVar length) {
+    return fixedLength.value() > 0 && length.min() > 0;
+  }
+
+  // o1 + l1 <= o2 \/ o2 + l2 <= o1, with one Boolean choosing the side
+  private void poseApart(IntVar o1, IntVar l1, IntVar o2, IntVar l2) {
+    IntVar before = new IntVar(support.store, 0, 1);
+    IntVar after = new IntVar(support.store, 0, 1);
+    support.pose(new XplusYeqC(before, after, 1));
+    support.pose(new Implies(before, precedes(o1, l1, o2)));
+    support.pose(new Implies(after, precedes(o2, l2, o1)));
+  }
+
+  private static PrimitiveConstraint precedes(IntVar o1, IntVar l1, IntVar o2) {
+    return l1.singleton() ? new XplusClteqZ(o1, l1.value(), o2) : new XplusYlteqZ(o1, l1, o2);
+  }
+
+  // a unary resource over the free axis for each maximal set of positive-length intervals of the
+  // fixed axis sharing a point (the sets open just before an interval ends), over the rectangles
+  // with positive lengths on both axes; diffnFixedAxis keeps the others apart pairwise
+  private void poseFixedAxisCliques(IntVar[] fo, IntVar[] o, IntVar[] fl, IntVar[] l) {
+    int n = fo.length;
+    List<long[]> events = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      if (inCliques(fl[i], l[i])) {
+        events.add(new long[] {fo[i].value(), 1, i});
+        events.add(new long[] {(long) fo[i].value() + fl[i].value(), 0, i});
+      }
+    }
+    // at equal points ends come first: [a, b) and [b, c) do not overlap
+    events.sort((a, b) -> a[0] != b[0] ? Long.compare(a[0], b[0]) : Long.compare(a[1], b[1]));
+    TreeSet<Integer> open = new TreeSet<>();
+    boolean grown = false;
+    IntVar one = support.dictionary.getConstant(1);
+    for (long[] e : events) {
+      int i = (int) e[2];
+      if (e[1] == 1) {
+        open.add(i);
+        grown = true;
+        continue;
+      }
+      if (grown && open.size() > 1) {
+        IntVar[] s = new IntVar[open.size()];
+        IntVar[] d = new IntVar[open.size()];
+        IntVar[] r = new IntVar[open.size()];
+        int k = 0;
+        for (int t : open) {
+          s[k] = o[t];
+          d[k] = l[t];
+          r[k++] = one;
+        }
+        support.delayedConstraints.add(new CumulativeUnary(s, d, r, one, true));
+      }
+      grown = false;
+      open.remove(i);
+    }
   }
 
   // under --proof the pairwise rule alone, which unit propagation over its encoding reaches; the
@@ -1467,10 +1613,14 @@ class GlobalConstraints implements ParserTreeConstants {
       // with the other axis fixed, rectangles apart along it never meet and diffn knows it; the
       // projection then only adds cost (accap), unless all of them cross one line (filters)
       // the projections are redundant: local search does not evaluate them
-      if (!fixedApart(y, ly) && !cumulativeTasks.contains(taskKey(x, lx, ly))) {
+      if (!fixedApart(y, ly)
+          && !cumulativeTasks.contains(taskKey(x, lx, ly))
+          && spanFitsInt(y, ly)) {
         support.implied(() -> poseCumulative(x, lx, ly, span(y, ly)));
       }
-      if (!fixedApart(x, lx) && !cumulativeTasks.contains(taskKey(y, ly, lx))) {
+      if (!fixedApart(x, lx)
+          && !cumulativeTasks.contains(taskKey(y, ly, lx))
+          && spanFitsInt(x, lx)) {
         support.implied(() -> poseCumulative(y, ly, lx, span(x, lx)));
       }
     }
@@ -1510,6 +1660,18 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   /** A variable equal to max(o[i] + l[i]) - min(o[i]), the span of the intervals along one axis. */
+  // first + span = last adds bounds in int, up to twice the distance from the lowest origin to the
+  // highest end
+  private static boolean spanFitsInt(IntVar[] o, IntVar[] l) {
+    long low = Long.MAX_VALUE;
+    long high = Long.MIN_VALUE;
+    for (int i = 0; i < o.length; i++) {
+      low = Math.min(low, o[i].min());
+      high = Math.max(high, (long) o[i].max() + l[i].max());
+    }
+    return 2 * (high - low) <= Integer.MAX_VALUE;
+  }
+
   private IntVar span(IntVar[] o, IntVar[] l) {
     Store localStore = support.store;
     IntVar[] end = new IntVar[o.length];
@@ -1614,9 +1776,9 @@ class GlobalConstraints implements ParserTreeConstants {
         support.constraintPriority = pc.priority();
         IntVar c = pc.counter();
         if (c.singleton()) {
-          support.pose(new CountBounds(pc.list(), pc.value(), c.value(), c.value()));
+          support.poseCount(pc.list(), pc.value(), null, c.value(), c.value());
         } else {
-          support.pose(new Count(pc.list(), c, pc.value()));
+          support.poseCount(pc.list(), pc.value(), c, 0, 0);
         }
       } else {
         support.constraintPriority = -1;
@@ -1707,7 +1869,7 @@ class GlobalConstraints implements ParserTreeConstants {
         ub[i] = counters[i].max();
       }
       support.pose(new CountValuesBounds(x, lb, ub, values));
-    } else {
+    } else if (!support.poseCountValuesSplit(x, counters, values)) {
       support.pose(new CountValues(x, counters, values));
     }
   }
@@ -1875,7 +2037,66 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar n = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(1));
 
-    support.pose(new Values(x, n));
+    List<IntVar[]> blocks = NVALUE_BLOCKS ? valueBlocks(x) : List.of();
+    if (blocks.size() < 2) {
+      support.pose(new Values(x, n));
+      return;
+    }
+    // no value is shared by two blocks, so the distinct values are the sum of each block's
+    IntVar[] counts = new IntVar[blocks.size() + 1];
+    int[] weights = new int[counts.length];
+    for (int k = 0; k < blocks.size(); k++) {
+      IntVar[] block = blocks.get(k);
+      IntDomain values = new IntervalDomain();
+      for (IntVar v : block) {
+        values.unionAdapt(v.domain);
+      }
+      counts[k] = new IntVar(store, 1, Math.min(block.length, values.getSize()));
+      weights[k] = 1;
+      support.pose(new Values(block, counts[k]));
+    }
+    counts[blocks.size()] = n;
+    weights[blocks.size()] = -1;
+    support.pose(new LinearInt(counts, weights, "==", 0));
+  }
+
+  /**
+   * Whether jacop_nvalue counts the distinct values of each block of its variables separately and
+   * sums the counts, when the variables fall into blocks whose domains share no value: {@code
+   * org.jacop.fz.nvalueBlocks} (default true). The bound of each count then comes from its own
+   * block (the lower bounds of Values, Bessiere, Hebrard, Hnich, Kiziltan and Walsh, Filtering
+   * algorithms for the NValue constraint, Constraints 11(4), 2006, hold per block and add up), and
+   * a learnt clause or a core over one block leaves the others out. In MiniZinc Challenge
+   * gfd-schedule the items of each kind take their group from a range of their own: the proof that
+   * 2018 n200f5d50m40k6 needs 17 groups, refuting 16 groups without deadline penalty, took LCG more
+   * than 250,000 conflicts without an end under one count and 1,153 failures with one count per
+   * kind.
+   */
+  private static final boolean NVALUE_BLOCKS =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.nvalueBlocks", "true"));
+
+  /**
+   * The variables in blocks whose domains, as intervals from min to max, do not overlap, in the
+   * order of their smallest values; a single block when they all overlap.
+   */
+  static List<IntVar[]> valueBlocks(IntVar[] x) {
+    if (x.length < 2) {
+      return List.<IntVar[]>of(x);
+    }
+    IntVar[] sorted = x.clone();
+    Arrays.sort(sorted, (a, b) -> Integer.compare(a.min(), b.min()));
+    List<IntVar[]> blocks = new ArrayList<>();
+    int start = 0;
+    int max = sorted[0].max();
+    for (int i = 1; i < sorted.length; i++) {
+      if (sorted[i].min() > max) {
+        blocks.add(Arrays.copyOfRange(sorted, start, i));
+        start = i;
+      }
+      max = Math.max(max, sorted[i].max());
+    }
+    blocks.add(Arrays.copyOfRange(sorted, start, sorted.length));
+    return blocks;
   }
 
   void gen_jacop_minimum_arg_int(SimpleNode node) {
@@ -1963,6 +2184,13 @@ class GlobalConstraints implements ParserTreeConstants {
    */
   void poseTableRows(IntVar[] v, int[] tbl) {
     int size = v.length;
+    if (size == 0) {
+      // the row count of a table without columns is lost: an empty array has no rows
+      throw Store.failException;
+    }
+    if (size == 2) {
+      support.permutationElementSums.addTable(v, tbl);
+    }
     int[][] t = filterFeasibleTuples(tbl, v, size);
     if (t.length == 0) {
       // no tuple is allowed by the domains
@@ -1983,13 +2211,125 @@ class GlobalConstraints implements ParserTreeConstants {
     if (vu.length != v.length) {
       poseTableWithUniqueVars(v, t, vu);
     } else {
+      t = internedTables.computeIfAbsent(new TableTuples(t), TableTuples::tuples);
+      tableByTuples.putIfAbsent(t, null);
       if (v.length <= TableCliques.MAX_ARITY) {
-        t = internedTables.computeIfAbsent(new TableTuples(t), TableTuples::tuples);
-        tableByTuples.putIfAbsent(t, null);
         support.dictionary.addTable(v, t);
       }
+      poseImpliedTableSums(v, t);
       poseTableBySize(v, t);
     }
+  }
+
+  /**
+   * Whether a table posts the sums of columns that are the same in all its rows, {@code
+   * org.jacop.fz.tableSums} (default true).
+   *
+   * @return true unless the property is false.
+   */
+  static boolean tableSums() {
+    return Boolean.parseBoolean(System.getProperty("org.jacop.fz.tableSums", "true"));
+  }
+
+  /** The fewest columns of a posted constant column sum. */
+  static final int MIN_TABLE_SUM_TERMS = 3;
+
+  /** The most rows times columns squared a table is scanned for constant column sums. */
+  static final long TABLE_SUMS_WORK = 10_000_000L;
+
+  // the column subsets with a constant sum of each table, by identity of its (interned) rows
+  private final Map<int[][], int[][]> tableSums = new IdentityHashMap<>();
+
+  int impliedTableSums;
+
+  /**
+   * It posts, as a redundant constraint, the sum of the columns of a table that is the same in
+   * every row: all columns, or all but one. XCSP3 BACP models give each course a row per period
+   * with its credit in the column of that period, so the credit columns sum to the credit; the sum
+   * links the period loads to the total and the linear relaxation then bounds the largest load
+   * (Bacp-m1-08a, XCSP 2018: unproved in 240 s, proved in 0.2 s). CP-SAT's presolve finds such sums
+   * too.
+   */
+  private void poseImpliedTableSums(IntVar[] v, int[][] t) {
+    int k = v.length;
+    if (!tableSums()
+        || support.options.proof() != null
+        || k < 3
+        || t.length < 2
+        || (long) t.length * k * k > TABLE_SUMS_WORK) {
+      return;
+    }
+    int[][] sums = tableSums.computeIfAbsent(t, GlobalConstraints::constantColumnSums);
+    for (int[] sum : sums) {
+      if ((sum[0] < 0 ? k : k - 1) < MIN_TABLE_SUM_TERMS) {
+        // a sum of two columns says no more than the table does about them, and it changed the
+        // search of StripPacking-C1P3 (XCSP 2018, w + h of a rotated item) from 4 s to none
+        continue;
+      }
+      // sum[0] is the column left out (-1 for none), sum[1] the constant
+      IntVar[] x = new IntVar[sum[0] < 0 ? k : k - 1];
+      int[] w = new int[x.length];
+      for (int c = 0, i = 0; c < k; c++) {
+        if (c != sum[0]) {
+          x[i] = v[c];
+          w[i++] = 1;
+        }
+      }
+      if (impliedTableSums++ == 0
+          && (support.options.debug() || support.options.searchStatistics())) {
+        FzConsole.println("%%%mzn-stat: impliedTableSums=1\n%%%mzn-stat-end");
+      }
+      support.pose(new LinearInt(x, w, "==", sum[1]));
+    }
+  }
+
+  // {left-out column or -1, constant} of each sum of all columns, or all columns but one, that is
+  // the same in every row and not implied by a constant column (that one is fixed anyway)
+  private static int[][] constantColumnSums(int[][] t) {
+    int k = t[0].length;
+    long[] total = new long[t.length];
+    for (int r = 0; r < t.length; r++) {
+      for (int c = 0; c < k; c++) {
+        total[r] += t[r][c];
+      }
+    }
+    boolean[] constantColumn = new boolean[k];
+    for (int c = 0; c < k; c++) {
+      constantColumn[c] = true;
+      for (int[] row : t) {
+        if (row[c] != t[0][c]) {
+          constantColumn[c] = false;
+          break;
+        }
+      }
+    }
+    List<int[]> found = new ArrayList<>();
+    boolean allConstant = true;
+    for (long s : total) {
+      allConstant &= s == total[0];
+    }
+    if (allConstant && fitsInt(total[0])) {
+      found.add(new int[] {-1, (int) total[0]});
+    } else {
+      for (int out = 0; out < k; out++) {
+        if (constantColumn[out]) {
+          continue;
+        }
+        long first = total[0] - t[0][out];
+        boolean same = fitsInt(first);
+        for (int r = 1; r < t.length && same; r++) {
+          same = total[r] - t[r][out] == first;
+        }
+        if (same) {
+          found.add(new int[] {out, (int) first});
+        }
+      }
+    }
+    return found.toArray(new int[0][]);
+  }
+
+  private static boolean fitsInt(long value) {
+    return value >= Integer.MIN_VALUE && value <= Integer.MAX_VALUE;
   }
 
   /**
@@ -1998,6 +2338,72 @@ class GlobalConstraints implements ParserTreeConstants {
    */
   static final boolean SHORT_TABLE_CLAUSES =
       Boolean.parseBoolean(System.getProperty("org.jacop.fz.shortTableClauses", "true"));
+
+  /**
+   * Whether negative tables over 0/1 variables are posted as clauses, {@code
+   * org.jacop.fz.negativeTableClauses} (default true).
+   */
+  static final boolean NEGATIVE_TABLE_CLAUSES =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.negativeTableClauses", "true"));
+
+  int negativeTableClauses;
+
+  // every constraint of the model is a clause or a negative table: only then the tables become
+  // clauses, as a model with other constraints (StillLife: sums and tables) was 1.4-3x slower
+  // with its single-row negative tables as clauses
+  boolean clauseModel;
+
+  /** The most rows of a negative table over 0/1 variables posted as clauses. */
+  static final int NEGATIVE_TABLE_CLAUSE_ROWS = 64;
+
+  /**
+   * Posts a negative table over 0/1 variables as one clause per row: a forbidden row is the clause
+   * that some variable differs from its value in the row. XCSP writes the pigeon-hole problem so
+   * (hole-10 of the 2017 competition: 561 tables forbidding (1, 1) for two pigeons in one hole); as
+   * clauses, the clause refutation of the root LP sees the at-most-one cliques and proves it at
+   * once, as CP-SAT does, where the binary tables took millions of failures.
+   *
+   * @param node the jacop_negative_table_int node: x and the rows flattened row by row.
+   * @param clause posts the clause of the positive and the negative literals
+   * @return false when the table is not over 0/1 variables and was not posted
+   */
+  boolean negativeTableAsClauses(SimpleNode node, BiConsumer<IntVar[], IntVar[]> clause) {
+    if (!NEGATIVE_TABLE_CLAUSES || !clauseModel || support.options.proof() != null) {
+      return false;
+    }
+    IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int[] tbl = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    int size = v.length;
+    if (size == 0
+        || tbl.length / size > NEGATIVE_TABLE_CLAUSE_ROWS
+        || Arrays.stream(v).anyMatch(x -> x.min() < 0 || x.max() > 1)) {
+      return false;
+    }
+    if (negativeTableClauses++ == 0
+        && (support.options.debug() || support.options.searchStatistics())) {
+      FzConsole.println("%%%mzn-stat: negativeTableClauses=1\n%%%mzn-stat-end");
+    }
+    for (int r = 0; r + size <= tbl.length; r += size) {
+      List<IntVar> positive = new ArrayList<>();
+      List<IntVar> negative = new ArrayList<>();
+      boolean possible = true;
+      for (int c = 0; c < size && possible; c++) {
+        int value = tbl[r + c];
+        if (value == 0) {
+          positive.add(v[c]);
+        } else if (value == 1) {
+          negative.add(v[c]);
+        } else {
+          // the row cannot match: nothing is forbidden
+          possible = false;
+        }
+      }
+      if (possible) {
+        clause.accept(positive.toArray(new IntVar[0]), negative.toArray(new IntVar[0]));
+      }
+    }
+    return true;
+  }
 
   /**
    * Posts as a clause a short table over 0/1 variables whose every row fixes one variable and
@@ -2096,6 +2502,28 @@ class GlobalConstraints implements ParserTreeConstants {
       position.putIfAbsent(x, position.size());
     }
     IntVar[] nv = position.keySet().toArray(new IntVar[0]);
+    // a large table posted on many scopes is filtered and compiled once per pattern of repeated
+    // variables and domains (Benzenoide: four million rows on 361 scopes)
+    List<Object> scopeKey = null;
+    int minRows = tableMddRows();
+    if (minRows > 0 && tbl.length / size >= minRows && support.options.proof() == null) {
+      scopeKey = new ArrayList<>();
+      scopeKey.add(new SameArray(tbl));
+      scopeKey.add(star);
+      for (IntVar x : v) {
+        scopeKey.add(position.get(x));
+      }
+      for (IntVar x : nv) {
+        scopeKey.add(x.dom().toString());
+      }
+      ShortTableMdd.Diagram known = scopeDiagrams.get(scopeKey);
+      if (known != null) {
+        support.delayedConstraints.add(
+            new ExtensionalSupportMdd(nv, known.level(), known.from(), known.label(), known.to()));
+        return;
+      }
+    }
+    IntVar[] scope = nv;
     List<int[]> kept = new ArrayList<>();
     for (int i = 0; i < tbl.length / size; i++) {
       int[] row = new int[nv.length];
@@ -2176,6 +2604,13 @@ class GlobalConstraints implements ParserTreeConstants {
       }
       return;
     }
+    ShortTableMdd.Diagram diagram = postAsDiagram(nv, kept, star);
+    if (diagram != null) {
+      if (scopeKey != null && nv == scope) {
+        scopeDiagrams.put(scopeKey, diagram);
+      }
+      return;
+    }
     // short tables with the same rows after the filtering (CrosswordDesign, XCSP 2026, posts each
     // of its dictionary tables of up to 330,000 rows on 24 slots) share the bit-sets of the first
     HybridTable same = shortTables.get(new ShortTableRows(kept, star));
@@ -2187,6 +2622,95 @@ class GlobalConstraints implements ParserTreeConstants {
       shortTables.put(new ShortTableRows(kept, star), table);
     }
     support.pose(table);
+  }
+
+  /**
+   * It returns the fewest rows of a (short) table compiled into a diagram, see {@link
+   * ShortTableMdd}. Set by {@code org.jacop.fz.tableMdd.rows} (default 100,000; 0 turns the
+   * compilation off).
+   *
+   * @return the fewest rows.
+   */
+  static int tableMddRows() {
+    return Integer.getInteger("org.jacop.fz.tableMdd.rows", 100_000);
+  }
+
+  /**
+   * The diagram of a table is posted when it has at most rows * arity / TABLE_MDD_RATIO edges. Set
+   * by {@code org.jacop.fz.tableMdd.ratio} (default 10).
+   */
+  static int tableMddRatio() {
+    return Integer.getInteger("org.jacop.fz.tableMdd.ratio", 10);
+  }
+
+  // diagrams posted for a table array, star, pattern of repeated variables and domains
+  private final Map<List<Object>, ShortTableMdd.Diagram> scopeDiagrams = new HashMap<>();
+
+  /** An array compared by identity: MiniZinc and the parser keep one array per table. */
+  private record SameArray(int[] array) {
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof SameArray(int[] other) && other == array;
+    }
+
+    @Override
+    public int hashCode() {
+      return System.identityHashCode(array);
+    }
+
+    @Override
+    public String toString() {
+      return "SameArray[" + array.length + "]";
+    }
+  }
+
+  // diagrams of large tables by rows and column domains, null when the table did not compile
+  private final Map<List<Object>, Optional<ShortTableMdd.Diagram>> tableDiagrams = new HashMap<>();
+
+  /**
+   * It posts a large table as a multi-valued decision diagram when the diagram is much smaller than
+   * the rows (Benzenoide, XCSP 2023: a million rows of arity 8 on 361 scopes, about 11 GB as
+   * tables, in a diagram of a few hundred edges). Tables with the same rows on variables with the
+   * same domains share one diagram.
+   *
+   * @param x the variables, all different.
+   * @param rows the rows, star matching every value.
+   * @param star the star value.
+   * @return the diagram posted, or null when the table was not posted.
+   */
+  ShortTableMdd.Diagram postAsDiagram(IntVar[] x, List<int[]> rows, int star) {
+    int minRows = tableMddRows();
+    if (minRows <= 0 || rows.size() < minRows || support.options.proof() != null) {
+      return null;
+    }
+    IntDomain[] domains = new IntDomain[x.length];
+    List<Object> key = new ArrayList<>();
+    key.add(new ShortTableRows(rows, star));
+    for (int i = 0; i < x.length; i++) {
+      domains[i] = x[i].dom().cloneLight();
+      key.add(domains[i].toString());
+    }
+    long limit = Math.min(Integer.MAX_VALUE, (long) rows.size() * x.length / tableMddRatio());
+    if (!tableDiagrams.containsKey(key)) {
+      Optional<ShortTableMdd.Diagram> compiled =
+          Optional.ofNullable(ShortTableMdd.compile(rows, star, domains, (int) limit));
+      tableDiagrams.put(key, compiled);
+      if (support.options.debug()) {
+        FzConsole.println(
+            "% table of "
+                + rows.size()
+                + " rows as diagram: "
+                + compiled.map(d -> d.from().length + " edges").orElse("too large"));
+      }
+    }
+    Optional<ShortTableMdd.Diagram> diagram = tableDiagrams.get(key);
+    if (diagram.isEmpty()) {
+      return null;
+    }
+    ShortTableMdd.Diagram mdd = diagram.get();
+    support.delayedConstraints.add(
+        new ExtensionalSupportMdd(x, mdd.level(), mdd.from(), mdd.label(), mdd.to()));
+    return mdd;
   }
 
   /**
@@ -2292,6 +2816,11 @@ class GlobalConstraints implements ParserTreeConstants {
     // Keep the tuples that can match the domains and project them onto the distinct variables
     // that are not fixed; a tuple that gives two values to the same variable cannot match.
     int size = v.length;
+    if (size == 0) {
+      // no columns: the empty array has no rows, so the table is false
+      b.domain.in(store.level, b, 0, 0);
+      return;
+    }
     Map<IntVar, Integer> position = new LinkedHashMap<>();
     for (IntVar x : v) {
       if (!x.singleton()) {
@@ -2335,8 +2864,50 @@ class GlobalConstraints implements ParserTreeConstants {
     }
     if (b.max() == 0) {
       support.pose(new NegativeTable(nv, t));
+    } else if (position.containsKey(b)) {
+      tableReifiedOnControl(nv, t, position.get(b), b, implication);
     } else {
       support.pose(new TableReified(nv, t, b, implication));
+    }
+  }
+
+  /**
+   * Posts b = 1 implies (or if and only if) x is a tuple when b is x[k] (a bool2int alias), which
+   * TableReified rejects: b = 1 implies that the other variables are a tuple with 1 at k, and, for
+   * the reification, b = 0 implies that they are not a tuple with 0 at k.
+   */
+  private void tableReifiedOnControl(IntVar[] x, int[][] t, int k, IntVar b, boolean implication) {
+    IntVar[] rest = new IntVar[x.length - 1];
+    for (int i = 0, n = 0; i < x.length; i++) {
+      if (i != k) {
+        rest[n++] = x[i];
+      }
+    }
+    List<int[]> one = new ArrayList<>();
+    List<int[]> zero = new ArrayList<>();
+    for (int[] tuple : t) {
+      int[] r = new int[rest.length];
+      for (int i = 0, n = 0; i < tuple.length; i++) {
+        if (i != k) {
+          r[n++] = tuple[i];
+        }
+      }
+      (tuple[k] == 1 ? one : zero).add(r);
+    }
+    if (one.isEmpty()) {
+      b.domain.in(store.level, b, 0, 0);
+    } else if (rest.length > 0) {
+      support.pose(new TableReified(rest, one.toArray(new int[0][]), b, true));
+    }
+    if (implication || zero.isEmpty()) {
+      return;
+    }
+    if (rest.length == 0) {
+      b.domain.in(store.level, b, 1, 1);
+    } else {
+      BooleanVar inZero = new BooleanVar(store);
+      support.pose(new TableReified(rest, zero.toArray(new int[0][]), inZero, false));
+      support.pose(new XlteqY(inZero, b));
     }
   }
 
@@ -2753,6 +3324,18 @@ class GlobalConstraints implements ParserTreeConstants {
     }
   }
 
+  // an automaton over no variable accepts the empty word only: it holds when the start state is
+  // final and fails otherwise; true when the sequence is empty, so nothing is left to post
+  private static boolean emptyWord(IntVar[] x, int q0, IntDomain finalStates) {
+    if (x.length > 0) {
+      return false;
+    }
+    if (!finalStates.contains(q0)) {
+      throw Store.failException;
+    }
+    return true;
+  }
+
   void gen_jacop_regular(SimpleNode node) {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     int numStates = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
@@ -2761,6 +3344,10 @@ class GlobalConstraints implements ParserTreeConstants {
     int q0 = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(4));
     IntDomain F = support.getSetLiteral(node, 5);
     int minIndex = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(6));
+
+    if (emptyWord(x, q0, F)) {
+      return;
+    }
 
     // ---- KK, 2018-07-27
     // regular must not have duplicated variables; we create all
@@ -2946,6 +3533,15 @@ class GlobalConstraints implements ParserTreeConstants {
     for (int s = 0; s < b.length; s++) {
       rows[s] = Arrays.copyOfRange(a, s * x.length, (s + 1) * x.length);
     }
+    List<IntVar> xs = Arrays.asList(x);
+    for (int s = 0; s < ok.length; s++) {
+      if (xs.contains(ok[s])) {
+        // ScenarioChance needs its indicators apart from x
+        IntVar copy = new IntVar(store, ok[s].dom().cloneLight());
+        support.pose(new XeqY(ok[s], copy));
+        ok[s] = copy;
+      }
+    }
     support.delayedConstraints.add(
         new ScenarioChance(x, rows, b, weights, alpha, ok.length == 0 ? null : ok));
   }
@@ -2970,6 +3566,12 @@ class GlobalConstraints implements ParserTreeConstants {
         p[j] = prob[i * k + j];
       }
       w[i] = new Dist(Arrays.copyOfRange(value, i * k, (i + 1) * k), p, den);
+    }
+    if (Arrays.asList(x).contains(c)) {
+      // ChanceSum needs a capacity apart from the loads
+      IntVar copy = new IntVar(store, c.dom().cloneLight());
+      support.pose(new XeqY(c, copy));
+      c = copy;
     }
     support.delayedConstraints.add(new ChanceSum(x, w, c, alpha, den));
   }
@@ -3049,6 +3651,16 @@ class GlobalConstraints implements ParserTreeConstants {
     IntDomain[] label = support.getSetArray((SimpleNode) node.jjtGetChild(3));
     int[] to = support.getIntArray((SimpleNode) node.jjtGetChild(4));
 
+    // a diagram that is exactly a sum of its variables equal to a constant is posted as that sum
+    // (XCSP MagicSquare-mdd); --proof keeps the diagram
+    if (MddLinearSum.enabled() && support.options.proof() == null) {
+      Long s = MddLinearSum.sum(x, level, from, label, to);
+      if (s != null && s >= IntDomain.MIN_INT && s <= IntDomain.MAX_INT) {
+        support.pose(new SumInt(x, "==", support.dictionary.getConstant(s.intValue())));
+        return;
+      }
+    }
+
     // the layered graph must not have duplicated variables
     IntVar[] xx = removeDuplicates(x);
 
@@ -3063,6 +3675,10 @@ class GlobalConstraints implements ParserTreeConstants {
     int q0 = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(4));
     IntDomain F = support.getSetLiteral(node, 5);
     support.getInt((ASTScalarFlatExpr) node.jjtGetChild(6)); // the minimum index, unused
+
+    if (emptyWord(x, q0, F)) {
+      return;
+    }
 
     // ---- KK, 2018-07-27
     // regular must not have duplicated variables; we create all
@@ -3105,8 +3721,11 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar P = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(4));
 
-    if (Arrays.stream(x).anyMatch(v -> !v.singleton() && (v == W || v == P))) {
-      // Knapsack rejects a quantity that is also the capacity or the profit
+    if (Arrays.stream(x).anyMatch(v -> !v.singleton() && (v == W || v == P))
+        || mergedBeyondInt(x, weights)
+        || mergedBeyondInt(x, profits)) {
+      // Knapsack rejects a quantity that is also the capacity or the profit, and it merges the
+      // items of one variable into an item with an int weight and profit
       support.pose(new LinearInt(x, weights, "==", W));
       support.pose(new LinearInt(x, profits, "==", P));
       return;
@@ -3122,6 +3741,18 @@ class GlobalConstraints implements ParserTreeConstants {
             .build()
             // a proof derives the rows of the relaxation, not the prunings of the dynamic program
             .dynamicProgramming(support.options.proof() == null));
+  }
+
+  // true when the coefficients of one variable listed several times add up beyond an int
+  private static boolean mergedBeyondInt(IntVar[] x, int[] coefficients) {
+    Map<IntVar, Long> merged = new IdentityHashMap<>();
+    for (int i = 0; i < x.length; i++) {
+      long sum = merged.merge(x[i], (long) coefficients[i], Long::sum);
+      if (sum != (int) sum) {
+        return true;
+      }
+    }
+    return false;
   }
 
   void gen_jacop_sequence(SimpleNode node) {
@@ -3180,6 +3811,14 @@ class GlobalConstraints implements ParserTreeConstants {
     // files compiled with older versions of the library number them from the lowest node in arc.
     int minNode = Math.min(1, Arrays.stream(arc).min().getAsInt());
 
+    String mode = networkFlowMode();
+    if (Arrays.stream(weight).allMatch(IntVar::singleton) && !"global".equals(mode)) {
+      networkFlowRows(arc, minNode, flow, weight, balance, cost);
+      if ("rows".equals(mode)) {
+        return;
+      }
+    }
+
     NetworkBuilder net = new NetworkBuilder();
 
     Node[] netNode = new Node[balance.length];
@@ -3195,6 +3834,77 @@ class GlobalConstraints implements ParserTreeConstants {
     net.setCostVariable(cost);
 
     support.pose(new NetworkFlow(net));
+  }
+
+  /**
+   * How a network flow with fixed weights is posted, by the system property {@code
+   * org.jacop.fz.networkFlow}: {@code global} (only {@link NetworkFlow}), {@code rows} (only the
+   * flow conservation rows and the cost row, as MiniZinc's standard decomposition), {@code both},
+   * or {@code auto} (the default: rows under free search, both otherwise). Under --proof the rows
+   * alone. The arc analysis of NetworkFlow (reduced-cost pruning with a shortest path per arc)
+   * costs more than it prunes on the small networks of the MiniZinc Challenge mapping problem
+   * (sixteen networks of 11 nodes and 36 arcs, about 80 % of the time), and the rows explain better
+   * under lazy clause generation. Mapping and nfc 2015-2022, 30 instances at 120 s, two seeds: free
+   * search 841 s with the global, 712 s with both, 598 s with the rows (2018 ring_mp3 28-111 s to 7
+   * s); default search 945 s, 793 s with the rows, 687 s with both (2016 mesh3x3_mp3 proved in
+   * 12-18 s instead of not in 120 s; the rows alone lose 2021 mesh4x4_2, 6-9 s to 51-53 s).
+   *
+   * @return global, rows or both
+   */
+  private String networkFlowMode() {
+    if (support.options.proof() != null) {
+      return "rows";
+    }
+    String mode = System.getProperty("org.jacop.fz.networkFlow", "auto");
+    if ("auto".equals(mode)) {
+      return support.options.freeSearch() ? "rows" : "both";
+    }
+    return mode;
+  }
+
+  // --proof: the network flow as its rows, which the OPB model states and a proof derives from:
+  // at each node the flow out less the flow in is the balance, and the cost is the weighted sum of
+  // the flows. NetworkFlow's reduced-cost pruning has no proof, so the OPB model left it out and
+  // the proof stopped (nfc, mapping); the rows prune less but keep the proof.
+  private void networkFlowRows(
+      int[] arc, int minNode, IntVar[] flow, IntVar[] weight, int[] balance, IntVar cost) {
+    List<List<IntVar>> vars = new ArrayList<>();
+    List<List<Integer>> coefficients = new ArrayList<>();
+    for (int i = 0; i < balance.length; i++) {
+      vars.add(new ArrayList<>());
+      coefficients.add(new ArrayList<>());
+    }
+    for (int i = 0; i < flow.length; i++) {
+      int from = arc[2 * i] - minNode;
+      int to = arc[2 * i + 1] - minNode;
+      vars.get(from).add(flow[i]);
+      coefficients.get(from).add(1);
+      vars.get(to).add(flow[i]);
+      coefficients.get(to).add(-1);
+    }
+    for (int i = 0; i < balance.length; i++) {
+      // a node with no arc has no row; its balance must be 0
+      if (vars.get(i).isEmpty()) {
+        if (balance[i] != 0) {
+          throw Store.failException;
+        }
+        continue;
+      }
+      support.pose(
+          new LinearInt(
+              vars.get(i).toArray(new IntVar[0]),
+              coefficients.get(i).stream().mapToInt(Integer::intValue).toArray(),
+              "==",
+              balance[i]));
+    }
+    IntVar[] terms = Arrays.copyOf(flow, flow.length + 1);
+    terms[flow.length] = cost;
+    int[] w = new int[flow.length + 1];
+    for (int i = 0; i < flow.length; i++) {
+      w[i] = weight[i].value();
+    }
+    w[flow.length] = -1;
+    support.pose(new LinearInt(terms, w, "==", 0));
   }
 
   void gen_jacop_lex_less_int(SimpleNode node) {
@@ -3235,6 +3945,13 @@ class GlobalConstraints implements ParserTreeConstants {
   void gen_jacop_lex_chain(SimpleNode node, boolean strict) {
     IntVar[] a = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     int vectors = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+    if (a.length == 0) {
+      // no vectors, or vectors of length 0: all equal, so a strict chain has at most one
+      if (strict && vectors > 1) {
+        throw Store.failException;
+      }
+      return;
+    }
     int n = a.length / vectors;
 
     // vector j is column j of the matrix that a lists row by row
@@ -3392,6 +4109,48 @@ class GlobalConstraints implements ParserTreeConstants {
     support.delayedConstraints.add(support.binPackingCardinality.binPacking(bin, cc, w, minBin));
     support.binPackingCliques.add(bin, cc, w, minBin);
     support.binPackingPermutations.add(bin, cc, w, minBin);
+    if (binPackingSums()) {
+      support.addLoadSums(bin, cc, w, minBin);
+    }
+    if (BIN_LOADS_DEFINED && !support.dictionary.isSearchAnnotated()) {
+      markLoadsDefined(bin, cc);
+    }
+  }
+
+  /**
+   * Whether the loads of a bin packing are also posted as sums of the items in each bin, from the
+   * system property {@code org.jacop.fz.binPackingSums}: {@code lcg} (the default) under lazy
+   * clause generation, {@code true} always, {@code false} never. Binpacking explains a load bound
+   * or a removed bin by the bins of many items at once (97 atoms per reason on MZNC 2017
+   * steelmillslab bench_19_5); the sum of a bin, over a 0/1 variable per item that says the item is
+   * in it, gives the learnt clauses those 0/1 variables and lifted linear reasons. With the sums
+   * beside Binpacking, bench_19_5 under a fixed search reaches its optimum 0 in 103 s, where
+   * Binpacking alone stays at 28 and the decomposition alone at 13 after 120 s. The sums are the
+   * load decomposition that P. Shaw, "A constraint for bin packing", CP 2004, strengthens.
+   */
+  private boolean binPackingSums() {
+    String mode = System.getProperty("org.jacop.fz.binPackingSums", "lcg").toLowerCase();
+    return "true".equals(mode) || "lcg".equals(mode) && support.options.lcg();
+  }
+
+  // the loads of a bin packing follow from the bins of its items: free search branches on them
+  // last, and LNS relaxes the bins only. The balanced academic curriculum of XCSP 2026 (BACPj,
+  // 500 courses in 100 periods of at least 2 courses) translated without defines_var annotations
+  // branched on the credit loads, the variables of its sum-of-squares objective, and found no
+  // solution in 240 s; on the bins the first solution comes in a second. Only in a model without
+  // a search annotation: the MiniZinc Challenge models carry one, and on gbac at 600 s with -f
+  // the loads defined made 6 of 19 objectives worse and 1 better
+  static final boolean BIN_LOADS_DEFINED =
+      !FALSE.equals(System.getProperty("org.jacop.fz.binPackingLoadsDefined"));
+
+  private void markLoadsDefined(IntVar[] bin, IntVar[] load) {
+    Set<IntVar> bins = Collections.newSetFromMap(new IdentityHashMap<>());
+    bins.addAll(Arrays.asList(bin));
+    for (IntVar l : load) {
+      if (!l.singleton() && !bins.contains(l)) {
+        support.dictionary.addDefinedVar(l);
+      }
+    }
   }
 
   void gen_jacop_bin_packing_capacity(SimpleNode node) {
@@ -3489,9 +4248,9 @@ class GlobalConstraints implements ParserTreeConstants {
 
       System.arraycopy(xx, i * dim, coords, 0, dim);
 
-      IntVar start = new IntVar(store, "start[" + i + "]", 0, 0);
-      IntVar duration = new IntVar(store, "duration[" + i + "]", 1, 1);
-      IntVar end = new IntVar(store, "end[" + i + "]", 1, 1);
+      IntVar start = new IntVar(store, store.freshVariableId("start[" + i + "]"), 0, 0);
+      IntVar duration = new IntVar(store, store.freshVariableId("duration[" + i + "]"), 1, 1);
+      IntVar end = new IntVar(store, store.freshVariableId("end[" + i + "]"), 1, 1);
       GeostObject obj = new GeostObject(i, coords, kk[i], start, duration, end);
       objects.add(obj);
     }

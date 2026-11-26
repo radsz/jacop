@@ -31,6 +31,7 @@
 package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -39,6 +40,7 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -155,6 +157,31 @@ class CyclicDistanceFlatzincTest {
   }
 
   /**
+   * A distance whose a, b or e is declared equal to another variable (var int: q = a0): the
+   * equality is posted on that variable outside the constraint items, so the detector must keep it
+   * like an alias, or q loses its link when a0 is dropped.
+   */
+  @Test
+  void variablesOfDeclaredEqualitiesAreKept() throws IOException {
+    Random random = new Random(63);
+    int trials = Integer.getInteger("cyclic.trials", 200) / 4;
+    for (int trial = 0; trial < trials; trial++) {
+      String model = randomModel(random, false);
+      String target = new String[] {"a0", "b0", "e0"}[random.nextInt(3)];
+      int at = model.indexOf("constraint ");
+      model =
+          model.substring(0, at)
+              + "var int: q:: output_var = "
+              + target
+              + ";\n"
+              + model.substring(at);
+      String on = run(model, true, "-a");
+      String off = run(model, false, "-a");
+      assertEquals(solutions(off), solutions(on), "trial " + trial + "\n" + model);
+    }
+  }
+
+  /**
    * A distance whose a, b or e is declared with a domain narrower than |e|, c - a or the difference
    * it stands for: the declaration is a constraint, which the replacement of a and b and the
    * substitution of e would drop. The solutions must stay those of the detector off (13 or 19 here,
@@ -196,6 +223,55 @@ class CyclicDistanceFlatzincTest {
     }
   }
 
+  /**
+   * Unless the property forces it, the distances are rewritten only in a model with at least
+   * org.jacop.fz.cyclicDistance.minDistances of them (400 by default): the small random models keep
+   * the minimum, and with the threshold at 1 they are rewritten with the same solutions.
+   */
+  @Test
+  void onlyModelsWithManyDistancesAreRewrittenByDefault() throws IOException {
+    Random random = new Random(63);
+    int rewritten = 0;
+    for (int trial = 0; trial < 20; trial++) {
+      String model = randomModel(random, false);
+      String off = run(model, false, "-a");
+      String auto = run(model, null, "-a", "-debug");
+      assertTrue(!auto.contains("% cyclic distances: ") || auto.contains("fewer than 400"), auto);
+      assertEquals(solutions(off), solutions(auto), "trial " + trial + "\n" + model);
+      System.setProperty(PROPERTY + ".minDistances", "1");
+      try {
+        String low = run(model, null, "-a", "-debug");
+        rewritten += low.contains("% cyclic distances: 0") ? 0 : 1;
+        assertEquals(solutions(off), solutions(low), "trial " + trial + "\n" + model + "\n" + low);
+      } finally {
+        System.clearProperty(PROPERTY + ".minDistances");
+      }
+    }
+    assertTrue(rewritten > 10, "rewritten " + rewritten);
+  }
+
+  @Test
+  void longEquationsAreReadInLinearTime() throws IOException {
+    // the definitions of the terms of a long equation (the 1,176,224 terms of rcpsp-wet-diverse
+    // j90_48_4) were each copied with the other terms: 30,000 terms took 7 GB
+    int n = 30_000;
+    StringBuilder fzn = new StringBuilder();
+    StringBuilder ones = new StringBuilder("[");
+    StringBuilder vars = new StringBuilder("[");
+    for (int i = 0; i < n; i++) {
+      fzn.append("var 0..1: x").append(i).append(";\n");
+      ones.append("1,");
+      vars.append('x').append(i).append(',');
+    }
+    fzn.append("var 0..").append(n).append(": obj:: output_var;\n");
+    fzn.append("constraint int_lin_eq(").append(ones).append("-1],").append(vars);
+    fzn.append("obj],0);\nconstraint int_le(obj,3);\nsolve satisfy;\n");
+    String out =
+        assertTimeoutPreemptively(
+            Duration.ofSeconds(60), () -> run(fzn.toString(), null, "--lcg", "off"));
+    assertTrue(out.contains("----------"), out);
+  }
+
   private static int solutions(String out) {
     return out.split("----------", -1).length - 1;
   }
@@ -211,14 +287,16 @@ class CyclicDistanceFlatzincTest {
     return last;
   }
 
-  private String run(String model, boolean detect, String... options) throws IOException {
+  private String run(String model, Boolean detect, String... options) throws IOException {
     Path fzn = tmp.resolve("model.fzn");
     Files.writeString(fzn, model);
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     PrintStream originalOut = System.out;
     String[] args = Arrays.copyOf(options, options.length + 1);
     args[options.length] = fzn.toString();
-    System.setProperty(PROPERTY, String.valueOf(detect));
+    if (detect != null) {
+      System.setProperty(PROPERTY, String.valueOf(detect));
+    }
     try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8)) {
       System.setOut(capture);
       new Fz2jacop().callMain(args);

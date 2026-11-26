@@ -120,6 +120,20 @@ public final class RevisedDualSimplex {
 
   // the artificial bounds: the first, the factor they grow by and the largest
   private static final double BIG_START = 1e6;
+
+  // the largest reduced cost past the tolerance that a cost shift absorbs, in the scaled problem
+  // (org.jacop.jalp.shiftMax; 0 turns cost shifting off)
+  private static final double SHIFT_MAX =
+      Double.parseDouble(System.getProperty("org.jacop.jalp.shiftMax", "1e-5"));
+  // the cost shifts in force: the columns shifted, and the shift of each column (cost minus the
+  // cost without the shifts)
+  private int costShifts;
+  private int[] shiftIdx = new int[0];
+  private double[] shiftAmt = new double[0];
+  // the shifts were taken back in this answer: no new ones until it ends
+  private boolean shiftsRemoved;
+  // the pivots left to the dual solve when it reached an optimum, for a primal clean-up
+  private int pivotsLeft;
   private static final double BIG_GROWTH = 100;
   private static final double BIG_MAX = 1e14;
 
@@ -226,6 +240,18 @@ public final class RevisedDualSimplex {
   private int weightsFrom;
 
   private int infeasibleRow = -1;
+  // the Farkas ray of the last solve when bound propagation proved it infeasible without a basis
+  // (internal rows), or null
+  private double[] boundRay;
+  // the presolve of this solve saw infeasibility: try a proof by bound propagation
+  private boolean presolveInfeasible;
+  // the Farkas ray of the reduced problem that ended infeasible, over the rows here, or null
+  private double[] reducedRay;
+  // the costs given while the solve looks for a proof of infeasibility with no costs, or null
+  private double[] provingCosts;
+  // bound propagation proves infeasibility the presolve saw (org.jacop.jalp.boundProof)
+  private static final boolean BOUND_PROOF =
+      Boolean.parseBoolean(System.getProperty("org.jacop.jalp.boundProof", "true"));
 
   // counts the removals of rows: a saved basis is for the rows of one count
   private long rowEpoch;
@@ -329,6 +355,11 @@ public final class RevisedDualSimplex {
   private boolean feasibility;
 
   private long totalPivots;
+
+  // the number of this instance in the trace (org.jacop.jalp.trace), 0 without one
+  private final int traceSolve = Trace.OUT == null ? 0 : Trace.nextSolve();
+  // the next dual solve starts from a postsolved basis: its start goes to the trace
+  private boolean traceStart;
   private long factorizations;
   private long ops;
 
@@ -462,6 +493,11 @@ public final class RevisedDualSimplex {
     savedHi = null;
     boundsPerturbed = false;
     perturbed = o.perturbed;
+    costShifts = o.costShifts;
+    shiftIdx = o.shiftIdx.clone();
+    shiftAmt = o.shiftAmt.clone();
+    shiftsRemoved = o.shiftsRemoved;
+    pivotsLeft = o.pivotsLeft;
     roundOffShare = o.roundOffShare;
     reuseFreshFactors = o.reuseFreshFactors;
     refreshedFromFactors = o.refreshedFromFactors;
@@ -469,6 +505,7 @@ public final class RevisedDualSimplex {
     exact = o.exact;
     cleaning = o.cleaning;
     dualPending = o.dualPending;
+    traceStart = o.traceStart;
     // copy() postsolves an open reduced solve first, so the copy has none
     reducedLp = null;
     reducedBy = null;
@@ -493,6 +530,10 @@ public final class RevisedDualSimplex {
     factorValid = false; // the copy factorizes its basis again when it is solved
     weightsFrom = o.weightsFrom;
     infeasibleRow = o.infeasibleRow;
+    boundRay = o.boundRay;
+    presolveInfeasible = o.presolveInfeasible;
+    reducedRay = o.reducedRay;
+    provingCosts = o.provingCosts == null ? null : o.provingCosts.clone();
     rowEpoch = o.rowEpoch;
     crashRows = o.crashRows;
     crashPending = o.crashPending;
@@ -567,6 +608,7 @@ public final class RevisedDualSimplex {
 
   // the costs of the scaled problem, perturbed or not
   private void setCosts(boolean perturb) {
+    unshift();
     Random rnd = new Random(seed);
     for (int j = 0; j < n; j++) {
       double c = givenCost[j] * colScale[j];
@@ -709,6 +751,7 @@ public final class RevisedDualSimplex {
 
   // appends rows with basic slacks; the factorization and the values must be rebuilt after
   private void appendRows(int[][] columns, double[][] weights, double[] rowLo, double[] rowHi) {
+    unshiftForRows();
     int k = columns.length;
     int m2 = m + k;
     int cols2 = cols + k;
@@ -977,9 +1020,13 @@ public final class RevisedDualSimplex {
     if (ended) {
       // a new answer: the bases of the solves that the limit cut off before count no more
       guard.reset();
+      shiftsRemoved = false;
     }
     shrinkArtificial();
     int status = dualSolve(limit);
+    if (provingCosts != null) {
+      endProving();
+    }
     ended = status != LIMIT;
     if (ended) {
       cleaning = false;
@@ -1014,6 +1061,7 @@ public final class RevisedDualSimplex {
 
   private int dualSolve(int limit) {
     infeasibleRow = -1;
+    boundRay = null;
     outsideValid = false;
     clearSkipped();
     if (feasibility) {
@@ -1045,6 +1093,13 @@ public final class RevisedDualSimplex {
     if (reducedLp != null) {
       return LIMIT;
     }
+    if (presolveInfeasible) {
+      presolveInfeasible = false;
+      if (boundProof()) {
+        return INFEASIBLE;
+      }
+      startProving();
+    }
     if (crashPending) {
       crashPending = false;
       if (totalPivots == 0) {
@@ -1060,10 +1115,15 @@ public final class RevisedDualSimplex {
       placeNonbasic();
     }
     updateBeta();
+    if (Trace.OUT != null && traceStart) {
+      traceStart = false;
+      traceStart();
+    }
     for (int iter = 0; iter < limit; iter++) {
       ops += 3L * m;
       int r = leavingRow();
       if (r < 0) {
+        pivotsLeft = limit - iter;
         int status = atOptimum();
         if (status >= 0) {
           return status;
@@ -1180,6 +1240,9 @@ public final class RevisedDualSimplex {
       upper[p] = !toLower;
       at[p] = bound;
       totalPivots++;
+      if (Trace.OUT != null) {
+        Trace.pivot(traceSolve, totalPivots, feasibility ? 1 : 2, q, p, r, theta, thetaD, fromRow);
+      }
       if (outsideValid) {
         for (int k = 0; k < alphaLen; k++) {
           noteRow(alphaIdx[k]);
@@ -1390,15 +1453,40 @@ public final class RevisedDualSimplex {
     if (skippedRows > 0 && !skippedRowsHold()) {
       return LIMIT;
     }
+    if (provingCosts != null) {
+      // feasible after all: on with the costs from this basis
+      endProving();
+      placeNonbasic();
+      updateBeta();
+      return -1;
+    }
     if (feasibility) {
       // feasible, but the objective pulled a column past every artificial bound
       return UNBOUNDED;
     }
     if (exact && perturbed) {
       // the costs as given: the columns whose reduced cost changed sign move to their other bound
+      boolean shifted = costShifts > 0;
       cleaning = true;
       setCosts(false);
       computeDuals();
+      if (shifted && primalCleanUp()) {
+        return LIMIT;
+      }
+      placeNonbasic();
+      updateBeta();
+      return -1;
+    }
+    if (costShifts > 0) {
+      // the optimum of the shifted costs: the shifts go, and the dual simplex goes on without
+      // new ones (a reduced problem of the presolve must end optimal for the costs that the whole
+      // problem has, or the whole problem starts far from its optimum: brazil3)
+      unshift();
+      shiftsRemoved = true;
+      computeDuals();
+      if (primalCleanUp()) {
+        return LIMIT;
+      }
       placeNonbasic();
       updateBeta();
       return -1;
@@ -1561,7 +1649,74 @@ public final class RevisedDualSimplex {
    */
   public double[] farkas() {
     flushReduced();
+    if (boundRay != null) {
+      double[] y = new double[m];
+      for (int i = 0; i < m; i++) {
+        y[i] = boundRay[i] * rowScale[i];
+      }
+      return y;
+    }
     return inverseRow(infeasibleRow);
+  }
+
+  /**
+   * Returns whether the last solve proved infeasibility by bound propagation over the rows (see
+   * {@link BoundProof}), without a basis; {@link #farkas()} then gives that proof.
+   *
+   * @return whether the proof of the last solve came from bound propagation
+   */
+  public boolean provedByBounds() {
+    return boundRay != null;
+  }
+
+  // the presolve saw infeasibility that bound propagation does not prove: the dual simplex looks
+  // for the proof with no costs, where every basis is dual feasible and no pivot is spent on the
+  // objective (gosh: 11,136 pivots, 3.6 s, with the costs; 0.6 s without)
+  private void startProving() {
+    provingCosts = givenCost.clone();
+    Arrays.fill(givenCost, 0);
+    setCosts(true);
+    cleaning = false;
+    placed = false;
+    dualsChecked = false;
+    if (factorValid) {
+      computeDuals();
+    }
+  }
+
+  // the costs as given again
+  private void endProving() {
+    System.arraycopy(provingCosts, 0, givenCost, 0, n);
+    provingCosts = null;
+    setCosts(true);
+    cleaning = false;
+    placed = false;
+    dualsChecked = false;
+    if (factorValid) {
+      computeDuals();
+    }
+  }
+
+  // a proof of infeasibility by bound propagation over the whole problem, as the presolve found
+  private boolean boundProof() {
+    BoundProof b = new BoundProof(n, rowIdx, rowVal, colIdx, colLen, boundLo, boundHi);
+    double[] y = {};
+    if (reducedRay != null && b.holds(reducedRay)) {
+      y = reducedRay;
+    }
+    reducedRay = null;
+    if (y.length == 0) {
+      y = b.run();
+    }
+    ops += b.work();
+    if (PRESOLVE_TRACE) {
+      System.err.println("bound proof " + (y.length > 0) + " work " + b.work());
+    }
+    if (y.length == 0) {
+      return false;
+    }
+    boundRay = y;
+    return true;
   }
 
   /**
@@ -1733,6 +1888,7 @@ public final class RevisedDualSimplex {
     placed = false;
     dualsChecked = false;
     infeasibleRow = -1;
+    boundRay = null;
     return true;
   }
 
@@ -1771,6 +1927,7 @@ public final class RevisedDualSimplex {
    */
   public int[] removeRows(int[] rows) {
     flushReduced();
+    unshiftForRows();
     boolean[] gone = new boolean[m];
     int removed = 0;
     for (int i : rows) {
@@ -1886,6 +2043,7 @@ public final class RevisedDualSimplex {
     cols = cols2;
     factorValid = false;
     infeasibleRow = -1;
+    boundRay = null;
     rowEpoch++;
     allocateWork();
     return oldRow;
@@ -2340,6 +2498,9 @@ public final class RevisedDualSimplex {
   private void place(int j) {
     if (row[j] < 0) {
       boolean was = upper[j];
+      if (shiftsCost(j)) {
+        return;
+      }
       if (d[j] > DUAL_TOL) {
         upper[j] = false;
       } else if (d[j] < -DUAL_TOL) {
@@ -2352,6 +2513,104 @@ public final class RevisedDualSimplex {
         markMoved(j);
       }
     }
+  }
+
+  /**
+   * Shifts the cost of nonbasic column j so that its reduced cost is 0 when the sign of the reduced
+   * cost, past the dual tolerance by at most SHIFT_MAX, would move it from its finite bound to an
+   * artificial one (cost shifting, Koberstein 2005; HiGHS). The reduced costs kept up by the pivots
+   * leave slacks of inequality rows a few 1e-9 on the wrong side, and each such move put a value of
+   * 1e6 into the basic values: comp07-2idx took 159,258 pivots, its infeasibility up to 1e12. The
+   * shifts are part of the perturbation: they go with it at the end of an exact solve.
+   */
+  private boolean shiftsCost(int j) {
+    if (!perturbed || cleaning || shiftsRemoved || SHIFT_MAX <= 0 || lo[j] == hi[j]) {
+      return false;
+    }
+    double v = d[j];
+    boolean toArtificial =
+        upper[j]
+            ? v > DUAL_TOL && isArtificial(j, false) && !isArtificial(j, true)
+            : v < -DUAL_TOL && isArtificial(j, true) && !isArtificial(j, false);
+    if (!toArtificial || Math.abs(v) > SHIFT_MAX) {
+      return false;
+    }
+    if (shiftAmt.length < cols) {
+      shiftAmt = Arrays.copyOf(shiftAmt, cols);
+    }
+    if (shiftAmt[j] == 0) {
+      if (shiftIdx.length == costShifts) {
+        shiftIdx = Arrays.copyOf(shiftIdx, Math.max(16, 2 * costShifts));
+      }
+      shiftIdx[costShifts++] = j;
+    }
+    shiftAmt[j] -= v;
+    cost[j] -= v;
+    d[j] = 0;
+    return true;
+  }
+
+  // takes the cost shifts back; the reduced costs are then those of the costs without them only
+  // after computeDuals
+  private void unshift() {
+    for (int k = 0; k < costShifts; k++) {
+      int j = shiftIdx[k];
+      cost[j] -= shiftAmt[j];
+      shiftAmt[j] = 0;
+    }
+    costShifts = 0;
+  }
+
+  // the shifts go before the rows change, so that they never follow a slack to another row
+  private void unshiftForRows() {
+    if (costShifts > 0) {
+      unshift();
+      if (factorValid) {
+        computeDuals();
+      }
+    }
+  }
+
+  /**
+   * After the cost shifts went: when a column at a finite bound would now move to an artificial
+   * one, and the basic values with it, the primal simplex takes such columns in instead, from the
+   * basis that is primal feasible, as HiGHS cleans up after removing its cost shifts. The reduced
+   * costs are computed again after it.
+   *
+   * @return true when the primal simplex stopped at the limit of pivots left
+   */
+  private boolean primalCleanUp() {
+    if (!pullsToArtificial()) {
+      return false;
+    }
+    int status = primalPivots(Math.max(1, pivotsLeft));
+    if (savedLo != null) {
+      restoreBounds();
+    }
+    placed = false;
+    dualsChecked = false;
+    if (status == LIMIT) {
+      return true;
+    }
+    // optimal or not, the dual simplex checks the basis again
+    computeDuals();
+    return false;
+  }
+
+  // whether a nonbasic column at a finite bound has a reduced cost that would place it at an
+  // artificial one
+  private boolean pullsToArtificial() {
+    for (int j = 0; j < cols; j++) {
+      if (row[j] >= 0 || lo[j] == hi[j]) {
+        continue;
+      }
+      if (upper[j]
+          ? d[j] > DUAL_TOL && isArtificial(j, false) && !isArtificial(j, true)
+          : d[j] < -DUAL_TOL && isArtificial(j, true) && !isArtificial(j, false)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   // moves the basic values with the nonbasic columns whose values changed since the last call
@@ -2496,6 +2755,9 @@ public final class RevisedDualSimplex {
         new Presolve(n, rowIdx, rowVal, colIdx, colVal, colLen, cost, trueCost, boundLo, boundHi);
     boolean reduced = p.run();
     presolveReductions = p.counts();
+    if (Trace.OUT != null) {
+      p.trace();
+    }
     ops += p.ops();
     if (PRESOLVE_TRACE) {
       System.err.println(
@@ -2511,6 +2773,7 @@ public final class RevisedDualSimplex {
               + Arrays.toString(p.counts()));
     }
     if (!reduced) {
+      presolveInfeasible = BOUND_PROOF && p.infeasible();
       if (factorValid) {
         // the perturbation of a column may have changed sign
         computeDuals();
@@ -2606,12 +2869,24 @@ public final class RevisedDualSimplex {
     Presolve p = reducedBy;
     reducedLp = null;
     reducedBy = null;
+    presolveInfeasible = BOUND_PROOF && status == INFEASIBLE;
+    if (presolveInfeasible) {
+      // the ray of the reduced problem over the rows it kept, a proof here too when the
+      // reductions that changed those rows do not matter to it
+      double[] yr = red.farkas();
+      reducedRay = new double[m];
+      for (int k = 0; k < yr.length; k++) {
+        reducedRay[p.oldRow[k]] = yr[k];
+      }
+    }
     if (PRESOLVE_TRACE) {
       System.err.println("presolve reduced end status " + status + " pivots " + red.totalPivots);
     }
-    // the dual simplex keeps its basis dual feasible: an infeasible end or the limit leave a
-    // basis worth carrying over too, only an unbounded end does not
-    if (status == UNBOUNDED) {
+    // the dual simplex keeps its basis dual feasible: the limit leaves a basis worth carrying
+    // over, an unbounded end does not, and neither does an infeasible one when the proof is looked
+    // for with no costs (gosh: 11,581 more pivots from the basis carried over, 1,933 from the slack
+    // basis)
+    if (status == UNBOUNDED || presolveInfeasible) {
       return;
     }
     int nr = p.columnsLeft();
@@ -2695,6 +2970,27 @@ public final class RevisedDualSimplex {
     outsideValid = false;
     presolvedRows = mr;
     presolvedColumns = nr;
+    traceStart = true;
+  }
+
+  // the trace of the start from a postsolved basis: each nonbasic column at an artificial bound
+  // (A solve column reducedCost atUpper) and each basic column outside its bounds (B solve column
+  // value lower upper)
+  private void traceStart() {
+    for (int j = 0; j < cols; j++) {
+      if (row[j] < 0 && isArtificial(j, upper[j])) {
+        Trace.OUT.printf(java.util.Locale.ROOT, "A %d %d %.6g %b%n", traceSolve, j, d[j], upper[j]);
+      }
+    }
+    for (int r = 0; r < m; r++) {
+      int j = basis[r];
+      double v = beta[r];
+      double tol = 1e-7 * (1 + Math.abs(v));
+      if (v < lo[j] - tol || v > hi[j] + tol) {
+        Trace.OUT.printf(
+            java.util.Locale.ROOT, "B %d %d %.6g %.6g %.6g%n", traceSolve, j, v, lo[j], hi[j]);
+      }
+    }
   }
 
   // the order in which the crash gives away a slack row, by the kind of the slack (crashKind)
@@ -2866,6 +3162,9 @@ public final class RevisedDualSimplex {
    * weights not known yet are computed exactly.
    */
   private void factorize() {
+    if (Trace.OUT != null) {
+      Trace.factor(traceSolve, totalPivots, "-");
+    }
     outsideValid = false;
     int[][] ci = new int[m][];
     double[][] cv = new double[m][];
@@ -3084,6 +3383,7 @@ public final class RevisedDualSimplex {
 
   private int primalPivots(int limit) {
     infeasibleRow = -1;
+    boundRay = null;
     clearSkipped();
     // a clean-up of the perturbation that the last call left at its limit goes on with the costs
     // as given: perturbing them again here made a primal solve called with a limit of one pivot
@@ -3222,6 +3522,9 @@ public final class RevisedDualSimplex {
       upper[p] = leavesAtUpper;
       at[p] = leavesAtUpper ? hi[p] : lo[p];
       totalPivots++;
+      if (Trace.OUT != null) {
+        Trace.pivot(traceSolve, totalPivots, 3, q, p, r, 0, 0, 0);
+      }
       if (reset || devex[p] > DEVEX_RESET) {
         Arrays.fill(devex, 0, cols, 1);
       }

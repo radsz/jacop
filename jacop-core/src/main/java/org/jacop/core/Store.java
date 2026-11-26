@@ -212,6 +212,13 @@ public class Store {
    */
   public DomainChangeRecorder domainWatcher;
 
+  /**
+   * A second receiver of every domain change of an integer variable, for a search heuristic that
+   * tracks the variables changed by propagation (pick/dom) next to dom/wdeg, which owns {@link
+   * #domainWatcher}. Null by default, which costs one test per change.
+   */
+  public DomainChangeRecorder domainTracker;
+
   /** It stores constraint that has recently failed during store.consistency() execution. */
   public Constraint recentlyFailedConstraint;
 
@@ -609,8 +616,13 @@ public class Store {
       queueViews(v, pruningEvent);
     }
 
-    if (domainWatcher != null && v instanceof IntVar x) {
-      domainWatcher.domainChanged(x, pruningEvent);
+    if ((domainWatcher != null || domainTracker != null) && v instanceof IntVar x) {
+      if (domainWatcher != null) {
+        domainWatcher.domainChanged(x, pruningEvent);
+      }
+      if (domainTracker != null) {
+        domainTracker.domainChanged(x, pruningEvent);
+      }
     }
   }
 
@@ -638,6 +650,9 @@ public class Store {
       }
       if (domainWatcher != null) {
         domainWatcher.domainChanged(view, event);
+      }
+      if (domainTracker != null) {
+        domainTracker.domainChanged(view, event);
       }
     }
   }
@@ -1103,6 +1118,26 @@ public class Store {
   }
 
   /**
+   * It gives an id that no variable of this store has yet: the given id, or the given id followed
+   * by primes. The variables that a reformulation creates take their ids from it, so that they
+   * never share an id with a variable of the model, which would hide one of them from {@link
+   * #variablesHashMap} and so its constraints from {@link #getConstraints()}.
+   *
+   * @param id the preferred id.
+   * @return an id unused in this store.
+   */
+  public String freshVariableId(String id) {
+    if (!variablesHashMap.containsKey(id)) {
+      return id;
+    }
+    StringBuilder fresh = new StringBuilder(id).append('\'');
+    while (variablesHashMap.containsKey(fresh.toString())) {
+      fresh.append('\'');
+    }
+    return fresh.toString();
+  }
+
+  /**
    * This function sets the prefix of the automatically generated names for noname variables.
    *
    * @param idPrefix prefix of all variables with automatically generated names.
@@ -1300,9 +1335,12 @@ public class Store {
 
     Var previousVar = variablesHashMap.put(v.id(), v);
 
-    if (ASSERTS_ENABLED && previousVar != null) {
-      throw new IllegalStateException(
-          String.valueOf("Two variables have the same id " + previousVar + " " + v));
+    if (previousVar != null && previousVar != v) {
+      // Two variables of the API may share a name. The earlier one stays in the map under a key of
+      // its own, since the map is also the list of the Boolean variables and of the variables
+      // whose constraints getConstraints() returns: without it, LCG, presolve and local search
+      // did not see the earlier variable and its constraints.
+      variablesHashMap.put(freshVariableId(v.id()), previousVar);
     }
 
     if (v.storeIndex != -1 && vars[v.storeIndex] == v) {

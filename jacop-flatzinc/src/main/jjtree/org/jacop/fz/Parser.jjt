@@ -72,12 +72,21 @@ public class Parser {
 
     // a name is repeated at every use of it (and a constraint name at every constraint): one
     // String per name, not one per token, keeps the parse tree of the largest models a third
-    // smaller (ma-path-finding, rcpsp-wet-diverse); cleared once the model is read
-    private final java.util.HashMap<String, String> names = new java.util.HashMap<String, String>();
+    // smaller (ma-path-finding, rcpsp-wet-diverse); cleared once the model is read. The nodes of an
+    // identifier share its Ident, which keeps the variable it names (Tables.getVariable)
+    private final java.util.HashMap<String, Ident> names = new java.util.HashMap<String, Ident>();
 
     String name(Token t) {
-	String known = names.putIfAbsent(t.image, t.image);
-	return known == null ? t.image : known;
+	return ident(t).name;
+    }
+
+    Ident ident(Token t) {
+	Ident known = names.get(t.image);
+	if (known == null) {
+	    known = new Ident(t.image);
+	    names.put(t.image, known);
+	}
+	return known;
     }
 
     // a declaration is read once, when its variable, parameter or array is made; only the
@@ -191,6 +200,9 @@ public class Parser {
 
     private void modelRead(SimpleNode model) throws Throwable {
 	dict.removeAliasFromSearch();
+	// an objective that is no variable or parameter of the model is an error of the model
+	Solve.checkObjective(model, dict);
+	cc.removeEntailedDisequalities(model);
 	// generate constraints
 	cc.generateAllConstraints(model);
 	// search
@@ -878,7 +890,7 @@ void scalar_flat_expr() #ScalarFlatExpr:
 	  jjtThis.setInt(aa.getIndex());
 	}
     | t = <IDENT> 
-	{ jjtThis.setType(2); jjtThis.setIdent(name(t)); }
+	{ jjtThis.setType(2); jjtThis.setIdent(ident(t)); }
     | t = bool_literal() 
 	{ jjtThis.setType(1); 
 	  int val = Boolean.parseBoolean(t.image)==true?1:0;
@@ -1035,10 +1047,22 @@ void set_literal() #SetLiteral:
 //     '[' non_array_flat_exprs ']'
 //   | '[' ']'
 
+// The int literals of an array literal are kept in one int[] while no other element comes
+// (PackedInts): a table of pigeonsPlus-11-07 (XCSP 2017) has 70 million entries, 3.4 GB as one
+// node each.
 void array_literal() #ArrayLiteral:
-{}
+{ PackedInts ints = new PackedInts(); }
 {
-    <LBOX> [ non_array_flat_exprs() ] <RBOX>
+    <LBOX> [ array_element(ints) ( <COMMA> array_element(ints) )* ] <RBOX>
+    { ints.close(jjtThis); }
+}
+
+void array_element(PackedInts ints) :
+{ Token t; }
+{
+    LOOKAHEAD(<INT_LITERAL> (<COMMA> | <RBOX>))
+    t=<INT_LITERAL> { ints.add(intLiteral(t), jjtree); }
+    | { ints.unpack(jjtree); } non_array_flat_expr()
 }
 
 void set_element() #SetElement:

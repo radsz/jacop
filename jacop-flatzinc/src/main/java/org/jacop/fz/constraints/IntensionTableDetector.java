@@ -214,8 +214,8 @@ public class IntensionTableDetector implements ParserTreeConstants {
    * @param skipped constraint nodes another detector already replaced; a group holding one is left.
    */
   public void detect(SimpleNode astTree, Set<SimpleNode> skipped) {
+    output = null;
     List<Item> items = new ArrayList<>();
-    Map<IntVar, Integer> occurrences = new IdentityHashMap<>();
     Set<IntVar> pinned = Collections.newSetFromMap(new IdentityHashMap<>());
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
@@ -227,7 +227,6 @@ public class IntensionTableDetector implements ParserTreeConstants {
             Item it = Item.read(support, (ASTConstElem) item);
             if (it == null || skipped.contains(item)) {
               // its variables stay outer: the constraint is posted as it is
-              PartialCopyDetector.countVariables(support, item, occurrences);
               for (int k = 0; k < item.jjtGetNumChildren(); k++) {
                 collectAll((SimpleNode) item.jjtGetChild(k), pinned);
               }
@@ -287,18 +286,32 @@ public class IntensionTableDetector implements ParserTreeConstants {
     }
   }
 
+  // the output variables, read once per detection (the output arrays do not change meanwhile)
+  private Set<org.jacop.core.Var> output;
+
   private boolean isInternal(IntVar v, Set<IntVar> pinned) {
-    return !v.singleton() && !pinned.contains(v) && !support.dictionary.isOutput(v);
+    if (output == null) {
+      output = support.dictionary.outputSnapshot();
+    }
+    return !v.singleton() && !pinned.contains(v) && !output.contains(v);
   }
 
   private void collectAll(SimpleNode node, Set<IntVar> into) {
-    Map<IntVar, Integer> found = new IdentityHashMap<>();
-    collectAll(node, found);
-    into.addAll(found.keySet());
+    collected.clear();
+    collectAll(node, collected);
+    into.addAll(collected.keySet());
   }
+
+  // the variables collectAll finds, reused: a map per argument of each of the 1.9 million rows of
+  // PB 2006 haplotype simp-nonunif
+  private final Map<IntVar, Integer> collected = new IdentityHashMap<>();
 
   private void collectAll(SimpleNode node, Map<IntVar, Integer> found) {
     PartialCopyDetector.countVariables(support, node, found);
+    if (node.getId() == JJTARRAYLITERAL) {
+      // countVariables read the elements
+      return;
+    }
     if (node instanceof ASTSolveExpr e && e.getIdent() != null) {
       // the objective: a variable, or an element of an array of variables (all of it is pinned)
       IntVar v = support.dictionary.getVariable(e.getIdent());
@@ -403,7 +416,7 @@ public class IntensionTableDetector implements ParserTreeConstants {
         outer.size() < 2 ? MAX_TUPLES : Math.clamp(2 * smallest, MAX_TUPLES, MAX_LARGE_TUPLES);
     long wanted = Math.max(MAX_NODES, 4L * rowLimit);
     long nodeLimit = Math.min(wanted, BUDGET - nodes);
-    String key = signature(bound, vars);
+    String key = signature(bound, vars, outer.size());
     int[][] rows = cache.get(key);
     if (rows == null) {
       Tabulator t = new Tabulator(vars, outer.size(), bound, nodeLimit, rowLimit);
@@ -442,10 +455,10 @@ public class IntensionTableDetector implements ParserTreeConstants {
     }
   }
 
-  // the group with its variables replaced by their places and domains: groups with the same
-  // signature have the same rows
-  private static String signature(Bound[] bounds, IntVar[] vars) {
-    StringBuilder key = new StringBuilder();
+  // the group with its variables replaced by their places and domains, and the number of outer
+  // variables, the columns of its rows: groups with the same signature have the same rows
+  private static String signature(Bound[] bounds, IntVar[] vars, int outer) {
+    StringBuilder key = new StringBuilder().append(outer).append(':');
     for (Bound b : bounds) {
       key.append(b.item.op.ordinal()).append('(');
       for (int i = 0; i < b.at.length; i++) {

@@ -79,6 +79,8 @@ public class VariablesParameters implements ParserTreeConstants {
   int lowInterval;
   // the last interval read when it was narrowed to JaCoP's range, or null
   private ASTIntTiExprTail clampedInterval;
+  // the narrowing of a declared domain {a, b, ...} with values beyond the range, without its ident
+  private Tables.ClampedDomain clampedList;
   int highInterval;
   double lowFloatInterval;
   double highFloatInterval;
@@ -128,11 +130,17 @@ public class VariablesParameters implements ParserTreeConstants {
       System.err.println(
           "Minimal value for " + varKind + " " + ident + " too low; changed to " + MIN_FLOAT);
       lowFloatInterval = MIN_FLOAT;
+      dictionary.noteNarrowedFloatDomain();
     }
     if (highFloatInterval > MAX_FLOAT) {
       System.err.println(
           "Maximal value for " + varKind + " " + ident + " too high; changed to " + MAX_FLOAT);
       highFloatInterval = MAX_FLOAT;
+      dictionary.noteNarrowedFloatDomain();
+    }
+    if (lowFloatInterval > highFloatInterval) {
+      // the whole domain is beyond JaCoP's float range: no value of it remains
+      throw Store.failException;
     }
   }
 
@@ -184,14 +192,51 @@ public class VariablesParameters implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Leaves out of the domain {a, b, ...} of an integer variable the values beyond JaCoP's integer
+   * range, as a declared interval is narrowed to it, and notes the narrowing.
+   */
+  private void narrowIntList() {
+    ArrayList<Integer> within = new ArrayList<>();
+    for (Integer e : intList) {
+      if (e >= IntDomain.MIN_INT && e <= IntDomain.MAX_INT) {
+        within.add(e);
+      }
+    }
+    if (within.isEmpty()) {
+      throw new ArithmeticException(
+          "domain "
+              + intList
+              + " lies outside the integer range "
+              + IntDomain.MIN_INT
+              + ".."
+              + IntDomain.MAX_INT
+              + " supported by JaCoP");
+    }
+    if (within.size() < intList.size()) {
+      int low = intList.stream().mapToInt(Integer::intValue).min().getAsInt();
+      int high = intList.stream().mapToInt(Integer::intValue).max().getAsInt();
+      clampedList =
+          new Tables.ClampedDomain(
+              null, low + ".." + high, low < IntDomain.MIN_INT, high > IntDomain.MAX_INT, false);
+      intList = within;
+    }
+  }
+
   private void noteClampedDomain(String ident) {
+    if (clampedList != null) {
+      dictionary.noteClampedDomain(
+          new Tables.ClampedDomain(
+              ident, clampedList.declared(), clampedList.low(), clampedList.high(), false));
+    }
     if (clampedInterval != null) {
       dictionary.noteClampedDomain(
           new Tables.ClampedDomain(
               ident,
               clampedInterval.getClamped(),
               clampedInterval.lowClamped(),
-              clampedInterval.highClamped()));
+              clampedInterval.highClamped(),
+              false));
     }
   }
 
@@ -279,6 +324,10 @@ public class VariablesParameters implements ParserTreeConstants {
         ident = ((ASTVarDeclItem) node).getIdent();
         varInt = new IntVar(store, ident, MIN_INT, MAX_INT);
         initAndRegisterIntVar(store, ident, varInt, node, initChild, table, outputVar);
+        if (table.getVariable(ident) == varInt && !varInt.singleton()) {
+          // an unbounded declaration is narrowed to JaCoP's range too
+          dictionary.noteUnboundedDomain(ident);
+        }
         break;
       case 1: // int interval
         generateIntIntervalVariable(store, node, initChild, table, outputVar);
@@ -448,6 +497,7 @@ public class VariablesParameters implements ParserTreeConstants {
         pose(store, new AeqS(aVar, setValue));
       } else {
         SetVar initSetVar = getSetFlatExpr_var(store, node, initChild);
+        table.noteDeclaredEquality(aVar, initSetVar);
         pose(store, new AeqB(aVar, initSetVar));
       }
     }
@@ -481,6 +531,9 @@ public class VariablesParameters implements ParserTreeConstants {
       }
     }
     table.addSearchFloatVar(aVar);
+    if (annotations.contains("is_defined_var") || annotations.contains("var_is_introduced")) {
+      table.addIntroducedFloatVar(aVar);
+    }
     if (outputVar) {
       table.addOutVar(aVar);
     }
@@ -613,10 +666,14 @@ public class VariablesParameters implements ParserTreeConstants {
       boolean outputArray,
       OutputArrayAnnotation outArrayAnn) {
     int size = computeArraySize(node);
-    IntVar[] varArrayInt =
-        initChild < node.jjtGetNumChildren()
-            ? getScalarFlatExpr_ArrayVar(store, node, initChild)
-            : createIntVarArray(store, ident, size, MIN_INT, MAX_INT, table);
+    IntVar[] varArrayInt;
+    if (initChild < node.jjtGetNumChildren()) {
+      varArrayInt = getScalarFlatExpr_ArrayVar(store, node, initChild);
+    } else {
+      varArrayInt = createIntVarArray(store, ident, size, MIN_INT, MAX_INT, table);
+      // unbounded declarations are narrowed to JaCoP's range too
+      dictionary.noteUnboundedDomain(ident);
+    }
     registerIntArray(table, ident, varArrayInt, outputArray, outArrayAnn);
   }
 
@@ -934,6 +991,7 @@ public class VariablesParameters implements ParserTreeConstants {
   // 10- range set {|1..n, m, ...|}
   int getType(SimpleNode node) {
     clampedInterval = null;
+    clampedList = null;
     SimpleNode child = (SimpleNode) node.jjtGetChild(0);
     if (child.getId() == JJTINTTIEXPRTAIL) {
       return getTypeFromIntTail((ASTIntTiExprTail) child);
@@ -960,6 +1018,7 @@ public class VariablesParameters implements ParserTreeConstants {
         break;
       case 2:
         extractIntList((ASTIntLiterals) child.jjtGetChild(0));
+        narrowIntList();
         break;
       default:
         throw new RuntimeException("Internal error in " + getClass().getName());
@@ -1146,7 +1205,8 @@ public class VariablesParameters implements ParserTreeConstants {
     }
     int low = ((ASTIntFlatExpr) setLiteral.jjtGetChild(0)).getInt();
     int high = ((ASTIntFlatExpr) setLiteral.jjtGetChild(1)).getInt();
-    return new IntervalDomain(low, high);
+    // 1..0 is the index set of an empty array, which IntervalDomain(1, 0) refuses under asserts
+    return low > high ? new IntervalDomain() : new IntervalDomain(low, high);
   }
 
   private IntDomain parseSetLiteralList(SimpleNode setLiteral) {
@@ -1461,6 +1521,11 @@ public class VariablesParameters implements ParserTreeConstants {
   int[] getArrayOfScalarFlatExpr(SimpleNode node, int index, int size) {
     SimpleNode child = (SimpleNode) node.jjtGetChild(index);
     int count = child.jjtGetNumChildren();
+    int[] packed = child.packedInts();
+    if (packed != null && count == size) {
+      // the declaration is dropped once read, and nothing changes a parameter array
+      return packed;
+    }
     if (count == size) {
       int[] aa = new int[size];
       for (int i = 0; i < count; i++) {

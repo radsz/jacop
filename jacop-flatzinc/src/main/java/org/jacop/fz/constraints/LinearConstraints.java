@@ -36,6 +36,7 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.IntStream;
 import org.jacop.constraints.AndBoolSimple;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.LinearBool;
@@ -106,7 +107,7 @@ class LinearConstraints implements ParserTreeConstants {
     // If a linear term contains only constants and can be evaluated
     // check if satisfied and do not generate constraint
     if (par3.min() == par3.max()) {
-      Integer sum = evaluateConstantLinearTerm(p1, p2);
+      Long sum = evaluateConstantLinearTerm(p1, p2);
       if (sum != null) {
         if (sum == par3.min()) {
           return;
@@ -118,7 +119,10 @@ class LinearConstraints implements ParserTreeConstants {
 
     if (allWeightsOne(p1)) {
       poseSumBool(p2, "==", par3);
-    } else if (p2.length >= 3 && boolSum(p2) && !Arrays.asList(p2).contains(par3)) {
+    } else if (p2.length >= 3
+        && boolSum(p2)
+        && !Arrays.asList(p2).contains(par3)
+        && !sumsExceedInt(p1)) {
       support.pose(
           par3.singleton()
               ? new LinearBool(p2, p1, "==", par3.value())
@@ -217,13 +221,43 @@ class LinearConstraints implements ParserTreeConstants {
     }
     int p3 = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
     boolean p2Fixed = allConstants(p2);
-    int s = 0;
+    long s = 0;
     if (p2Fixed) {
       for (int el = 0; el < p2.length; el++) {
-        s += p2[el].min() * p1[el];
+        s += (long) p2[el].min() * p1[el];
       }
     }
     IntVar p4 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
+
+    Boolean decided = decidedBeyondInt(operation, p1, p2, p3);
+    if (decided != null) {
+      if (isReified || !decided) {
+        p4.domain.inValue(store.level, p4, decided ? 1 : 0);
+      }
+      return;
+    }
+
+    if (p2.length == 0) {
+      // the empty sum is the constant test 0 rel p3, which LinearInt rejects
+      boolean holds =
+          switch (operation) {
+            case Support.EQ -> p3 == 0;
+            case Support.NE -> p3 != 0;
+            case Support.LT -> 0 < p3;
+            case Support.LE -> 0 <= p3;
+            case Support.GT -> 0 > p3;
+            case Support.GE -> 0 >= p3;
+            default ->
+                throw new IllegalArgumentException(
+                    "%% ERROR: Relation in linear constraint not supported.");
+          };
+      if (isReified) {
+        p4.domain.inValue(store.level, p4, holds ? 1 : 0);
+      } else if (!holds) {
+        p4.domain.inValue(store.level, p4, 0);
+      }
+      return;
+    }
 
     switch (operation) {
       case Support.EQ:
@@ -259,7 +293,7 @@ class LinearConstraints implements ParserTreeConstants {
   }
 
   private void intLinReifEq(
-      int[] p1, IntVar[] p2, int p3, IntVar p4, boolean p2Fixed, int s, boolean isReified) {
+      int[] p1, IntVar[] p2, int p3, IntVar p4, boolean p2Fixed, long s, boolean isReified) {
     if (p2Fixed) {
       handleIntLinReifEqFixed(p4, p3, s, isReified);
       return;
@@ -286,7 +320,7 @@ class LinearConstraints implements ParserTreeConstants {
     }
   }
 
-  private void handleIntLinReifEqFixed(IntVar p4, int p3, int s, boolean isReified) {
+  private void handleIntLinReifEqFixed(IntVar p4, int p3, long s, boolean isReified) {
     if (isReified) {
       p4.domain.inValue(store.level, p4, s == p3 ? 1 : 0);
     } else if (s != p3) {
@@ -437,10 +471,18 @@ class LinearConstraints implements ParserTreeConstants {
       // very special case: positive weighted sum of 0/1 variables <= 0 =>  (all p2's zero <=>
       // p4)
       if (isReified) {
-        if (support.options.useSat()) {
-          sat.generateAllZeroReif(support.unique(p2), p4);
+        // a variable of weight 0 does not take part in the sum
+        IntVar[] weighted =
+            IntStream.range(0, p2.length)
+                .filter(i -> p1[i] != 0)
+                .mapToObj(i -> p2[i])
+                .toArray(IntVar[]::new);
+        if (weighted.length == 0) {
+          p4.domain.inValue(store.level, p4, 1);
+        } else if (support.options.useSat()) {
+          sat.generateAllZeroReif(support.unique(weighted), p4);
         } else {
-          poseAllZeroReif(support.unique(p2), p4);
+          poseAllZeroReif(support.unique(weighted), p4);
         }
       } else {
         // This case doesn't exist in _imp version
@@ -513,16 +555,27 @@ class LinearConstraints implements ParserTreeConstants {
     int p3 = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
     if (repeated(p2)) {
       // merged aliases (CommonSubexpressions) can name a variable twice
-      Map<IntVar, Integer> terms = new LinkedHashMap<>();
+      Map<IntVar, Long> terms = new LinkedHashMap<>();
       for (int i = 0; i < p2.length; i++) {
-        terms.merge(p2[i], p1[i], Integer::sum);
+        terms.merge(p2[i], (long) p1[i], Long::sum);
       }
       terms.values().removeIf(c -> c == 0);
-      p2 = terms.keySet().toArray(new IntVar[0]);
-      p1 = terms.values().stream().mapToInt(Integer::intValue).toArray();
+      // a merged coefficient beyond int is left to the constraint, which merges in long
+      if (terms.values().stream().allMatch(c -> c == (int) (long) c)) {
+        p2 = terms.keySet().toArray(new IntVar[0]);
+        p1 = terms.values().stream().mapToInt(Long::intValue).toArray();
+      }
     }
 
-    Integer s = evaluateConstantLinearTerm(p1, p2);
+    Boolean decided = decidedBeyondInt(operation, p1, p2, p3);
+    if (decided != null) {
+      if (!decided) {
+        throw Store.failException;
+      }
+      return;
+    }
+
+    Long s = evaluateConstantLinearTerm(p1, p2);
     boolean p2Fixed = s != null;
 
     if (!p2Fixed && (operation == Support.EQ || operation == Support.LE)) {
@@ -606,7 +659,7 @@ class LinearConstraints implements ParserTreeConstants {
     int_lin_relationEq(p1, p2, p3, null, false);
   }
 
-  private void int_lin_relationEq(int[] p1, IntVar[] p2, int p3, Integer s, boolean p2Fixed)
+  private void int_lin_relationEq(int[] p1, IntVar[] p2, int p3, Long s, boolean p2Fixed)
       throws FailException {
     if (p2Fixed) {
       if (s == p3) {
@@ -766,7 +819,7 @@ class LinearConstraints implements ParserTreeConstants {
     }
   }
 
-  private void int_lin_relationNe(int[] p1, IntVar[] p2, int p3, Integer s, boolean p2Fixed)
+  private void int_lin_relationNe(int[] p1, IntVar[] p2, int p3, Long s, boolean p2Fixed)
       throws FailException {
     if (p2Fixed) {
       if (s != p3) {
@@ -810,7 +863,7 @@ class LinearConstraints implements ParserTreeConstants {
     }
   }
 
-  private void int_lin_relationLt(int[] p1, IntVar[] p2, int p3, Integer s, boolean p2Fixed)
+  private void int_lin_relationLt(int[] p1, IntVar[] p2, int p3, Long s, boolean p2Fixed)
       throws FailException {
     if (p2Fixed) {
       if (s < p3) {
@@ -839,7 +892,7 @@ class LinearConstraints implements ParserTreeConstants {
     }
   }
 
-  private void int_lin_relationLe(int[] p1, IntVar[] p2, int p3, Integer s, boolean p2Fixed)
+  private void int_lin_relationLe(int[] p1, IntVar[] p2, int p3, Long s, boolean p2Fixed)
       throws FailException {
     if (p2Fixed) {
       if (s <= p3) {
@@ -950,6 +1003,10 @@ class LinearConstraints implements ParserTreeConstants {
         return false;
       }
     }
+    if (sumsExceedInt(p1) && (other != -1 || !"<=".equals(rel))) {
+      // LinearBool holds its sums in int; LinearInt holds them in long
+      return false;
+    }
     if (other == -1) {
       if ("<=".equals(rel) && sumsExceedInt(p1)) {
         poseLinearBoolLeFixingHeavy(p1, p2, p3);
@@ -1040,14 +1097,26 @@ class LinearConstraints implements ParserTreeConstants {
   }
 
   private void int_lin_relationLeSingleWeight(int w, IntVar x, int p3) {
+    if (w == 0) {
+      // 0 * x <= p3 is the constant test 0 <= p3
+      if (p3 < 0) {
+        throw Store.failException;
+      }
+      return;
+    }
     if (w < 0) {
-      int rhsValue = (int) Math.round(Math.ceil((float) p3 / (float) w));
+      // in long: the bound of -x <= Integer.MIN_VALUE does not fit an int
+      long bound = Math.ceilDiv((long) p3, (long) w);
+      if (bound > Integer.MAX_VALUE) {
+        throw Store.failException;
+      }
+      int rhsValue = (int) bound;
       x.domain.inMin(store.level, x, rhsValue);
       if (support.options.debug()) {
         FzConsole.println("Pruned variable " + x + " to be >= " + rhsValue);
       }
     } else {
-      int rhsValue = (int) Math.round(Math.floor((float) p3 / (float) w));
+      int rhsValue = Math.floorDiv(p3, w);
       x.domain.inMax(store.level, x, rhsValue);
       if (support.options.debug()) {
         FzConsole.println("% Pruned variable " + x + " to be <= " + rhsValue);
@@ -1246,19 +1315,59 @@ class LinearConstraints implements ParserTreeConstants {
   }
 
   /**
+   * Decides a short row whose sum or constant lies beyond int by the bounds of its terms, computed
+   * in long. The two-variable constraints such rows are posted as add their bounds in int and
+   * reject them; with unit weights and variables within the domain range, such a row is always
+   * decided.
+   *
+   * @param operation the relation of the row
+   * @param weights the weights
+   * @param vars the variables
+   * @param c the right-hand side
+   * @return whether the row holds, or null when it is not decided or fits in int
+   */
+  private static Boolean decidedBeyondInt(int operation, int[] weights, IntVar[] vars, int c) {
+    if (vars.length == 0 || vars.length > 3) {
+      return null;
+    }
+    long lo = 0;
+    long hi = 0;
+    for (int i = 0; i < vars.length; i++) {
+      long a = (long) weights[i] * vars[i].min();
+      long b = (long) weights[i] * vars[i].max();
+      lo += Math.min(a, b);
+      hi += Math.max(a, b);
+    }
+    if (lo >= Integer.MIN_VALUE
+        && hi <= Integer.MAX_VALUE
+        && c >= IntDomain.MIN_INT
+        && c <= IntDomain.MAX_INT) {
+      return null;
+    }
+    return switch (operation) {
+      case Support.EQ -> c < lo || c > hi ? Boolean.FALSE : lo == hi ? Boolean.TRUE : null;
+      case Support.NE -> c < lo || c > hi ? Boolean.TRUE : lo == hi ? Boolean.FALSE : null;
+      case Support.LE -> hi <= c ? Boolean.TRUE : lo > c ? Boolean.FALSE : null;
+      case Support.LT -> hi < c ? Boolean.TRUE : lo >= c ? Boolean.FALSE : null;
+      default -> null;
+    };
+  }
+
+  /**
    * Evaluates a linear term if all variables are constants.
    *
    * @param weights the weights array
    * @param vars the variables array
    * @return the computed sum if all variables are constants, or null if not all are constants
    */
-  private Integer evaluateConstantLinearTerm(int[] weights, IntVar[] vars) {
+  private Long evaluateConstantLinearTerm(int[] weights, IntVar[] vars) {
     if (!allConstants(vars)) {
       return null;
     }
-    int sum = 0;
+    // in long: the terms of int coefficients and values overflow int
+    long sum = 0;
     for (int i = 0; i < vars.length; i++) {
-      sum += vars[i].min() * weights[i];
+      sum += (long) vars[i].min() * weights[i];
     }
     return sum;
   }

@@ -526,12 +526,29 @@ public class Subcircuit extends Alldiff {
    * @return the constraints, still to be imposed
    */
   public static List<Constraint> decomposition(Store store, IntVar[] list) {
+    return decomposition(store, list, new IntVar[list.length]);
+  }
+
+  /**
+   * Returns the decomposition of {@link #decomposition(Store, IntVar[])} and its position
+   * variables. The successors do not fix the positions, since any node of the circuit may be at
+   * position 1, and the decomposition finds a second cycle only once the positions are fixed: a
+   * search must label them after the successors, or it accepts successors with two cycles.
+   *
+   * @param store the store of the auxiliary variables
+   * @param list the successors, numbered from 1
+   * @param position receives the position variable of each node, as long as list
+   * @return the constraints, still to be imposed
+   */
+  public static List<Constraint> decomposition(Store store, IntVar[] list, IntVar[] position) {
     int n = list.length;
+    if (position.length != n) {
+      throw new IllegalArgumentException("one position per successor is needed");
+    }
     List<Constraint> out = new ArrayList<>();
-    IntVar[] position = new IntVar[n];
     IntVar[] notFirst = new IntVar[n];
     for (int i = 0; i < n; i++) {
-      position[i] = new IntVar(store, list[i].id() + "_position", 0, n);
+      position[i] = new IntVar(store, store.freshVariableId(list[i].id() + "_position"), 0, n);
       out.add(new XgteqC(list[i], 1));
       out.add(new XlteqC(list[i], n));
       IntVar outside = new IntVar(store, 0, 1);

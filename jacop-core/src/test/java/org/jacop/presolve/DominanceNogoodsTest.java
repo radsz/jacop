@@ -31,7 +31,9 @@
 package org.jacop.presolve;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -182,6 +184,27 @@ class DominanceNogoodsTest {
     store.impose(new LinearInt(new IntVar[] {a, b, p}, new int[] {1, 2, -1}, "==", 0));
     DominanceNogoods.Outcome o = new DominanceNogoods(store, p, true).run();
     assertThat(o.skipped()).isNotNull();
+  }
+
+  @Test
+  void definitionsOfLongEqualitiesTakeLinearTime() {
+    // p = sum(x) with p narrowed below the sum, so every term of the row is tried as the defined
+    // variable; each try summed the whole row (60,000 terms: 25 s, rcpsp-wet-diverse-like rows)
+    int n = 60_000;
+    Store store = new Store();
+    IntVar[] x = new IntVar[n + 1];
+    int[] w = new int[n + 1];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, 0, 1);
+      w[i] = 1;
+    }
+    IntVar p = new IntVar(store, "p", 0, 3);
+    x[n] = p;
+    w[n] = -1;
+    store.impose(new LinearInt(x, w, "==", 0));
+    assertThat(store.consistency()).isTrue();
+    assertTimeoutPreemptively(
+        Duration.ofSeconds(10), () -> new DominanceNogoods(store, p, false).run());
   }
 
   private static Integer best(Model model, Iterable<List<Integer>> solutions) {
@@ -349,5 +372,47 @@ class DominanceNogoodsTest {
     search.getSolutionListener().searchAll(true);
     search.getSolutionListener().recordSolutions(false);
     search.labeling(store, new SimpleSelect<>(vars, null, new IndomainRandom<>(seed)));
+  }
+
+  @Test
+  void theSearchForNogoodsStopsAtTheDeadlineOfTheRun() {
+    // the search had its own budget of 1 s but did not look at the time-out of the run
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 0, 1);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar p = new IntVar(store, "p", 0, 9);
+    store.impose(new LinearInt(new IntVar[] {a, b}, new int[] {3, 3}, "<=", 3));
+    store.impose(new LinearInt(new IntVar[] {a, b, p}, new int[] {5, 4, -1}, "==", 0));
+    assertThat(store.consistency()).isTrue();
+    DominanceNogoods late = new DominanceNogoods(store, p, false);
+    late.setDeadline(System.nanoTime() - 1);
+    DominanceNogoods.Outcome o = late.run();
+    assertThat(o.nogoods()).isZero();
+    assertThat(o.complete()).isFalse();
+    // b = 1 and a = 0 stays
+    b.domain.in(store.level, b, 1, 1);
+    assertThat(store.consistency()).isTrue();
+  }
+
+  @Test
+  void aReificationWithAFixedBooleanDefinesNoVariable() {
+    // with r fixed, the row of r <-> h <= a1 (its left-hand side unchanged) lost r and was taken
+    // as the equality a1 = h, so a1 followed h past its maximum: the nogoods dropped h = 0 with
+    // a3 < 3 and the optimum 11 (a1 = 3, a3 = 0)
+    Store store = new Store();
+    IntVar a1 = new IntVar(store, "a1", 0, 3);
+    IntVar a3 = new IntVar(store, "a3", 0, 3);
+    IntVar h = new IntVar(store, "h", 0, 1);
+    IntVar r = new IntVar(store, "r", 1, 1);
+    IntVar obj = new IntVar(store, "obj", -100, 100);
+    store.impose(new Reified(new XlteqY(h, a1), r));
+    store.impose(new XlteqY(h, a3));
+    store.impose(new LinearInt(new IntVar[] {a1, a3, obj}, new int[] {2, -1, -1}, "==", -5));
+    assertThat(store.consistency()).isTrue();
+    new DominanceNogoods(store, obj, false).run();
+    assertThat(store.consistency()).isTrue();
+    int[] best = {Integer.MIN_VALUE};
+    search(store, new IntVar[] {a1, a3, h, obj}, 1, () -> best[0] = Math.max(best[0], obj.value()));
+    assertThat(best[0]).isEqualTo(11);
   }
 }

@@ -42,6 +42,7 @@ import java.util.Map;
 import java.util.Set;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.XeqY;
 import org.jacop.core.IntVar;
 import org.jacop.fz.ASTConstElem;
 import org.jacop.fz.ASTScalarFlatExpr;
@@ -76,6 +77,8 @@ import org.jacop.fz.SimpleNode;
  * @version 5.0
  */
 public class CardinalityDetector implements ParserTreeConstants {
+
+  private static final Set<String> GATE_KINDS = Set.of("int_eq_reif");
 
   // fewest literals a linear constraint must have to be read as a count
   static final int MIN_COUNT_SIZE = 2;
@@ -168,6 +171,10 @@ public class CardinalityDetector implements ParserTreeConstants {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
+    // the counted literals are int_eq_reif constraints: a model without them is not read
+    if (!support.hasConstraint(astTree, GATE_KINDS)) {
+      return;
+    }
     support.forEachConstraint(astTree, this::collect);
     if (literals.isEmpty()) {
       return;
@@ -298,6 +305,9 @@ public class CardinalityDetector implements ParserTreeConstants {
       counter[v - min] =
           counts == null ? new IntVar(support.store, 0, n) : counter(counts, n, used);
     }
+    if (support.options.proof() != null) {
+      separateCounters(support, g.x, counter);
+    }
     GCC gcc = new GCC(g.x, counter, min);
     // redundant, so degree-based variable selections see the degrees of the model
     gcc.setDegreeWeight(0);
@@ -310,6 +320,30 @@ public class CardinalityDetector implements ParserTreeConstants {
       postImpliedSums(g.x, counter, min);
     }
     return true;
+  }
+
+  /**
+   * Under --proof, gives a counter that is also a counted variable (the magic sequences of nmseq),
+   * or that counts two values, a copy linked by an equality. The flow reasons of GCC are then cuts
+   * over the variables' values and the counters' bounds apart, which a proof derives; a variable in
+   * both roles made reasons that fold several rounds of the self-counting fixpoint, which no cut of
+   * one flow gives, so the OPB model left the GCC out and the proof stopped.
+   *
+   * @param support the support of the store
+   * @param x the counted variables
+   * @param counters the counters, whose shared entries are replaced by their copies
+   */
+  static void separateCounters(Support support, IntVar[] x, IntVar[] counters) {
+    Set<IntVar> counted = Collections.newSetFromMap(new IdentityHashMap<>());
+    counted.addAll(Arrays.asList(x));
+    Set<IntVar> used = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (int i = 0; i < counters.length; i++) {
+      IntVar c = counters[i];
+      if (!c.singleton() && (counted.contains(c) || !used.add(c))) {
+        counters[i] = new IntVar(support.store, c.dom().cloneLight());
+        support.pose(new XeqY(c, counters[i]));
+      }
+    }
   }
 
   // whether some counter is also a counted variable, as in a self-describing sequence

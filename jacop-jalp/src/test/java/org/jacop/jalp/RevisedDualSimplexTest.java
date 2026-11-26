@@ -520,6 +520,43 @@ class RevisedDualSimplexTest {
     assertThat(lp.pivots()).isEqualTo(lp.reducedPivots());
   }
 
+  /**
+   * A row of n column singletons that differ in cost alone took n^2 steps at presolve: the
+   * implied-free test of each singleton read the whole row (40,000 terms of a FlatZinc sum, 9 s),
+   * and the search for parallel columns tried every earlier column of the same pattern (50,000
+   * columns, 16 s).
+   */
+  @Test
+  void columnSingletonsOfALongRowArePresolvedInLinearTime() {
+    int n = 100_000;
+    int[] idx = new int[n];
+    double[] val = new double[n];
+    double[] cost = new double[n];
+    for (int j = 0; j < n; j++) {
+      idx[j] = j;
+      val[j] = 1;
+      cost[j] = 1 + (double) j / n;
+    }
+    RevisedDualSimplex lp =
+        new RevisedDualSimplex(
+            new int[][] {idx},
+            new double[][] {val},
+            new double[] {3},
+            new double[] {Double.POSITIVE_INFINITY},
+            cost,
+            true);
+    for (int j = 0; j < n; j++) {
+      lp.setBounds(j, 0, 1);
+    }
+    int status =
+        org.junit.jupiter.api.Assertions.assertTimeoutPreemptively(
+            java.time.Duration.ofSeconds(10), () -> lp.solve(1_000_000));
+    assertThat(status).isEqualTo(RevisedDualSimplex.OPTIMAL);
+    // the three cheapest columns at 1
+    double best = 3 + 3.0 / n;
+    assertThat(lp.objective()).isCloseTo(best, offset(1e-6));
+  }
+
   @Test
   void forcingRowFixesItsColumnsAndPostsolvesAnOptimalBasis() {
     // x + y <= 0 over x, y in [0, 5] holds only at x = y = 0; then x + 2y + z >= 2 makes z >= 2.
@@ -545,6 +582,140 @@ class RevisedDualSimplexTest {
   }
 
   @Test
+  void impliedFreeColumnOfAnEquationIsAggregated() {
+    // x + y + z = 4 with y, z in [0, 1] implies x in [2, 4], inside its bounds [0, 10]; x is in
+    // two more rows (x + w >= 3, x - y <= 3.5), so it is substituted out with its equation.
+    // min x + w = 3 (x in [2, 3], w = 3 - x)
+    double inf = Double.POSITIVE_INFINITY;
+    int[][] cols = {{0, 1, 2}, {0, 3}, {0, 1}};
+    double[][] vals = {{1, 1, 1}, {1, 1}, {1, -1}};
+    double[] lo = {4, 3, -inf};
+    double[] hi = {4, inf, 3.5};
+    double[] cost = {1, 0, 0, 1};
+    for (boolean presolve : new boolean[] {false, true}) {
+      RevisedDualSimplex lp = new RevisedDualSimplex(cols, vals, lo, hi, cost, true);
+      lp.setExact(true);
+      lp.setPresolve(presolve);
+      lp.setBounds(0, 0, 10);
+      lp.setBounds(1, 0, 1);
+      lp.setBounds(2, 0, 1);
+      lp.setBounds(3, 0, 10);
+      assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      assertThat(lp.objective()).isCloseTo(3, org.assertj.core.data.Offset.offset(1e-9));
+      if (presolve) {
+        assertThat(lp.presolveReductions()[Presolve.AGGREGATED_COLUMN]).isEqualTo(1);
+      }
+    }
+  }
+
+  @Test
+  void columnWhoseBoundsOtherRowsImplyIsAggregated() {
+    // x + y + z = 4 with y, z in [0, 5] implies only x in [-6, 4], so the equation alone does not
+    // make x free; x - w >= 0 with w >= 0 implies x >= 0, its lower bound, so x is implied free
+    // and substituted out with its equation. min -x - 2w with x + w <= 6: x = w = 3, -9
+    double inf = Double.POSITIVE_INFINITY;
+    int[][] cols = {{0, 1, 2}, {0, 3}, {0, 3}};
+    double[][] vals = {{1, 1, 1}, {1, -1}, {1, 1}};
+    double[] lo = {4, 0, -inf};
+    double[] hi = {4, inf, 6};
+    double[] cost = {-1, 0, 0, -2};
+    for (boolean presolve : new boolean[] {false, true}) {
+      RevisedDualSimplex lp = new RevisedDualSimplex(cols, vals, lo, hi, cost, true);
+      lp.setExact(true);
+      lp.setPresolve(presolve);
+      lp.setBounds(0, 0, 10);
+      lp.setBounds(1, 0, 5);
+      lp.setBounds(2, 0, 5);
+      lp.setBounds(3, 0, 10);
+      assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      assertThat(lp.objective()).isCloseTo(-9, org.assertj.core.data.Offset.offset(1e-9));
+      if (presolve) {
+        assertThat(lp.presolveReductions()[Presolve.AGGREGATED_COLUMN]).isEqualTo(1);
+      }
+    }
+  }
+
+  @Test
+  void presolvePassesThatFindNothingChargeNoWork() {
+    // x + y = 1 with x, y in [0, 5]: no row with one side to stuff, and the bounds the row implies
+    // (x, y <= 1) remove no other row. The work of the LP paces its calls in the search, so the two
+    // passes leave it as it was (nightly 26 Nov: accap instance5 and evm-super-compilation changed
+    // search from a scan that found nothing)
+    Presolve p =
+        new Presolve(
+            2,
+            new int[][] {{0, 1}},
+            new double[][] {{1, 1}},
+            new int[][] {{0}, {0}},
+            new double[][] {{1}, {1}},
+            new int[] {1, 1},
+            new double[] {1, 2},
+            new double[] {1, 2},
+            new double[] {0, 0, 1},
+            new double[] {5, 5, 1});
+    long before = p.ops();
+    assertThat(p.stuffing()).isZero();
+    assertThat(p.impliedRows()).isZero();
+    assertThat(p.ops()).isEqualTo(before);
+  }
+
+  @Test
+  void rowKeptByTheBoundsOtherRowsImplyIsRemoved() {
+    // x + y + v = 10 and z + w + u = 5 with every column >= 0 imply x <= 10 and z <= 5, so
+    // x + z <= 30 holds over those bounds alone and goes; no column bound changes. min -x - z: -15
+    double inf = Double.POSITIVE_INFINITY;
+    for (boolean presolve : new boolean[] {false, true}) {
+      RevisedDualSimplex lp =
+          new RevisedDualSimplex(
+              new int[][] {{0, 1, 2}, {3, 4, 5}, {0, 3}},
+              new double[][] {{1, 1, 1}, {1, 1, 1}, {1, 1}},
+              new double[] {10, 5, -inf},
+              new double[] {10, 5, 30},
+              new double[] {-1, 0, 0, -1, 0, 0},
+              true);
+      lp.setExact(true);
+      lp.setPresolve(presolve);
+      for (int j = 0; j < 6; j++) {
+        lp.setBounds(j, 0, inf);
+      }
+      assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      assertThat(lp.objective()).isCloseTo(-15, org.assertj.core.data.Offset.offset(1e-9));
+      if (presolve) {
+        assertThat(lp.presolveReductions()[Presolve.IMPLIED_ROW]).isEqualTo(1);
+      }
+    }
+  }
+
+  @Test
+  void singletonColumnsOfACoveringRowAreStuffed() {
+    // 56x + 55y + 54z >= 27 with x, y, z in [0, 1] and costs 10, 49, 33: x covers the row alone
+    // at the lowest cost per unit (Gamrath et al. 2015, singleton column stuffing), so y and z,
+    // the dearest first, are fixed at 0. min 10 * 27 / 56
+    double inf = Double.POSITIVE_INFINITY;
+    for (boolean presolve : new boolean[] {false, true}) {
+      RevisedDualSimplex lp =
+          new RevisedDualSimplex(
+              new int[][] {{0, 1, 2}},
+              new double[][] {{56, 55, 54}},
+              new double[] {27},
+              new double[] {inf},
+              new double[] {10, 49, 33},
+              true);
+      lp.setExact(true);
+      lp.setPresolve(presolve);
+      for (int j = 0; j < 3; j++) {
+        lp.setBounds(j, 0, 1);
+      }
+      assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      assertThat(lp.objective())
+          .isCloseTo(10.0 * 27 / 56, org.assertj.core.data.Offset.offset(1e-9));
+      if (presolve) {
+        assertThat(lp.presolveReductions()[Presolve.STUFFED_COLUMN]).isEqualTo(2);
+      }
+    }
+  }
+
+  @Test
   void dominatedColumnIsFixedByTheDualBoundOfAColumnSingleton() {
     // x + s + t = 4 and x - v <= 2, s >= 0 without upper bound and cost 1 bounds the dual of row 0
     // by 1, so the reduced cost of x (cost 3) is at least 2: x = 0 in every optimum. min 4
@@ -565,6 +736,32 @@ class RevisedDualSimplexTest {
     assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
     assertThat(lp.presolveReductions()[Presolve.DOMINATED_COLUMN]).isEqualTo(1);
     assertThat(lp.objective()).isCloseTo(4, org.assertj.core.data.Offset.offset(1e-9));
+  }
+
+  @Test
+  void infeasibilityThePresolveSeesIsProvedByBoundsWithoutPivots() {
+    // z >= 1 (a singleton row), x - z = 2 (a doubleton equation), x + y <= 1: x >= 3 cannot hold
+    Lp p = new Lp(new Random(0), 0, 0, 0, 0);
+    p.cols = new int[][] {{2}, {0, 2}, {0, 1}};
+    p.vals = new double[][] {{1}, {1, -1}, {1, 1}};
+    p.rowLo = new double[] {1, 2, -INF};
+    p.rowHi = new double[] {INF, 2, 1};
+    p.cost = new double[] {1, -1, 2};
+    p.lo = new double[] {0, 0, 0};
+    p.hi = new double[] {10, 10, 10};
+    for (boolean scale : new boolean[] {false, true}) {
+      RevisedDualSimplex lp = p.simplex(scale);
+      assertThat(lp.solve(1_000_000)).isEqualTo(RevisedDualSimplex.INFEASIBLE);
+      assertThat(lp.provedByBounds()).isTrue();
+      assertThat(lp.pivots()).isZero();
+      checkFarkas(p, lp.farkas(), "scaled " + scale);
+      // the bounds that made it infeasible go: the next solve finds the optimum
+      p.rowHi[2] = 20;
+      lp.setBounds(3 + 2, -INF, 20);
+      assertThat(solveAndCheck(p, lp, scale, "relaxed")).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      assertThat(lp.provedByBounds()).isFalse();
+      p.rowHi[2] = 1;
+    }
   }
 
   @Test
@@ -647,10 +844,11 @@ class RevisedDualSimplexTest {
     // the chunks of the chunked solves, apart so that they leave the problems as they were
     Random chunks = new Random(29);
     Random parallels = new Random(31);
-    int[] reductions = new int[9];
+    int[] reductions = new int[12];
     int runs = Integer.getInteger("jalp.test.runs", 3000) / 3;
     int reduced = 0;
     int optimal = 0;
+    int byBounds = 0;
     for (int run = 0; run < runs; run++) {
       boolean scale = rnd.nextBoolean();
       int m = 1 + rnd.nextInt(14);
@@ -713,6 +911,9 @@ class RevisedDualSimplexTest {
           reductions[k] += lp.presolveReductions()[k];
         }
       }
+      if (lp.provedByBounds()) {
+        byBounds++;
+      }
       String inChunks = what + " in chunks";
       assertThat(solveAndCheck(p, chunked, scale, inChunks)).as(inChunks).isEqualTo(status);
       if (status == RevisedDualSimplex.OPTIMAL) {
@@ -739,6 +940,8 @@ class RevisedDualSimplexTest {
       }
     }
     assertThat(reduced).isGreaterThan(optimal / 2);
+    // some infeasibilities the presolve saw were proved by bound propagation, the rays checked
+    assertThat(byBounds).isGreaterThan(runs / 100);
     // every kind of reduction was made, parallel rows and columns too
     assertThat(reductions).as(java.util.Arrays.toString(reductions)).doesNotContain(0);
   }
@@ -883,6 +1086,34 @@ class RevisedDualSimplexTest {
   }
 
   @Test
+  void aColumnSingletonHoldsItsRowAtTheBoundItsCostPushesTo() {
+    // edge design: x_e in [0, 1] opens edge e at cost 3 or 5, the flow f_e on it is at most
+    // 4 x_e and costs 1 or 0.25, 6 units flow: x_e only in its capacity row, pushed down by its
+    // cost to the bound the row implies, so the row becomes the equation f_e = 4 x_e and goes
+    int[][] cols = {{0, 2}, {1, 3}, {2, 3}};
+    double[][] vals = {{-4, 1}, {-4, 1}, {1, 1}};
+    double[] rowLo = {-INF, -INF, 6};
+    double[] rowHi = {0, 0, 6};
+    double[] cost = {3, 5, 1, 0.25};
+    for (boolean presolve : new boolean[] {false, true}) {
+      RevisedDualSimplex lp = new RevisedDualSimplex(cols, vals, rowLo, rowHi, cost, true);
+      lp.setExact(true);
+      lp.setPresolve(presolve);
+      lp.setBounds(0, 0, 1);
+      lp.setBounds(1, 0, 1);
+      assertThat(lp.solve(1000)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      if (presolve) {
+        assertThat(lp.presolvedRows()).isLessThan(2);
+      }
+      // a unit of flow costs 3 / 4 + 1 on edge 0 and 5 / 4 + 0.25 on edge 1, which carries 4
+      assertThat(lp.objective()).isCloseTo(9.5, org.assertj.core.data.Offset.offset(1e-9));
+      assertThat(lp.value(0)).isCloseTo(0.5, org.assertj.core.data.Offset.offset(1e-9));
+      assertThat(lp.value(1)).isCloseTo(1, org.assertj.core.data.Offset.offset(1e-9));
+      assertThat(lp.value(3)).isCloseTo(4, org.assertj.core.data.Offset.offset(1e-9));
+    }
+  }
+
+  @Test
   void theRefactorizationRulesAgree() {
     Random rnd = new Random(11);
     int runs = Math.max(3, Integer.getInteger("jalp.test.runs", 3000) / 300);
@@ -901,6 +1132,9 @@ class RevisedDualSimplexTest {
       for (double weight : new double[] {0, 1, 0.01}) {
         String what = "run " + run + " weight " + weight;
         RevisedDualSimplex lp = p.simplex(true);
+        // no presolve: the infeasibilities it sees are proved by bounds, without the pivots that
+        // make the rule fire
+        lp.setPresolve(false);
         lp.setRefactorWeight(weight);
         int s = solveAndCheck(p, lp, true, what);
         if (weight <= 0) {

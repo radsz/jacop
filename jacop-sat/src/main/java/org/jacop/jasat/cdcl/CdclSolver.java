@@ -271,6 +271,9 @@ public final class CdclSolver {
   private long lubyLimit;
   // conflicts of one unit of the Luby sequence in stable mode
   private static final long LUBY_UNIT = Long.getLong("jacop.jasat.lubyUnit", 512L);
+  // a lazy activity order while an external propagator decides, see VarHeap.setLazy
+  private static final boolean LAZY_ORDER =
+      !"false".equals(System.getProperty("jacop.jasat.lazyOrder"));
   private final int[] lbdQueue = new int[50];
   private int lbdQueueSize;
   private int lbdQueueHead;
@@ -464,6 +467,19 @@ public final class CdclSolver {
   private long nextElimination = 5000;
   private int eliminationInterval = 5000;
   private int eliminationRounds;
+  // the elimination bound reached so far, the largest one, and the longest resolvent
+  private int eliminationBound;
+  private int maxEliminationBound = 16;
+  private int resolventLimit = 100;
+  private boolean eliminationGates = true;
+  int gateEliminations;
+  // time spent in elimination
+  long eliminationNanos;
+  // after a round that eliminated nothing: the root trail and irredundant clause counts it saw;
+  // the next round during search waits until one of them grows
+  private boolean eliminationFruitless;
+  private int eliminationTrail;
+  private int eliminationOriginals;
   private long seed;
 
   // inprocessing statistics per round on standard output
@@ -1004,6 +1020,12 @@ public final class CdclSolver {
     interrupted = true;
   }
 
+  /** Takes back {@link #cancel()}: later calls of {@link #solve} run again. */
+  public void uncancel() {
+    cancelled = false;
+    interrupted = false;
+  }
+
   /**
    * Whether the clock of the solver is virtual (system property {@code jacop.virtualClock}): {@link
    * #now} then counts {@link #work}, {@link #VIRTUAL_WORK_PER_MS} per millisecond, instead of
@@ -1513,6 +1535,27 @@ public final class CdclSolver {
     vdata[r | REASON] = why;
     vdata[r | TPOS] = trailSize;
     trail[trailSize++] = lit;
+  }
+
+  /**
+   * Returns the decisions of the current assignment: the literals assigned without a reason above
+   * the root, in the order of the trail.
+   *
+   * @return the decision literals, in DIMACS form
+   */
+  public int[] decisionLiterals() {
+    int[] out = new int[decisionLevel];
+    int n = 0;
+    for (int k = decisionLevel == 0 ? trailSize : trailLim[0]; k < trailSize; k++) {
+      int lit = trail[k];
+      if (varReason(lit >> 1) == NO_REASON && litLevel(lit) > 0) {
+        if (n == out.length) {
+          out = Arrays.copyOf(out, 2 * n + 1);
+        }
+        out[n++] = toDimacs(lit);
+      }
+    }
+    return Arrays.copyOf(out, n);
   }
 
   /** The decision level of variable v (meaningful while v is assigned). */
@@ -3339,7 +3382,7 @@ public final class CdclSolver {
             && !externalUsed
             && numUnits == 0) {
           nextElimination = conflicts + (long) eliminationInterval * ++eliminationRounds;
-          if (!eliminate()) {
+          if (eliminationDue() && !eliminate()) {
             return UNSAT;
           }
         }
@@ -3543,6 +3586,10 @@ public final class CdclSolver {
           lit = external.propagate();
         }
         if (lit == 0) {
+          // a propagation cut by the deadline is no fixpoint: no decision and no model follow
+          if (external.propagationCut()) {
+            outOfTime = true;
+          }
           return NO_CONFLICT;
         }
         implied = toLit(lit);
@@ -3721,6 +3768,18 @@ public final class CdclSolver {
     backtrack(0);
     external = propagator;
     notified = 0;
+  }
+
+  /**
+   * Sets whether the activity order of the decisions is lazy (see {@link VarHeap#setLazy}), for an
+   * external propagator that makes almost every decision, as lazy clause generation under a fixed
+   * search does: the order is then read only when the propagator has no decision. The system
+   * property {@code jacop.jasat.lazyOrder=false} keeps it eager. Off by default.
+   *
+   * @param lazy true for the lazy order
+   */
+  public void setLazyOrder(boolean lazy) {
+    order.setLazy(lazy && LAZY_ORDER);
   }
 
   /**
@@ -4189,6 +4248,37 @@ public final class CdclSolver {
   }
 
   /**
+   * Sets the largest bound of variable elimination: an elimination may add this many clauses more
+   * than it removes. The bound is 0 in the first run before the search and rises through 1, 2, 4, 8
+   * and 16 up to this one with each complete run during search (default 16; 0 never adds clauses).
+   *
+   * @param bound the largest bound
+   */
+  public void setMaxEliminationBound(int bound) {
+    maxEliminationBound = Math.max(0, bound);
+  }
+
+  /**
+   * Turns gate detection in variable elimination on or off (on by default). When a variable is the
+   * output of an AND, OR, ITE, XOR gate or an equivalence, only the resolvents of its defining
+   * clauses with the others are added.
+   *
+   * @param on whether to use gates
+   */
+  public void setEliminationGates(boolean on) {
+    eliminationGates = on;
+  }
+
+  /**
+   * Sets the longest resolvent variable elimination may add (default 100).
+   *
+   * @param literals the limit
+   */
+  public void setResolventLimit(int literals) {
+    resolventLimit = Math.max(2, literals);
+  }
+
+  /**
    * Sets how often elimination runs again during search, after its first run before the search.
    *
    * @param conflicts the conflicts before the first round (later rounds are further apart), or 0
@@ -4401,14 +4491,18 @@ public final class CdclSolver {
   // ------------------------------------------------------------------------- clause database
 
   /**
-   * Whether the learnt clauses take more than their share of the heap, checked at most every
-   * MEMORY_REDUCE_GAP conflicts and only once the arena is that large.
+   * Whether the learnt clauses take more than their share of the heap, checked only once the arena
+   * is that large and at most every k * MEMORY_REDUCE_GAP conflicts after the (k - 1)-th memory
+   * reduction. A memory reduction deletes learnt clauses of every tier, so a gap that stays fixed
+   * can delete the clauses the search needs again and again: with decisions in a fixed order a
+   * satisfiable formula then ran millions of conflicts without an answer. A gap that grows lets the
+   * search finish, and the learnt clauses grow by at most the clauses of one gap over the budget.
    */
   private boolean learntsTooLarge() {
     if (conflicts < nextMemoryCheck || memSize - wasted <= learntBudget) {
       return false;
     }
-    nextMemoryCheck = conflicts + MEMORY_REDUCE_GAP;
+    nextMemoryCheck = conflicts + MEMORY_REDUCE_GAP * (memoryReductions + 1);
     return learntInts() > learntBudget;
   }
 
@@ -4633,8 +4727,25 @@ public final class CdclSolver {
         gatesFound += cc.andGates + cc.xorGates + cc.iteGates;
       }
     }
-    Eliminator e = new Eliminator(numVars, sat ? input : new int[0][], sat ? n : 0, frozen, proof);
+    long elimBegin = System.nanoTime();
+    // with an external propagator (lazy clause generation) elimination stays as in MiniSat
+    int[][] elimInput = sat ? input : new int[0][];
+    int elimCount = sat ? n : 0;
+    Eliminator.Limits limits =
+        new Eliminator.Limits(eliminationBound, eliminationBound, resolventLimit, eliminationGates);
+    Eliminator e =
+        external != null
+            ? new Eliminator(numVars, elimInput, elimCount, frozen, proof)
+            : new Eliminator(numVars, elimInput, elimCount, frozen, proof, limits);
     sat = sat && e.run();
+    gateEliminations += e.numGateEliminations();
+    // the bound rises by one step after each complete run, so the first run before the search
+    // adds no clauses and later runs during search add more (Kissat's eliminatebound schedule)
+    eliminationFruitless = e.numEliminated() == 0 && eliminationBound >= maxEliminationBound;
+    if (e.completed()) {
+      eliminationBound = Eliminator.nextBound(eliminationBound, maxEliminationBound);
+    }
+    eliminationNanos += System.nanoTime() - elimBegin;
     for (int i = 0; i < numOriginals; i++) {
       int ref = originals[i];
       if ((mem[ref + META] & DELETED) == 0) {
@@ -4718,6 +4829,8 @@ public final class CdclSolver {
     if (propagate() != NO_CONFLICT) {
       return refuted();
     }
+    eliminationTrail = trailSize;
+    eliminationOriginals = numOriginals + numOriginalBinaries;
     return true;
   }
 
@@ -4973,6 +5086,17 @@ public final class CdclSolver {
           (System.nanoTime() - start) / 1e9);
     }
     return s;
+  }
+
+  /**
+   * Whether an elimination round during search can find more than the last one: it eliminated
+   * something, or new root facts or irredundant clauses appeared since.
+   */
+  private boolean eliminationDue() {
+    return external != null
+        || !eliminationFruitless
+        || trailSize > eliminationTrail
+        || numOriginals + numOriginalBinaries != eliminationOriginals;
   }
 
   /**
@@ -6228,6 +6352,7 @@ public final class CdclSolver {
     if (assigned != trailSize) {
       throw new IllegalStateException(assigned + " variables assigned, trail " + trailSize);
     }
+    markWatched();
     for (int pass = 0; pass < 2; pass++) {
       int[] list = pass == 0 ? originals : learnts;
       int n = pass == 0 ? numOriginals : numLearnts;
@@ -6240,6 +6365,11 @@ public final class CdclSolver {
         checkClause(mem, ref + HEADER, mem[ref + SIZE], pass == 0 ? "original" : "learnt");
       }
     }
+    for (int l = 0; l < 2 * numVars; l++) {
+      for (int i = 1; i < watches[l][0]; i++) {
+        watchedMarks[watchRef(watches[l][i])] = 0;
+      }
+    }
     int[] pair = new int[2];
     for (int l = 0; l < 2 * numVars; l++) {
       for (int b = 1; b < binWatches[l][0]; b++) {
@@ -6250,19 +6380,37 @@ public final class CdclSolver {
     }
   }
 
+  // per clause reference, bit k set when the clause is in the watch list of its k-th literal
+  private int[] watchedMarks = new int[0];
+
+  /**
+   * Marks every clause found in the watch list of its first or second literal, in one pass over the
+   * watch lists, so that checking all clauses stays linear when a watch list is long.
+   */
+  private void markWatched() {
+    if (watchedMarks.length < mem.length) {
+      watchedMarks = new int[mem.length];
+    }
+    for (int l = 0; l < 2 * numVars; l++) {
+      for (int i = 1; i < watches[l][0]; i++) {
+        int ref = watchRef(watches[l][i]);
+        for (int k = 0; k < 2 && ref + HEADER + k < mem.length; k++) {
+          if (mem[ref + HEADER + k] == l) {
+            watchedMarks[ref] |= 1 << k;
+          }
+        }
+      }
+    }
+  }
+
   private void checkWatched(int ref) {
     for (int k = 0; k < 2; k++) {
-      int w = mem[ref + HEADER + k];
-      boolean found = false;
-      for (int i = 1; i < watches[w][0] && !found; i++) {
-        found = watchRef(watches[w][i]) == ref;
-      }
-      if (!found) {
+      if ((watchedMarks[ref] & 1 << k) == 0) {
         throw new IllegalStateException(
             "clause "
                 + clauseText(mem, ref + HEADER, mem[ref + SIZE])
                 + " not watched by "
-                + toDimacs(w));
+                + toDimacs(mem[ref + HEADER + k]));
       }
     }
   }

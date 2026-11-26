@@ -38,6 +38,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
@@ -100,7 +101,7 @@ public abstract class LayeredGraphConstraint extends Constraint
   private int indexOffset;
 
   /** Removes the values that label no edge, and in the first pass checks every level. */
-  private final InitOnce init = new InitOnce();
+  private InitOnce init = new InitOnce();
 
   /** The graph as described, kept for explanations. */
   private LayeredGraphDescription description;
@@ -222,6 +223,12 @@ public abstract class LayeredGraphConstraint extends Constraint
 
   private int currentLevel;
 
+  // The store of the constraint and the levels at which its state changed, each recorded once with
+  // the store, so the store calls removeLevel only for those levels instead of for every level.
+  private Store imposedStore;
+  private int[] changedLevels = new int[16];
+  private int changedTop;
+
   // Nodes that lost all their incoming edges (forward lists) or all their outgoing edges
   // (backward lists) and must be removed. In large graphs they are kept as linked lists per level:
   // the first node of level l is
@@ -269,12 +276,18 @@ public abstract class LayeredGraphConstraint extends Constraint
   // searches the graph depth first from the first level for paths labelled with values of the
   // domains, as the mddc algorithm of Cheng and Yap (CP 2008) does, and stops as soon as every
   // value of the levels below has a support. Nodes from which no such path exists are kept in a
-  // sparse set, noNodes, whose size is the record noRecord, so they are skipped until
-  // backtracking. Nodes with a path are marked with the stamp of the call in yesStamp.
+  // list, noList, whose size is the record noRecord and whose members are set in noBits, so they
+  // are skipped until backtracking; the bits of the entries past the record are cleared at the
+  // next call. Nodes with a path are marked with the stamp of the call in yesStamp. The stamps are
+  // only read during one call, so the constraints of a store that share a built graph share them
+  // (SearchScratch): WordDesign2-words-mdd-100 (XCSP 2023) posts 4,950 MDDs on one diagram of
+  // 525,720 nodes, and three node arrays of their own took 6 MB for each of them.
   private boolean supportSearch;
-  private int[] noNodes;
-  private int[] noPosition;
+  private long[] noBits;
+  private int[] noList;
+  private int noListTop;
   private int noRecord;
+  private SearchScratch scratch;
   private int[] yesStamp;
   private int[] inDomainStamp;
   private int[] supportedStamp;
@@ -605,12 +618,19 @@ public abstract class LayeredGraphConstraint extends Constraint
    * integer programming", CPAIOR 2007).
    *
    * @return the edges, or null when the paths of the graph are not exactly the solutions of the
-   *     constraint or the graph is not built yet
+   *     constraint or the graph is not built yet; the constraints of one shared graph over equal
+   *     domains return the same array, which must not be changed
    */
   public int[] pathEdges() {
     if (description == null || !explainedByPaths()) {
       return null;
     }
+    // the thousands of diagrams of one graph mostly see equal domains at the root (1,485 diagrams
+    // of 1.8 million edges in WordDesign2-words-mdd-055, XCSP 2023)
+    return built != null ? built.pathEdges(list, this::computePathEdges) : computePathEdges();
+  }
+
+  private int[] computePathEdges() {
     int levels = list.length;
     int[] edge = description.edges;
     PathNodes paths = new PathNodes();
@@ -921,9 +941,38 @@ public abstract class LayeredGraphConstraint extends Constraint
       return size + 1;
     }
 
+    // clauses longer than this are cleared of duplicates by sorting, not pairwise
+    private static final int SORT_FROM = 64;
+
     /** Adds the clause being built, without constants, duplicates and tautologies. */
     private void emit(int size) {
       int n = 0;
+      if (size > SORT_FROM) {
+        for (int k = 0; k < size; k++) {
+          int l = clause[k];
+          if (l == TRUE) {
+            return;
+          }
+          if (l != FALSE) {
+            clause[n++] = l;
+          }
+        }
+        // the clause of a value lists every arc of its level labelled with it, hundreds of
+        // thousands in the diagrams of WordDesign2-words-mdd (XCSP 2023)
+        Arrays.sort(clause, 0, n);
+        int m = 0;
+        for (int k = 0; k < n; k++) {
+          int l = clause[k];
+          if (l < 0 && Arrays.binarySearch(clause, k + 1, n, -l) >= 0) {
+            return;
+          }
+          if (m == 0 || clause[m - 1] != l) {
+            clause[m++] = l;
+          }
+        }
+        model.clause(clause, m);
+        return;
+      }
       for (int k = 0; k < size; k++) {
         int l = clause[k];
         if (l == TRUE) {
@@ -958,6 +1007,38 @@ public abstract class LayeredGraphConstraint extends Constraint
   }
 
   /**
+   * The arrays of the support search that are only read during one call: the stamps of the nodes
+   * with a path, of the values in the domains and of the supported values, and the count of
+   * unsupported values per level. A store propagates one constraint at a time, so its constraints
+   * on one built graph share them, each call with a stamp of its own.
+   */
+  static final class SearchScratch {
+    final int[] yesStamp;
+    final int[] inDomainStamp;
+    final int[] supportedStamp;
+    final int[] levelUnsupported;
+    private int stamp;
+
+    SearchScratch(int nodes, int slots, int levels) {
+      yesStamp = new int[nodes];
+      inDomainStamp = new int[slots];
+      supportedStamp = new int[slots];
+      levelUnsupported = new int[levels];
+    }
+
+    /** A stamp no node or slot carries yet. */
+    int nextStamp() {
+      if (++stamp == Integer.MAX_VALUE) {
+        Arrays.fill(yesStamp, 0);
+        Arrays.fill(inDomainStamp, 0);
+        Arrays.fill(supportedStamp, 0);
+        stamp = 1;
+      }
+      return stamp;
+    }
+  }
+
+  /**
    * The layered graph built from a description over the domains of the levels when the constraint
    * was imposed: the kept nodes and edges, the slots and the static adjacency arrays. It is never
    * changed after it is built, so constraints with the same diagram over equal domains share it:
@@ -988,6 +1069,10 @@ public abstract class LayeredGraphConstraint extends Constraint
     private final IntDomain[] domains;
     private final Object[] key;
     private LayeredGraphExplanation.Graph explanation;
+    private final Map<Store, SearchScratch> scratches = new WeakHashMap<>();
+    // the edges on a path last computed, over the domains they were computed over
+    private IntDomain[] pathDomains;
+    private int[] pathEdges;
 
     /**
      * It builds the graph. Edges with values outside the domains are dropped, a forward and a
@@ -1163,6 +1248,30 @@ public abstract class LayeredGraphConstraint extends Constraint
       for (int level = 0; level <= levels; level++) {
         Arrays.fill(nodeLevel, levelNodeStart[level], levelNodeStart[level + 1], level);
       }
+    }
+
+    /**
+     * Returns the edges on a path over the domains of the list, computed again only when they
+     * differ from the domains of the last call.
+     */
+    synchronized int[] pathEdges(IntVar[] list, Supplier<int[]> compute) {
+      boolean same = pathDomains != null && pathDomains.length == list.length;
+      for (int i = 0; same && i < list.length; i++) {
+        same = pathDomains[i].eq(list[i].domain);
+      }
+      if (!same) {
+        pathEdges = compute.get();
+        pathDomains = new IntDomain[list.length];
+        for (int i = 0; i < list.length; i++) {
+          pathDomains[i] = list[i].domain.cloneLight();
+        }
+      }
+      return pathEdges;
+    }
+
+    /** The stamps of the support search for the constraints of a store on this graph. */
+    synchronized SearchScratch scratch(Store store) {
+      return scratches.computeIfAbsent(store, s -> new SearchScratch(nodes, slots, levels));
     }
 
     /** The graph for explanations by cuts, made once for all constraints sharing this graph. */
@@ -2013,8 +2122,38 @@ public abstract class LayeredGraphConstraint extends Constraint
     }
   }
 
+  /**
+   * Records with the store that the state changes at this level, once per level.
+   *
+   * @param level the current store level.
+   */
+  private void changedAt(int level) {
+    if (changedTop == 0 || changedLevels[changedTop - 1] != level) {
+      if (changedTop == changedLevels.length) {
+        changedLevels = Arrays.copyOf(changedLevels, 2 * changedTop);
+      }
+      changedLevels[changedTop++] = level;
+      imposedStore.recordChange(this);
+    }
+  }
+
+  /**
+   * The store calls removeLevel only for the levels recorded by changedAt, so the constraint does
+   * not listen to the removal of every level.
+   *
+   * @return false.
+   */
+  @Override
+  public boolean isStateful() {
+    return false;
+  }
+
   @Override
   public void removeLevel(int level) {
+
+    while (changedTop > 0 && changedLevels[changedTop - 1] >= level) {
+      changedTop--;
+    }
 
     while (markTop > 0 && markLevel[markTop - 1] >= level) {
       int start = markPosition[--markTop];
@@ -2072,6 +2211,7 @@ public abstract class LayeredGraphConstraint extends Constraint
       position = p == null ? -1 : p;
     }
     if (position >= 0 && !levelQueued[position]) {
+      changedAt(level);
       levelQueued[position] = true;
       levelQueue[levelQueueSize++] = position;
     }
@@ -2081,6 +2221,7 @@ public abstract class LayeredGraphConstraint extends Constraint
   public void consistency(Store store) {
 
     currentLevel = store.level;
+    changedAt(currentLevel);
     if (epochLevel != currentLevel) {
       if (++epoch > STAMP_MASK) {
         // Stamps are restored from the trail too, so they are cleared there as well.
@@ -2229,6 +2370,8 @@ public abstract class LayeredGraphConstraint extends Constraint
   @Override
   public void impose(Store store) {
 
+    // a second imposition prunes its new graph to the domains at its first consistency call
+    init = new InitOnce();
     buildLayeredGraph(store);
 
     mapping = Var.positionMapping(list, true, this.getClass());
@@ -2246,6 +2389,7 @@ public abstract class LayeredGraphConstraint extends Constraint
     }
     levelQueue = new int[list.length];
     levelQueued = new boolean[list.length];
+    imposedStore = store;
 
     super.impose(store);
   }
@@ -2319,20 +2463,15 @@ public abstract class LayeredGraphConstraint extends Constraint
    * are needed only once the probe starts, and constraints that settle on the counters release
    * them, which matters for models with hundreds of large diagrams.
    */
-  private void createSearchArrays() {
-    int nodes = nodeCount;
-    int slots = slotCount;
-    noNodes = new int[nodes];
-    noPosition = new int[nodes];
-    for (int n = 0; n < nodes; n++) {
-      noNodes[n] = n;
-      noPosition[n] = n;
-    }
-    yesStamp = new int[nodes];
-    inDomainStamp = new int[slots];
-    supportedStamp = new int[slots];
-    levelUnsupported = new int[list.length];
-    searchStamp = 0;
+  private void createSearchArrays(Store store) {
+    noBits = new long[(nodeCount >>> 6) + 1];
+    noList = new int[16];
+    noListTop = 0;
+    scratch = built.scratch(store);
+    yesStamp = scratch.yesStamp;
+    inDomainStamp = scratch.inDomainStamp;
+    supportedStamp = scratch.supportedStamp;
+    levelUnsupported = scratch.levelUnsupported;
   }
 
   /**
@@ -2340,8 +2479,9 @@ public abstract class LayeredGraphConstraint extends Constraint
    * of the nodes without support is left as it is; it is not read by the counters.
    */
   private void releaseSearchArrays() {
-    noNodes = null;
-    noPosition = null;
+    noBits = null;
+    noList = null;
+    scratch = null;
     yesStamp = null;
     inDomainStamp = null;
     supportedStamp = null;
@@ -2349,14 +2489,15 @@ public abstract class LayeredGraphConstraint extends Constraint
   }
 
   private void searchSupports(Store store) {
-    if (noNodes == null) {
-      createSearchArrays();
+    if (noBits == null) {
+      createSearchArrays(store);
     }
-    if (++searchStamp == Integer.MAX_VALUE) {
-      Arrays.fill(yesStamp, 0);
-      Arrays.fill(inDomainStamp, 0);
-      Arrays.fill(supportedStamp, 0);
-      searchStamp = 1;
+    searchStamp = scratch.nextStamp();
+    // backtracking restored the record: the nodes past it have a path again
+    int noSize = (int) (state[noRecord] & VALUE);
+    while (noListTop > noSize) {
+      int node = noList[--noListTop];
+      noBits[node >>> 6] &= ~(1L << node);
     }
     int levels = list.length;
     for (int level = 0; level < levels; level++) {
@@ -2412,8 +2553,7 @@ public abstract class LayeredGraphConstraint extends Constraint
     if (yesStamp[node] == searchStamp) {
       return true;
     }
-    int noSize = (int) (state[noRecord] & VALUE);
-    if (noPosition[node] < noSize) {
+    if ((noBits[node >>> 6] & (1L << node)) != 0) {
       return false;
     }
     boolean result = false;
@@ -2443,13 +2583,11 @@ public abstract class LayeredGraphConstraint extends Constraint
       yesStamp[node] = searchStamp;
     } else {
       save(noRecord);
-      noSize = (int) (state[noRecord] & VALUE);
-      int position = noPosition[node];
-      int other = noNodes[noSize];
-      noNodes[position] = other;
-      noPosition[other] = position;
-      noNodes[noSize] = node;
-      noPosition[node] = noSize;
+      if (noListTop == noList.length) {
+        noList = Arrays.copyOf(noList, Math.min(nodeCount, 2 * noListTop));
+      }
+      noList[noListTop++] = node;
+      noBits[node >>> 6] |= 1L << node;
       state[noRecord]++;
     }
     return result;

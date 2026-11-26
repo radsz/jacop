@@ -95,7 +95,28 @@ public class Fz2jacop {
     // indomain_random, on_restart) repeat from run to run
     Store.setSeed(0);
 
-    Options opt = new Options(args);
+    Options opt;
+    try {
+      opt = new Options(args);
+      // the settings that the portfolio reads before its threads start
+      for (String key :
+          new String[] {"portfolio-split", "portfolio-dfs-split", "portfolio-bisect"}) {
+        String value = opt.freeConfig(key, "0");
+        try {
+          Double.parseDouble(value);
+          if (!key.endsWith("bisect")) {
+            Integer.parseInt(value);
+          }
+        } catch (NumberFormatException _) {
+          throw new IllegalArgumentException(
+              "option --free-config " + key + "=" + value + ": not a number");
+        }
+      }
+    } catch (IllegalArgumentException e) {
+      // a value of an option that is not one, as an error of the command line, not a stack trace
+      FzConsole.printlnErr("%% Error: " + e.getMessage());
+      return 1;
+    }
 
     // several objectives: each subproblem is solved by this method in turn
     Goals goals = Goals.of(opt, args);
@@ -104,9 +125,24 @@ public class Fz2jacop {
     }
 
     if (opt.threads() > 1) {
-      String unsupported = Portfolio.unsupported(opt);
-      if (unsupported == null) {
-        return Portfolio.solve(args, opt);
+      Portfolio portfolio = new Portfolio(opt);
+      if (watchdog && opt.getTimeOut() > 0) {
+        // the model is read before any thread starts, and that does not look at the time-out
+        portfolio.startWatchdog(
+            watchdogDelay(opt) + TimeLimitWatchdog.GRACE,
+            () -> {
+              VeriPbProof.abandon();
+              Runtime.getRuntime().halt(0);
+            });
+      }
+      String unsupported;
+      try {
+        unsupported = Portfolio.unsupported(opt);
+        if (unsupported == null) {
+          return portfolio.run(args);
+        }
+      } finally {
+        portfolio.cancelWatchdog();
       }
       IO.println("%% -p ignored: " + unsupported);
     }
@@ -152,6 +188,15 @@ public class Fz2jacop {
   private static final long VIRTUAL_CLOCK_WALL_FACTOR =
       Long.getLong("jacop.virtualClock.wallFactor", 10);
 
+  // when the watchdog fires, before its grace period: under the virtual clock the search stops on
+  // its work, which can take longer than the time-out on the wall clock, and the watchdog only
+  // catches a run that hangs
+  private static long watchdogDelay(Options opt) {
+    return CdclSolver.VIRTUAL_CLOCK
+        ? VIRTUAL_CLOCK_WALL_FACTOR * opt.getRemainingTimeOut()
+        : opt.getRemainingTimeOut();
+  }
+
   private int solve(Options opt, InputStream file, SimpleNode model) {
 
     Parser parser = new Parser(file);
@@ -159,18 +204,18 @@ public class Fz2jacop {
 
     RunWhenShuttingDown t = new RunWhenShuttingDown(parser);
     if (printsAtShutdown(opt)) {
-      Runtime.getRuntime().addShutdownHook(t);
+      try {
+        Runtime.getRuntime().addShutdownHook(t);
+      } catch (IllegalStateException _) {
+        // the JVM is already shutting down (a signal right after the start): nothing to print
+      }
     }
 
     TimeLimitWatchdog watch = null;
     if (watchdog && opt.getTimeOut() > 0 && opt.portfolioWorker() == null) {
       watch =
           TimeLimitWatchdog.start(
-              // under the virtual clock the search stops on its work, which can take longer than
-              // the time-out on the wall clock: the watchdog only catches a run that hangs
-              CdclSolver.VIRTUAL_CLOCK
-                  ? VIRTUAL_CLOCK_WALL_FACTOR * opt.getRemainingTimeOut()
-                  : opt.getRemainingTimeOut(),
+              watchdogDelay(opt),
               report(opt, parser),
               () -> {
                 // a proof ends after its last whole step, so that it still checks
@@ -262,14 +307,19 @@ public class Fz2jacop {
     }
 
     if (opt.getStatistics()) {
-      Runtime.getRuntime().removeShutdownHook(t);
+      try {
+        Runtime.getRuntime().removeShutdownHook(t);
+      } catch (IllegalStateException _) {
+        // the JVM is already shutting down, and the hook is running or has run
+      }
       printStatisticsTime(parser);
     }
     return status;
   }
 
   private void handleFailException(Options opt, Parser parser) {
-    if (parser.getTables().domainsClamped()) {
+    boolean narrowing = parser.getTables().failureMayComeFromNarrowing();
+    if (narrowing) {
       // the failure may come from the values cut off by narrowing a domain to JaCoP's range
       IO.println("=====UNKNOWN=====");
     } else {
@@ -279,7 +329,7 @@ public class Fz2jacop {
       // the model failed while it was translated, before the propagation the proof derives
       IO.println("%% --proof: no proof written, the model fails while it is translated");
     }
-    if (!opt.getOutputFilename().isEmpty() && !parser.getTables().domainsClamped()) {
+    if (!opt.getOutputFilename().isEmpty() && !narrowing) {
       try {
         Files.writeString(Path.of(opt.getOutputFilename()), "=====UNSATISFIABLE=====");
       } catch (IOException e1) {

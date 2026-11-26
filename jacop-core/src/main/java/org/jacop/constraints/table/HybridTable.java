@@ -232,7 +232,7 @@ public class HybridTable extends Constraint
   private int queueSize;
   private boolean[] queued;
   private boolean pruning;
-  private final InitOnce init = new InitOnce();
+  private InitOnce init = new InitOnce();
 
   /** The explanations for lazy clause generation, made on first use. */
   private TableExplanation explanation;
@@ -569,6 +569,8 @@ public class HybridTable extends Constraint
     // an imposition again (LcgSolver.release hands a held table back to the store) starts with an
     // empty queue: the columns queued by the first one were never taken off it
     queueSize = 0;
+    // and with a new set of valid tuples, so the first full filtering is due again
+    init = new InitOnce();
     buildIndex();
 
     state = valid.state;
@@ -1928,11 +1930,28 @@ public class HybridTable extends Constraint
     IntDomain d = xi.dom();
     int s = size;
     int p = 0;
+    // a domain of many intervals answers contains by a binary search, and the live classes come
+    // in no order: on many classes its values are copied to a bit set first (CrosswordDesign,
+    // XCSP 2026: word columns of 130,000 values with thousands of holes, checked at every node)
+    long[] mask =
+        s >= MASK_CLASSES
+                && d.noIntervals() >= MASK_INTERVALS
+                && (long) d.max() - d.min() < MASK_RANGE
+            ? domainMask(d)
+            : null;
+    int maskBase = mask == null ? 0 : d.min();
+    int maskMax = mask == null ? 0 : d.max();
     while (p < s) {
       int c = l[p];
       int lo = cMin[c];
       int hi = cMax[c];
-      boolean alive = lo == hi ? d.contains(lo) : d.isIntersecting(lo, hi);
+      boolean alive;
+      if (lo == hi && mask != null) {
+        int b = lo - maskBase;
+        alive = lo >= maskBase && lo <= maskMax && (mask[b >>> 6] & (1L << b)) != 0;
+      } else {
+        alive = lo == hi ? d.contains(lo) : d.isIntersecting(lo, hi);
+      }
       if (alive && (fromScan ? stamps[c] != seenStamp : !supported(i, c, excluded))) {
         if (excluded == null) {
           removedClasses[removed++] = c;
@@ -1964,6 +1983,43 @@ public class HybridTable extends Constraint
     if (removed > 0) {
       removeClasses(i, removed);
     }
+  }
+
+  /** The fewest live classes and intervals of a domain for which filterDomain copies it to bits. */
+  private static final int MASK_CLASSES = 512;
+
+  private static final int MASK_INTERVALS = 16;
+
+  private static final long MASK_RANGE = 1L << 22;
+
+  // the bits of the values of a domain, from its least value, in a reused array
+  private long[] maskBits = new long[0];
+
+  private long[] domainMask(IntDomain d) {
+    int base = d.min();
+    int words = (int) (((long) d.max() - base) >>> 6) + 1;
+    if (maskBits.length < words) {
+      maskBits = new long[words];
+    } else {
+      Arrays.fill(maskBits, 0, words, 0L);
+    }
+    long[] bits = maskBits;
+    for (int k = 0; k < d.noIntervals(); k++) {
+      int from = d.leftElement(k) - base;
+      int to = d.rightElement(k) - base;
+      int fw = from >>> 6;
+      int tw = to >>> 6;
+      if (fw == tw) {
+        bits[fw] |= (-1L << from) & (-1L >>> (63 - (to & 63)));
+      } else {
+        bits[fw] |= -1L << from;
+        for (int w = fw + 1; w < tw; w++) {
+          bits[w] = -1L;
+        }
+        bits[tw] |= -1L >>> (63 - (to & 63));
+      }
+    }
+    return bits;
   }
 
   /** Below this many classes, the classes a filtering removes are removed one by one. */

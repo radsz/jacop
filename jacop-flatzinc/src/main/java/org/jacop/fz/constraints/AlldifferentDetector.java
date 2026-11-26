@@ -79,6 +79,12 @@ import org.jacop.fz.SimpleNode;
  * property {@code org.jacop.fz.alldifferentImplied} set to {@code post} posts it as well, and
  * {@code off} does not collect implied disequalities.
  *
+ * <p>A binary positive table whose pairs, over the domains of its two variables, are exactly those
+ * with {@code x - y != d} is a stated disequality as well, as XCSP3 models write one (pigeonsPlus:
+ * the ten-value pigeon variables differ pairwise only by such tables, and the all-different
+ * constraint over eleven of them fails at the root, where CP-SAT's presolve also refutes it). The
+ * table stays posted, since table merging may still read it.
+ *
  * <p>Each clique is recorded with its offsets in {@link Support#allDifferentOffsets}, where {@link
  * LinearSystemDetector} finds the cliques that are permutations of the union of their domains.
  *
@@ -108,6 +114,9 @@ public class AlldifferentDetector implements ParserTreeConstants {
   // off, sum (cliques of implied disequalities only recorded, the default) or post (posted too)
   private final String implied =
       System.getProperty("org.jacop.fz.alldifferentImplied", "sum").toLowerCase();
+
+  /** The most pairs of a binary table, and of the product of its domains, read as a disequality. */
+  static final long MAX_TABLE_PAIRS = 100_000L;
 
   /** The fewest variables a clique must have to get an all-different constraint. */
   static final int MIN_CLIQUE_SIZE = 5;
@@ -157,6 +166,9 @@ public class AlldifferentDetector implements ParserTreeConstants {
 
   /** Statistics: the implied disequalities collected. */
   int impliedEdges;
+
+  // binary tables read as disequalities
+  int tableEdges;
 
   /** Statistics: the cliques that use an implied disequality. */
   int impliedCliques;
@@ -213,6 +225,9 @@ public class AlldifferentDetector implements ParserTreeConstants {
               + impliedCliques
               + "\n%%%mzn-stat-end");
     }
+    if (tableEdges > 0 && (support.options.debug() || support.options.searchStatistics())) {
+      FzConsole.println("%%%mzn-stat: alldifferentTableEdges=" + tableEdges + "\n%%%mzn-stat-end");
+    }
     if (differenceValues > 0 && (support.options.debug() || support.options.searchStatistics())) {
       FzConsole.println(
           "%%%mzn-stat: alldifferentDifferenceValues=" + differenceValues + "\n%%%mzn-stat-end");
@@ -265,6 +280,7 @@ public class AlldifferentDetector implements ParserTreeConstants {
           absolutes.add(new IntVar[] {support.getVariable(p1), support.getVariable(p2)});
         }
       }
+      case "jacop_table_int" -> table(node);
       case "array_var_int_element", "array_var_bool_element" -> element(node, 1);
       case "jacop_array_var_int_element_nonshifted", "jacop_array_var_bool_element_nonshifted" ->
           element(node, support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3)));
@@ -272,6 +288,71 @@ public class AlldifferentDetector implements ParserTreeConstants {
         // not a disequality
       }
     }
+  }
+
+  // a binary positive table that holds exactly the pairs of the domains with x - y != d
+  private void table(ASTConstElem node) {
+    if (support.mergedTables.containsKey(node)) {
+      return;
+    }
+    IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    if (v == null || v.length != 2 || v[0] == v[1] || v[0].singleton() || v[1].singleton()) {
+      return;
+    }
+    long product = (long) v[0].getSize() * v[1].getSize();
+    if (product > MAX_TABLE_PAIRS) {
+      return;
+    }
+    int[] t = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    if (t == null || t.length / 2 > MAX_TABLE_PAIRS) {
+      return;
+    }
+    Set<Long> pairs = new HashSet<>();
+    for (int r = 0; r + 1 < t.length; r += 2) {
+      if (v[0].domain.contains(t[r]) && v[1].domain.contains(t[r + 1])) {
+        pairs.add(((long) t[r] << 32) | (t[r + 1] & 0xffffffffL));
+      }
+    }
+    Integer d = tableDifference(v[0], v[1], pairs, product);
+    if (d != null) {
+      tableEdges++;
+      // stated, so a clique of them is posted; the table itself stays posted
+      Edge edge = Edge.of(node(v[0]), node(v[1]), d);
+      stated.add(edge);
+      edge(v[0], v[1], d, null);
+      impliedEdges--;
+    }
+  }
+
+  // d when the pairs are those of the domains of x and y with x - y != d, otherwise null
+  private static Integer tableDifference(IntVar x, IntVar y, Set<Long> pairs, long product) {
+    Integer d = null;
+    long excluded = 0;
+    for (var ex = x.domain.valueEnumeration(); ex.hasMoreElements(); ) {
+      int a = ex.nextElement();
+      for (var ey = y.domain.valueEnumeration(); ey.hasMoreElements(); ) {
+        int b = ey.nextElement();
+        if (!pairs.contains(((long) a << 32) | (b & 0xffffffffL))) {
+          if (d == null) {
+            d = a - b;
+          } else if (d != a - b) {
+            return null;
+          }
+          excluded++;
+        }
+      }
+    }
+    if (d == null) {
+      return null;
+    }
+    // every pair with x - y = d is missing: the table is exactly the disequality
+    long withDifference = 0;
+    for (var ex = x.domain.valueEnumeration(); ex.hasMoreElements(); ) {
+      if (y.domain.contains(ex.nextElement() - d)) {
+        withDifference++;
+      }
+    }
+    return withDifference == excluded && pairs.size() == product - excluded ? d : null;
   }
 
   // a * x0 - a * x1 = c with c != 0: x0 != x1
@@ -405,6 +486,20 @@ public class AlldifferentDetector implements ParserTreeConstants {
     elements.clear();
   }
 
+  /**
+   * It adds a disequality x - y != d stated by a constraint that another detector posts itself
+   * unless it is replaced: the token stands for it in {@link #replaced()}. It is called before
+   * {@link #detect(SimpleNode)}.
+   *
+   * @param x the first variable.
+   * @param y the second variable.
+   * @param d the excluded difference x - y.
+   * @param token the node that stands for the disequality.
+   */
+  public void statedDisequality(IntVar x, IntVar y, int d, SimpleNode token) {
+    edge(x, y, d, token);
+  }
+
   // x - y != d, stated by source or, when source is null, implied by other constraints
   private void edge(IntVar x, IntVar y, int d, SimpleNode source) {
     if (x == y || x.singleton() || y.singleton()) {
@@ -474,6 +569,8 @@ public class AlldifferentDetector implements ParserTreeConstants {
         if (work >= WORK_LIMIT) {
           break;
         }
+        // the clique search takes seconds on large models (hidato_table: 4.5 s)
+        support.checkTimeOut();
         if (covered.contains(Edge.of(seed, first[0], first[1]))) {
           continue;
         }

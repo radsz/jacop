@@ -341,7 +341,7 @@ public class CostMdd extends CostRegular {
     }
     IntVar[] q = new IntVar[levels + 1];
     for (int i = 0; i <= levels; i++) {
-      q[i] = new IntVar(store, "N" + i, 0, nodeLevel.length);
+      q[i] = new IntVar(store, store.freshVariableId("N" + i), 0, nodeLevel.length);
     }
     IntVar[] w = new IntVar[levels];
     List<List<int[]>> tuples = new ArrayList<>();
@@ -360,7 +360,7 @@ public class CostMdd extends CostRegular {
     for (int i = 0; i < levels; i++) {
       int lo = tuples.get(i).stream().mapToInt(t -> t[3]).min().orElse(0);
       int hi = tuples.get(i).stream().mapToInt(t -> t[3]).max().orElse(0);
-      w[i] = new IntVar(store, "W" + i, lo, hi);
+      w[i] = new IntVar(store, store.freshVariableId("W" + i), lo, hi);
       result.add(
           new Table(
               new IntVar[] {q[i], list[i], q[i + 1], w[i]}, tuples.get(i).toArray(new int[0][])));

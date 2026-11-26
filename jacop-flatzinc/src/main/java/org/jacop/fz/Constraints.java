@@ -48,6 +48,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
+import org.jacop.fz.constraints.AbsoluteDifferenceDetector;
 import org.jacop.fz.constraints.AffineFolding;
 import org.jacop.fz.constraints.AgreementCountDetector;
 import org.jacop.fz.constraints.AlldiffChannels;
@@ -55,9 +56,11 @@ import org.jacop.fz.constraints.AlldifferentDetector;
 import org.jacop.fz.constraints.AntichainDetector;
 import org.jacop.fz.constraints.ArgMaxFunctionDetector;
 import org.jacop.fz.constraints.BalanceDetector;
+import org.jacop.fz.constraints.BinPackingCostBound;
 import org.jacop.fz.constraints.CardinalityDetector;
 import org.jacop.fz.constraints.CircuitCostDetector;
 import org.jacop.fz.constraints.ClampedBounds;
+import org.jacop.fz.constraints.ClausalCompiler;
 import org.jacop.fz.constraints.ColouredTreeDetector;
 import org.jacop.fz.constraints.CommonSubexpressions;
 import org.jacop.fz.constraints.ConjunctionSumDetector;
@@ -65,18 +68,24 @@ import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.ConvexAllocationDetector;
 import org.jacop.fz.constraints.CostNetworkDetector;
 import org.jacop.fz.constraints.CountPartnersDetector;
+import org.jacop.fz.constraints.CountStepCostBound;
 import org.jacop.fz.constraints.CyclicDistanceDetector;
 import org.jacop.fz.constraints.DifferenceBoundsDetector;
 import org.jacop.fz.constraints.DifferenceCyclesDetector;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
+import org.jacop.fz.constraints.DisjunctiveListsDifferDetector;
 import org.jacop.fz.constraints.ElementTableDetector;
 import org.jacop.fz.constraints.EnforcementInliner;
+import org.jacop.fz.constraints.EntailedDisequalities;
 import org.jacop.fz.constraints.ExactCoverDetector;
+import org.jacop.fz.constraints.FactoredRowDetector;
 import org.jacop.fz.constraints.GiantTourDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
 import org.jacop.fz.constraints.IndexDisjunctionDetector;
+import org.jacop.fz.constraints.IndexFunctionDetector;
 import org.jacop.fz.constraints.IntensionTableDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
+import org.jacop.fz.constraints.LinearIndexElementDetector;
 import org.jacop.fz.constraints.LinearOverlapDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
 import org.jacop.fz.constraints.LinearSystemDetector;
@@ -91,6 +100,7 @@ import org.jacop.fz.constraints.PartialCopyDetector;
 import org.jacop.fz.constraints.PermutedTasksDetector;
 import org.jacop.fz.constraints.PrecedenceCostDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
+import org.jacop.fz.constraints.ProductOfSumsDetector;
 import org.jacop.fz.constraints.ProgressionTilingDetector;
 import org.jacop.fz.constraints.RegularFlowDetector;
 import org.jacop.fz.constraints.RoutesDetector;
@@ -167,17 +177,47 @@ public class Constraints implements ParserTreeConstants {
     debug = options.debug();
   }
 
+  /**
+   * Removes the disequalities that the declared domains already satisfy, before {@link
+   * #generateAllConstraints} and its detectors scan them; see {@link EntailedDisequalities}.
+   *
+   * @param astTree the model
+   */
+  void removeEntailedDisequalities(SimpleNode astTree) {
+    // with clamped domains a disequality true over the clamped domain need not be true over the
+    // declared one
+    if (!EntailedDisequalities.enabled() || dictionary.domainsClamped()) {
+      return;
+    }
+    int entailed = new EntailedDisequalities(support).remove(astTree);
+    if (support.options.debug() && entailed > 0) {
+      FzConsole.println("% " + entailed + " disequalities true by the domains removed");
+    }
+  }
+
   void generateAllConstraints(SimpleNode astTree) throws Throwable {
 
+    dictionary.searchAnnotated = searchAnnotated(astTree);
     // an objective declared beyond the integer range is divided by the factor its definition
     // forces on it, instead of being narrowed
     ObjectiveScaling.apply(support, astTree);
     if (dictionary.domainsClamped()) {
-      System.err.println(dictionary.clampedDomainsWarning());
+      if (dictionary.boundedDomainsClamped()) {
+        System.err.println(dictionary.clampedDomainsWarning());
+      }
       dictionary.recordDeclaredDomains();
       dictionary.setSaturationCandidates(
           SaturatedProducts.find(
               support, astTree, ObjectiveScaling.objective(dictionary, astTree)));
+      // reads the rows as declared, before the detectors replace constraints, to show the
+      // narrowing of domains harmless at the end or when the model fails while it is translated
+      dictionary.setClampedBounds(
+          new ClampedBounds(
+              support,
+              astTree,
+              dictionary.narrowedVariables(),
+              dictionary::declaredBounds,
+              dictionary.saturatedProducts()));
     }
 
     Options options = support.options;
@@ -197,6 +237,12 @@ public class Constraints implements ParserTreeConstants {
       // float variables, and a model built for LCG (clauses, split sums, no views) and then solved
       // by search is not the model solved without --lcg
       options.dropLcg("the model has float variables");
+    } else if (manySolutions && options.lcgEnumerates()) {
+      // LCG enumerates the solutions with blocking clauses over the output variables (see
+      // LcgSolver.setEnumeration); the reformulations that lose solutions are off, as without LCG
+      if (options.debug()) {
+        FzConsole.println("% many solutions: enumerated by LCG");
+      }
     } else if (options.getAll() && satisfaction(astTree)) {
       options.dropLcg("all solutions are not supported");
     } else if (manySolutions) {
@@ -217,6 +263,16 @@ public class Constraints implements ParserTreeConstants {
       // Boolean constraints become clauses of the LCG solver, or of the SAT solver of -sat once
       // presolve has preprocessed them; Solve posts them
       sat.collectClauses();
+    }
+    // a satisfaction model over small domains under free search is also compiled into one CNF,
+    // which Solve gives to JaSAT; the store is built as usual, to check the solution
+    if (ClausalCompiler.enabled()
+        && options.lcg()
+        && options.proof() == null
+        && !manySolutions
+        && satisfaction(astTree)
+        && freeSearchModel(astTree, options)) {
+      dictionary.clausalModel = ClausalCompiler.compile(support, astTree);
     }
     if (options.proof() != null && options.lcg()) {
       // the constraints propagate as they are imposed; the proof derives their changes from the
@@ -255,11 +311,14 @@ public class Constraints implements ParserTreeConstants {
           pureClique = true;
         }
       }
+      cf.setClauseModel(clauseModel(astTree));
       // a search variable that became an alias is searched as its Boolean
       dictionary.searchAliasTargets(dictionary.binaryEqAliases);
       // the same function of the same inputs is computed once; --proof encodes the model as given
       if (CommonSubexpressions.enabled() && options.proof() == null) {
-        CommonSubexpressions cse = new CommonSubexpressions(support, solveItemVariables(astTree));
+        Set<IntVar> pinned = solveItemVariables(astTree);
+        dictionary.addDeclaredEqualities(pinned);
+        CommonSubexpressions cse = new CommonSubexpressions(support, pinned);
         cse.detect(astTree);
         if (!cse.replaced().isEmpty()) {
           replaced = new HashSet<>(cse.replaced());
@@ -286,14 +345,35 @@ public class Constraints implements ParserTreeConstants {
         }
         dictionary.removeAliasFromSearch();
       }
+      // t = x - y and a = |t| used only to exclude values become constraints on x - y, whose
+      // disequalities the all-different detection reads
+      AbsoluteDifferenceDetector absoluteDifferences = null;
+      if (AbsoluteDifferenceDetector.enabled() && options.proof() == null) {
+        absoluteDifferences = new AbsoluteDifferenceDetector(support);
+        absoluteDifferences.detect(astTree, replaced);
+      }
+      Set<SimpleNode> inCliques = Set.of();
       if (AlldifferentDetector.enabled()) {
         AlldifferentDetector alldifferent = new AlldifferentDetector(support);
+        if (absoluteDifferences != null) {
+          absoluteDifferences.feed(alldifferent);
+        }
         alldifferent.detect(astTree);
+        inCliques = alldifferent.replaced();
         if (replaced.isEmpty()) {
           replaced = alldifferent.replaced();
         } else {
           replaced = new HashSet<>(replaced);
           replaced.addAll(alldifferent.replaced());
+        }
+      }
+      if (absoluteDifferences != null) {
+        Set<SimpleNode> rewritten = absoluteDifferences.apply(inCliques);
+        if (!rewritten.isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(rewritten);
+          dictionary.removeFromDefaultSearch(absoluteDifferences.removed());
+          dictionary.unusedVariables.addAll(absoluteDifferences.removed());
         }
       }
 
@@ -314,10 +394,31 @@ public class Constraints implements ParserTreeConstants {
         }
       }
 
+      // an element over a constant array read through a linear index of a few variables becomes a
+      // table over those variables when nothing else reads the index
+      if (LinearIndexElementDetector.enabled() && options.proof() == null) {
+        LinearIndexElementDetector linear =
+            new LinearIndexElementDetector(support, keptVariables(astTree));
+        linear.detect(astTree, replaced);
+        if (!linear.replaced().isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(linear.replaced());
+          dictionary.removeFromDefaultSearch(linear.removed());
+          dictionary.unusedVariables.addAll(linear.removed());
+        }
+      }
+
+      // the step costs of the counts of one array cannot all stay low: their least sum bounds the
+      // objective
+      if (CountStepCostBound.enabled() && options.proof() == null) {
+        new CountStepCostBound(support)
+            .detect(astTree, replaced, ObjectiveScaling.objective(dictionary, astTree));
+      }
+
       // the tables check their rows against the domains, and --proof does not encode them
       if (ElementTableDetector.enabled() && options.proof() == null) {
         ElementTableDetector elements = new ElementTableDetector(support);
-        elements.detect(astTree);
+        elements.detect(astTree, replaced);
         if (!elements.replaced().isEmpty()) {
           replaced = new HashSet<>(replaced);
           replaced.addAll(elements.replaced());
@@ -341,6 +442,20 @@ public class Constraints implements ParserTreeConstants {
         if (!lists.replaced().isEmpty()) {
           replaced = new HashSet<>(replaced);
           replaced.addAll(lists.replaced());
+        }
+      }
+
+      // lists that differ written as clauses of reified disequalities become AllDifferentLists over
+      // the largest group of lists that all differ pairwise
+      if (DisjunctiveListsDifferDetector.enabled() && options.proof() == null) {
+        DisjunctiveListsDifferDetector lists =
+            new DisjunctiveListsDifferDetector(support, solveItemVariables(astTree));
+        lists.detect(astTree);
+        if (!lists.replaced().isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(lists.replaced());
+          dictionary.removeFromDefaultSearch(lists.removed());
+          dictionary.unusedVariables.addAll(lists.removed());
         }
       }
 
@@ -431,6 +546,15 @@ public class Constraints implements ParserTreeConstants {
         }
       }
 
+      // a product of two functions of one index variable as a sum over the index's value literals
+      if (IndexFunctionDetector.enabled() && options.proof() == null) {
+        Set<SimpleNode> products = new IndexFunctionDetector(support).detect(astTree);
+        if (!products.isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(products);
+        }
+      }
+
       IncreasingDetector increasing = null;
       if (IncreasingDetector.sumEnabled() || IncreasingDetector.nvalueEnabled()) {
         increasing = new IncreasingDetector(support);
@@ -478,6 +602,26 @@ public class Constraints implements ParserTreeConstants {
         }
       }
 
+      // a sum of conjunctions over all pairs of two sets of Booleans as the product of their
+      // counts;
+      // --proof encodes the rows as given
+      if (ProductOfSumsDetector.enabled() && options.proof() == null) {
+        ProductOfSumsDetector productOfSums = new ProductOfSumsDetector(support, replaced);
+        Set<SimpleNode> conjunctions = productOfSums.detect(astTree);
+        if (!conjunctions.isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(conjunctions);
+          dictionary.removeFromDefaultSearch(productOfSums.removed());
+          dictionary.unusedVariables.addAll(productOfSums.removed());
+        }
+      }
+
+      // the load costs of each bin packing that a linear constraint sums become a variable bounded
+      // by their smallest sum over the bin packing alone; --proof does not encode the bound
+      if (BinPackingCostBound.enabled() && options.proof() == null) {
+        new BinPackingCostBound(support, zeroSumNodes).detect(astTree);
+      }
+
       // common sub-sums of linear constraints become variables, not of the rows zero-sum detection
       // took out; --proof encodes the rows as given
       if (LinearOverlapDetector.enabled() && options.proof() == null) {
@@ -488,7 +632,7 @@ public class Constraints implements ParserTreeConstants {
       // Solve imposes once the objective is known; it reads the model as it is
       if (CostNetworkDetector.enabled() && options.proof() == null) {
         CostNetworkDetector costNetwork = new CostNetworkDetector(support);
-        costNetwork.collect(astTree);
+        costNetwork.collect(astTree, replaced);
         dictionary.costNetwork = costNetwork;
       }
 
@@ -547,16 +691,6 @@ public class Constraints implements ParserTreeConstants {
 
       support.releaseLinearRewrites();
       support.reportAlldiffChannels();
-      if (dictionary.domainsClamped()) {
-        // reads the rows as declared, to show the narrowing of domains harmless at the end
-        dictionary.setClampedBounds(
-            new ClampedBounds(
-                support,
-                astTree,
-                dictionary.narrowedVariables(),
-                dictionary::declaredBounds,
-                dictionary.saturatedProducts()));
-      }
       cf.poseCounts();
       cf.poseDiffnProjections();
 
@@ -621,6 +755,12 @@ public class Constraints implements ParserTreeConstants {
       // --proof does not encode it
       if (ConjunctionSumDetector.enabled() && options.proof() == null) {
         new ConjunctionSumDetector(support).detect(astTree);
+      }
+
+      // a linear row times a variable that multiplies each of its terms (first-level RLT over the
+      // model's products), redundant; --proof does not encode it
+      if (FactoredRowDetector.enabled() && options.proof() == null) {
+        new FactoredRowDetector(support, replaced).detect(astTree);
       }
 
       // the coloring bound of a maximized sum of 0/1 variables with pairwise conflicts (maximum
@@ -756,9 +896,12 @@ public class Constraints implements ParserTreeConstants {
       // to be sure that all constraints queues are empty and the
       // model is consistent; it can happen that search will not
       // find out inconsistency if all variables are ground
-      if (!store.consistency()) {
-        throw Store.failException;
-      }
+      support.propagateUntilTimeOut(
+          () -> {
+            if (!store.consistency()) {
+              throw Store.failException;
+            }
+          });
     } catch (FailException e) {
       // a constraint failed as it propagated (a domain the translation emptied has no reason)
       if (dictionary.rootTrail != null && store.recentlyFailedConstraint != null) {
@@ -788,6 +931,39 @@ public class Constraints implements ParserTreeConstants {
 
   // a constraint item, imposed as implied by the others when implied is true
   /** The integer variables named by the solve item: the objective and the search annotations. */
+  private static final Set<String> CLAUSE_CONSTRAINTS =
+      Set.of(
+          "jacop_negative_table_int",
+          "bool_clause",
+          "array_bool_or",
+          "array_bool_and",
+          "bool2int",
+          "bool_not",
+          "bool_eq",
+          "bool_le",
+          "bool_lt",
+          "bool_or",
+          "bool_and");
+
+  /* Whether every constraint of the model is a clause or a negative table, which over 0/1
+   * variables is a set of clauses. */
+  private static boolean clauseModel(SimpleNode astTree) {
+    for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
+      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
+      if (node.getId() != JJTCONSTRAINTITEMS) {
+        continue;
+      }
+      for (int j = 0; j < node.jjtGetNumChildren(); j++) {
+        SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
+        if (item.getId() != JJTCONSTELEM
+            || !CLAUSE_CONSTRAINTS.contains(((ASTConstElem) item).getName())) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   private Set<IntVar> solveItemVariables(SimpleNode astTree) {
     Set<IntVar> vars = Collections.newSetFromMap(new IdentityHashMap<>());
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
@@ -817,6 +993,8 @@ public class Constraints implements ParserTreeConstants {
     for (IntVar v : new ArrayList<>(vars)) {
       vars.add(dictionary.getAlias(v));
     }
+    // the equality posted for var x = y stays on those variables
+    dictionary.addDeclaredEqualities(vars);
     return vars;
   }
 
@@ -941,16 +1119,15 @@ public class Constraints implements ParserTreeConstants {
     ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
     IntVar v1 = support.getVariable(p1);
     IntVar v2 = support.getVariable(p2);
-    if (v1 == v2 || dictionary.isAliasTarget(v2)) {
-      // the integer variable is already the alias of a Boolean; gen_bool2int posts the equality
-      // of the two Booleans
+    if (v1 == v2 || dictionary.isAliasTarget(v2) || dictionary.isDeclaredEqual(v2)) {
+      // the integer variable is already the alias of a Boolean, or a declaration made it equal to
+      // another variable on its own object; gen_bool2int posts the equality
       return;
     }
     dictionary.addAlias(v1, v2);
-    if (v1.singleton() || v2.singleton()) {
-      v1.domain.in(store.level, v1, v2.domain);
-      v2.domain.in(store.level, v2, v1.domain);
-    }
+    // v1 stands for v2 from now on, so it takes the declared domain of v2 (var 2..20: i)
+    v1.domain.in(store.level, v1, v2.domain);
+    v2.domain.in(store.level, v2, v1.domain);
     if (debug) {
       FzConsole.println("% Alias: " + v1 + " == " + v2);
     }
@@ -987,6 +1164,7 @@ public class Constraints implements ParserTreeConstants {
         || x.max() > 1
         || dictionary.aliasTable.containsKey(x)
         || dictionary.isAliasTarget(x)
+        || dictionary.isDeclaredEqual(x)
         || dictionary.aliasTable.containsKey(b)) {
       return false;
     }
@@ -1044,6 +1222,40 @@ public class Constraints implements ParserTreeConstants {
   private boolean hasFloatVariables() {
     for (int i = 0; i < store.size(); i++) {
       if (store.vars[i] instanceof FloatVar) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** Whether the solve item, a child of the model's end, carries a search annotation. */
+  private static boolean searchAnnotated(Node node) {
+    for (int i = node.jjtGetNumChildren() - 1; i >= 0; i--) {
+      Node child = node.jjtGetChild(i);
+      if (child instanceof ASTSolveItem item) {
+        return item.jjtGetNumChildren() > 1;
+      }
+      if (child instanceof ASTModelEnd && searchAnnotated(child)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // whether the model is solved by free search: -f, or no search annotation (as Solve decides)
+  private static boolean freeSearchModel(Node node, Options options) {
+    if (options.freeSearch()) {
+      return true;
+    }
+    if (!options.freeSearchWithoutAnnotation() || options.complementarySearch()) {
+      return false;
+    }
+    for (int i = node.jjtGetNumChildren() - 1; i >= 0; i--) {
+      Node child = node.jjtGetChild(i);
+      if (child instanceof ASTSolveItem item) {
+        return item.jjtGetNumChildren() == 1;
+      }
+      if (child instanceof ASTModelEnd && freeSearchModel(child, options)) {
         return true;
       }
     }

@@ -108,7 +108,7 @@ public final class SaturatedProducts {
    */
   public static Set<IntVar> find(Support support, SimpleNode astTree, IntVar objective) {
     Tables dictionary = support.dictionary;
-    if (!dictionary.domainsClamped()
+    if (!dictionary.boundedDomainsClamped()
         || support.options != null && support.options.proof() != null) {
       return Set.of();
     }
@@ -220,7 +220,7 @@ public final class SaturatedProducts {
         low = support.getInt(other);
         high = low;
       } else if (other.getType() == 2) {
-        IntVar w = support.dictionary.getVariable(other.getIdent());
+        IntVar w = support.dictionary.getVariable(other);
         if (w == null || uses.containsKey(w)) {
           return false;
         }
@@ -237,7 +237,7 @@ public final class SaturatedProducts {
   }
 
   private boolean names(ASTScalarFlatExpr e, IntVar v) {
-    return e.getType() == 2 && support.dictionary.getVariable(e.getIdent()) == v;
+    return e.getType() == 2 && support.dictionary.getVariable(e) == v;
   }
 
   // the candidates a constraint names, also through arrays
@@ -251,7 +251,7 @@ public final class SaturatedProducts {
           }
         }
       } else {
-        IntVar v = support.dictionary.getVariable(e.getIdent());
+        IntVar v = support.dictionary.getVariable(e);
         if (v != null && uses.containsKey(v)) {
           out.put(v, true);
         }

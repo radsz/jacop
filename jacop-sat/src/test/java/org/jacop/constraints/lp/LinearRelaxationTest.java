@@ -339,6 +339,42 @@ class LinearRelaxationTest {
     }
   }
 
+  /**
+   * Root re-cuts (org.jacop.lp.rootRecut): the restart solves also run when the bounds of the root
+   * level changed without a better bound of the cost, and at the root of a search that starts a
+   * level above the first solve (LinearRelaxation.searchRoot); they keep the optimum of every
+   * model, as depth-first search finds it.
+   */
+  @ParameterizedTest
+  @EnumSource(LinearRelaxation.Simplex.class)
+  void keepsTheOptimumWithRootRecuts(LinearRelaxation.Simplex simplex) {
+    boolean was = LinearRelaxation.restartSolvesOn;
+    boolean bounds = LinearRelaxation.restartBoundsOn;
+    boolean recut = LinearRelaxation.rootRecutOn;
+    try {
+      LinearRelaxation.restartSolvesOn = true;
+      LinearRelaxation.restartBoundsOn = true;
+      LinearRelaxation.rootRecutOn = true;
+      long solves = 0;
+      long recuts = 0;
+      for (int run = 0; run < RUNS; run++) {
+        for (boolean above : new boolean[] {false, true}) {
+          LinearRelaxation r = restarts(run, simplex, above);
+          if (r != null) {
+            solves += r.restartSolves;
+            recuts += r.rootRecuts;
+          }
+        }
+      }
+      assertThat(solves).isPositive();
+      assertThat(recuts).isPositive();
+    } finally {
+      LinearRelaxation.restartSolvesOn = was;
+      LinearRelaxation.restartBoundsOn = bounds;
+      LinearRelaxation.rootRecutOn = recut;
+    }
+  }
+
   // solves each model with restarts after each solution; returns the restart solves and the root
   // reduced-cost prunings
   private static long[] restarts(LinearRelaxation.Simplex simplex) {
@@ -357,6 +393,13 @@ class LinearRelaxationTest {
   // the restarts of one model, checked against depth-first search; its relaxation, or null without
   // an objective
   private static LinearRelaxation restarts(long run, LinearRelaxation.Simplex simplex) {
+    return restarts(run, simplex, false);
+  }
+
+  // the same; with above, the search starts a level above the first solve, which it gives the
+  // relaxation as its root level, as free search does
+  private static LinearRelaxation restarts(
+      long run, LinearRelaxation.Simplex simplex, boolean above) {
     long[] expected = search(new Model(run));
     Model model = new Model(run);
     if (model.objective == null) {
@@ -368,6 +411,10 @@ class LinearRelaxationTest {
     IntVar[] vars = Arrays.copyOf(model.x, model.x.length + 1);
     vars[model.x.length] = cost;
     long best = Long.MIN_VALUE;
+    if (above && model.store.consistency()) {
+      model.store.setLevel(model.store.level + 1);
+      r.searchRoot(model.store.level);
+    }
     while (model.store.consistency()) {
       DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
       search.setPrintInfo(false);
@@ -1213,6 +1260,49 @@ class LinearRelaxationTest {
   }
 
   /**
+   * In a tree of sums (LinearSplit) the row of an inner block also holds the sums of the blocks
+   * below it. When that row comes before theirs, every sum still gets its own row as definition:
+   * taking the row's first variable to define defined a lower sum by it and left the inner sum a
+   * free column (XCSP 2025 BusScheduling-c2: 536 of 7,199 sums, no first solution in 120 s).
+   */
+  @Test
+  void substitutionDefinesEverySumOfATreeWhoseInnerRowComesFirst() {
+    Store store = new Store();
+    // the rows are read by variable: the inner sum is made first
+    IntVar inner = new IntVar(store, "m", 0, 6);
+    IntVar[] leaf = new IntVar[3];
+    for (int b = 0; b < leaf.length; b++) {
+      leaf[b] = new IntVar(store, "s" + b, 0, 2);
+    }
+    IntVar[] x = new IntVar[6];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+    }
+    store.impose(
+        new LinearInt(
+            new IntVar[] {leaf[0], leaf[1], leaf[2], inner}, new int[] {1, 1, 1, -1}, "==", 0));
+    for (int b = 0; b < leaf.length; b++) {
+      store.impose(
+          new LinearInt(
+              new IntVar[] {x[2 * b], x[2 * b + 1], leaf[b]}, new int[] {1, 1, -1}, "==", 0));
+    }
+    IntVar y = new IntVar(store, "y", 0, 3);
+    store.impose(new LinearInt(new IntVar[] {inner, y}, new int[] {1, 1}, "<=", 2));
+    // a relaxation of a single row is none
+    store.impose(new LinearInt(new IntVar[] {x[0], x[5]}, new int[] {1, 1}, ">=", 1));
+    Set<IntVar> sums = new HashSet<>(Arrays.asList(leaf));
+    sums.add(inner);
+    LinearRelaxation r = LinearRelaxation.of(store, null, false, List.of(), sums);
+    assertThat(r).isNotNull();
+    for (LinearForm f : r.allRows()) {
+      assertThat(Arrays.asList(f.vars())).as("%s", f).doesNotContainAnyElementsOf(sums);
+    }
+    assertThat(r.allRows())
+        .anyMatch(
+            f -> f.vars().length == x.length + 1 && f.relation() == LinearForm.LE && f.c() == 2);
+  }
+
+  /**
    * Chained definitions that use the variables of the level below twice merge their terms: each
    * level replaced {@code y_k} and {@code z_k} by both {@code y_k-1} and {@code z_k-1}, so without
    * merging a row over the top level doubled at every level (XCSP 2022 CarSequencing-table ran out
@@ -1251,6 +1341,49 @@ class LinearRelaxationTest {
         assertThat(weight).as("%s", f).isNotZero();
       }
     }
+  }
+
+  /**
+   * A long row cut into sums of blocks is expanded back whole: the objective of XCSP 2025
+   * BusScheduling-c2, a sum of 14,771 Booleans that lcg-split cuts into blocks, stayed as the sum
+   * of its blocks under a cap of 4,096 terms per expanded row, and free search proved its optimum
+   * in none of 3 runs of 120 s instead of in 17-31 s.
+   */
+  @Test
+  void substitutionExpandsLongRowsCutIntoBlocks() {
+    Store store = new Store();
+    int n = 5000;
+    int block = 20;
+    IntVar[] b = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      b[i] = new IntVar(store, "b" + i, 0, 1);
+    }
+    Set<IntVar> sums = new HashSet<>();
+    IntVar[] blocks = new IntVar[n / block];
+    for (int j = 0; j < blocks.length; j++) {
+      blocks[j] = new IntVar(store, "s" + j, 0, block);
+      IntVar[] vs = new IntVar[block + 1];
+      int[] ws = new int[block + 1];
+      vs[0] = blocks[j];
+      ws[0] = 1;
+      for (int i = 0; i < block; i++) {
+        vs[i + 1] = b[j * block + i];
+        ws[i + 1] = -1;
+      }
+      store.impose(new LinearInt(vs, ws, "==", 0));
+      sums.add(blocks[j]);
+    }
+    int[] ones = new int[blocks.length];
+    Arrays.fill(ones, 1);
+    store.impose(new LinearInt(blocks, ones, ">=", 30));
+    // a second row: a relaxation has at least two
+    store.impose(new LinearInt(new IntVar[] {b[0], b[1]}, new int[] {1, 1}, "<=", 1));
+    LinearRelaxation r = LinearRelaxation.of(store, null, false, List.of(), sums);
+    assertThat(r).isNotNull();
+    assertThat(r.allRows())
+        .anyMatch(
+            f -> f.vars().length == n && Arrays.asList(f.vars()).containsAll(Arrays.asList(b)));
+    assertThat(r.allRows()).noneMatch(f -> Arrays.asList(f.vars()).contains(blocks[0]));
   }
 
   /**

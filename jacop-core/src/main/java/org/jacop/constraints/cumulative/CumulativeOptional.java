@@ -121,6 +121,8 @@ public class CumulativeOptional extends Cumulative {
 
       store.propagationHasOccurred = false;
 
+      fitTasksInLimit(store);
+
       up.sweepPruning(store, taskNormal, opt);
 
       if (!store.propagationHasOccurred && doOptionalOverload) {
@@ -140,6 +142,33 @@ public class CumulativeOptional extends Cumulative {
       }
 
     } while (store.propagationHasOccurred);
+  }
+
+  /**
+   * A present task that occupies the resource uses at most the limit; a task that uses more than
+   * the limit is absent or has zero duration. The profile only sees a task once it has a compulsory
+   * part, so without this a present task using more than the limit was not refuted while its start
+   * was open.
+   *
+   * @param store the constraint store.
+   */
+  void fitTasksInLimit(Store store) {
+    int limitMax = limit.max();
+    for (int i = 0; i < taskNormal.length; i++) {
+      TaskView t = taskNormal[i];
+      if (opt[i].max() == 0) {
+        continue;
+      }
+      if (t.res.min() > limitMax) {
+        if (t.dur.min() > 0) {
+          opt[i].domain.inMax(store.level, opt[i], 0);
+        } else if (opt[i].min() == 1) {
+          t.dur.domain.inMax(store.level, t.dur, 0);
+        }
+      } else if (t.dur.min() > 0 && opt[i].min() == 1) {
+        t.res.domain.inMax(store.level, t.res, limitMax);
+      }
+    }
   }
 
   @Override

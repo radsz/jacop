@@ -38,9 +38,13 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XorSystem;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
+import org.jacop.core.Store;
 import org.jacop.fz.ASTConstElem;
 import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.FzConsole;
@@ -87,8 +91,32 @@ public class XorSystemDetector implements ParserTreeConstants {
   // the longest inequality matched with its opposite into an equation
   static final int MAX_PAIRED_LENGTH = 64;
 
-  // the inequalities over 0/1 variables not yet matched, by their terms
-  private final Map<Map<IntVar, Integer>, Integer> lessEquals = new HashMap<>();
+  // the inequalities over 0/1 variables not yet matched, by a hash of their terms that is linear
+  // in the coefficients, so that the opposite terms have the opposite hash: maps of the terms of
+  // every row as keys took a tenth of the set-up of the 1.9 million rows of PB 2006 haplotype
+  // simp-nonunif; the terms are built only for rows whose hashes meet
+  private final Map<Long, List<Pending>> lessEquals = new HashMap<>();
+
+  /** An inequality over 0/1 variables waiting for its opposite. */
+  private static final class Pending {
+    private final int[] a;
+    private final IntVar[] v;
+    private final int k;
+    private Map<IntVar, Integer> terms;
+
+    Pending(int[] a, IntVar[] v, int k) {
+      this.a = a;
+      this.v = v;
+      this.k = k;
+    }
+
+    Map<IntVar, Integer> terms() {
+      if (terms == null) {
+        terms = XorSystemDetector.terms(a, v);
+      }
+      return terms;
+    }
+  }
 
   private final Support support;
 
@@ -114,6 +142,9 @@ public class XorSystemDetector implements ParserTreeConstants {
   /** Statistics: the rows from equations over 0/1 variables only. */
   int zeroOneRows;
 
+  /** Statistics: the values and equivalences implied by equations taken modulo 2. */
+  int impliedParities;
+
   /** Statistics: the equations read as two opposite inequalities. */
   int pairedRows;
 
@@ -125,6 +156,17 @@ public class XorSystemDetector implements ParserTreeConstants {
 
   // the rows that are parities read from clauses, whose clauses the model keeps
   private final java.util.BitSet fromClauses = new java.util.BitSet();
+
+  // the rows of bool_not and bool_eq, which propagate their row completely
+  private final java.util.BitSet equivalences = new java.util.BitSet();
+
+  private void equivalenceRow(IntVar a, IntVar b, int parity) {
+    int before = rows.size();
+    row(new IntVar[] {a, b}, parity);
+    if (rows.size() > before) {
+      equivalences.set(before);
+    }
+  }
 
   // the parities encoded as clauses enter the system (see clause(IntVar[], IntVar[]))
   static final boolean CLAUSES =
@@ -168,6 +210,9 @@ public class XorSystemDetector implements ParserTreeConstants {
     support.forEachConstraint(astTree, this::collect);
     lessEquals.clear();
     clauseRows();
+    if (support.options.searchStatistics() && impliedParities > 0) {
+      FzConsole.println("%%%mzn-stat: xorImpliedParities=" + impliedParities + "\n%%%mzn-stat-end");
+    }
     if (rows.size() < 2) {
       return;
     }
@@ -189,9 +234,14 @@ public class XorSystemDetector implements ParserTreeConstants {
           || members.stream().allMatch(r -> rows.get(r).length < 3)) {
         continue;
       }
-      if (members.stream().allMatch(fromClauses::get) && acyclic(members, n)) {
+      if (members.stream().allMatch(r -> fromClauses.get(r) || equivalences.get(r))
+          && acyclic(members, n)) {
         // unit propagation on the clauses of a Berge-acyclic system already reaches the
-        // fixpoint of Gauss-Jordan elimination; the system would only slow the search
+        // fixpoint of Gauss-Jordan elimination; the system would only slow the search. Also with
+        // equivalences and negations, which propagate their row completely: on security-witness
+        // FlexScan-DA (MaxSAT Evaluation 2021) each of the 63,636 soft literals is the negation of
+        // an output of a three-variable XOR in clauses, and the 63,636 systems of two rows posted
+        // for them made every backtrack of LCG visit each of them
         acyclicSystems++;
         continue;
       }
@@ -267,8 +317,8 @@ public class XorSystemDetector implements ParserTreeConstants {
               support.getVarArray((SimpleNode) node.jjtGetChild(1)));
         }
       }
-      case "bool_not" -> row(new IntVar[] {aVar(node, 0), aVar(node, 1)}, 1);
-      case "bool_eq" -> row(new IntVar[] {aVar(node, 0), aVar(node, 1)}, 0);
+      case "bool_not" -> equivalenceRow(aVar(node, 0), aVar(node, 1), 1);
+      case "bool_eq" -> equivalenceRow(aVar(node, 0), aVar(node, 1), 0);
       // r = (a == b): a xor b xor r = 1
       case "bool_eq_reif" -> row(new IntVar[] {aVar(node, 0), aVar(node, 1), aVar(node, 2)}, 1);
       // r = (a != b): a xor b xor r = 0
@@ -929,30 +979,68 @@ public class XorSystemDetector implements ParserTreeConstants {
     if (a.length != v.length || v.length < 2 || v.length > MAX_PAIRED_LENGTH) {
       return;
     }
-    Map<IntVar, Integer> terms = new HashMap<>();
+    long hash = 0;
     for (int i = 0; i < v.length; i++) {
       if (v[i].min() < 0 || v[i].max() > 1) {
         return;
       }
+      hash += mix(System.identityHashCode(v[i])) * a[i];
+    }
+    int k = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    Map<IntVar, Integer> terms = null;
+    List<Pending> opposites = lessEquals.get(-hash);
+    if (opposites != null) {
+      terms = terms(a, v);
+      Map<IntVar, Integer> negated = new HashMap<>();
+      terms.forEach((x, c) -> negated.put(x, -c));
+      for (int p = 0; p < opposites.size(); p++) {
+        Pending other = opposites.get(p);
+        if (other.terms().equals(negated)) {
+          if (other.k != -k) {
+            break;
+          }
+          opposites.remove(p);
+          if (opposites.isEmpty()) {
+            lessEquals.remove(-hash);
+          }
+          IntVar[] x = terms.keySet().toArray(new IntVar[0]);
+          int[] c = new int[x.length];
+          for (int i = 0; i < x.length; i++) {
+            c[i] = terms.get(x[i]);
+          }
+          pairedRows++;
+          linear(c, x, k);
+          return;
+        }
+      }
+    }
+    List<Pending> same = lessEquals.computeIfAbsent(hash, h -> new ArrayList<>(1));
+    for (Pending other : same) {
+      if (terms == null) {
+        terms = terms(a, v);
+      }
+      if (other.terms().equals(terms)) {
+        // the first of the rows with these terms waits
+        return;
+      }
+    }
+    same.add(new Pending(a, v, k));
+  }
+
+  // the terms of a row, repeated variables added up, without zero coefficients
+  private static Map<IntVar, Integer> terms(int[] a, IntVar[] v) {
+    Map<IntVar, Integer> terms = new HashMap<>();
+    for (int i = 0; i < v.length; i++) {
       terms.merge(v[i], a[i], Integer::sum);
     }
     terms.values().removeIf(c -> c == 0);
-    int k = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
-    Map<IntVar, Integer> negated = new HashMap<>();
-    terms.forEach((x, c) -> negated.put(x, -c));
-    Integer other = lessEquals.get(negated);
-    if (other != null && other == -k) {
-      lessEquals.remove(negated);
-      IntVar[] x = terms.keySet().toArray(new IntVar[0]);
-      int[] c = new int[x.length];
-      for (int i = 0; i < x.length; i++) {
-        c[i] = terms.get(x[i]);
-      }
-      pairedRows++;
-      linear(c, x, k);
-    } else {
-      lessEquals.putIfAbsent(terms, k);
-    }
+    return terms;
+  }
+
+  private static long mix(int h) {
+    long z = (h + 0x9E3779B97F4A7C15L) * 0xBF58476D1CE4E5B9L;
+    z = (z ^ (z >>> 27)) * 0x94D049BB133111EBL;
+    return z ^ (z >>> 31);
   }
 
   /**
@@ -1006,8 +1094,14 @@ public class XorSystemDetector implements ParserTreeConstants {
         nonBinary = true;
       }
     }
-    if (x.size() < 2) {
-      return;
+    if (x.size() < 2 || x.size() == 2 && x.size() < a.length) {
+      // the equation taken modulo 2 is a unit or an equivalence that no constraint of the model
+      // states: the parity of a product modulo 2^k (PB competition factor-mod, where the low bit
+      // of each partial product is the and of the low bits of its factors)
+      impliedParity(x, parity);
+      if (x.size() < 2) {
+        return;
+      }
     }
     // a plain 0/1 equation such as x_1 + ... + x_k = 1 is no parity information beyond itself
     if (!nonBinary && !(ZERO_ONE_EQUALITIES && zeroOneParity(a, v, rhs))) {
@@ -1018,6 +1112,25 @@ public class XorSystemDetector implements ParserTreeConstants {
     }
     linearRows++;
     row(x.toArray(new IntVar[0]), parity);
+  }
+
+  // posts xor(x) = parity of one variable (a value) or two (an equivalence or a negation); none
+  // with parity 1 has no solution
+  private void impliedParity(List<IntVar> x, int parity) {
+    if (x.isEmpty()) {
+      if (parity == 1) {
+        throw Store.failException;
+      }
+      return;
+    }
+    if (x.size() == 1) {
+      support.pose(new XeqC(x.get(0), parity));
+    } else if (parity == 0) {
+      support.pose(new XeqY(x.get(0), x.get(1)));
+    } else {
+      support.pose(new XneqY(x.get(0), x.get(1)));
+    }
+    impliedParities++;
   }
 
   // whether an equation over 0/1 variables enters the system: two variables (an equivalence or a

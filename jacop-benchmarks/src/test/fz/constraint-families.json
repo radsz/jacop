@@ -237,7 +237,8 @@
     "float_pow",
     "float_round",
     "float_floor",
-    "float_ceil"
+    "float_ceil",
+    "jacop_piecewise_linear"
   ],
   "graph": [
     "jacop_graph_match",
@@ -250,6 +251,7 @@
     "jacop_dreachable",
     "jacop_connected",
     "jacop_dconnected",
+    "jacop_dag",
     "jacop_tree",
     "jacop_dtree",
     "jacop_path",

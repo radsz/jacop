@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.IntStream;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -85,6 +86,7 @@ import org.jacop.search.restart.ConstantCalculator;
 import org.jacop.search.restart.GeometricCalculator;
 import org.jacop.search.restart.LinearCalculator;
 import org.jacop.search.restart.LubyCalculator;
+import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMax;
 import org.jacop.set.search.IndomainSetMin;
@@ -489,6 +491,8 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         }
       }
       return kept;
+    } else if (isEmptyArray(body)) {
+      return new boolean[0];
     } else {
       throw new RuntimeException(
           "Error: Non vector definitionion in seq_search; execution aborted");
@@ -956,7 +960,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
           System.err.println(
               WARNING_VAR_HEURISTIC_PREFIX + varSelectionHeuristic + WARNING_VAR_HEURISTIC_SUFFIX);
 
-          yield null;
+          yield new ComparatorsVar<>(null);
         }
       };
     }
@@ -1092,7 +1096,10 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     if (node.getType() == 0 || node.getType() == 1) { // int or bool constant
       return dictionary.getConstant(node.getInt());
     } else if (node.getType() == 2) { // ident
-      return dictionary.getVariable(node.getIdent());
+      IntVar v = dictionary.getVariable(node.getIdent());
+      // a parameter in the array is a constant, as a literal is
+      Integer c = v == null ? dictionary.checkInt(node.getIdent()) : null;
+      return c != null ? dictionary.getConstant(c) : v;
     } else if (node.getType() == 3) { // array access
       if (node.getInt() >= dictionary.getVariableArray(node.getIdent()).length
           || node.getInt() < 0) {
@@ -1116,7 +1123,10 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     if (node.getType() == 5) { // float
       return new FloatVar(store, node.getFloat(), node.getFloat());
     } else if (node.getType() == 2) { // ident
-      return dictionary.getFloatVariable(node.getIdent());
+      FloatVar v = dictionary.getFloatVariable(node.getIdent());
+      // a parameter in the array is a constant, as a literal is
+      Double c = v == null ? dictionary.checkFloat(node.getIdent()) : null;
+      return c != null ? dictionary.getFloatConstant(c) : v;
     } else if (node.getType() == 3) { // array access
       if (node.getInt() > dictionary.getVariableFloatArray(node.getIdent()).length
           || node.getInt() < 0) {
@@ -1211,6 +1221,17 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /** Whether an annotation argument is the empty array literal []. */
+  private static boolean isEmptyArray(SimpleNode node) {
+    if (!Objects.equals(((ASTAnnotation) node).getAnnId(), ANN_EXPR)) {
+      return false;
+    }
+    Node m = node.jjtGetChild(0);
+    return m.jjtGetNumChildren() == 1
+        && m.jjtGetChild(0) instanceof ASTArrayLiteral
+        && m.jjtGetChild(0).jjtGetNumChildren() == 0;
+  }
+
   /**
    * Retrieves an array of float variables from a parse tree node.
    *
@@ -1229,6 +1250,8 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         aa[i] = el;
       }
       return aa;
+    } else if (isEmptyArray(node)) {
+      return new FloatVar[0];
     } else if (Objects.equals(((ASTAnnotation) node).getAnnId(), ANN_EXPR)) {
       SimpleNode n = (SimpleNode) node.jjtGetChild(0).jjtGetChild(0);
       if (((ASTScalarFlatExpr) n).getType() == 2) { // ident
@@ -1249,7 +1272,10 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    */
   SetVar getSetVariable(ASTScalarFlatExpr node) {
     if (node.getType() == 2) { // ident
-      return dictionary.getSetVariable(node.getIdent());
+      SetVar v = dictionary.getSetVariable(node.getIdent());
+      // a parameter in the array is a fixed set, as a literal is
+      IntDomain c = v == null ? dictionary.getSet(node.getIdent()) : null;
+      return c != null ? new SetVar(store, new BoundSetDomain(c, c)) : v;
     } else if (node.getType() == 3) { // array access
       return dictionary.getSetVariableArray(node.getIdent())[node.getInt()];
     } else {
@@ -1283,6 +1309,8 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         }
       }
       return aa;
+    } else if (isEmptyArray(node)) {
+      return new SetVar[0];
     } else if (Objects.equals(((ASTAnnotation) node).getAnnId(), ANN_EXPR)) {
       SimpleNode n = (SimpleNode) node.jjtGetChild(0).jjtGetChild(0);
       if (((ASTScalarFlatExpr) n).getType() == 2) { // ident

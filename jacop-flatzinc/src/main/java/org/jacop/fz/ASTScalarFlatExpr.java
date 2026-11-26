@@ -8,9 +8,11 @@ public class ASTScalarFlatExpr extends SimpleNode {
   // type = 0-int; 1=bool; 2-ident 3=array acces; 4=string; 5=float;
   int type = -1;
   int intValue; // keeps int & boolean 0/1 value
-  double doubleValue; // keeps int & boolean 0/1 value
-  String ident;
-  String st;
+  // the identifier (types 2 and 3; an Ident for type 2 when parsed), the string (4) or the float
+  // (5) as a Double: one field, since
+  // these nodes are the largest part of the parse tree (7.8 million of RoomMate-sr0700, 48 bytes
+  // each with a field for each, 40 now)
+  private Object text;
 
   public ASTScalarFlatExpr(int id) {
     super(id);
@@ -37,27 +39,40 @@ public class ASTScalarFlatExpr extends SimpleNode {
   }
 
   public double getFloat() {
-    return doubleValue;
+    return text instanceof Double d ? d : 0.0;
   }
 
   public void setFloat(double d) {
-    doubleValue = d;
+    text = d;
   }
 
   public String getIdent() {
-    return ident;
+    if (text instanceof Ident i) {
+      return i.name;
+    }
+    return type != 4 && text instanceof String s ? s : null;
   }
 
   public void setIdent(String i) {
-    ident = i;
+    text = i;
+  }
+
+  // the identifier shared by the nodes that name it (see Tables.getVariable(ASTScalarFlatExpr))
+  void setIdent(Ident i) {
+    text = i;
+  }
+
+  // the shared identifier, or null when the node has none
+  Ident ident() {
+    return text instanceof Ident i ? i : null;
   }
 
   public String getString() {
-    return st;
+    return type == 4 && text instanceof String s ? s : null;
   }
 
   public void setString(String i) {
-    st = i;
+    text = i;
   }
 
   @Override
@@ -69,10 +84,10 @@ public class ASTScalarFlatExpr extends SimpleNode {
           switch (type) {
             case 0 -> "(int): " + intValue;
             case 1 -> "(bool): " + intValue;
-            case 2 -> "(ident): " + ident;
-            case 3 -> "(array access): " + ident + "[" + intValue + "]";
-            case 4 -> "(string): " + st;
-            case 5 -> "(float): " + doubleValue;
+            case 2 -> "(ident): " + getIdent();
+            case 3 -> "(array access): " + getIdent() + "[" + intValue + "]";
+            case 4 -> "(string): " + getString();
+            case 5 -> "(float): " + getFloat();
             default ->
                 throw new IllegalStateException("Internal parsing error; " + getClass().getName());
           };

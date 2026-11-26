@@ -30,6 +30,7 @@
 
 package org.jacop.lcg;
 
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 
 /**
@@ -187,11 +188,12 @@ public final class ShiftExplanation {
     }
     long lo = Math.max(targetMin, imageMin);
     long hi = Math.min(targetMax, imageMax);
-    if (hi - lo >= MAX_VALUES) {
-      return false;
-    }
-    for (long u = lo; u <= hi; u++) {
-      if (!excluded(trail, position, target, source, k, sign, u, out)) {
+    // only the values in both root domains need a reason: the others were never possible
+    int walked = 0;
+    for (long u = nextCandidate(trail, target, source, k, sign, lo, hi);
+        u <= hi;
+        u = nextCandidate(trail, target, source, k, sign, u + 1, hi)) {
+      if (++walked > MAX_VALUES || !excluded(trail, position, target, source, k, sign, u, out)) {
         return false;
       }
     }
@@ -332,7 +334,8 @@ public final class ShiftExplanation {
     // the least target value with a counterpart in the source's bounds
     long sourceMin =
         sign > 0 ? trail.minBefore(source, position) + k : k - trail.maxBefore(source, position);
-    for (long u = top; ; u--) {
+    int walked = 0;
+    for (long u = top; ; u = previousCandidate(trail, target, source, k, sign, u - 1, targetMin)) {
       if (u < targetMin) {
         trail.addLowerBound(target, position, out);
         return true;
@@ -345,7 +348,7 @@ public final class ShiftExplanation {
         }
         return true;
       }
-      if (top - u >= MAX_VALUES || !excluded(trail, position, target, source, k, sign, u, out)) {
+      if (++walked > MAX_VALUES || !excluded(trail, position, target, source, k, sign, u, out)) {
         return false;
       }
     }
@@ -365,7 +368,8 @@ public final class ShiftExplanation {
     // the greatest target value with a counterpart in the source's bounds
     long sourceMax =
         sign > 0 ? trail.maxBefore(source, position) + k : k - trail.minBefore(source, position);
-    for (long u = bottom; ; u++) {
+    int walked = 0;
+    for (long u = bottom; ; u = nextCandidate(trail, target, source, k, sign, u + 1, targetMax)) {
       if (u > targetMax) {
         trail.addUpperBound(target, position, out);
         return true;
@@ -378,10 +382,89 @@ public final class ShiftExplanation {
         }
         return true;
       }
-      if (u - bottom >= MAX_VALUES || !excluded(trail, position, target, source, k, sign, u, out)) {
+      if (++walked > MAX_VALUES || !excluded(trail, position, target, source, k, sign, u, out)) {
         return false;
       }
     }
+  }
+
+  /**
+   * Returns the least target value u, from {@code from} on, that is in the target's root domain and
+   * whose counterpart is in the source's root domain; a value without both was never possible and
+   * needs no reason. Past {@code to} the walk stops and returns a value above {@code to}.
+   */
+  static long nextCandidate(
+      AtomicTrail trail, IntVar target, IntVar source, long k, int sign, long from, long to) {
+    IntDomain t = trail.rootDomain(target);
+    IntDomain s = trail.rootDomain(source);
+    long u = Math.max(from, t.min());
+    while (u <= to) {
+      if (u > t.max()) {
+        return to + 1;
+      }
+      if (!t.contains((int) u)) {
+        // the next target value: nextValue of u - 1 is the least value above it, since u is out
+        u = t.nextValue((int) u - 1);
+        continue;
+      }
+      long c = sign > 0 ? u - k : k - u;
+      if (c < s.min() || c > s.max()) {
+        // the counterparts left run out of the source's root bounds in one direction or the other
+        if (sign > 0 ? c > s.max() : c < s.min()) {
+          return to + 1;
+        }
+        u = sign > 0 ? s.min() + k : k - s.max();
+        continue;
+      }
+      if (s.contains((int) c)) {
+        return u;
+      }
+      // the next counterpart in the source: above c when the shift goes up, below it for a mirror
+      long next = sign > 0 ? s.nextValue((int) c) + k : k - s.previousValue((int) c);
+      if (next <= u) {
+        return to + 1;
+      }
+      u = next;
+    }
+    return u;
+  }
+
+  /**
+   * Returns the greatest target value u, from {@code from} down, in the target's root domain and
+   * with its counterpart in the source's; below {@code to} the walk stops and returns a value below
+   * {@code to}.
+   */
+  static long previousCandidate(
+      AtomicTrail trail, IntVar target, IntVar source, long k, int sign, long from, long to) {
+    IntDomain t = trail.rootDomain(target);
+    IntDomain s = trail.rootDomain(source);
+    long u = Math.min(from, t.max());
+    while (u >= to) {
+      if (u < t.min()) {
+        return to - 1;
+      }
+      if (!t.contains((int) u)) {
+        u = t.previousValue((int) u + 1);
+        continue;
+      }
+      long c = sign > 0 ? u - k : k - u;
+      if (c < s.min() || c > s.max()) {
+        if (sign > 0 ? c < s.min() : c > s.max()) {
+          return to - 1;
+        }
+        u = sign > 0 ? s.max() + k : k - s.min();
+        continue;
+      }
+      if (s.contains((int) c)) {
+        return u;
+      }
+      long next = sign > 0 ? s.previousValue((int) c) + k : k - s.nextValue((int) c);
+      if (next >= u) {
+        return to - 1;
+      }
+      u = next;
+    }
+    return u;
   }
 
   // target value u, or its source counterpart (u - k, or k - u for a mirror), is out before the

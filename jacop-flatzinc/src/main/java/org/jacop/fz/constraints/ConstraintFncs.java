@@ -874,7 +874,9 @@ public final class ConstraintFncs {
 
   /** Handles the jacop_negative_table_int FlatZinc constraint. */
   public void jacop_negative_table_int(SimpleNode n) {
-    gc.gen_jacop_negative_table_int(n);
+    if (!gc.negativeTableAsClauses(n, bc::poseClause)) {
+      gc.gen_jacop_negative_table_int(n);
+    }
   }
 
   /** Handles the jacop_table_int_reif FlatZinc constraint. */
@@ -1126,6 +1128,15 @@ public final class ConstraintFncs {
   /** Handles the jacop_channel FlatZinc constraint. */
   public void jacop_channel(SimpleNode n) {
     gc.gen_jacop_channel(n);
+  }
+
+  /**
+   * It tells whether every constraint of the model is a clause or a negative table.
+   *
+   * @param clauseModel true when the model has only clauses and negative tables.
+   */
+  public void setClauseModel(boolean clauseModel) {
+    gc.clauseModel = clauseModel;
   }
 
   /** Handles the jacop_all_equal_int FlatZinc constraint. */
@@ -1459,6 +1470,11 @@ public final class ConstraintFncs {
     foc.gen_float_log2(n);
   }
 
+  /** Handles the jacop_piecewise_linear FlatZinc constraint. */
+  public void jacop_piecewise_linear(SimpleNode n) {
+    foc.gen_jacop_piecewise_linear(n);
+  }
+
   /** Handles the float_sinh FlatZinc constraint. */
   public void float_sinh(SimpleNode n) {
     foc.gen_float_sinh(n);
@@ -1599,6 +1615,11 @@ public final class ConstraintFncs {
   /** Handles the jacop_dconnected FlatZinc constraint. */
   public void jacop_dconnected(SimpleNode n) {
     graph.gen_jacop_connected(n, true);
+  }
+
+  /** Handles the jacop_dag FlatZinc constraint. */
+  public void jacop_dag(SimpleNode n) {
+    graph.gen_jacop_dag(n);
   }
 
   /** Handles the jacop_tree FlatZinc constraint. */

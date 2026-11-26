@@ -42,7 +42,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
@@ -50,9 +52,13 @@ import org.jacop.api.Violation;
 import org.jacop.constraints.AlldiffSum;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.Count;
+import org.jacop.constraints.CountBounds;
+import org.jacop.constraints.CountValues;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.ImpliesNot;
+import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Linearizations;
 import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.Reified;
@@ -66,7 +72,9 @@ import org.jacop.constraints.XplusClteqZImplied;
 import org.jacop.constraints.XplusClteqZImpliedNot;
 import org.jacop.constraints.cumulative.MultiCumulative;
 import org.jacop.constraints.diffn.DiffnK;
+import org.jacop.constraints.lp.PartitionCuts;
 import org.jacop.constraints.regular.MultiCostRegular;
+import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -314,6 +322,11 @@ public class Support implements ParserTreeConstants {
   }
 
   private int[] getIntArrayFromLiteral(SimpleNode node) {
+    int[] packed = node.packedInts();
+    if (packed != null) {
+      intPresent = true;
+      return packed.clone();
+    }
     int count = node.jjtGetNumChildren();
     int[] aa = new int[count];
     for (int i = 0; i < count; i++) {
@@ -349,7 +362,7 @@ public class Support implements ParserTreeConstants {
       int val = node.getInt();
       return dictionary.getConstant(val);
     } else if (node.getType() == 2) { // ident
-      IntVar int_boolVar = dictionary.getVariable(node.getIdent());
+      IntVar int_boolVar = dictionary.getVariable(node);
       if (int_boolVar == null) {
         int bInt = dictionary.getInt(node.getIdent());
         return dictionary.getConstant(bInt); // new IntVar(store, bInt, bInt);
@@ -773,7 +786,13 @@ public class Support implements ParserTreeConstants {
           // defined by the constraint that defines the integer: speck-optimisation defines the
           // integer copy of every bit of the state, which left one variable of 12,213 to the
           // neighbourhoods of LNS
-          dictionary.addDefinedVar(v);
+          if (halfReified(constraintWithAnnotations)) {
+            // MiniZinc annotates b of int_lin_ne_imp(a, x, c, b) as defined, but b -> c leaves b
+            // free when c holds
+            dictionary.addHalfDefinedVar(v);
+          } else {
+            dictionary.addDefinedVar(v);
+          }
         }
       } else if ("priority".equals(ann.getAnnId())) {
         SimpleNode child = (SimpleNode) ann.jjtGetChild(0);
@@ -784,11 +803,17 @@ public class Support implements ParserTreeConstants {
     }
   }
 
+  private static boolean halfReified(SimpleNode constraintWithAnnotations) {
+    return constraintWithAnnotations.jjtGetChild(0) instanceof ASTConstElem c
+        && c.getName() != null
+        && c.getName().endsWith("_imp");
+  }
+
   Var getAnnVar(ASTAnnExpr node) {
 
     ASTScalarFlatExpr e = (ASTScalarFlatExpr) node.jjtGetChild(0);
     if (e != null) {
-      return dictionary.getVariable(e.getIdent());
+      return dictionary.getVariable(e);
     } else {
       throw new IllegalArgumentException(
           "Wrong variable identified in \"defines_var\" annotation" + node);
@@ -806,6 +831,84 @@ public class Support implements ParserTreeConstants {
   }
 
   /**
+   * Tells whether a detector that rewrites only constraints of the given kinds has to read the
+   * model: whether the model has a constraint of one of the kinds. The scan reads only the names of
+   * the constraints, while each pass of a detector over the model looks up the variables of every
+   * constraint: on the 2.3 million clauses of MaxSAT 2021 relational-inference ar-2 each such pass
+   * costs 3-4 s and finds nothing. Like the passes it replaces, it stops with {@link ModelTimeOut}
+   * once the time-out has passed. Property {@code org.jacop.fz.detectorGates=false} reads the model
+   * always.
+   *
+   * @param astTree the root of the parsed model.
+   * @param kinds the names of the constraints the detector can rewrite.
+   * @return true when the model has a constraint of one of the kinds, or the gates are off.
+   * @throws ModelTimeOut when the time-out has passed.
+   */
+  public boolean hasConstraint(SimpleNode astTree, Set<String> kinds) {
+    if (DISABLED.equals(System.getProperty("org.jacop.fz.detectorGates"))) {
+      return true;
+    }
+    checkTimeOut();
+    Set<String> present = constraintKinds(astTree);
+    for (String kind : kinds) {
+      if (present.contains(kind)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Tells whether the model has a constraint whose name passes a test, as {@link
+   * #hasConstraint(SimpleNode, Set)} does for a set of names.
+   *
+   * @param astTree the root of the parsed model.
+   * @param kind the test of a constraint name.
+   * @return true when a constraint name passes the test, or the gates are off.
+   * @throws ModelTimeOut when the time-out has passed.
+   */
+  public boolean hasConstraint(SimpleNode astTree, Predicate<String> kind) {
+    if (DISABLED.equals(System.getProperty("org.jacop.fz.detectorGates"))) {
+      return true;
+    }
+    checkTimeOut();
+    for (String name : constraintKinds(astTree)) {
+      if (kind.test(name)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // the names of the constraints of the model whose root is kindsOf, read once: the constraint
+  // items and their names do not change while the detectors read the model, and a scan per gate
+  // of the 1.9 million rows of PB 2006 haplotype simp-nonunif cost 0.1 s each
+  private SimpleNode kindsOf;
+
+  private Set<String> kinds;
+
+  private Set<String> constraintKinds(SimpleNode astTree) {
+    if (kindsOf != astTree) {
+      Set<String> present = new HashSet<>();
+      for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
+        SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
+        if (node.getId() == JJTCONSTRAINTITEMS) {
+          for (int j = 0; j < node.jjtGetNumChildren(); j++) {
+            checkTimeOut();
+            SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
+            if (item instanceof ASTConstElem c) {
+              present.add(c.getName());
+            }
+          }
+        }
+      }
+      kinds = present;
+      kindsOf = astTree;
+    }
+    return kinds;
+  }
+
+  /**
    * Calls the action on every constraint of a parsed model, in the order of the model. It stops
    * with {@link ModelTimeOut} once the time-out has passed: a scan of a model with millions of
    * constraints takes seconds (rcpsp-wet-diverse j90_48_4, 470 MB).
@@ -814,14 +917,26 @@ public class Support implements ParserTreeConstants {
    * @param action what is done with each constraint.
    */
   void forEachConstraint(SimpleNode astTree, Consumer<ASTConstElem> action) {
+    forEachConstraintItem(astTree, (item, element) -> action.accept(element));
+  }
+
+  /**
+   * Calls an action on each constraint element of the model with its constraint item, whose other
+   * children are the annotations of the constraint (a node does not keep its parent).
+   *
+   * @param astTree the root of the parsed model
+   * @param action the action, on the constraint item and its element
+   */
+  void forEachConstraintItem(SimpleNode astTree, BiConsumer<SimpleNode, ASTConstElem> action) {
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {
         for (int j = 0; j < node.jjtGetNumChildren(); j++) {
           checkTimeOut();
-          SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
+          SimpleNode constraint = (SimpleNode) node.jjtGetChild(j);
+          SimpleNode item = (SimpleNode) constraint.jjtGetChild(0);
           if (item.getId() == JJTCONSTELEM) {
-            action.accept((ASTConstElem) item);
+            action.accept(constraint, (ASTConstElem) item);
           }
         }
       }
@@ -854,10 +969,27 @@ public class Support implements ParserTreeConstants {
    * @throws ModelTimeOut when it has passed
    */
   void checkTimeOut() {
-    if (options != null && options.timeOutPassed()) {
+    // the clock is read at the first and every 64th call after it (Options.timeOutCheckStride), and
+    // stays passed once it is: the
+    // detectors call this for each constraint they read, 160 million times (2 s) on the 3.9
+    // million clauses of MaxSAT 2021 haplotyping-pedigrees
+    if (options == null) {
+      return;
+    }
+    if (timedOut != options
+        && (timeOutChecks++ & (options.timeOutCheckStride() - 1)) == 0
+        && options.timeOutPassed()) {
+      timedOut = options;
+    }
+    if (timedOut == options) {
       throw new ModelTimeOut();
     }
   }
+
+  // the calls of checkTimeOut, and the options whose time-out one found passed
+  private int timeOutChecks;
+
+  private Options timedOut;
 
   /** Posts the conflict cliques of the bin packing constraints over the same bins. */
   public void detectBinPackingCliques() {
@@ -910,6 +1042,94 @@ public class Support implements ParserTreeConstants {
     }
   }
 
+  // the bin packings whose loads are also posted as sums of their items, see addLoadSums
+  private final List<Object[]> loadSums = new ArrayList<>();
+
+  /**
+   * Collects a bin packing whose loads are also posted, with the delayed constraints, as the sums
+   * of the items in each bin: a 0/1 variable per item and bin that says the item is in it, the one
+   * the model reifies when it has one. Binpacking explains a load bound or a removed bin by the
+   * bins of many items at once (97 atoms per reason on MZNC 2017 steelmillslab bench_19_5); the
+   * sums give the learnt clauses those 0/1 variables and lifted linear reasons.
+   *
+   * @param bin the bin of each item
+   * @param load the load of each bin
+   * @param w the weight of each item
+   * @param minBin the number of the first bin
+   */
+  void addLoadSums(IntVar[] bin, IntVar[] load, int[] w, int minBin) {
+    loadSums.add(new Object[] {bin, load, w, minBin});
+  }
+
+  /** The most item-bin pairs whose load sums are posted beside a bin packing. */
+  private static final int LOAD_SUM_PAIRS = 1 << 16;
+
+  // load[i] = sum of w[k] * [bin[k] = i + minBin] over the items k, with the 0/1 variables
+  // channelled to the bins
+  private void poseLoadSums(IntVar[] bin, IntVar[] load, int[] w, int minBin) {
+    int n = bin.length;
+    int m = load.length;
+    if ((long) n * m > LOAD_SUM_PAIRS) {
+      return;
+    }
+    List<List<IntVar>> terms = new ArrayList<>();
+    List<List<Integer>> weights = new ArrayList<>();
+    for (int i = 0; i < m; i++) {
+      terms.add(new ArrayList<>());
+      weights.add(new ArrayList<>());
+    }
+    long[] fixed = new long[m];
+    for (int k = 0; k < n; k++) {
+      if (w[k] == 0) {
+        continue;
+      }
+      IntDomain d = bin[k].dom();
+      if (bin[k].singleton()) {
+        int i = bin[k].value() - minBin;
+        if (i >= 0 && i < m) {
+          fixed[i] += w[k];
+        }
+        continue;
+      }
+      Map<Integer, IntVar> reified = reif.cs.get(bin[k]);
+      for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        int i = v - minBin;
+        if (i < 0 || i >= m) {
+          continue;
+        }
+        IntVar b = reified == null ? null : reified.get(v);
+        if (b == null) {
+          b = new BooleanVar(store);
+          addReified(bin[k], v, b);
+        }
+        terms.get(i).add(b);
+        weights.get(i).add(w[k]);
+      }
+    }
+    for (int i = 0; i < m; i++) {
+      List<IntVar> t = terms.get(i);
+      IntVar[] vs = new IntVar[t.size() + 1];
+      int[] ws = new int[t.size() + 1];
+      for (int j = 0; j < t.size(); j++) {
+        vs[j] = t.get(j);
+        ws[j] = weights.get(i).get(j);
+      }
+      vs[t.size()] = load[i];
+      ws[t.size()] = -1;
+      if (fixed[i] > Integer.MAX_VALUE) {
+        return;
+      }
+      pose(new LinearInt(vs, ws, "==", (int) -fixed[i]));
+    }
+  }
+
+  private void poseLoadSums() {
+    for (Object[] p : loadSums) {
+      poseLoadSums((IntVar[]) p[0], (IntVar[]) p[1], (int[]) p[2], (Integer) p[3]);
+    }
+  }
+
   /** Imposes all delayed constraints. */
   public void poseDelayedConstraints() {
     binPackingCardinality.attach();
@@ -959,6 +1179,8 @@ public class Support implements ParserTreeConstants {
     implied(this::poseOverlappingAlldiffs);
     implied(this::posePartitionSums);
     poseAlldiffSums();
+
+    poseLoadSums();
 
     // generate channeling constraints instead of reified constraints
     reif.pose();
@@ -1464,7 +1686,7 @@ public class Support implements ParserTreeConstants {
   Map<SimpleNode, ControlSubstitution> controlSubstitutions = new IdentityHashMap<>();
 
   /** The substitutions by eliminated control, for detectors that read controls as literals. */
-  final Map<IntVar, ControlSubstitution> substitutedControls = new IdentityHashMap<>();
+  Map<IntVar, ControlSubstitution> substitutedControls = new IdentityHashMap<>();
 
   private ControlSubstitution activeControl;
 
@@ -1494,11 +1716,14 @@ public class Support implements ParserTreeConstants {
 
   /**
    * Forgets the constraint nodes posted with a substituted control once all constraints are posted,
-   * since through their parents they hold the parse tree of every such constraint.
+   * since through their parents they hold the parse tree of every such constraint, and the
+   * substitutions by eliminated control, which only detectors read (4.5 MB of rcpsp_max
+   * psp_ubo500_33 during the search).
    */
   public void releaseControlSubstitutions() {
-    // a new map, since a cleared one keeps its table
+    // new maps, since a cleared one keeps its table
     controlSubstitutions = new IdentityHashMap<>();
+    substitutedControls = new IdentityHashMap<>();
   }
 
   /**
@@ -1579,6 +1804,148 @@ public class Support implements ParserTreeConstants {
     return c;
   }
 
+  /**
+   * Runs a propagation of the model being built, which stops with {@link ModelTimeOut} once the
+   * time-out has passed: bounds that converge one unit per step (x &lt; y &lt; z &lt; x over wide
+   * domains) take minutes to fail. A failure at the time-out proves nothing, so it is no failure.
+   *
+   * @param propagation the propagation, which throws FailException when the model fails
+   * @throws FailException when the model fails before the time-out
+   */
+  public void propagateUntilTimeOut(Runnable propagation) throws FailException {
+    boolean deadline =
+        options != null && options.getTimeOut() > 0 && store.getConsistencyDeadline() == 0;
+    if (deadline) {
+      store.setConsistencyDeadline(System.currentTimeMillis() + options.getRemainingTimeOut());
+    }
+    try {
+      propagation.run();
+    } catch (FailException e) {
+      if (deadline && store.isConsistencyDeadlinePassed()) {
+        throw new ModelTimeOut();
+      }
+      throw e;
+    } finally {
+      if (deadline) {
+        store.setConsistencyDeadline(0);
+      }
+    }
+  }
+
+  /**
+   * Poses the count of value in list, between lo and hi or equal to counter. With lazy clause
+   * generation a count of more than {@code lcg-split} variables is split as {@link LinearSplit}
+   * splits a sum: a Count over each block of about sqrt(n) variables defines the block's count, and
+   * the sum of the block counts is the counter. The explanation of a count cites every variable
+   * that is or cannot be the value, about n literals; over blocks a reason cites the counts of the
+   * other blocks, and learnt clauses can speak of a block's count. This is the totalizer of
+   * Bailleux and Boufkhad ("Efficient CNF encoding of Boolean cardinality constraints", CP 2003)
+   * with lazily created count literals, as lazy clause generation splits long sums (Abio and
+   * Stuckey, "Encoding linear constraints into SAT", CP 2014). Peaceable queens 8 (MiniZinc
+   * Challenge 2021), whose objective counts one colour over 64 squares, is proved only with it.
+   * {@code lcg-split-count=0} keeps counts whole.
+   *
+   * @param list the counted variables, each of which can take value
+   * @param value the counted value
+   * @param counter the number of variables equal to value, or null for the bounds lo and hi
+   * @param lo the least count when counter is null
+   * @param hi the largest count when counter is null
+   */
+  void poseCount(List<IntVar> list, int value, IntVar counter, int lo, int hi) {
+    int limit = options.lcg() ? Integer.parseInt(options.freeConfig("lcg-split", "20")) : 0;
+    int n = list.size();
+    if (limit <= 1 || n <= limit || "0".equals(options.freeConfig("lcg-split-count", "1"))) {
+      pose(
+          counter == null ? new CountBounds(list, value, lo, hi) : new Count(list, counter, value));
+      return;
+    }
+    int size = Math.min((int) Math.ceil(Math.sqrt(n)), limit);
+    List<IntVar> sums = new ArrayList<>();
+    int from = 0;
+    while (from < n) {
+      // a last block of one variable joins the block before it
+      int to = n - (from + size) == 1 ? n : Math.min(n, from + size);
+      List<IntVar> block = list.subList(from, to);
+      IntVar s = new IntVar(store, 0, block.size());
+      Constraint blockCount = new Count(block, s, value);
+      propagateUntilTimeOut(() -> store.imposeWithConsistency(blockCount));
+      dictionary.addSplitCount(s);
+      sums.add(s);
+      from = to;
+    }
+    IntVar c = counter == null ? new IntVar(store, lo, hi) : counter;
+    IntVar[] top = new IntVar[sums.size() + 1];
+    int[] w = new int[top.length];
+    for (int i = 0; i < sums.size(); i++) {
+      top[i] = sums.get(i);
+      w[i] = 1;
+    }
+    top[sums.size()] = c;
+    w[sums.size()] = -1;
+    LinearInt sum = new LinearInt(top, w, "==", 0);
+    // dom/wdeg weighs the counted variables when the sum of the blocks fails
+    sum.setWeightedVariables(list.toArray(new IntVar[0]));
+    pose(sum);
+  }
+
+  /**
+   * Poses CountValues over a list, or under lazy clause generation, for a list longer than
+   * lcg-split (20) variables, CountValues over blocks of about sqrt(n) variables and, for each
+   * value, a sum of the block counters equal to its counter, as {@link #poseCount} does for one
+   * value. A constraint whose block counters would outnumber its variables stays whole, and so does
+   * every one with --free-config lcg-split-count-values=0.
+   *
+   * @param list the counted variables
+   * @param counters the counter of each value
+   * @param values the counted values
+   * @return whether the constraint was split
+   */
+  boolean poseCountValuesSplit(IntVar[] list, IntVar[] counters, int[] values) {
+    int limit = options.lcg() ? Integer.parseInt(options.freeConfig("lcg-split", "20")) : 0;
+    int n = list.length;
+    if (limit <= 1
+        || n <= limit
+        || "0".equals(options.freeConfig("lcg-split-count-values", "1"))
+        || "0".equals(options.freeConfig("lcg-split-count", "1"))) {
+      return false;
+    }
+    int size = Math.min((int) Math.ceil(Math.sqrt(n)), limit);
+    // a counter per block and value: more of them than counted variables (many values, as in
+    // warehouse assignments) costs more than the shorter reasons give back
+    if ((long) Math.ceilDiv(n, size) * values.length > n) {
+      return false;
+    }
+    List<List<IntVar>> blockCounters = new ArrayList<>();
+    int from = 0;
+    while (from < n) {
+      int to = n - (from + size) == 1 ? n : Math.min(n, from + size);
+      IntVar[] block = Arrays.copyOfRange(list, from, to);
+      IntVar[] bc = new IntVar[values.length];
+      for (int k = 0; k < values.length; k++) {
+        bc[k] = new IntVar(store, 0, block.length);
+        dictionary.addSplitCount(bc[k]);
+      }
+      Constraint blockCount = new CountValues(block, bc, values);
+      propagateUntilTimeOut(() -> store.imposeWithConsistency(blockCount));
+      blockCounters.add(List.of(bc));
+      from = to;
+    }
+    for (int k = 0; k < values.length; k++) {
+      IntVar[] top = new IntVar[blockCounters.size() + 1];
+      int[] w = new int[top.length];
+      for (int b = 0; b < blockCounters.size(); b++) {
+        top[b] = blockCounters.get(b).get(k);
+        w[b] = 1;
+      }
+      top[blockCounters.size()] = counters[k];
+      w[blockCounters.size()] = -1;
+      LinearInt sum = new LinearInt(top, w, "==", 0);
+      sum.setWeightedVariables(list);
+      pose(sum);
+    }
+    return true;
+  }
+
   void pose(Constraint c) throws FailException {
 
     if (activeControl != null && activeControl.negated()) {
@@ -1600,11 +1967,15 @@ public class Support implements ParserTreeConstants {
       }
     }
 
-    if (constraintPriority >= 0 && constraintPriority <= 4) {
-      store.imposeWithConsistency(c, constraintPriority);
-    } else {
-      store.imposeWithConsistency(c);
-    }
+    Constraint posted = c;
+    propagateUntilTimeOut(
+        () -> {
+          if (constraintPriority >= 0 && constraintPriority <= 4) {
+            store.imposeWithConsistency(posted, constraintPriority);
+          } else {
+            store.imposeWithConsistency(posted);
+          }
+        });
 
     if (options.debug()) {
       String s = "% " + c;
@@ -2049,13 +2420,29 @@ public class Support implements ParserTreeConstants {
           Explainable,
           PbEncodable,
           ConflictRows,
-          Linearizations.Relaxable {
+          Linearizations.Relaxable,
+          PartitionCuts.Equality {
 
     final IntVar x;
     final IntVar y;
     final IntVar b;
     final boolean isReified;
     final int fzNumberId;
+
+    @Override
+    public IntVar left() {
+      return x;
+    }
+
+    @Override
+    public IntVar right() {
+      return y;
+    }
+
+    @Override
+    public IntVar indicator() {
+      return isReified ? b : null;
+    }
 
     FzXeqY(IntVar x, IntVar y, IntVar b, boolean isReified) {
       super(new IntVar[] {x, y, b});

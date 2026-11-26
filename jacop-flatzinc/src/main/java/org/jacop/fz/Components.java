@@ -141,6 +141,15 @@ final class Components {
         }
       }
     }
+    // the clauses of each component: a scan of every clause for each component was quadratic
+    // (PB 2012 ped2.B.recomb1, 168k clauses)
+    Map<Var, List<IntVar[][]>> componentClauses = new IdentityHashMap<>();
+    for (IntVar[][] clause : clauses) {
+      Var root = root(parent, clause);
+      if (root != null) {
+        componentClauses.computeIfAbsent(root, k -> new ArrayList<>()).add(clause);
+      }
+    }
     int solved = 0;
     int fixed = 0;
     int timedOut = 0;
@@ -155,7 +164,7 @@ final class Components {
       if (vars == null || vars.isEmpty() || left <= 0) {
         continue;
       }
-      int[] values = solve(store, vars, clauses, left);
+      int[] values = solve(store, vars, componentClauses.getOrDefault(e.getKey(), List.of()), left);
       if (values == null) {
         timedOut++;
         continue;
@@ -257,6 +266,18 @@ final class Components {
       values[i] = ((IntDomain) solution[i]).value();
     }
     return values;
+  }
+
+  // the component of a clause: that of its first variable that is not fixed, or null
+  private static Var root(Map<Var, Var> parent, IntVar[][] clause) {
+    for (IntVar[] side : clause) {
+      for (IntVar v : side) {
+        if (parent.containsKey(v)) {
+          return find(parent, v);
+        }
+      }
+    }
+    return null;
   }
 
   private static boolean touches(IntVar[][] clause, Set<Var> in) {

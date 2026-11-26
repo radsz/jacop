@@ -61,6 +61,7 @@ import org.jacop.constraints.Circuit;
 import org.jacop.constraints.ConditionalSelect;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
+import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.CountValues;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
@@ -112,6 +113,7 @@ import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.constraints.regular.Regular;
+import org.jacop.constraints.table.BinaryBitTable;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
@@ -146,6 +148,8 @@ import org.junit.jupiter.api.Test;
 
 /** VeriPB proofs of LCG searches, checked by {@link RupChecker}. */
 class VeriPbProofTest {
+
+  private static final int SELF_COUNTING_SEEDS = Integer.getInteger("proof.selfCounting", 300);
 
   private final ByteArrayOutputStream model = new ByteArrayOutputStream();
   private final ByteArrayOutputStream proof = new ByteArrayOutputStream();
@@ -608,6 +612,64 @@ class VeriPbProofTest {
     assertThat(checker.conclusion).isEqualTo("BOUNDS INF INF");
   }
 
+  @Test
+  void tasksSharingAStartBeyondTheLimitAreRefuted() {
+    // two tasks of use 2 start at x4 under a limit of 2: they overlap at x4 whatever it is, but no
+    // window of the time table is overloaded by energy, so the failure needs a step per value of
+    // x4 (proof fuzz seed 75817982)
+    Store store = new Store();
+    IntVar x0 = values(store, "x0", 1, 3);
+    IntVar x1 = values(store, "x1", 1, 3);
+    IntVar x2 = new IntVar(store, "x2", 0, 3);
+    IntVar x3 = values(store, "x3", -1, 3);
+    IntVar x4 = new IntVar(store, "x4", -1, 4);
+    IntVar x6 = values(store, "x6", 0, 1, 3);
+    IntVar one = new IntVar(store, "one", 1, 1);
+    IntVar two = new IntVar(store, "two", 2, 2);
+    store.impose(new AlldifferentExceptZero(new IntVar[] {x2, x0, x6}));
+    store.impose(
+        new Cumulative(
+            new IntVar[] {x4, x4, x2},
+            new IntVar[] {one, two, two},
+            new IntVar[] {two, two, two},
+            two));
+    store.impose(new Max(new IntVar[] {x4, x3, x3}, x0));
+    store.impose(new CountBounds(new IntVar[] {x1, x0}, 2, 0, 1));
+    LcgSolver lcg = withProof(store);
+    assertThat(lcg.minimize(x1)).isEqualTo(CdclSolver.UNSAT);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS INF INF");
+  }
+
+  // random tasks under Cumulative with its default rules and a capacity to minimise: some reasons
+  // of time-table edge finding and disjunctive reasoning were no rup steps for the proof's load
+  // lines (RupChecker rejected 10 of 400 such seeds, this one in 0.2 s; VeriPB rectangle-packing
+  // rpp21 and rpp30 and pillars-and-planks p-d12), so a proof turns those two rules off
+  @Test
+  void timeTableEnergyRulesAreOffUnderProof() {
+    Random random = new Random(5276);
+    int n = 8 + random.nextInt(7);
+    int horizon = 10 + random.nextInt(8);
+    Store store = new Store();
+    IntVar[] s = new IntVar[n];
+    IntVar[] dur = new IntVar[n];
+    IntVar[] res = new IntVar[n];
+    IntVar cap = new IntVar(store, "cap", 1, 8);
+    for (int i = 0; i < n; i++) {
+      int d = 1 + random.nextInt(6);
+      int r = 1 + random.nextInt(4);
+      s[i] = new IntVar(store, "s" + i, 0, horizon);
+      dur[i] = new IntVar(store, "d" + i, d, d);
+      res[i] = new IntVar(store, "r" + i, r, r);
+      store.impose(new LinearInt(new IntVar[] {s[i]}, new int[] {1}, "<=", horizon + 1 - d));
+    }
+    store.impose(new Cumulative(s, dur, res, cap));
+    LcgSolver lcg = withProof(store);
+    assertThat(lcg.minimize(cap)).isEqualTo(CdclSolver.SAT);
+    assertThat(new RupChecker().check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+  }
+
   // random fixed tasks under Cumulative (edge finding and energy rules): every reason is a rup
   // step once its overloaded window is summed, and the optimum is the brute-force one
   @Test
@@ -885,6 +947,46 @@ class VeriPbProofTest {
   }
 
   @Test
+  void clauseOverAVariableNarrowedToZeroOneAtTheRootIsWritten() {
+    // x in 0..6 is 0/1 after the root propagation when the clause x = 1 or y = 0 is added, but the
+    // model states x over 0..6 before that propagation: writing the clause threw "x::{0..1} is
+    // not a 0/1 variable" (MiniZinc fuzz seed 2029932, --proof)
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 6);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    AtomicTrail rootTrail = new AtomicTrail(store);
+    store.imposeWithConsistency(new XlteqC(x, 1));
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setRootTrail(rootTrail);
+    lcg.setProof(model, proof);
+    lcg.addClause(new IntVar[] {x}, new IntVar[] {y});
+    lcg.addClause(new IntVar[] {y}, new IntVar[0]);
+    assertThat(lcg.solve()).isEqualTo(CdclSolver.SAT);
+    assertThat(x.value()).isOne();
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  @Test
+  void countOfARepeatedVariableIntoAHoleIsDerived() {
+    // x4 = 1 fixes x0 = 0, so the count of 1 in [x0, x4, x0] is 1, a hole of c in {0, 2, 3}: the
+    // bounds of c were not written for a list holding x0 twice, one term of weight 2 in the row
+    // (fuzz seed 57069766, repeated variables)
+    Store store = new Store();
+    IntVar x0 = values(store, "x0", 0, 1, 3);
+    IntVar x4 = new IntVar(store, "x4", 1, 2);
+    IntVar c = values(store, "c", 0, 2, 3);
+    store.impose(new ElementIntegerFast(x4, new int[] {0, 3}, x0, 0));
+    store.impose(new Count(new IntVar[] {x0, x4, x0}, c, 1));
+    assertThat(store.consistency()).isTrue();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(model, proof);
+    assertThat(lcg.solve()).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  @Test
   void countIntoAHoleOfACountIsDerived() {
     // x1 = -1 and x2 = 2 count one 2, a hole of the counter c in {0, 2}: the row of Count counts
     // value literals, which unit propagation does not round into c's order literals (fuzz seed
@@ -907,6 +1009,43 @@ class VeriPbProofTest {
     assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
     String pbp = proof.toString(StandardCharsets.US_ASCII);
     assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  // self-counting cardinalities as the FlatZinc front end posts them under --proof (the magic
+  // sequences of nmseq): x[i] counts the value i in x through a copy of x[i] linked by an equality,
+  // and some counters are other variables
+  @Test
+  void selfCountingCardinalitiesAreProved() {
+    optimaAreProved(
+        SELF_COUNTING_SEEDS,
+        (store, random) -> {
+          int n = 4 + random.nextInt(3);
+          IntVar[] x = new IntVar[n];
+          for (int i = 0; i < n; i++) {
+            x[i] = new IntVar(store, "x" + i, 0, n - 1);
+            if (random.nextBoolean()) {
+              x[i].domain.in(store.level, x[i], x[i].domain.subtract(random.nextInt(n)));
+            }
+          }
+          IntVar[] counters = new IntVar[n];
+          for (int i = 0; i < n; i++) {
+            counters[i] = new IntVar(store, "c" + i, 0, n);
+            if (random.nextInt(3) != 0) {
+              store.impose(new XeqY(x[i], counters[i]));
+            }
+          }
+          store.impose(new GCC(x, counters, 0));
+          IntVar obj = new IntVar(store, "obj", -100, 100);
+          IntVar[] terms = Arrays.copyOf(x, n + 1);
+          terms[n] = obj;
+          int[] w = new int[n + 1];
+          for (int i = 0; i < n; i++) {
+            w[i] = random.nextInt(7) - 3;
+          }
+          w[n] = -1;
+          store.impose(new LinearInt(terms, w, "==", 0));
+          return obj;
+        });
   }
 
   @Test
@@ -1669,6 +1808,38 @@ class VeriPbProofTest {
               }
             }
             store.impose(new HybridTable(new IntVar[] {x[k], x[k + 1], x[k + 2]}, tuples));
+          }
+          store.impose(new XneqY(x[0], x[3]));
+          IntVar obj = new IntVar(store, "obj", -500, 500);
+          IntVar[] terms = {x[0], x[1], x[2], x[3], obj};
+          int[] w = new int[terms.length];
+          for (int i = 0; i < 4; i++) {
+            w[i] = random.nextInt(9) - 4;
+          }
+          w[4] = -1;
+          store.impose(new LinearInt(terms, w, "==", 0));
+          return obj;
+        });
+  }
+
+  // binary tables over domains with holes, as the FlatZinc front end posts small binary tables
+  @Test
+  void binaryBitTablesAreProved() {
+    optimaAreProved(
+        200,
+        (store, random) -> {
+          IntVar[] x = new IntVar[4];
+          for (int i = 0; i < x.length; i++) {
+            x[i] = new IntVar(store, "x" + i, 0, 7);
+            x[i].domain.in(store.level, x[i], x[i].domain.subtract(random.nextInt(8)));
+          }
+          for (int k = 0; k + 1 < x.length; k++) {
+            int[][] pairs = new int[8 + random.nextInt(10)][2];
+            for (int[] t : pairs) {
+              t[0] = random.nextInt(8);
+              t[1] = random.nextInt(8);
+            }
+            store.impose(new BinaryBitTable(x[k], x[k + 1], pairs));
           }
           store.impose(new XneqY(x[0], x[3]));
           IntVar obj = new IntVar(store, "obj", -500, 500);

@@ -32,6 +32,12 @@ package org.jacop.constraints.lp;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Random;
+import org.jacop.constraints.LinearInt;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.InputOrderSelect;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -91,6 +97,95 @@ class MirCutTest {
       }
     }
     assertThat(made).isGreaterThan(1000);
+  }
+
+  /**
+   * MIR cuts with variable bounds substituted ({@link MirCut#ofVariableBounds}) hold at every
+   * integer point that meets the row, the variable bounds and the column bounds; the factors of the
+   * variable bounds may be larger than the upper bound of their column.
+   */
+  @Test
+  void variableBoundCutsKeepEveryIntegerPointOfTheRowAndBounds() {
+    Random rnd = new Random(17);
+    int made = 0;
+    for (int run = 0; run < 100000; run++) {
+      int general = 1 + rnd.nextInt(3);
+      int binary = 1 + rnd.nextInt(2);
+      int n = general + binary;
+      long[] c = new long[n];
+      long[] lo = new long[n];
+      long[] hi = new long[n];
+      double[] value = new double[n];
+      for (int j = 0; j < n; j++) {
+        c[j] = rnd.nextInt(5) == 0 ? 0 : rnd.nextInt(41) - 20L;
+        lo[j] = j < general ? rnd.nextInt(2) : 0;
+        hi[j] = j < general ? lo[j] + 2 + rnd.nextInt(5) : 1;
+        value[j] = lo[j] + rnd.nextDouble() * ((double) hi[j] - lo[j]);
+      }
+      // variable bounds x_j <= a u (rows x - a u <= 0) and x_j >= a u (rows x - a u >= 0)
+      java.util.List<int[]> rows = new java.util.ArrayList<>();
+      java.util.List<long[]> weights = new java.util.ArrayList<>();
+      java.util.List<Long> upper = new java.util.ArrayList<>();
+      java.util.List<Long> lower = new java.util.ArrayList<>();
+      int bounds = 1 + rnd.nextInt(3);
+      for (int k = 0; k < bounds; k++) {
+        int x = rnd.nextInt(general);
+        int u = general + rnd.nextInt(binary);
+        long a = 1 + rnd.nextInt((int) hi[x] + 4);
+        boolean flip = rnd.nextBoolean();
+        rows.add(flip ? new int[] {u, x} : new int[] {x, u});
+        weights.add(flip ? new long[] {a, -1} : new long[] {1, -a});
+        boolean up = rnd.nextBoolean();
+        // flipped, the row is -x + a u, whose sides are the negated sides of x - a u
+        upper.add(up != flip ? 0L : null);
+        lower.add(up != flip ? null : 0L);
+        if (rnd.nextBoolean()) {
+          // an LP point near the variable bound, where it is substituted
+          double near = a * value[u] + (up ? -1 : 1) * 0.3 * rnd.nextDouble();
+          value[x] = Math.clamp(near, (double) lo[x], (double) hi[x]);
+        }
+      }
+      MirCut.VariableBounds vb = MirCut.VariableBounds.of(n, rows, weights, upper, lower, lo, hi);
+      if (vb == null) {
+        continue;
+      }
+      long b = rnd.nextInt(81) - 40L;
+      int[] columns = new int[n];
+      for (int j = 0; j < n; j++) {
+        columns[j] = j;
+      }
+      MirCut cut = MirCut.ofVariableBounds(columns, c, b, value, lo, hi, vb);
+      if (cut == null) {
+        continue;
+      }
+      made++;
+      long[] p = lo.clone();
+      while (p != null) {
+        boolean feasible = true;
+        long row = 0;
+        for (int j = 0; j < n; j++) {
+          row += c[j] * p[j];
+        }
+        feasible = row <= b;
+        for (int k = 0; k < rows.size() && feasible; k++) {
+          long r = weights.get(k)[0] * p[rows.get(k)[0]] + weights.get(k)[1] * p[rows.get(k)[1]];
+          feasible =
+              (upper.get(k) == null || r <= upper.get(k))
+                  && (lower.get(k) == null || r >= lower.get(k));
+        }
+        if (feasible) {
+          long lhs = 0;
+          for (int k = 0; k < cut.columns.length; k++) {
+            lhs += cut.weights[k] * p[cut.columns[k]];
+          }
+          assertThat(lhs)
+              .as("run %d cut %s at %s", run, cut, java.util.Arrays.toString(p))
+              .isLessThanOrEqualTo(cut.rhs);
+        }
+        p = next(p, lo, hi);
+      }
+    }
+    assertThat(made).isGreaterThan(500);
   }
 
   /**
@@ -275,5 +370,106 @@ class MirCutTest {
       p[j] = lo[j];
     }
     return null;
+  }
+
+  /**
+   * Fixed-charge models (x_k <= cap_k u_k, demand rows, cost f u + c x) keep their optimum with the
+   * MIR cuts with variable bounds of the rows and of the Gomory rows of the root, and their root
+   * bounds stay below it.
+   */
+  @Test
+  void variableBoundCutsOfRowsAndGomoryRowsKeepTheOptimum() {
+    Random rnd = new Random(5);
+    boolean wasMir = LinearRelaxation.vbMirOn;
+    boolean wasGomory = LinearRelaxation.vbGomoryOn;
+    boolean wasRead = LinearRelaxation.VB_MIR;
+    LinearRelaxation.vbMirOn = true;
+    LinearRelaxation.vbGomoryOn = true;
+    LinearRelaxation.VB_MIR = true;
+    long vbCuts = 0;
+    try {
+      for (int run = 0; run < 60; run++) {
+        int n = 3 + rnd.nextInt(4);
+        int[] cap = new int[n];
+        int[] fixed = new int[n];
+        int[] unit = new int[n];
+        int total = 0;
+        for (int k = 0; k < n; k++) {
+          cap[k] = 3 + rnd.nextInt(12);
+          fixed[k] = 5 + rnd.nextInt(40);
+          unit[k] = 1 + rnd.nextInt(6);
+          total += cap[k];
+        }
+        int demand = 1 + rnd.nextInt(Math.max(1, total * 2 / 3));
+        int second = rnd.nextBoolean() ? 1 + rnd.nextInt(Math.max(1, total / 2)) : 0;
+        long expected = new FixedCharge(cap, fixed, unit, demand, second).optimum();
+        FixedCharge m = new FixedCharge(cap, fixed, unit, demand, second);
+        LinearRelaxation r = LinearRelaxation.of(m.store, m.cost, false);
+        assertThat(r).as("run %d", run).isNotNull();
+        m.store.impose(r);
+        assertThat(m.optimum()).as("run %d", run).isEqualTo(expected);
+        if (expected != Long.MIN_VALUE) {
+          assertThat(r.rootBound).as("run %d", run).isLessThanOrEqualTo(expected + 1e-6);
+          if (!Double.isNaN(r.cutBound)) {
+            assertThat(r.cutBound).as("run %d", run).isLessThanOrEqualTo(expected + 1e-6);
+          }
+        }
+        vbCuts += r.vbCuts;
+      }
+    } finally {
+      LinearRelaxation.vbMirOn = wasMir;
+      LinearRelaxation.vbGomoryOn = wasGomory;
+      LinearRelaxation.VB_MIR = wasRead;
+    }
+    assertThat(vbCuts).isPositive();
+  }
+
+  // min sum f u + c x, x_k <= cap_k u_k, sum x >= demand, and x_0 + x_1 >= second
+  private static final class FixedCharge {
+    final Store store = new Store();
+    final IntVar[] vars;
+    final IntVar cost;
+
+    FixedCharge(int[] cap, int[] fixed, int[] unit, int demand, int second) {
+      int n = cap.length;
+      IntVar[] x = new IntVar[n];
+      IntVar[] u = new IntVar[n];
+      int most = 0;
+      for (int k = 0; k < n; k++) {
+        x[k] = new IntVar(store, "x" + k, 0, cap[k]);
+        u[k] = new IntVar(store, "u" + k, 0, 1);
+        store.impose(new LinearInt(new IntVar[] {x[k], u[k]}, new int[] {1, -cap[k]}, "<=", 0));
+        most += fixed[k] + unit[k] * cap[k];
+      }
+      int[] ones = new int[n];
+      java.util.Arrays.fill(ones, 1);
+      store.impose(new LinearInt(x, ones, ">=", demand));
+      if (second > 0) {
+        store.impose(new LinearInt(new IntVar[] {x[0], x[1]}, new int[] {1, 1}, ">=", second));
+      }
+      cost = new IntVar(store, "cost", 0, most);
+      IntVar[] all = new IntVar[2 * n + 1];
+      int[] ws = new int[2 * n + 1];
+      for (int k = 0; k < n; k++) {
+        all[k] = u[k];
+        ws[k] = fixed[k];
+        all[n + k] = x[k];
+        ws[n + k] = unit[k];
+      }
+      all[2 * n] = cost;
+      ws[2 * n] = -1;
+      store.impose(new LinearInt(all, ws, "==", 0));
+      vars = new IntVar[2 * n];
+      System.arraycopy(u, 0, vars, 0, n);
+      System.arraycopy(x, 0, vars, n, n);
+    }
+
+    long optimum() {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      boolean found =
+          search.labeling(store, new InputOrderSelect<>(store, vars, new IndomainMin<>()), cost);
+      return found ? search.getCostValue() : Long.MIN_VALUE;
+    }
   }
 }

@@ -114,8 +114,17 @@ public class EnforcementInliner implements ParserTreeConstants {
     }
   }
 
-  /** A half-reified constraint: its node, its control and the variables of its body. */
-  private record Imp(ASTConstElem node, IntVar control, Set<IntVar> body) {}
+  /**
+   * A half-reified constraint: its node, its control and the variables of its body. The body is
+   * kept as a compact immutable set (variables compare by identity): the identity set it is
+   * collected in has a table of 64 slots, 272 bytes for the one or two variables of most bodies
+   * (196,000 bodies, 53 MB of XCSP 2022 RoomMate-sr0300 while the model is read).
+   */
+  private record Imp(ASTConstElem node, IntVar control, Set<IntVar> body) {
+    Imp {
+      body = Set.copyOf(body);
+    }
+  }
 
   /** The occurrences of a variable. */
   private static final class Info {
@@ -123,7 +132,64 @@ public class EnforcementInliner implements ParserTreeConstants {
     int neg;
     int controls;
     Imp control;
-    final List<Clause> clauses = new ArrayList<>(2);
+    // the clauses with the variable positive: the clause itself while there is one, as for most
+    // variables, and a list once there are more. A list for each variable was 48 bytes of each of
+    // the 1.46 million variables of XCSP 2022 RoomMate-sr0700 while the model is read
+    private Object clauses;
+
+    void add(Clause c) {
+      if (clauses == null) {
+        clauses = c;
+      } else if (clauses instanceof Clause first) {
+        List<Clause> all = new ArrayList<>(2);
+        all.add(first);
+        all.add(c);
+        clauses = all;
+      } else {
+        list().add(c);
+      }
+    }
+
+    /** The clauses, as a list of their own. */
+    List<Clause> clauses() {
+      if (clauses == null) {
+        return new ArrayList<>(0);
+      }
+      if (clauses instanceof Clause only) {
+        return new ArrayList<>(List.of(only));
+      }
+      return new ArrayList<>(list());
+    }
+
+    /** Drops the dead clauses and counts the others. */
+    int live() {
+      if (clauses instanceof Clause only) {
+        if (only.dead) {
+          clauses = null;
+        }
+      } else if (clauses != null) {
+        List<Clause> all = list();
+        all.removeIf(c -> c.dead);
+        clauses = all.size() == 1 ? all.getFirst() : all;
+      }
+      return count();
+    }
+
+    int count() {
+      if (clauses == null) {
+        return 0;
+      }
+      return clauses instanceof Clause ? 1 : list().size();
+    }
+
+    void clear() {
+      clauses = null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Clause> list() {
+      return (List<Clause>) clauses;
+    }
   }
 
   private final Map<IntVar, Info> infos = new IdentityHashMap<>();
@@ -193,6 +259,10 @@ public class EnforcementInliner implements ParserTreeConstants {
    * @param fncs the constraint functions that post the changed clauses.
    */
   public void detect(SimpleNode astTree, ConstraintFncs fncs) {
+    // only the control of a half-reified constraint is eliminated: a model without one is not read
+    if (!support.hasConstraint(astTree, name -> name.endsWith("_imp"))) {
+      return;
+    }
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {
@@ -279,7 +349,7 @@ public class EnforcementInliner implements ParserTreeConstants {
       Clause c = new Clause(node, pos, neg);
       clauses.add(c);
       for (IntVar v : pos) {
-        info(v).clauses.add(c);
+        info(v).add(c);
       }
       for (IntVar v : neg) {
         info(v).neg++;
@@ -338,7 +408,7 @@ public class EnforcementInliner implements ParserTreeConstants {
         }
         return;
       }
-      add(support.dictionary.getVariable(e.getIdent()), out);
+      add(support.dictionary.getVariable(e), out);
     } else if (e.getType() == 3
         && support.dictionary.getDeclaredVariableArray(e.getIdent()) != null) {
       add(support.getVariable(e), out);
@@ -370,8 +440,7 @@ public class EnforcementInliner implements ParserTreeConstants {
   }
 
   private static int live(Info i) {
-    i.clauses.removeIf(c -> c.dead);
-    return i.clauses.size();
+    return i.live();
   }
 
   // b -> x = t over a 0/1 variable x: b becomes the literal x = t in its clauses
@@ -406,7 +475,7 @@ public class EnforcementInliner implements ParserTreeConstants {
       return;
     }
     boolean positive = equal ? k == 1 : k == 0;
-    for (Clause c : new ArrayList<>(info.clauses)) {
+    for (Clause c : info.clauses()) {
       c.pos.remove(b);
       c.changed = true;
       List<IntVar> same = positive ? c.pos : c.neg;
@@ -416,13 +485,13 @@ public class EnforcementInliner implements ParserTreeConstants {
       } else if (!same.contains(x)) {
         same.add(x);
         if (positive) {
-          info(x).clauses.add(c);
+          info(x).add(c);
         } else {
           info(x).neg++;
         }
       }
     }
-    info.clauses.clear();
+    info.clear();
     info(x).other--;
     replaced.add(node);
     eliminated.add(b);
@@ -435,10 +504,10 @@ public class EnforcementInliner implements ParserTreeConstants {
       return;
     }
     Info info = infos.get(b);
-    if (info.clauses.size() != 1) {
+    if (info.count() != 1) {
       return;
     }
-    Clause c = info.clauses.getFirst();
+    Clause c = info.clauses().getFirst();
     if (c.size() != 2) {
       return;
     }

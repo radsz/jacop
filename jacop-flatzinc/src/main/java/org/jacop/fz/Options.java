@@ -188,7 +188,10 @@ public class Options {
             --default-search <value> search for a model without search annotation; one of
                 "free" (default; as with -f), "input" (input order, splitting the domains)
             --free-config <key=value,...> settings of the new free search engine, for experiments:
-                heuristic=domwdeg|cacd|chs|afc, lc=<k>, phase=0|1, restarts=geometric|luby|none,
+                heuristic=chs|domwdeg|cacd|pick|frba|rr|afc (chs default for satisfaction,
+                domwdeg for optimisation; rr: round robin over runs of
+                rr-set=cacd;pick;frba, rr-runs=<runs each> (1); pick-mode=3|0), lc=<k>, phase=0|1,
+                restarts=geometric|luby|none,
                 set-heuristic=input|afc (set variables: input order (default) or largest
                 accumulated failure count and degree),
                 scale=<failures>, base=<growth of geometric restarts> (100, 1.5; optimisation 10, 1.05),
@@ -279,8 +282,8 @@ public class Options {
                 relaxation has value columns, or under -f tree cuts),
                 rect-placement=first|always|off (with --lcg: the runs of the default
                 branching place the rectangles of diffn constraints one at a time, bottom-left,
-                before the other decisions until the first solution (first, default), in all
-                of them (always), or never),
+                before the other decisions until the first solution (first, default; not in
+                satisfaction models), in all of them (always), or never),
                 slot-dive=on|off (with --lcg, optimisation: before the search a dive without
                 learning fills the variables of a cardinality with fixed counts that covers the
                 search variables in model order, largest value first, and its solution starts
@@ -291,6 +294,10 @@ public class Options {
                 lcg-literal-runs=<n>, lcg-literal-runs-solved=<n> (with --lcg and an
                 annotation: runs on literals in each turn of the annotation, the literals and
                 activity branching, before and after a first solution; defaults 1 and 6),
+                lcg-annotation-drop=<n> (with --lcg and an annotation: after n conflicts without a
+                solution the turns of the annotation are dropped and the literals and activity
+                branching take turns; default 50000, 0 never; not for satisfaction models without
+                a search annotation),
                 lcg-chain-limit=<n> (with --lcg: linked bound literals per variable past which
                 short reasons on its new bounds are used once, not kept, so its chain
                 [x >= v] -> [x >= u] stops growing; default 64, a huge value turns it off),
@@ -352,7 +359,10 @@ public class Options {
                 ls-patience=<ms> (local search stops after this long without a solution or fewer
                 violated constraints, default 1000; 5000 for ls-auto), ls-auto=1|0 (1, the default:
                 without ls, a disjunctive scheduling model whose cost is the makespan gets the
-                critical-path tabu search alone for half of the time left, until it stalls), ls-moves=fj|walk (fj, the default:
+                critical-path tabu search alone for half of the time left, until it stalls),
+                ls-lex=1|0 (1, the default: without ls, a model whose own lex-leader constraints
+                are a symmetry of it gets local search for half of the time left, until it stalls,
+                with those constraints left to its canonicalizer), ls-moves=fj|walk (fj, the default:
                 feasibility jump, the best jump of a sample of variables, all violated constraints
                 weigh more at a minimum; walk: a step moves a variable of one violated constraint),
                 ls-perm=1|0 (1, the default: an all different constraint over one domain of as many
@@ -461,7 +471,13 @@ public class Options {
     String[] args = splitValues(given);
     int i = 0;
     while (i < args.length - 1) {
-      i = parseOption(args, i);
+      try {
+        i = parseOption(args, i);
+      } catch (NumberFormatException _) {
+        // the value of a numeric option, or the file name after an option without its value
+        throw new IllegalArgumentException(
+            "option " + args[i] + ": " + args[i + 1] + " is not a valid number");
+      }
     }
     fileName = args[args.length - 1];
   }
@@ -1062,6 +1078,28 @@ public class Options {
   }
 
   /**
+   * Tells whether a search stopped by a limit of its own (a node budget) before the time-out may go
+   * on: no time-out is set, or more than a millisecond of it is left. A run without a time-out has
+   * no remaining time ({@link #getRemainingTimeOut()} is 0), so a node budget must not be read as
+   * the time-out there.
+   *
+   * @return true if the search may go on
+   */
+  public boolean timeLeft() {
+    return timeOut <= 0 || getRemainingTimeOut() > 1;
+  }
+
+  /**
+   * Returns how many time-out checks of the model set-up share one reading of the clock: the
+   * detectors check the time-out for each constraint they read. A power of two.
+   *
+   * @return the number of checks per reading of the clock.
+   */
+  public int timeOutCheckStride() {
+    return 64;
+  }
+
+  /**
    * It checks whether the time-out has passed.
    *
    * @return true if a time-out was set and it has passed.
@@ -1152,6 +1190,22 @@ public class Options {
   public boolean lcg() {
     return lcg;
   }
+
+  /**
+   * Whether the satisfaction models of -a and -n N (N &gt; 1) are solved with LCG, which enumerates
+   * their solutions with blocking clauses: when --lcg is given, and by default when LCG is on by
+   * default and neither -p, --proof nor --presolve is given. The property org.jacop.fz.lcgAll=off
+   * turns the default off, so LCG on by default gives way to search without learning, as before.
+   *
+   * @return true when LCG solves a model with many solutions to print
+   */
+  public boolean lcgEnumerates() {
+    return lcg
+        && (lcgGiven || LCG_ALL && threads == 1 && proof == null && presolve == Presolve.OFF);
+  }
+
+  // org.jacop.fz.lcgAll=off: LCG on by default leaves the solutions of -a and -n N to search
+  private static final boolean LCG_ALL = !"off".equals(System.getProperty("org.jacop.fz.lcgAll"));
 
   /**
    * Turns off LCG that is on by default, for a model it does not support (float variables, more

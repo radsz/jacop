@@ -66,6 +66,13 @@ public class SinPeqR extends AbstractTrigConstraint
   @Override
   protected void boundConsistency(Store store) {
 
+    if (p == q) {
+      // sin(x) - x is decreasing and 0 at 0: x = 0 is the only solution, which bound propagation
+      // would only approach by about x^3 per pass
+      p.domain.in(store.level, p, 0.0, 0.0);
+      return;
+    }
+
     if (spansFullPeriod()) {
       return;
     }

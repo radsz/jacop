@@ -184,6 +184,12 @@ final class OpbEncoder implements PbModel {
   private Constraint current;
 
   /**
+   * Whether the model names the constraint before its lines, in a comment {@code * c <class> <id>};
+   * the system property {@code jacop.lcg.proofOwners} sets it.
+   */
+  private static final boolean OWNERS = Boolean.getBoolean("jacop.lcg.proofOwners");
+
+  /**
    * Creates the encoder.
    *
    * @param vars the variables, by id
@@ -209,6 +215,9 @@ final class OpbEncoder implements PbModel {
   /** Writes the literals of every variable and the constraints that define them. */
   void variables() {
     chainStart = new long[vars.length];
+    if (OWNERS) {
+      constraints.append("* c variables\n");
+    }
     for (int i = 0; i < vars.length; i++) {
       if (vars[i] == null || root[i].singleton()) {
         continue;
@@ -254,6 +263,11 @@ final class OpbEncoder implements PbModel {
    */
   void constraint(Constraint c) {
     current = c;
+    if (OWNERS) {
+      // the constraint whose lines follow, for a checker that derives them from another model
+      constraints.append("* c ").append(c.getClass().getSimpleName()).append(' ');
+      constraints.append(c.id()).append('\n');
+    }
     if (!encode(c)) {
       String name = c.getClass().getSimpleName();
       if (c instanceof AbstractReifiedConstraint r) {
@@ -563,6 +577,36 @@ final class OpbEncoder implements PbModel {
       }
     }
     line(guardPrefix() + s + ">= " + Math.subtractExact(rhs, constant));
+  }
+
+  /**
+   * Writes a clause that {@link LcgSolver#addClause} gave the solver as {@code [x >= 1]} literals:
+   * one of the positive variables is at least 1 or one of the negative ones is below 1. Its
+   * variables were 0/1 when the clause was added, but the domains of the model may be wider: with a
+   * root trail they are the domains before the root propagation that narrowed them.
+   *
+   * @param positive variables of which one may be at least 1
+   * @param negative variables of which one may be below 1
+   */
+  void solverClause(IntVar[] positive, IntVar[] negative) {
+    if (OWNERS) {
+      constraints.append("* c solver clause\n");
+    }
+    StringBuilder s = new StringBuilder();
+    for (int sign = 1; sign >= -1; sign -= 2) {
+      for (IntVar x : sign > 0 ? positive : negative) {
+        int i = id.applyAsInt(x);
+        IntDomain d = root[i];
+        if (d.min() >= 1 || d.max() < 1) {
+          if (d.min() >= 1 == sign > 0) {
+            return;
+          }
+          continue;
+        }
+        s.append("1 ").append(sign > 0 ? ge(i, 1) : "~" + ge(i, 1)).append(' ');
+      }
+    }
+    line(guardPrefix() + s + ">= 1");
   }
 
   @Override
@@ -1193,10 +1237,38 @@ final class OpbEncoder implements PbModel {
   private void line(String constraint) {
     constraints.append(constraint).append(" ;\n");
     numConstraints++;
+    sizeByOwner.merge(owner(), (long) constraint.length() + 3, Long::sum);
     if (constraints.length() > MAX_CHARS) {
       // the order and channelling lines cost several lines per value, more than their term count
-      throw new TooLarge("the OPB model is over " + MAX_CHARS + " characters");
+      throw new TooLarge("the OPB model is over " + MAX_CHARS + " characters" + largestOwners());
     }
+  }
+
+  // the text of the model by what wrote it: a constraint class, or the variables' encodings
+  private final Map<String, Long> sizeByOwner = new HashMap<>();
+
+  private String owner() {
+    return current == null ? "variables" : current.getClass().getSimpleName();
+  }
+
+  // the three largest writers of the model and their shares, which say what a cap stopped
+  private String largestOwners() {
+    long total = sizeByOwner.values().stream().mapToLong(Long::longValue).sum();
+    if (total == 0) {
+      return "";
+    }
+    StringBuilder s = new StringBuilder(" (");
+    sizeByOwner.entrySet().stream()
+        .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+        .limit(3)
+        .forEach(
+            e ->
+                s.append(s.length() > 2 ? ", " : "")
+                    .append(e.getKey())
+                    .append(' ')
+                    .append(100 * e.getValue() / total)
+                    .append('%'));
+    return s.append(')').toString();
   }
 
   // the longest model text, well below the largest array a StringBuilder can hold
@@ -1206,7 +1278,10 @@ final class OpbEncoder implements PbModel {
     numTerms += terms;
     if (numTerms > maxTerms) {
       throw new TooLarge(
-          "the OPB model is over " + maxTerms + " terms (system property jacop.lcg.proofTerms)");
+          "the OPB model is over "
+              + maxTerms
+              + " terms (system property jacop.lcg.proofTerms)"
+              + largestOwners());
     }
   }
 
