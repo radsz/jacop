@@ -9276,7 +9276,7 @@ public final class LcgSolver implements ExternalPropagator {
    * @param list the entries of the explanation
    * @param slackOf the slack of each entry by entry index, or null to read the list's own slacks
    */
-  private void dropDominated(EntryList list, int[] slackOf) {
+  void dropDominated(EntryList list, int[] slackOf) {
     int n = list.size();
     if (n < 2) {
       return;
@@ -9306,6 +9306,10 @@ public final class LcgSolver implements ExternalPropagator {
         several = true;
       }
       int kind = trail.kind(e);
+      if (list.hasExcludedValue(k)) {
+        // a bound cited as the removal of one value implies no bound
+        continue;
+      }
       if (kind == AtomicTrail.GE) {
         strongestGe[id] = Math.max(strongestGe[id], boundOf(list, k, e, slackOf));
       } else if (kind == AtomicTrail.LE) {
@@ -9321,7 +9325,10 @@ public final class LcgSolver implements ExternalPropagator {
       int id = trail.id(trail.variable(e));
       int kind = trail.kind(e);
       boolean keep;
-      if (kind == AtomicTrail.GE) {
+      if (list.hasExcludedValue(k)) {
+        int v = list.excludedValue(k);
+        keep = v >= strongestGe[id] && v <= strongestLe[id];
+      } else if (kind == AtomicTrail.GE) {
         // bit 1: a lower bound kept, bit 2: an upper bound kept, both at this stamp
         keep = boundOf(list, k, e, slackOf) == strongestGe[id] && (keptBound[id] & 1) == 0;
         if (keep) {
@@ -9348,6 +9355,15 @@ public final class LcgSolver implements ExternalPropagator {
     }
     dominatedAtoms += n - kept;
     list.truncate(kept);
+  }
+
+  /**
+   * Returns the trail of the atoms, for tests in this package.
+   *
+   * @return the trail
+   */
+  AtomicTrail trail() {
+    return trail;
   }
 
   // the bound of a cited GE or LE entry, weakened by its slack
