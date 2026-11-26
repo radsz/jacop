@@ -103,36 +103,6 @@ public class ListsDifferDetector implements ParserTreeConstants {
     return replaced;
   }
 
-  /** A list of variables compared by identity. */
-  private record VarList(IntVar[] vars) {
-    @Override
-    public boolean equals(Object o) {
-      if (!(o instanceof VarList(IntVar[] v)) || v.length != vars.length) {
-        return false;
-      }
-      for (int i = 0; i < vars.length; i++) {
-        if (v[i] != vars[i]) {
-          return false;
-        }
-      }
-      return true;
-    }
-
-    @Override
-    public int hashCode() {
-      int h = 1;
-      for (IntVar x : vars) {
-        h = 31 * h + System.identityHashCode(x);
-      }
-      return h;
-    }
-
-    @Override
-    public String toString() {
-      return Arrays.toString(vars);
-    }
-  }
-
   /**
    * It scans the constraint items of the model, posts the lists-differ tables as AllDifferentLists
    * and records them as replaced.

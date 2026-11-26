@@ -4032,7 +4032,15 @@ class FlatzincFrontEndTest {
               "--search-statistics",
               "--free-config",
               "lcg-split-tree=0");
-      String[] tree = run(model.toString(), "--lcg", "--search-statistics");
+      // the objective block bound would add six sums of about 280 terms (one per y), which
+      // are not split: measure the split sums alone
+      String[] tree;
+      System.setProperty("org.jacop.fz.blockBound", "false");
+      try {
+        tree = run(model.toString(), "--lcg", "--search-statistics");
+      } finally {
+        System.clearProperty("org.jacop.fz.blockBound");
+      }
       assertEquals(cp, lastObjective(blocks), model.toString());
       assertEquals(cp, lastObjective(tree), model.toString());
       // 1,701 terms with s: 41 blocks of up to 42 terms; in the tree 86 blocks of up to 20

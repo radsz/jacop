@@ -389,18 +389,7 @@ final class DecompositionBound {
     if (objective == null || objective.singleton()) {
       return null;
     }
-    List<Constraint> all = new ArrayList<>();
-    for (Constraint c : Components.constraints(store)) {
-      // a relaxation of the whole model, such as the linear relaxation, and a redundant constraint
-      // over many blocks, such as the negative cycle check of difference constraints, are not
-      // needed in the relaxation
-      if (c instanceof SatisfiedPresent s && s.satisfied()
-          || c instanceof LinearRelaxation
-          || c instanceof DifferenceCycles) {
-        continue;
-      }
-      all.add(c);
-    }
+    List<Constraint> all = relaxable(store);
     // the equations: a variable that only its equation and one other constraint use, such as a
     // part of a long sum split for lazy clause generation or a cost term, is replaced by its
     // definition in the objective and in the linear rows
@@ -747,35 +736,91 @@ final class DecompositionBound {
       if (a == null || a == 0 || d == null || d == self || used.contains(d)) {
         continue;
       }
-      LinearForm f = equations.get(d);
-      long wv = f.weights()[indexOf(f.vars(), v)];
       used.add(d);
-      terms.remove(v);
-      // wv v + sum w_u u = c, wv = +-1: v = wv (c - sum w_u u)
-      constant[0] += a * wv * f.c();
-      for (int i = 0; i < f.vars().length; i++) {
-        IntVar u = f.vars()[i];
-        if (u == v) {
-          continue;
-        }
-        long coefficient = -a * wv * f.weights()[i];
-        if (u.singleton()) {
-          constant[0] += coefficient * u.value();
-        } else {
-          terms.merge(u, coefficient, Long::sum);
-          work.add(u);
-        }
+      substitute(terms, constant, work, v, a, equations.get(d));
+    }
+  }
+
+  /**
+   * Replaces the term {@code a v} of terms + constant by the definition of v in the equation f, in
+   * which v has the weight +1 or -1, and queues the new terms.
+   */
+  static void substitute(
+      Map<IntVar, Long> terms,
+      long[] constant,
+      ArrayDeque<IntVar> work,
+      IntVar v,
+      long a,
+      LinearForm f) {
+    long wv = f.weights()[indexOf(f.vars(), v)];
+    terms.remove(v);
+    // wv v + sum w_u u = c, wv = +-1: v = wv (c - sum w_u u)
+    constant[0] += a * wv * f.c();
+    for (int i = 0; i < f.vars().length; i++) {
+      IntVar u = f.vars()[i];
+      if (u == v) {
+        continue;
+      }
+      long coefficient = -a * wv * f.weights()[i];
+      if (u.singleton()) {
+        constant[0] += coefficient * u.value();
+      } else {
+        terms.merge(u, coefficient, Long::sum);
+        work.add(u);
       }
     }
   }
 
-  private static int indexOf(IntVar[] vars, IntVar v) {
+  static int indexOf(IntVar[] vars, IntVar v) {
     for (int i = 0; i < vars.length; i++) {
       if (vars[i] == v) {
         return i;
       }
     }
     return -1;
+  }
+
+  /**
+   * Returns the constraints of the store that a relaxation of the model keeps: not the satisfied
+   * ones, and not a relaxation of the whole model, such as the linear relaxation, or a redundant
+   * constraint over many blocks, such as the negative cycle check of difference constraints.
+   *
+   * @param store the store.
+   * @return the constraints.
+   */
+  static List<Constraint> relaxable(Store store) {
+    List<Constraint> all = new ArrayList<>();
+    for (Constraint c : Components.constraints(store)) {
+      if (c instanceof SatisfiedPresent s && s.satisfied()
+          || c instanceof LinearRelaxation
+          || c instanceof DifferenceCycles) {
+        continue;
+      }
+      all.add(c);
+    }
+    return all;
+  }
+
+  /**
+   * Returns a map that copies each variable into the store once, see {@link #copyOf(Store, Var)}.
+   *
+   * @param copy the store of the copies.
+   * @return the map.
+   */
+  static VarMap copyMap(Store copy) {
+    Map<Var, Var> copies = new IdentityHashMap<>();
+    return new VarMap() {
+      @Override
+      public Store target() {
+        return copy;
+      }
+
+      @Override
+      @SuppressWarnings("unchecked")
+      public <V extends Var> V get(V v) {
+        return (V) copies.computeIfAbsent(v, w -> copyOf(copy, w));
+      }
+    };
   }
 
   private static int blockIndex(Var root, Map<Var, Integer> blockOf, List<Block> blocks) {
@@ -1573,25 +1618,7 @@ final class DecompositionBound {
    */
   private Copy copy(Block block) {
     Store copy = new Store();
-    Map<Var, Var> copies = new IdentityHashMap<>();
-    VarMap map =
-        new VarMap() {
-          @Override
-          public Store target() {
-            return copy;
-          }
-
-          @Override
-          @SuppressWarnings("unchecked")
-          public <V extends Var> V get(V v) {
-            Var c = copies.get(v);
-            if (c == null) {
-              c = copyOf(copy, v);
-              copies.put(v, c);
-            }
-            return (V) c;
-          }
-        };
+    VarMap map = copyMap(copy);
     try {
       for (Constraint c : block.own) {
         if (!Copyable.canCopy(c)) {

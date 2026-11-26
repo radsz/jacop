@@ -189,6 +189,36 @@ class BinPackingCliqueFlatzincTest {
     assertTrue(withCliques > 100, "cliques in " + withCliques + " models");
   }
 
+  /**
+   * The load sums posted beside a bin packing (org.jacop.fz.binPackingSums), always and under lazy
+   * clause generation, keep every solution of random bin packings with loads.
+   */
+  @Test
+  void loadSumsKeepAllSolutions() throws IOException {
+    Random random = new Random(29);
+    int checked = 0;
+    System.setProperty("org.jacop.fz.binPackingSums", "true");
+    try {
+      for (int trial = 0; trial < 200; trial++) {
+        Model model = randomModel(random);
+        if (!model.fzn().contains("jacop_bin_packing(")) {
+          continue;
+        }
+        checked++;
+        String[][] options = {{"-a"}, {"-a", "--lcg", "on"}};
+        for (String[] o : options) {
+          assertEquals(
+              model.bruteForce(),
+              solutions(run(model.fzn(), o)),
+              String.join(" ", o) + ", trial " + trial + "\n" + model.fzn());
+        }
+      }
+    } finally {
+      System.clearProperty("org.jacop.fz.binPackingSums");
+    }
+    assertTrue(checked > 50, "bin packings with loads: " + checked);
+  }
+
   @Test
   void crossDimensionCliqueIsOffByDefault() throws IOException {
     // each pair of items exceeds the capacity in one dimension only, a different one per pair
