@@ -13773,4 +13773,21 @@ class SingleConstraintTest extends TestHelper {
       }
     }
   }
+
+  @Test
+  void edgeFindingCumulativeComputesTheAreaOfLongTasksInLong() {
+    // the area of the tasks that edge finding tries to fit was summed in int: a task of duration
+    // 536870908 and resource 8 overflowed and the single solution was lost
+    int[][][] instances = {
+      {{-2, -536870908, 1, 536870908, 2, 8, 10}, {-2, -536870908, 1, 536870908, 2, 8, 10}},
+      {{-2, -10, 1, 10, 2, 536870907, 536870909}, {-2, -10, 1, 10, 2, 536870907, 536870909}},
+      {{-2, -536870908, 1, 536870908, 1, 8, 10}, {0, -536870906, 1, 536870908, 2, 8, 10}}
+    };
+    for (int[][] instance : instances) {
+      int[] counts = profileCumulativeCounts(2, instance[0], instance[1], true);
+      assertThat(counts[1])
+          .as("%s..%s", Arrays.toString(instance[0]), Arrays.toString(instance[1]))
+          .isEqualTo(counts[0]);
+    }
+  }
 }

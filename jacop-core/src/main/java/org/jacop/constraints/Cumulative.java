@@ -750,7 +750,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   }
 
   private boolean fitTasksAfter(List<Task> s, int est0) {
-    int areaS = 0;
+    long areaS = 0;
     int lctOfS = IntDomain.MIN_INT;
     int minDur = IntDomain.MAX_INT;
     int minRes = IntDomain.MAX_INT;
@@ -764,7 +764,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       minDur = Math.min(minDur, dur);
       minRes = Math.min(minRes, res);
 
-      areaS += dur * res;
+      areaS += (long) dur * res;
     }
 
     int limitMax = limit.max();
@@ -775,13 +775,13 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     fitAfter = availableArea >= areaS;
 
     if (fitAfter) {
-      fitAfter = (lctOfS - est0) / minDur * (limitMax / minRes) >= s.size();
+      fitAfter = (long) ((lctOfS - est0) / minDur) * (limitMax / minRes) >= s.size();
     }
     return fitAfter;
   }
 
   private boolean fitTasksBefore(List<Task> s, int lct0) {
-    int areaS = 0;
+    long areaS = 0;
     int estOfS = IntDomain.MAX_INT;
     int minDur = IntDomain.MAX_INT;
     int minRes = IntDomain.MAX_INT;
@@ -795,7 +795,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       minDur = Math.min(minDur, dur);
       minRes = Math.min(minRes, res);
 
-      areaS += dur * res;
+      areaS += (long) dur * res;
     }
 
     int limitMax = limit.max();
@@ -807,7 +807,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
     fitBefore = availableArea >= areaS;
     if (fitBefore) {
-      fitBefore = (lct0 - estOfS) / minDur * (limitMax / minRes) >= s.size();
+      fitBefore = (long) ((lct0 - estOfS) / minDur) * (limitMax / minRes) >= s.size();
     }
     return fitBefore;
   }
