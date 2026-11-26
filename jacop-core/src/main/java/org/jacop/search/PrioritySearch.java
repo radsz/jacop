@@ -334,7 +334,10 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     if (printInfo) {
       log.info("{}", statistics());
     }
-    restoreStoreLevelIfRaised(raisedLevel);
+    // as in DepthFirstSearch, the solution stays assigned in the level raised for the search
+    if (!assignSolution) {
+      restoreStoreLevelIfRaised(raisedLevel);
+    }
     return true;
   }
 
@@ -496,7 +499,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     if (printInfo) {
       log.info("{}", statistics());
     }
-    restoreStoreLevelIfRaised(raisedLevel);
+    if (!assignSolution) {
+      restoreStoreLevelIfRaised(raisedLevel);
+    }
     return masterSearch == null || result;
   }
 

@@ -14543,4 +14543,50 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.level).isZero();
     assertThat(List.of(x.value(), y.value(), u.value(), v.value())).containsExactly(2, 1, 1, 1);
   }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void prioritySearchKeepsTheAssignedSolutionOfAConstraintThatRaisesTheLevel() {
+    // Alldistinct asks the search to raise the level before the first consistency; the priority
+    // search assigned the solution in that level and then removed it, so y was left open
+    for (boolean all : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", 0, 2);
+      IntVar y = new IntVar(store, "y", 0, 2);
+      IntVar u = new IntVar(store, "u", 0, 1);
+      IntVar v = new IntVar(store, "v", 0, 1);
+      store.impose(new Alldistinct(new IntVar[] {x, y}));
+      DepthFirstSearch<IntVar>[] searches = new DepthFirstSearch[2];
+      searches[0] = new DepthFirstSearch<>();
+      searches[0].setSelectChoicePoint(
+          new SimpleSelect<>(new IntVar[] {x, y}, null, new IndomainMin<>()));
+      searches[1] = new DepthFirstSearch<>();
+      searches[1].setSelectChoicePoint(
+          new SimpleSelect<>(new IntVar[] {u, v}, null, new IndomainMin<>()));
+      for (DepthFirstSearch<IntVar> search : searches) {
+        search.setPrintInfo(false);
+      }
+      PrioritySearch<IntVar> priority =
+          new PrioritySearch<>(new IntVar[] {x, u}, new SmallestDomain<>(), searches);
+      priority.setPrintInfo(false);
+      if (all) {
+        priority.setSolutionLimit(Integer.MAX_VALUE);
+      }
+      assertThat(priority.labeling(store)).isTrue();
+      assertThat(x.singleton() && y.singleton() && u.singleton() && v.singleton()).isTrue();
+      assertThat(x.value()).isNotEqualTo(y.value());
+      // the same as a depth-first search over the same variables
+      Store reference = new Store();
+      IntVar rx = new IntVar(reference, "x", 0, 2);
+      IntVar ry = new IntVar(reference, "y", 0, 2);
+      reference.impose(new Alldistinct(new IntVar[] {rx, ry}));
+      DepthFirstSearch<IntVar> dfs = new DepthFirstSearch<>();
+      dfs.setPrintInfo(false);
+      assertThat(
+              dfs.labeling(
+                  reference, new SimpleSelect<>(new IntVar[] {rx, ry}, null, new IndomainMin<>())))
+          .isTrue();
+      assertThat(store.level).isEqualTo(reference.level);
+    }
+  }
 }
