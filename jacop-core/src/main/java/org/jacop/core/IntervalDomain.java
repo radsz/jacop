@@ -554,7 +554,7 @@ public class IntervalDomain extends IntDomain {
       bounds = new int[2 * (1 + ALLOCATION_MARGIN)];
       put(bounds, size++, min, max);
 
-    } else if (min > bounds[2 * (size - 1) + 1] + 1) {
+    } else if ((long) min > (long) bounds[2 * (size - 1) + 1] + 1) {
 
       // the most common case when a domain is built in increasing order: append at the end
       ensureCapacity();
@@ -571,10 +571,11 @@ public class IntervalDomain extends IntDomain {
 
     } else {
 
-      // min..max starts before the last interval: the first interval it touches, by binary search
-      int i = firstIntervalEndingAtOrAfter(min - 1);
+      // min..max starts before the last interval: the first interval it touches, by binary search;
+      // in long, since a parameter of a constraint can be Integer.MIN_VALUE or Integer.MAX_VALUE
+      int i = firstIntervalEndingAtOrAfter(min == Integer.MIN_VALUE ? min : min - 1);
 
-      if (max + 1 < bounds[2 * i]) {
+      if ((long) max + 1 < bounds[2 * i]) {
 
         // min..max touches no interval, so it is inserted at position i
         ensureCapacity();
@@ -586,7 +587,7 @@ public class IntervalDomain extends IntDomain {
 
         // the intervals i..j - 1 touch min..max and are merged with it
         int j = i + 1;
-        while (j < size && bounds[2 * j] <= max + 1) {
+        while (j < size && bounds[2 * j] <= (long) max + 1) {
           j++;
         }
         int newMin = Math.min(min, bounds[2 * i]);
@@ -1835,7 +1836,7 @@ public class IntervalDomain extends IntDomain {
 
       while (true) {
 
-        if (currentDomain1Max + 1 < currentDomain2Min) {
+        if ((long) currentDomain1Max + 1 < currentDomain2Min) {
           result.appendInterval(currentDomain1Min, currentDomain1Max);
           i1++;
           if (i1 == max1) {
@@ -1846,7 +1847,7 @@ public class IntervalDomain extends IntDomain {
           continue;
         }
 
-        if (currentDomain2Max + 1 < currentDomain1Min) {
+        if ((long) currentDomain2Max + 1 < currentDomain1Min) {
           result.appendInterval(currentDomain2Min, currentDomain2Max);
           i2++;
           if (i2 < domain.noIntervals()) {
@@ -1860,9 +1861,9 @@ public class IntervalDomain extends IntDomain {
 
         int min = Math.min(currentDomain1Min, currentDomain2Min);
 
-        while ((currentDomain1Max + 1 >= currentDomain2Min
+        while (((long) currentDomain1Max + 1 >= currentDomain2Min
                 && currentDomain1Min <= currentDomain2Min)
-            || (currentDomain2Max + 1 >= currentDomain1Min
+            || ((long) currentDomain2Max + 1 >= currentDomain1Min
                 && currentDomain2Min <= currentDomain1Min)) {
 
           if (currentDomain1Max <= currentDomain2Max) {
@@ -1897,7 +1898,7 @@ public class IntervalDomain extends IntDomain {
           }
 
           if (currentDomain1Max <= currentDomain2Max
-              && currentDomain1Max + 1 >= currentDomain2Min) {
+              && (long) currentDomain1Max + 1 >= currentDomain2Min) {
             result.appendInterval(min, currentDomain2Max);
             i2++;
           } else {
@@ -1918,7 +1919,7 @@ public class IntervalDomain extends IntDomain {
           }
 
           if (currentDomain2Max <= currentDomain1Max
-              && currentDomain2Max + 1 >= currentDomain1Min) {
+              && (long) currentDomain2Max + 1 >= currentDomain1Min) {
             result.appendInterval(min, currentDomain1Max);
             i1++;
           } else {
@@ -1984,7 +1985,7 @@ public class IntervalDomain extends IntDomain {
     int currentInterval1Max = bounds[2 * i1 + 1];
 
     // all intervals before and not glued (min..max) are included
-    while (i1 < size && currentInterval1Max + 1 < min) {
+    while (i1 < size && (long) currentInterval1Max + 1 < min) {
       result.appendInterval(currentInterval1Min, currentInterval1Max);
       i1++;
       if (i1 < size) {
@@ -1995,7 +1996,7 @@ public class IntervalDomain extends IntDomain {
 
     if (i1 == size) {
       result.appendInterval(min, max);
-    } else if (max + 1 < currentInterval1Min) {
+    } else if ((long) max + 1 < currentInterval1Min) {
       // currentInterval if after and not glued
       result.appendInterval(min, max);
     } else {
@@ -2027,7 +2028,7 @@ public class IntervalDomain extends IntDomain {
 
         if (i1 < size) {
           // if current interval is glued or intersects with (min..max)
-          if (max + 1 >= currentInterval1Min) {
+          if ((long) max + 1 >= currentInterval1Min) {
             result.appendInterval(tempMin, currentInterval1Max);
             i1++;
           } else {
@@ -2072,7 +2073,7 @@ public class IntervalDomain extends IntDomain {
 
     while (true) {
 
-      if (currentIntervalMax + 1 < value) {
+      if ((long) currentIntervalMax + 1 < value) {
         result.appendInterval(currentIntervalMin, currentIntervalMax);
         i1++;
         if (i1 == size) {
@@ -2086,7 +2087,7 @@ public class IntervalDomain extends IntDomain {
       }
     }
 
-    if (value + 1 < currentIntervalMin) {
+    if ((long) value + 1 < currentIntervalMin) {
       result.appendInterval(value, value);
     } else {
 
@@ -2101,7 +2102,7 @@ public class IntervalDomain extends IntDomain {
         tempMax = currentIntervalMax;
       }
 
-      if (i1 + 1 < size && tempMax + 1 == bounds[2 * (i1 + 1)]) {
+      if (i1 + 1 < size && (long) tempMax + 1 == bounds[2 * (i1 + 1)]) {
         tempMax = bounds[2 * (i1 + 1) + 1];
         i1++;
       }

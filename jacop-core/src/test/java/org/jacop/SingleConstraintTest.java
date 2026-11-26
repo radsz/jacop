@@ -148,6 +148,7 @@ import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Same;
+import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
@@ -13195,5 +13196,52 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     // (MIN, MIN + 2), (MIN + 1, MIN + 3), (MIN + 2, MIN), (MIN + 2, MIN + 4)
     assertThat(noOfAllSolutions(store, new IntVar[] {x, y})).isEqualTo(4);
+  }
+
+  @Test
+  public void valuesAtTheEndsOfJavaIntegersInBuiltDomains() {
+    // a value list holding Integer.MAX_VALUE (a parameter of a FlatZinc count_values, gcc or
+    // value_precede_chain): unionAdapt and union compared max + 1 with the next value, which
+    // overflowed and gave the domain {2147483647, 1}; CountValues then failed when x = 1, 0
+    IntervalDomain built = new IntervalDomain();
+    built.unionAdapt(Integer.MAX_VALUE);
+    built.unionAdapt(1);
+    built.unionAdapt(Integer.MIN_VALUE);
+    assertThat(built.checkInvariants()).isNull();
+    assertThat(built.toString()).isEqualTo("{-2147483648, 1, 2147483647}");
+    IntDomain union = new IntervalDomain(Integer.MAX_VALUE, Integer.MAX_VALUE).union(1);
+    assertThat(union.checkInvariants()).isNull();
+    assertThat(union.min()).isEqualTo(1);
+    union = new IntervalDomain(2147483645, Integer.MAX_VALUE).union(-536870909, -536870909);
+    assertThat(union.checkInvariants()).isNull();
+    union =
+        new IntervalDomain(Integer.MAX_VALUE, Integer.MAX_VALUE).union(new IntervalDomain(1, 2));
+    assertThat(union.checkInvariants()).isNull();
+
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 3);
+    }
+    IntVar none = new IntVar(store, "none", 0, 0);
+    IntVar ones = new IntVar(store, "ones", 3, 3);
+    store.impose(new CountValues(x, new IntVar[] {none, ones}, new int[] {Integer.MAX_VALUE, 1}));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    x[1].domain.in(1, x[1], 1, 1);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(2);
+    x[0].domain.in(2, x[0], 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[2].value()).isEqualTo(1);
+
+    // 1 follows a 0 and the value 2^31 - 1, which no variable takes, constrains nothing
+    Store chain = new Store();
+    IntVar[] y = new IntVar[4];
+    for (int i = 0; i < y.length; i++) {
+      y[i] = new IntVar(chain, "y" + i, 0, 3);
+    }
+    chain.impose(new SeqPrecedeChain(y, new int[] {0, 1, Integer.MAX_VALUE}));
+    assertThat(noOfAllSolutions(chain, y)).isEqualTo(136);
   }
 }
