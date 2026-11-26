@@ -7689,11 +7689,47 @@ public class LinearRelaxation extends Constraint
 
   @Override
   public LinearRelaxation copy(VarMap map) {
+    return copy(map, false);
+  }
+
+  /**
+   * Returns a copy whose rows also hold the MIR and Gomory cuts made so far. The cuts are made over
+   * the bounds of the first solve and the integrality of the auxiliary columns, so they hold over
+   * the whole search; an explanation that cites a cut is implied by the constraint, but the rows of
+   * {@link #copy(VarMap)} alone, whose auxiliary columns are free to take fractional values in its
+   * relaxation, need not imply it. A checker of explanations copies the constraint with this.
+   *
+   * @param map the copies of the variables
+   * @return the copy, with the cuts as rows
+   */
+  public LinearRelaxation copyWithCuts(VarMap map) {
+    return copy(map, true);
+  }
+
+  private LinearRelaxation copy(VarMap map, boolean withCuts) {
     // the auxiliary columns are not in the store: the copy gets its own
     Map<IntVar, IntVar> columns = new IdentityHashMap<>();
     List<LinearForm> copies = new ArrayList<>();
     for (LinearForm f : forms) {
       copies.add(new LinearForm(copied(f.vars(), map, columns), f.weights(), f.c(), f.relation()));
+    }
+    if (withCuts && !firstSolveLost) {
+      int[][] cutColumns = rowColumns;
+      long[][] cutWeights = rowWeights;
+      long[] cutHi = rowHi;
+      String[] sources = cutSource;
+      for (int i = 0; i < Math.min(sources.length, cutColumns.length); i++) {
+        if (sources[i] == null) {
+          continue;
+        }
+        IntVar[] vars = new IntVar[cutColumns[i].length];
+        for (int k = 0; k < vars.length; k++) {
+          vars[k] = x[cutColumns[i][k]];
+        }
+        copies.add(
+            new LinearForm(
+                copied(vars, map, columns), cutWeights[i].clone(), cutHi[i], LinearForm.LE));
+      }
     }
     // the capacity cuts are rows of the copy: the prunings made with them stay explained by them;
     // over the bounds of a first solve that was lost they may not hold

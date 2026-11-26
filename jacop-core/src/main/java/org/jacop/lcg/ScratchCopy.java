@@ -35,6 +35,7 @@ import java.util.Map;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -111,7 +112,11 @@ final class ScratchCopy {
   boolean imposeCopy(Constraint c) {
     Constraint copy;
     try {
-      copy = ((Copyable<?>) c).copy(varMap());
+      // a linear relaxation is copied with its cuts, which its explanations may cite
+      copy =
+          c instanceof LinearRelaxation r
+              ? r.copyWithCuts(varMap())
+              : ((Copyable<?>) c).copy(varMap());
     } catch (IllegalArgumentException _) {
       return false;
     }

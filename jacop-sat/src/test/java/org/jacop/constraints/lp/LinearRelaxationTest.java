@@ -3268,4 +3268,126 @@ class LinearRelaxationTest {
     }
     assertThat(checked).isGreaterThan(300);
   }
+
+  /**
+   * The explanation checker copies a linear relaxation with its MIR and Gomory cuts, which hold
+   * over the whole search and which its explanations cite: the failure of [obj <= 8], the root
+   * bound of the relaxation, in the search of the core-guided phase for a solution at that bound,
+   * was explained by a Gomory cut over the tuple columns of the table hulls, and the checker, whose
+   * copy had only the rows (with fractional tuple columns), found x0 = x1 = x2 = 1, which no table
+   * allows, and reported a wrong explanation (lpchk.fzn). The search finds the optimum of
+   * depth-first search.
+   */
+  @Test
+  void explanationCheckerCopiesTheCutsOfTheRelaxation() {
+    long expected = -1;
+    // the cuts of the root depend on the time of its solves: several runs, so that one cites them
+    for (int run = 0; run < 6; run++) {
+      boolean lcg = run > 0;
+      Store store = new Store();
+      IntVar[] x = {
+        new IntVar(store, "x0", 1, 5), new IntVar(store, "x1", 1, 5), new IntVar(store, "x2", 1, 3)
+      };
+      IntVar[] t = new IntVar[5];
+      for (int i = 0; i < t.length; i++) {
+        t[i] = new IntVar(store, "t" + i, 0, i == 3 ? 7 : 5);
+      }
+      IntVar obj = new IntVar(store, "obj", 0, 62);
+      IntVar[][] scopes = {
+        {x[0], x[2], x[1], t[0]},
+        {x[0], x[1], x[2], t[1]},
+        {x[0], x[2], x[1], t[2]},
+        {x[0], x[1], x[2], t[4]},
+      };
+      int[][][] tuples = {
+        {
+          {1, 1, 2, 3}, {1, 1, 3, 1}, {1, 1, 5, 1}, {1, 2, 1, 2}, {1, 2, 3, 0}, {1, 2, 4, 1},
+          {1, 2, 5, 4}, {1, 3, 1, 3}, {1, 3, 3, 5}, {1, 3, 4, 0}, {2, 1, 2, 3}, {2, 1, 3, 1},
+          {2, 1, 4, 4}, {2, 1, 5, 5}, {2, 2, 1, 4}, {2, 2, 2, 1}, {2, 2, 4, 3}, {2, 3, 1, 2},
+          {2, 3, 2, 4}, {2, 3, 3, 3}, {2, 3, 5, 2}, {3, 1, 1, 1}, {3, 1, 2, 4}, {3, 1, 3, 2},
+          {3, 1, 4, 4}, {3, 1, 5, 4}, {3, 2, 1, 1}, {3, 2, 2, 1}, {3, 2, 3, 5}, {3, 2, 4, 4},
+          {3, 2, 5, 0}, {3, 3, 1, 1}, {3, 3, 2, 4}, {3, 3, 3, 2}, {3, 3, 4, 0}, {4, 1, 1, 5},
+          {4, 1, 2, 3}, {4, 1, 3, 1}, {4, 1, 5, 1}, {4, 2, 1, 0}, {4, 2, 2, 5}, {4, 2, 3, 1},
+          {4, 2, 4, 3}, {4, 2, 5, 1}, {4, 3, 1, 5}, {4, 3, 2, 1}, {4, 3, 3, 3}, {4, 3, 4, 1},
+          {5, 1, 1, 1}, {5, 1, 2, 0}, {5, 1, 3, 3}, {5, 1, 4, 1}, {5, 1, 5, 5}, {5, 2, 1, 5},
+          {5, 2, 3, 5}, {5, 2, 5, 0}, {5, 3, 2, 0}, {5, 3, 5, 2}
+        },
+        {
+          {1, 1, 1, 4}, {1, 1, 2, 2}, {1, 1, 3, 5}, {1, 2, 3, 0}, {1, 3, 1, 5}, {1, 3, 2, 0},
+          {1, 3, 3, 2}, {1, 4, 1, 3}, {1, 4, 2, 1}, {1, 4, 3, 3}, {1, 5, 1, 3}, {2, 1, 1, 2},
+          {2, 1, 2, 3}, {2, 1, 3, 2}, {2, 2, 1, 1}, {2, 2, 2, 0}, {2, 3, 1, 4}, {2, 3, 2, 4},
+          {2, 4, 1, 1}, {2, 4, 2, 3}, {2, 5, 1, 5}, {2, 5, 2, 4}, {2, 5, 3, 4}, {3, 1, 2, 0},
+          {3, 1, 3, 0}, {3, 2, 1, 0}, {3, 2, 2, 2}, {3, 2, 3, 4}, {3, 3, 1, 0}, {3, 3, 2, 3},
+          {3, 3, 3, 4}, {3, 4, 2, 3}, {3, 4, 3, 4}, {3, 5, 2, 4}, {3, 5, 3, 5}, {4, 1, 2, 5},
+          {4, 1, 3, 0}, {4, 2, 1, 3}, {4, 2, 2, 5}, {4, 2, 3, 4}, {4, 4, 1, 4}, {4, 4, 2, 5},
+          {4, 4, 3, 2}, {4, 5, 1, 2}, {4, 5, 3, 3}, {5, 1, 1, 0}, {5, 1, 2, 5}, {5, 1, 3, 0},
+          {5, 2, 1, 1}, {5, 2, 3, 0}, {5, 3, 2, 5}, {5, 3, 3, 2}, {5, 4, 2, 1}, {5, 4, 3, 5},
+          {5, 5, 3, 1}
+        },
+        {
+          {1, 1, 1, 3}, {1, 1, 3, 1}, {1, 1, 4, 5}, {1, 2, 1, 5}, {1, 2, 3, 0}, {1, 2, 4, 5},
+          {1, 2, 5, 2}, {1, 3, 2, 3}, {1, 3, 3, 5}, {1, 3, 4, 2}, {1, 3, 5, 1}, {2, 1, 2, 4},
+          {2, 1, 4, 5}, {2, 2, 1, 5}, {2, 2, 2, 1}, {2, 2, 3, 4}, {2, 2, 5, 2}, {2, 3, 1, 5},
+          {2, 3, 2, 1}, {3, 1, 1, 1}, {3, 1, 2, 4}, {3, 1, 3, 3}, {3, 1, 4, 0}, {3, 1, 5, 5},
+          {3, 2, 1, 3}, {3, 2, 2, 2}, {3, 2, 3, 0}, {3, 2, 4, 0}, {3, 3, 1, 3}, {3, 3, 4, 3},
+          {3, 3, 5, 3}, {4, 1, 1, 3}, {4, 1, 2, 5}, {4, 1, 3, 4}, {4, 1, 4, 2}, {4, 1, 5, 2},
+          {4, 2, 1, 1}, {4, 2, 2, 5}, {4, 2, 3, 0}, {4, 2, 4, 5}, {4, 3, 4, 1}, {4, 3, 5, 5},
+          {5, 1, 1, 1}, {5, 1, 3, 5}, {5, 1, 5, 5}, {5, 2, 1, 5}, {5, 2, 2, 4}, {5, 2, 3, 3},
+          {5, 2, 4, 4}, {5, 2, 5, 4}, {5, 3, 1, 0}, {5, 3, 2, 4}, {5, 3, 3, 0}, {5, 3, 5, 1}
+        },
+        {
+          {1, 1, 1, 3}, {1, 1, 3, 0}, {1, 2, 2, 3}, {1, 3, 2, 5}, {1, 4, 1, 5}, {1, 4, 2, 0},
+          {1, 4, 3, 4}, {1, 5, 3, 5}, {2, 1, 1, 1}, {2, 1, 3, 3}, {2, 2, 1, 4}, {2, 2, 2, 5},
+          {2, 3, 1, 2}, {2, 3, 3, 0}, {2, 4, 3, 5}, {2, 5, 1, 5}, {3, 1, 1, 4}, {3, 1, 2, 0},
+          {3, 1, 3, 1}, {3, 2, 1, 1}, {3, 2, 2, 4}, {3, 3, 1, 3}, {3, 3, 2, 4}, {3, 3, 3, 3},
+          {3, 4, 2, 0}, {3, 4, 3, 1}, {3, 5, 2, 4}, {3, 5, 3, 1}, {4, 1, 1, 5}, {4, 1, 2, 0},
+          {4, 1, 3, 4}, {4, 2, 1, 1}, {4, 2, 3, 3}, {4, 4, 1, 3}, {4, 4, 2, 0}, {4, 4, 3, 3},
+          {4, 5, 1, 1}, {4, 5, 2, 1}, {4, 5, 3, 2}, {5, 1, 1, 2}, {5, 1, 2, 0}, {5, 1, 3, 4},
+          {5, 2, 1, 5}, {5, 2, 2, 2}, {5, 2, 3, 0}, {5, 3, 1, 1}, {5, 3, 2, 2}, {5, 4, 3, 5},
+          {5, 5, 1, 2}, {5, 5, 3, 2}
+        },
+      };
+      List<TableCliques.Table> tables = new ArrayList<>();
+      for (int k = 0; k < scopes.length; k++) {
+        store.impose(new Table(scopes[k], tuples[k]));
+        tables.add(new TableCliques.Table(scopes[k], tuples[k]));
+      }
+      store.impose(new ElementInteger(x[2], new int[] {2, 7, 5}, t[3], 0));
+      store.impose(
+          new LinearInt(
+              new IntVar[] {t[0], t[1], t[2], t[3], t[4], obj},
+              new int[] {3, 3, 2, 1, 3, -1},
+              "==",
+              0));
+      if (!lcg) {
+        DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+        search.setPrintInfo(false);
+        IntVar[] vars = {x[0], x[1], x[2], t[0], t[1], t[2], t[3], t[4]};
+        assertThat(search.labeling(store, new SimpleSelect<>(vars, null, new IndomainMin<>()), obj))
+            .isTrue();
+        expected = search.getCostValue();
+        continue;
+      }
+      LinearRelaxation r =
+          LinearRelaxation.of(
+              store,
+              obj,
+              false,
+              List.of(),
+              TableCliques.rows(tables).all(),
+              Set.of(),
+              LinearRelaxation.Simplex.DENSE);
+      store.impose(r);
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      // the core-guided phase of the flatzinc front end, whose first search is at the root bound
+      solver.setCoreSearch(0.5, 100_000, 5000);
+      solver.setCoreDelay(0.05, 10_000, 0.02);
+      solver.setTimeLimit(60_000);
+      assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+      assertThat(solver.boundDives).isPositive();
+      assertThat(r.cuts).isPositive();
+      assertThat((long) solver.value(obj)).isEqualTo(expected);
+    }
+  }
 }
