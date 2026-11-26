@@ -3587,8 +3587,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // and activity branching (CHANGELOG 510). amaze2 2012-07-04, 06-29 and 03-08 found no
       // solution in 300 s on some seeds and are solved in 28 to 125 s; 28 instances where no
       // solution comes early, 240 s, two seeds: solved 25 -> 29, total time 8,486 -> 7,416 s.
-      // Not for satisfaction under the default search of a model without an annotation (CHANGELOG
-      // 517), which none of the 28 was: the XCSP CSPs PegSolitaireTable-english-3-3-0 and
+      // Not for satisfaction under the default search of a model without an annotation (jacop
+      // #942), which none of the 28 was: the XCSP CSPs PegSolitaireTable-english-3-3-0 and
       // SportsScheduling-dummy-14, solved in 20 and 71 s with its turns, were unsolved in 30 and
       // 90 s without them
       lcg.setAnnotationDrop(

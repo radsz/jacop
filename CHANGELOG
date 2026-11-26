@@ -9409,15 +9409,6 @@ Version 5.0 (unreleased)
    changes (split sums under -f): proved 9 -> 10, total 1,376 -> 1,277 s,
    no objective worse.
 
-517. Free search does not drop the runs of the default search of a
-   satisfaction model without a search annotation after 50,000 conflicts
-   (510, the annotation drop): the drop was measured on annotated models
-   and on optimisation models only. On XCSP CSPs, which have no
-   annotation, it lost three instances in the default mode, which are
-   back at 90 s: SportsScheduling-dummy-14 (2022, unsolved -> 47-87 s),
-   PegSolitaireTable-english-3-3-0 (2025, 32 -> 18.5 s) and
-   Primes-20-40-3-5 (2023, unsolved -> 52 s).
-
 Version 4.11
 =============
 
