@@ -4031,7 +4031,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       linearRelaxation.rememberSearchStart();
       lcg.atRootAfter(lpProbeMs * 1_000_000L, this::resumeRelaxation);
     }
-    lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
+    try {
+      lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
+    } finally {
+      // -n or --gap stops the search by throwing from the solution listener: the check would go on
+      // after the run, printing and keeping the solver
+      if (slowCheck != null) {
+        slowCheck.interrupt();
+      }
+    }
     if (lpProbing) {
       // the probe finished the search: the relaxation was never solved
       linearRelaxation.suspend(false);
@@ -4042,7 +4050,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       printProbeStatistics(lcg);
     }
     if (slowCheck != null) {
-      slowCheck.interrupt();
       // a finished virtual thread keeps its task, and the task the solver: free search without
       // learning, which runs in this frame, would keep the solver and its clauses
       slowCheck = null;

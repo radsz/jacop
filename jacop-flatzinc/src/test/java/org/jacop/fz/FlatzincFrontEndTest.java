@@ -8918,4 +8918,72 @@ class FlatzincFrontEndTest {
       }
     }
   }
+
+  @Test
+  void theLcgSpeedCheckEndsWhenTheNumberOfSolutionsStopsTheSearch() throws Exception {
+    // -n stops LCG by throwing from the solution listener: the speed check thread was only
+    // interrupted when the search returned, so it went on after the run, kept the solver and
+    // printed its -debug line after the run had ended
+    Random rnd = new Random(5);
+    StringBuilder fzn = new StringBuilder();
+    int n = 14;
+    for (int i = 0; i < n; i++) {
+      fzn.append("var 0..9: x").append(i).append(";\n");
+    }
+    fzn.append("var -1000..1000: obj :: output_var;\n");
+    for (int k = 0; k < 20; k++) {
+      int a = rnd.nextInt(n);
+      int b = (a + 1 + rnd.nextInt(n - 1)) % n;
+      fzn.append("constraint int_ne(x%d,x%d);%n".formatted(a, b));
+    }
+    for (int k = 0; k < 6; k++) {
+      StringJoiner cs = new StringJoiner(",");
+      StringJoiner xs = new StringJoiner(",");
+      for (int j = 0; j < 4; j++) {
+        cs.add(String.valueOf(1 + rnd.nextInt(5)));
+        xs.add("x" + rnd.nextInt(n));
+      }
+      fzn.append("constraint int_lin_le([%s],[%s],%d);%n".formatted(cs, xs, 15 + rnd.nextInt(26)));
+    }
+    StringJoiner cs = new StringJoiner(",");
+    StringJoiner xs = new StringJoiner(",");
+    for (int i = 0; i < n; i++) {
+      cs.add(String.valueOf(rnd.nextInt(11) - 5));
+      xs.add("x" + i);
+    }
+    fzn.append("constraint int_lin_eq([%s,-1],[%s,obj],0);%n".formatted(cs, xs));
+    fzn.append("solve maximize obj;\n");
+    Path model = tmp.resolve("speedcheck.fzn");
+    Files.writeString(model, fzn.toString(), StandardCharsets.UTF_8);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+    String atReturn;
+    String later;
+    try (PrintStream capture = new PrintStream(out, true, StandardCharsets.UTF_8)) {
+      System.setOut(capture);
+      new Fz2jacop()
+          .callMain(
+              new String[] {
+                "-f",
+                "--lcg",
+                "on",
+                "-debug",
+                "-n",
+                "2",
+                "-t",
+                "20000",
+                "--free-config",
+                "lcg-slow-at=0.05",
+                model.toString()
+              });
+      atReturn = out.toString(StandardCharsets.UTF_8);
+      // the check comes 1 s into the search
+      Thread.sleep(1500);
+      later = out.toString(StandardCharsets.UTF_8);
+    } finally {
+      System.setOut(originalOut);
+    }
+    assertEquals(2, atReturn.split("----------", -1).length - 1, atReturn);
+    assertEquals("", later.substring(atReturn.length()));
+  }
 }
