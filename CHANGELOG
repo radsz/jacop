@@ -9159,6 +9159,19 @@ Version 5.0 (unreleased)
    -19 %; at 240 s, Diffn instances proved by both 918 -> 836 s (-f) and
    188 -> 175 s (default search); wide-quick -f at 600 s total 0.995.
 
+513. Table explanations (HybridTable under LCG) are cheaper on wide tables,
+   with the same reasons. Once a row is killed by one atom of a column
+   fixed before the explained position, only a column dead at the root
+   can beat it, so the other columns are checked against their root
+   domains instead of being scored one by one; the columns with covered
+   values and with entries in the reason are kept in lists. MiniZinc
+   Challenge 2020 minimal-decision-sets, whose element lookups become
+   tables of 127-196 columns: fixed search australian_train5 46 -> 39 s,
+   colic_train4 74 -> 57 s, cleve_train5 27 -> 23 s at 600 s with the same
+   failures; table explanations 33 % -> 14 % of the run. On the 67
+   Challenge instances with such tables and on wide-quick the total time
+   is unchanged (0.99-1.01).
+
 508. The FlatZinc front end bounds the parts of a linear objective that
    belong to loosely coupled blocks of the model (ObjectiveBlockBound,
    -Dorg.jacop.fz.blockBound=false turns it off). Constraints and clauses
@@ -9189,7 +9202,64 @@ Version 5.0 (unreleased)
    and Cepek, Constraints 2005). MiniZinc Challenge 2014 stochastic-fjsp
    fjsp-a1-s3 under fd: 452 after 600 s -> optimum 207 proved in 15 s.
 
-510. CostNetworkBound (entry 320) is on by default. The FlatZinc front end
+510. LCG explanations drop the atoms that another atom of the same
+   explanation implies: of the bounds of one variable only the strongest
+   lower and upper bound stay, and a removed value stays only when no
+   cited bound excludes it. A reason or failure that excludes a range of
+   values one value at a time cites, for each value, the weakest bound
+   that removed it (lifting, Feydy and Stuckey, CP 2009), so an element
+   over a range of positions cited one index bound per position where the
+   strongest alone implies the others: on MZNC 2013 javarouting trip_6_3
+   ElementInteger reasons had 6.3 distinct atoms where 1 was needed. The
+   clause is a subset of the old one, so it stays implied and is
+   stronger, and conflict analysis no longer resolves the weaker bounds.
+   -Djacop.lcg.dropDominated=false keeps every atom (and --proof keeps
+   them, so the proof steps stay as before). Wide-quick set at 240 s:
+   -f total time 2,580 -> 2,367 s, solved 52 -> 53 (lot-sizing pigment20a
+   proved in 63 s), celar graph11 35,355 -> 6,364, mapping mesh_star
+   45 -> 14 s; default mode neutral (4,275 -> 4,304 s, same solved).
+   Wide set at 240 s, -f: total time 13,154 -> 13,005 s, 196 instances
+   solved by both 2,681 -> 2,445 s (blocks-world 16-4-83 173 -> 92 s,
+   liner-sf-repositioning tp7_4 177 -> 106 s), whirlpool d29 lost at the
+   limit (154 s before); default mode 19,811 -> 19,825 s, 169 = 169
+   solved.
+
+511. LCG reasons of products (MulExplanation) and of x + y = z with a
+   fixed term cite only the bounds they need. A product reason guarded
+   its range exclusion with the variable's own earlier bound, which the
+   trail gives as the root bound, so a third of its atoms were the
+   variable's own; it now first explains the exclusion from the other
+   factors' bounds alone, each lifted by bisection to the weakest value
+   that still excludes the range and cited by the earliest trail atom
+   that reaches it (lifting, Feydy and Stuckey, CP 2009), and a failure
+   is explained from all bounds lifted the same way. x + y = z explains a
+   bound and a failure from the lifted linear bounds before the shift,
+   which cited both bounds of the fixed term. -Djacop.lcg.mulLift=false
+   turns the product lifting off and -Djacop.lcg.shiftLast=false the
+   linear sum reasons. MZNC 2018
+   train instance.17: objective <= 35000 proved in 10 s (unfinished
+   before), optimum found at 27 s instead of 98 s. Wide set at 240 s,
+   -f: total time 13,288 -> 13,038 s, the 194 instances solved by both
+   2,434 -> 1,998 s (lot-sizing pigment20a 182 -> 51 s, javarouting
+   trip_7_2 212 -> 127 s, ship-schedule 8Ships 59 -> 11 s); wide-quick
+   default mode 4,504 -> 4,536 s, same solved.
+
+512. Under lazy clause generation the FlatZinc front end also posts the
+   load of each bin of a bin packing as a linear sum of 0/1 variables, one
+   per item that may go in the bin, channelled to the item's bin (the
+   model's own reified equalities where it has them). Binpacking explains
+   a load bound or a removed bin by the bins of many items at once (97
+   atoms per reason on MZNC 2017 steelmillslab bench_19_5); the sums give
+   the learnt clauses the 0/1 variables and lifted linear reasons (the
+   load decomposition of P. Shaw, "A constraint for bin packing", CP
+   2004). -Dorg.jacop.fz.binPackingSums=lcg (default) | true | false; at
+   most 65,536 item-bin pairs. bench_19_5 under --lcg with a fixed search:
+   28 -> 13 in 120 s. MZNC gbac (19 instances), -f at 240 s, two rounds:
+   total 2,840 -> 2,647 s and 2,886 -> 2,608 s, 2017 UD4 proved in
+   103-111 s (unsolved before), 2016 UD3 objective 230 -> 165 and 250 ->
+   238. -f does not run steelmillslab under LCG, so it is unchanged there.
+
+513. CostNetworkBound (entry 320) is on by default. The FlatZinc front end
    builds the cost function network of an objective that sums unary and
    binary cost tables (weighted CSP: protein design, frequency assignment)
    and posts the bound when its root bound is above the bound the objective
@@ -9208,7 +9278,7 @@ Version 5.0 (unreleased)
    at most 0.5 s on one); the bound is posted only on proteindesign12.
    -Dorg.jacop.fz.costNetwork=false turns it off.
 
-511. The FlatZinc front end removes int_ne and int_lin_ne constraints that
+514. The FlatZinc front end removes int_ne and int_lin_ne constraints that
    the declared domains already satisfy (disjoint domains, a fixed side
    outside the other domain, a constant outside the range of the sum)
    before the detectors run, and IntensionTableDetector looks output
@@ -9218,7 +9288,7 @@ Version 5.0 (unreleased)
    free search totals -19 % at 600 s, fixed search the same. -Dorg.jacop.fz.entailedDisequalities=false
    keeps them.
 
-512. LCG free search (-f) of an optimisation model that is fast enough for
+515. LCG free search (-f) of an optimisation model that is fast enough for
    the speed check (lcg-slow-rate) now also gives way to free search
    without learning at that check when learning cuts its tree little: its
    conflicts jump back fewer than 1.3 levels with an LBD of at least 0.35
@@ -9236,7 +9306,7 @@ Version 5.0 (unreleased)
    holds on 3 of the 187 optimisation instances of the wide set, and the
    wide-quick set at 240 s gives way on none.
 
-513. Opt-in variable-bound MIR of the Gomory rows of the linear relaxation
+516. Opt-in variable-bound MIR of the Gomory rows of the linear relaxation
    (-Dorg.jacop.lp.vbGomory=true). The exact slack Gomory separator, which
    aggregates the rows by an integer scaling of a row of the basis inverse
    with the row slacks as integer columns, also builds the complemented MIR
@@ -9257,7 +9327,7 @@ Version 5.0 (unreleased)
    instance10-duplicated_0.23 proved in 332 s), total time 0.960; default
    the same 26 solved, total 0.998.
 
-514. Opt-in -Dorg.jacop.lp.columnRows=true: when the linear relaxation has
+517. Opt-in -Dorg.jacop.lp.columnRows=true: when the linear relaxation has
    more rows than its share, every further row over columns already in the
    relaxation goes to the tail of rows the sparse simplex tries last, not
    only the clause rows of 503. MiniZinc Challenge 2017 routing-flexible
@@ -9269,6 +9339,75 @@ Version 5.0 (unreleased)
    and 1,348,290 -> 1,321,165 (-f). On the 39 instances whose relaxation it
    changes, 600 s: default one more solved (GCM_0006), total time 0.949;
    -f the same solved, total time 0.968.
+
+518. The FlatZinc front end posts a strict diffn whose rectangles are fixed
+   along one axis (origins and lengths, as the time axis of accap) as unary
+   resources (CumulativeUnary) over the other axis, one for each maximal set
+   of rectangles that overlap along the fixed axis: the maximal cliques of
+   an interval graph, found by a sweep (Gilmore and Hoffman, "A
+   characterization of comparability graphs and of interval graphs",
+   Canadian Journal of Mathematics 16, 1964). Rectangles of length 0 along
+   either axis are kept apart pairwise. Under lazy clause generation a
+   failure of Diffn is explained by the bounds of all its rectangles, about
+   140 atoms on accap, while each unary resource explains its own tasks.
+   MiniZinc Challenge accap (15 instances of 2019, 2022 and 2024), 300 s:
+   default search better objectives on 10, worse on 3 (2019 instance6
+   110 -> 85, optimum 82; Chuffed reaches 91 in 600 s); -f proved 9 -> 11,
+   total 2,443 -> 1,449 s, every proof equal or faster, but instance8 and
+   instance9 end at 3x the objective, where a slow LCG keeps its turn while
+   it improves by 1 at a time. code-generator (15 instances, 240 s):
+   default search one proof gained and one lost, -f neutral.
+   -Dorg.jacop.fz.diffnFixedAxis=off keeps Diffn; pairs posts the pairwise
+   disjunctions of MiniZinc's decomposition instead, both posts both.
+
+519. Lazy clause generation: the reasons of the value precedence
+   constraint (SeqPrecedeChain, which index-value symmetry breaking posts
+   for interchangeable values) cite "x != v" for a value v removed from x
+   in place of the bound atom that removed it ([x <= 11] for 12). The
+   bound atom is true only in the branch that tightened the bound, so the
+   learnt clauses did not carry over. The literal [x = v] is cited when it
+   exists and was false before the propagated literal; a missing one is
+   made at the next learnt clause, never during conflict analysis. The
+   rest stays as it was. MiniZinc Challenge 2015 open_stacks with
+   default search: wbp_20_20_1 52 -> 4 s, wbo_10_20_1 16 -> 6 s,
+   wbop_15_30_1 23 -> 17 s; the 38 open_stacks (2009/2011/2015) and wide
+   set instances that post a value precedence, 600 s: default search
+   proved 32 -> 33 (2011 problem_10_20_1 in 382 s), total time -5.9 %;
+   -f the same (+0.1 %). -s prints the cited literals as
+   lcgValueLiterals; -Djacop.lcg.valueLiterals=false cites the bounds
+   again.
+
+520. Free search on models that order their own rows and columns with
+   lex-leader constraints (MiniZinc Challenge opd): each lex_lesseq(X, Y)
+   of the model whose swap of X and Y, with the variables the model
+   defines from them (the products of two rows), maps every other
+   constraint, the domains and the objective onto themselves is left to
+   the canonicalizer of local search, as the symmetry breaking JaCoP
+   posts is: local search moves freely and a solution is moved onto the
+   symmetric one the lex-leader constraints accept. The row and column
+   lex-leader constraints of a 0/1 matrix together admit a doubly
+   lexical order of any matrix (A. Lubiw, Doubly lexical orderings of
+   matrices, SIAM J. Comput. 16(5), 1987), which sorting rows and
+   columns in turn reaches. The check runs only when local search
+   starts, takes at most 10 s and a twentieth of the time left, and
+   either keeps all of the model's lex-leader constraints or none.
+   With -f and no ls, such a model gets local search for half of the
+   time left, until it stalls (--free-config ls-lex=0 turns that off;
+   -Dorg.jacop.fz.symmetryModelLexLs=false turns the check off). Under
+   --lcg, local search replaces the block sums of a long sum split for
+   lazy clause generation by their definitions (Builder.substituted), so
+   a move changes the whole sum at once; before, the model of
+   flener_et_al_15_350_100 had 2,400 rows instead of 120 and every moved
+   solution broke a block sum. Variables the canonicalizer does not
+   move take the values propagation gives them. -s prints lsModelLex.
+   -f, 240 s, the 17 instances whose model has lex-leader constraints
+   (12 of the wide set, 5 of opd 2015): proved 10 -> 13, total 1,899 ->
+   1,075 s, no objective worse; opd 2015 flener_et_al_10_350_100 28 ->
+   22, its lower bound, in 15 s (Chuffed 25 at 240 s), small_bibd_11_22_10
+   and 13_26_06 proved in 8 s, opd 2017 flener_et_al_15_350_100 32 -> 25
+   (best known 24). The 14 other wide set instances whose local search
+   changes (split sums under -f): proved 9 -> 10, total 1,376 -> 1,277 s,
+   no objective worse.
 
 512. FlatZinc set-up on big Pseudo-Boolean models is faster, with the same
    search. The output-variable check used by alias merging is a set

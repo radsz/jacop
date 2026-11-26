@@ -126,6 +126,7 @@ import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusClteqZ;
+import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.cumulative.Cumulative;
@@ -1432,8 +1433,132 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] lx = support.getVarArray((SimpleNode) node.jjtGetChild(2));
     IntVar[] ly = support.getVarArray((SimpleNode) node.jjtGetChild(3));
 
+    if (diffnFixedAxis(x, y, lx, ly) || diffnFixedAxis(y, x, ly, lx)) {
+      return;
+    }
     support.pose(diffn(x, y, lx, ly, true));
     diffnProjections.add(new IntVar[][] {x, y, lx, ly});
+  }
+
+  /**
+   * How a strict diffn with one axis fixed (origins and lengths) is posted, from {@code
+   * org.jacop.fz.diffnFixedAxis}: {@code off} keeps the Diffn global; {@code pairs} posts, for each
+   * two rectangles that overlap along the fixed axis, the disjunction that they are apart along the
+   * other ({@code o_i + l_i <= o_j \/ o_j + l_j <= o_i}, as MiniZinc's decomposition does); {@code
+   * unary} posts a unary resource over the other axis for each maximal set of rectangles that
+   * overlap along the fixed axis (the maximal cliques of an interval graph, Gilmore and Hoffman, "A
+   * characterization of comparability graphs and of interval graphs", Canadian Journal of
+   * Mathematics 16, 1964), the default; {@code both} posts both. Rectangles of length 0 along
+   * either axis are kept apart pairwise, as a unary resource lets them sit inside another task.
+   *
+   * @return the mode
+   */
+  private static String diffnFixedAxisMode() {
+    return System.getProperty("org.jacop.fz.diffnFixedAxis", "unary");
+  }
+
+  /**
+   * Posts a strict diffn whose rectangles are fixed along one axis ({@code fo}, {@code fl}) as
+   * constraints along the other ({@code o}, {@code l}), see {@link #diffnFixedAxisMode()}. Once the
+   * fixed axis is known, rectangles that do not overlap along it never meet, and the others are
+   * exactly the pairs of tasks of a disjunctive scheduling problem along the other axis. Under lazy
+   * clause generation the failures of Diffn are explained by the bounds of all rectangles, while
+   * each pair or unary resource explains its own. On the 15 accap instances of the MiniZinc
+   * Challenge (2019, 2022, 2024), 300 s, unary resources give better objectives with default search
+   * on 10 and worse on 3, and free search proves 11 instead of 9 in 1,449 s instead of 2,443 s.
+   *
+   * @return false when the constraint is not of this kind or the mode is off (nothing posted)
+   */
+  private boolean diffnFixedAxis(IntVar[] fo, IntVar[] o, IntVar[] fl, IntVar[] l) {
+    String mode = diffnFixedAxisMode();
+    boolean pairs = "pairs".equals(mode) || "both".equals(mode);
+    boolean unary = "unary".equals(mode) || "both".equals(mode);
+    if (!pairs && !unary || support.options.proof() != null) {
+      return false;
+    }
+    if (fo.length < 2
+        || !allVarGround(fo)
+        || !allVarGround(fl)
+        || negativeMin(fl)
+        || negativeMin(l)) {
+      return false;
+    }
+    int n = fo.length;
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        long si = fo[i].value();
+        long sj = fo[j].value();
+        // a unary resource lets a task of length 0 sit inside another, a strict diffn does not
+        if (si < sj + fl[j].value()
+            && sj < si + fl[i].value()
+            && (pairs || !inCliques(fl[i], l[i]) || !inCliques(fl[j], l[j]))) {
+          poseApart(o[i], l[i], o[j], l[j]);
+        }
+      }
+    }
+    if (unary) {
+      poseFixedAxisCliques(fo, o, fl, l);
+    }
+    return true;
+  }
+
+  // the rectangles the unary resources of poseFixedAxisCliques cover: positive lengths on both axes
+  private static boolean inCliques(IntVar fixedLength, IntVar length) {
+    return fixedLength.value() > 0 && length.min() > 0;
+  }
+
+  // o1 + l1 <= o2 \/ o2 + l2 <= o1, with one Boolean choosing the side
+  private void poseApart(IntVar o1, IntVar l1, IntVar o2, IntVar l2) {
+    IntVar before = new IntVar(support.store, 0, 1);
+    IntVar after = new IntVar(support.store, 0, 1);
+    support.pose(new XplusYeqC(before, after, 1));
+    support.pose(new Implies(before, precedes(o1, l1, o2)));
+    support.pose(new Implies(after, precedes(o2, l2, o1)));
+  }
+
+  private static PrimitiveConstraint precedes(IntVar o1, IntVar l1, IntVar o2) {
+    return l1.singleton() ? new XplusClteqZ(o1, l1.value(), o2) : new XplusYlteqZ(o1, l1, o2);
+  }
+
+  // a unary resource over the free axis for each maximal set of positive-length intervals of the
+  // fixed axis sharing a point (the sets open just before an interval ends), over the rectangles
+  // with positive lengths on both axes; diffnFixedAxis keeps the others apart pairwise
+  private void poseFixedAxisCliques(IntVar[] fo, IntVar[] o, IntVar[] fl, IntVar[] l) {
+    int n = fo.length;
+    List<long[]> events = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      if (inCliques(fl[i], l[i])) {
+        events.add(new long[] {fo[i].value(), 1, i});
+        events.add(new long[] {(long) fo[i].value() + fl[i].value(), 0, i});
+      }
+    }
+    // at equal points ends come first: [a, b) and [b, c) do not overlap
+    events.sort((a, b) -> a[0] != b[0] ? Long.compare(a[0], b[0]) : Long.compare(a[1], b[1]));
+    TreeSet<Integer> open = new TreeSet<>();
+    boolean grown = false;
+    IntVar one = support.dictionary.getConstant(1);
+    for (long[] e : events) {
+      int i = (int) e[2];
+      if (e[1] == 1) {
+        open.add(i);
+        grown = true;
+        continue;
+      }
+      if (grown && open.size() > 1) {
+        IntVar[] s = new IntVar[open.size()];
+        IntVar[] d = new IntVar[open.size()];
+        IntVar[] r = new IntVar[open.size()];
+        int k = 0;
+        for (int t : open) {
+          s[k] = o[t];
+          d[k] = l[t];
+          r[k++] = one;
+        }
+        support.delayedConstraints.add(new CumulativeUnary(s, d, r, one, true));
+      }
+      grown = false;
+      open.remove(i);
+    }
   }
 
   // under --proof the pairwise rule alone, which unit propagation over its encoding reaches; the
@@ -3984,9 +4109,28 @@ class GlobalConstraints implements ParserTreeConstants {
     support.delayedConstraints.add(support.binPackingCardinality.binPacking(bin, cc, w, minBin));
     support.binPackingCliques.add(bin, cc, w, minBin);
     support.binPackingPermutations.add(bin, cc, w, minBin);
+    if (binPackingSums()) {
+      support.addLoadSums(bin, cc, w, minBin);
+    }
     if (BIN_LOADS_DEFINED && !support.dictionary.isSearchAnnotated()) {
       markLoadsDefined(bin, cc);
     }
+  }
+
+  /**
+   * Whether the loads of a bin packing are also posted as sums of the items in each bin, from the
+   * system property {@code org.jacop.fz.binPackingSums}: {@code lcg} (the default) under lazy
+   * clause generation, {@code true} always, {@code false} never. Binpacking explains a load bound
+   * or a removed bin by the bins of many items at once (97 atoms per reason on MZNC 2017
+   * steelmillslab bench_19_5); the sum of a bin, over a 0/1 variable per item that says the item is
+   * in it, gives the learnt clauses those 0/1 variables and lifted linear reasons. With the sums
+   * beside Binpacking, bench_19_5 under a fixed search reaches its optimum 0 in 103 s, where
+   * Binpacking alone stays at 28 and the decomposition alone at 13 after 120 s. The sums are the
+   * load decomposition that P. Shaw, "A constraint for bin packing", CP 2004, strengthens.
+   */
+  private boolean binPackingSums() {
+    String mode = System.getProperty("org.jacop.fz.binPackingSums", "lcg").toLowerCase();
+    return "true".equals(mode) || "lcg".equals(mode) && support.options.lcg();
   }
 
   // the loads of a bin packing follow from the bins of its items: free search branches on them
