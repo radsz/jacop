@@ -883,6 +883,9 @@ public final class RevisedDualSimplex {
     crashPending = rows >= 0 && totalPivots == 0;
   }
 
+  // whether the presolve propagates the dual bounds over every column (off in tests of other rules)
+  boolean presolveDualBounds = true;
+
   /**
    * Sets whether the first solve presolves the problem, as {@code org.jacop.jalp.presolve} does. It
    * has no effect after a solve.
@@ -2753,6 +2756,7 @@ public final class RevisedDualSimplex {
   private int presolve(int limit) {
     Presolve p =
         new Presolve(n, rowIdx, rowVal, colIdx, colVal, colLen, cost, trueCost, boundLo, boundHi);
+    p.dualBounds &= presolveDualBounds;
     boolean reduced = p.run();
     presolveReductions = p.counts();
     if (Trace.OUT != null) {

@@ -623,6 +623,8 @@ class RevisedDualSimplexTest {
       RevisedDualSimplex lp = new RevisedDualSimplex(cols, vals, lo, hi, cost, true);
       lp.setExact(true);
       lp.setPresolve(presolve);
+      // the dual bounds would fix a column first
+      lp.presolveDualBounds = false;
       lp.setBounds(0, 0, 10);
       lp.setBounds(1, 0, 5);
       lp.setBounds(2, 0, 5);
@@ -657,6 +659,24 @@ class RevisedDualSimplexTest {
     assertThat(p.stuffing()).isZero();
     assertThat(p.impliedRows()).isZero();
     assertThat(p.ops()).isEqualTo(before);
+    // x + y >= 1 with x, y in [0, 5]: the duals are y >= 0 and nothing bounds them above, so no
+    // column is dominated
+    double inf = Double.POSITIVE_INFINITY;
+    Presolve q =
+        new Presolve(
+            2,
+            new int[][] {{0, 1}},
+            new double[][] {{1, 1}},
+            new int[][] {{0}, {0}},
+            new double[][] {{1}, {1}},
+            new int[] {1, 1},
+            new double[] {1, 2},
+            new double[] {1, 2},
+            new double[] {0, 0, 1},
+            new double[] {5, 5, inf});
+    before = q.ops();
+    assertThat(q.dualDominatedColumns()).isZero();
+    assertThat(q.ops()).isEqualTo(before);
   }
 
   @Test
@@ -675,6 +695,8 @@ class RevisedDualSimplexTest {
               true);
       lp.setExact(true);
       lp.setPresolve(presolve);
+      // the dual bounds would fix a column first
+      lp.presolveDualBounds = false;
       for (int j = 0; j < 6; j++) {
         lp.setBounds(j, 0, inf);
       }
@@ -736,6 +758,85 @@ class RevisedDualSimplexTest {
     assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
     assertThat(lp.presolveReductions()[Presolve.DOMINATED_COLUMN]).isEqualTo(1);
     assertThat(lp.objective()).isCloseTo(4, org.assertj.core.data.Offset.offset(1e-9));
+  }
+
+  @Test
+  void dualBoundsPropagateOverColumnsWithMoreEntries() {
+    // s + 2x >= 1 and s + x + t >= 2, all >= 0, x <= 1, costs s 1, x 4, t 1: s without an upper
+    // bound gives y0 + y1 <= 1 and so y0 <= 1 (y1 >= 0), t gives y1 <= 1, so the reduced cost of x
+    // is at least 4 - 2 - 1 > 0 and x = 0 in every optimum; the column singleton t alone (the
+    // rule before) leaves y0 unbounded. min 2 (s = 2)
+    double inf = Double.POSITIVE_INFINITY;
+    for (boolean presolve : new boolean[] {false, true}) {
+      RevisedDualSimplex lp =
+          new RevisedDualSimplex(
+              new int[][] {{0, 1}, {0, 1, 2}},
+              new double[][] {{1, 2}, {1, 1, 1}},
+              new double[] {1, 2},
+              new double[] {inf, inf},
+              new double[] {1, 4, 1},
+              true);
+      lp.setExact(true);
+      lp.setPresolve(presolve);
+      lp.setBounds(0, 0, inf);
+      lp.setBounds(1, 0, 1);
+      lp.setBounds(2, 0, inf);
+      assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      assertThat(lp.objective()).isCloseTo(2, org.assertj.core.data.Offset.offset(1e-9));
+      if (presolve) {
+        assertThat(lp.presolveReductions()[Presolve.DOMINATED_COLUMN]).isPositive();
+      }
+    }
+  }
+
+  @Test
+  void columnSingletonsWithBoundsTheirRowsImplyBoundTheDuals() {
+    // three set partitioning rows s + x + u = 1, t + x + v = 1, w + u + v = 1 over [0, 1]: each
+    // row implies the upper bound of its column singleton (s, t, w, cost 1), so y_i <= 1, and x
+    // (cost 5, in two rows) is dominated; u and v (cost 1) are only weakly dominated by the
+    // singletons and stay or go with the others. min 2
+    double inf = Double.POSITIVE_INFINITY;
+    for (boolean presolve : new boolean[] {false, true}) {
+      RevisedDualSimplex lp =
+          new RevisedDualSimplex(
+              new int[][] {{0, 3, 4}, {1, 3, 5}, {2, 4, 5}},
+              new double[][] {{1, 1, 1}, {1, 1, 1}, {1, 1, 1}},
+              new double[] {1, 1, 1},
+              new double[] {1, 1, 1},
+              new double[] {1, 1, 1, 5, 1, 1},
+              true);
+      lp.setExact(true);
+      lp.setPresolve(presolve);
+      for (int j = 0; j < 6; j++) {
+        lp.setBounds(j, 0, 1);
+      }
+      assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      assertThat(lp.objective()).isCloseTo(2, org.assertj.core.data.Offset.offset(1e-9));
+      if (presolve) {
+        assertThat(lp.presolveReductions()[Presolve.DOMINATED_COLUMN]).isPositive();
+      }
+    }
+  }
+
+  @Test
+  void weaklyDominatedColumnIsFixedAtItsBound() {
+    // x + y <= 4 and x + 2y >= 1 with x, y >= 0, costs x 0, y 1, and z (cost 0, no upper bound)
+    // in the first row only: its reduced cost -y0 is at least 0 over the dual bound the row gives
+    // (y0 <= 0), not more, so z is weakly dominated and fixed at 0. min 0
+    double inf = Double.POSITIVE_INFINITY;
+    Presolve p =
+        new Presolve(
+            3,
+            new int[][] {{0, 1, 2}, {0, 1}},
+            new double[][] {{1, 1, 1}, {1, 2}},
+            new int[][] {{0, 1}, {0, 1}, {0}},
+            new double[][] {{1, 1}, {1, 2}, {1}},
+            new int[] {2, 2, 1},
+            new double[] {0, 1, 0},
+            new double[] {0, 1, 0},
+            new double[] {0, 0, 0, -inf, 1},
+            new double[] {inf, inf, inf, 4, inf});
+    assertThat(p.dualDominatedColumns()).isPositive();
   }
 
   @Test

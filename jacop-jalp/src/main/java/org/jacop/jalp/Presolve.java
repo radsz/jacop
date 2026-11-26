@@ -128,6 +128,40 @@ final class Presolve {
   // above the cost perturbation (about 1e-6 relative), which alone fixes nothing
   private static final double DOMINATED = 1e-5;
 
+  // whether the bounds of the duals are propagated over the reduced costs of every column without
+  // an upper or a lower bound, not only of the column singletons, before the dominated columns are
+  // looked for (org.jacop.jalp.presolveDualBounds)
+  private static final boolean DUAL_BOUNDS_RULE =
+      Boolean.parseBoolean(System.getProperty("org.jacop.jalp.presolveDualBounds", "true"));
+
+  // whether the dual bounds take the column bounds that rows imply as absent
+  // (org.jacop.jalp.presolveImpliedFree)
+  private static final boolean IMPLIED_FREE_RULE =
+      Boolean.parseBoolean(System.getProperty("org.jacop.jalp.presolveImpliedFree", "true"));
+
+  // how far beyond a column bound, relative to its size, a row must imply it for the bound to be
+  // taken as absent (within it by as much for a column singleton)
+  private static final double FREE_MARGIN = 1e-7;
+
+  // a reduced cost bound farther than this from 0, relative to the cost and the sizes it is summed
+  // from, proves a column dominated over the propagated dual bounds, which are taken over the true
+  // costs (HiGHS: the dual feasibility tolerance)
+  private static final double DUAL_DOMINATED = 1e-7;
+
+  // whether weakly dominated columns are fixed too (org.jacop.jalp.presolveWeakDominated)
+  private static final boolean DUAL_WEAK_RULE =
+      Boolean.parseBoolean(System.getProperty("org.jacop.jalp.presolveWeakDominated", "true"));
+
+  // the rounds of the propagation of the dual bounds
+  private static final int DUAL_ROUNDS = 8;
+
+  // a dual bound is moved only when it moves by more than this, relative to its size, so the
+  // propagation does not crawl
+  private static final double DUAL_STEP = 1e-6;
+
+  // a dual bound larger than this is not used: it carries more rounding than it bounds
+  private static final double DUAL_HUGE = 1e9;
+
   // whether column singletons of an inequality row are fixed by singleton column stuffing
   // (org.jacop.jalp.presolveStuffing)
   private static final boolean STUFFING_RULE =
@@ -395,7 +429,11 @@ final class Presolve {
   // the passes over the rows and columns until nothing changes; false when the bounds cannot hold
   private boolean passes() {
     boolean changed = true;
-    for (int pass = 0; changed && pass < MAX_PASSES; pass++) {
+    // only the passes in which the rows and columns changed count towards the limit: each of the
+    // rules after them removes a row or a column when it changes the problem, and one that took a
+    // pass of the limit left the rules after it out (scrs8: dominated columns found one at a time
+    // in the last passes kept 258 aggregations out)
+    for (int pass = 0; changed && pass < MAX_PASSES; ) {
       changed = false;
       for (int i = 0; i < m; i++) {
         if (rowAlive[i]) {
@@ -415,8 +453,11 @@ final class Presolve {
           changed |= r > 0;
         }
       }
+      if (changed) {
+        pass++;
+      }
       if (DOMINATED_RULE && !changed) {
-        changed = dominatedColumns() > 0;
+        changed = (dualBounds ? dualDominatedColumns() : dominatedColumns()) > 0;
       }
       if (STUFFING_RULE && !changed) {
         changed = stuffing() > 0;
@@ -528,6 +569,460 @@ final class Presolve {
       }
     }
     return found;
+  }
+
+  // whether the dual bounds propagate over every column (DUAL_BOUNDS_RULE; off in tests of other
+  // rules)
+  boolean dualBounds = DUAL_BOUNDS_RULE;
+
+  // the columns whose reduced cost moved a dual bound
+  private boolean[] dualSource;
+
+  // the bounds of the columns that rows imply, so that the dual bounds take them as free
+  private boolean[] freeLo;
+  private boolean[] freeHi;
+  // per row, the removed bounds among the column bounds that its least (most) activity takes, and
+  // the bounds removed through its upper (lower) side
+  private int[] freeMinSides;
+  private int[] freeMaxSides;
+  private int[] freeFromHi;
+  private int[] freeFromLo;
+  // per column, the row and the side (1: upper, -1: lower) that removed its lower and upper bound
+  private int[] freeLoRow;
+  private int[] freeHiRow;
+  private byte[] freeLoSide;
+  private byte[] freeHiSide;
+
+  // dominated columns over propagated dual bounds (Andersen and Andersen, section 3.5; HiGHS
+  // keeps the same implied dual bounds): the sides of a row give the sign of its dual, and every
+  // column without an upper (lower) bound has a reduced cost c_j - y a_j of at least (most) 0, a
+  // linear inequality over the duals whose activity bounds tighten them, in rounds as the bounds
+  // of the rows in the primal. Every dual solution lies in the bounds, so a column whose reduced
+  // cost they keep away from 0 is at the bound its sign asks for in every optimum, and is fixed
+  // there. A pass that fixes nothing charges no work, as in stuffing().
+  // The number of columns fixed
+  int dualDominatedColumns() {
+    long opsBefore = ops;
+    if (yLo == null) {
+      yLo = new double[m];
+      yHi = new double[m];
+    }
+    if (IMPLIED_FREE_RULE) {
+      impliedFree();
+    }
+    if (dualSource == null) {
+      dualSource = new boolean[n];
+    }
+    Arrays.fill(dualSource, false);
+    for (int i = 0; i < m; i++) {
+      yLo[i] = rowHi[i] == Double.POSITIVE_INFINITY ? 0 : Double.NEGATIVE_INFINITY;
+      yHi[i] = rowLo[i] == Double.NEGATIVE_INFINITY ? 0 : Double.POSITIVE_INFINITY;
+    }
+    ops += m + n;
+    boolean moved = true;
+    for (int round = 0; moved && round < DUAL_ROUNDS; round++) {
+      moved = false;
+      for (int j = 0; j < n; j++) {
+        if (colAlive[j] && (noHi(j) || noLo(j))) {
+          moved |= propagateDual(j);
+        }
+      }
+    }
+    for (int i = 0; i < m; i++) {
+      if (rowAlive[i] && yLo[i] > yHi[i]) {
+        // no dual solution: the problem has no optimum, and no column is fixed for one
+        ops = opsBefore;
+        return 0;
+      }
+    }
+    int found = 0;
+    boolean sourceFixed = false;
+    for (int j = 0; j < n; j++) {
+      if (!colAlive[j] || !dualRange(j)) {
+        continue;
+      }
+      double c = wtrue[j];
+      double tol = DUAL_DOMINATED * (1 + Math.abs(c) + rangeSize);
+      // d_j = c_j - y a_j: at least c_j - max, at most c_j - min
+      if (lo[j] != Double.NEGATIVE_INFINITY && !noLo(j) && !rangeMaxInf && c - rangeMax > tol) {
+        sourceFixed |= dualSource[j];
+        dominated(j, lo[j]);
+        found++;
+      } else if (hi[j] != Double.POSITIVE_INFINITY
+          && !noHi(j)
+          && !rangeMinInf
+          && c - rangeMin < -tol) {
+        sourceFixed |= dualSource[j];
+        dominated(j, hi[j]);
+        found++;
+      }
+    }
+    // weakly dominated columns (reduced cost of the sign the bound asks for, possibly 0) are fixed
+    // at the bound when no dual bound came from them: the problem with the column fixed then has
+    // its duals within the bounds as well, and its optimum is one of the problem. A column fixed
+    // above whose reduced cost gave a dual bound leaves them for the next pass
+    if (DUAL_WEAK_RULE && !sourceFixed) {
+      for (int j = 0; j < n; j++) {
+        if (!colAlive[j] || dualSource[j] || !dualRange(j)) {
+          continue;
+        }
+        double c = wtrue[j];
+        double tol = DUAL_DOMINATED * (1 + Math.abs(c) + rangeSize);
+        if (lo[j] != Double.NEGATIVE_INFINITY && !noLo(j) && !rangeMaxInf && c - rangeMax >= -tol) {
+          dominated(j, lo[j]);
+          found++;
+        } else if (hi[j] != Double.POSITIVE_INFINITY
+            && !noHi(j)
+            && !rangeMinInf
+            && c - rangeMin <= tol) {
+          dominated(j, hi[j]);
+          found++;
+        }
+      }
+    }
+    if (found == 0) {
+      ops = opsBefore;
+    }
+    return found;
+  }
+
+  // the range of y a_j over the dual bounds, set by dualRange(j)
+  private double rangeMin;
+  private double rangeMax;
+  private boolean rangeMinInf;
+  private boolean rangeMaxInf;
+  private double rangeSize;
+
+  // sets the range of y a_j over the dual bounds; whether column j has a bound and the range has a
+  // finite end
+  private boolean dualRange(int j) {
+    if (lo[j] == Double.NEGATIVE_INFINITY && hi[j] == Double.POSITIVE_INFINITY) {
+      return false;
+    }
+    double min = 0;
+    double max = 0;
+    boolean minInf = false;
+    boolean maxInf = false;
+    double size = 0;
+    int[] ci = cIdx[j];
+    double[] cv = cVal[j];
+    ops += cLen[j];
+    for (int e = 0; e < cLen[j] && !(minInf && maxInf); e++) {
+      int i = ci[e];
+      double a = cv[e];
+      if (!rowAlive[i] || a == 0) {
+        continue;
+      }
+      double l = a > 0 ? yLo[i] : yHi[i];
+      double h = a > 0 ? yHi[i] : yLo[i];
+      if (Double.isInfinite(l)) {
+        minInf = true;
+      } else {
+        min += a * l;
+        size += Math.abs(a * l);
+      }
+      if (Double.isInfinite(h)) {
+        maxInf = true;
+      } else {
+        max += a * h;
+        size += Math.abs(a * h);
+      }
+    }
+    rangeMin = min;
+    rangeMax = max;
+    rangeMinInf = minInf;
+    rangeMaxInf = maxInf;
+    rangeSize = size;
+    return !(minInf && maxInf);
+  }
+
+  // whether column j has no upper bound, or one the rows imply
+  private boolean noHi(int j) {
+    return hi[j] == Double.POSITIVE_INFINITY || IMPLIED_FREE_RULE && freeHi[j];
+  }
+
+  // whether column j has no lower bound, or one the rows imply
+  private boolean noLo(int j) {
+    return lo[j] == Double.NEGATIVE_INFINITY || IMPLIED_FREE_RULE && freeLo[j];
+  }
+
+  // the column bounds that a row implies from the bounds of its other columns, so that the problem
+  // without them has the same solutions (HiGHS isUpperStrictlyImplied: beyond the bound by a margin
+  // for a column with more entries, within it for a column singleton). A bound is removed only when
+  // the row implies it from bounds that are kept, and no bound removed before is implied from it,
+  // so that the problem without all of them has the same solutions too
+  private void impliedFree() {
+    if (freeLo == null) {
+      freeLo = new boolean[n];
+      freeHi = new boolean[n];
+      freeLoRow = new int[n];
+      freeHiRow = new int[n];
+      freeLoSide = new byte[n];
+      freeHiSide = new byte[n];
+      freeMinSides = new int[m];
+      freeMaxSides = new int[m];
+      freeFromHi = new int[m];
+      freeFromLo = new int[m];
+    }
+    Arrays.fill(freeLo, false);
+    Arrays.fill(freeHi, false);
+    Arrays.fill(freeLoRow, -1);
+    Arrays.fill(freeHiRow, -1);
+    Arrays.fill(freeMinSides, 0);
+    Arrays.fill(freeMaxSides, 0);
+    Arrays.fill(freeFromHi, 0);
+    Arrays.fill(freeFromLo, 0);
+    ops += n + m;
+    for (int i = 0; i < m; i++) {
+      if (rowAlive[i] && rowCount[i] >= 2) {
+        impliedFree(i);
+      }
+    }
+  }
+
+  // the bounds row i implies, as implyBounds(i)
+  private void impliedFree(int i) {
+    int[] idx = rIdx[i];
+    double[] val = rVal[i];
+    int len = rLen[i];
+    ops += 2L * len;
+    double min = 0;
+    double max = 0;
+    int minInf = 0;
+    int maxInf = 0;
+    double size = 0;
+    for (int e = 0; e < len; e++) {
+      int j = idx[e];
+      double a = val[e];
+      if (!colAlive[j] || a == 0) {
+        continue;
+      }
+      double l = a > 0 ? lo[j] : hi[j];
+      double h = a > 0 ? hi[j] : lo[j];
+      if (Double.isInfinite(l)) {
+        minInf++;
+      } else {
+        min += a * l;
+        size += Math.abs(a * l);
+      }
+      if (Double.isInfinite(h)) {
+        maxInf++;
+      } else {
+        max += a * h;
+        size += Math.abs(a * h);
+      }
+    }
+    boolean useHi = rowHi[i] != Double.POSITIVE_INFINITY && minInf <= 1;
+    boolean useLo = rowLo[i] != Double.NEGATIVE_INFINITY && maxInf <= 1;
+    if (!useHi && !useLo) {
+      return;
+    }
+    double slack =
+        SAME
+            * (1
+                + size
+                + Math.abs(rowLo[i] == Double.NEGATIVE_INFINITY ? 0 : rowLo[i])
+                + Math.abs(rowHi[i] == Double.POSITIVE_INFINITY ? 0 : rowHi[i]));
+    for (int e = 0; e < len; e++) {
+      int j = idx[e];
+      double a = val[e];
+      if (!colAlive[j] || a == 0 || Math.abs(a) < SMALL_ENTRY) {
+        continue;
+      }
+      double l = a > 0 ? lo[j] : hi[j];
+      double h = a > 0 ? hi[j] : lo[j];
+      // the implied bounds without the rounding allowance, which a column singleton may reach
+      // within the margin; a column with more entries must be beyond it with the allowance
+      double up = Double.NaN;
+      double down = Double.NaN;
+      if (useHi && (minInf == 0 || Double.isInfinite(l))) {
+        up = (rowHi[i] - (Double.isInfinite(l) ? min : min - a * l)) / a;
+      }
+      if (useLo && (maxInf == 0 || Double.isInfinite(h))) {
+        down = (rowLo[i] - (Double.isInfinite(h) ? max : max - a * h)) / a;
+      }
+      // the upper bound of x_j comes from the upper side of the row for a > 0
+      double newHi = a > 0 ? up : down;
+      double newLo = a > 0 ? down : up;
+      int hiSide = a > 0 ? 1 : -1;
+      boolean singleton = colCount[j] == 1;
+      double allowance = singleton ? 0 : slack / Math.abs(a);
+      if (!freeHi[j]
+          && hi[j] != Double.POSITIVE_INFINITY
+          && !Double.isNaN(newHi)
+          && (singleton
+              ? newHi <= hi[j] + FREE_MARGIN * (1 + Math.abs(hi[j]))
+              : newHi + allowance < hi[j] - FREE_MARGIN * (1 + Math.abs(hi[j])))
+          && canFree(j, true, i, hiSide, a)) {
+        free(j, true, i, hiSide);
+      }
+      if (!freeLo[j]
+          && lo[j] != Double.NEGATIVE_INFINITY
+          && !Double.isNaN(newLo)
+          && (singleton
+              ? newLo >= lo[j] - FREE_MARGIN * (1 + Math.abs(lo[j]))
+              : newLo - allowance > lo[j] + FREE_MARGIN * (1 + Math.abs(lo[j])))
+          && canFree(j, false, i, -hiSide, a)) {
+        free(j, false, i, -hiSide);
+      }
+    }
+  }
+
+  // whether the upper (lower) bound of column j, which row i implies through its side (1: upper),
+  // can go: the bounds of the other columns the side takes are all kept, and no bound removed
+  // before is implied from this one
+  private boolean canFree(int j, boolean upper, int i, int side, double a) {
+    // the side takes the least activity of the others for the upper side, the most for the lower
+    // side; the bounds of x_j among those removed are not the others'
+    boolean ownLoInMin = a > 0;
+    int own;
+    if (side > 0) {
+      own = (ownLoInMin ? freeLo[j] : freeHi[j]) ? 1 : 0;
+      if (freeMinSides[i] - own > 0) {
+        return false;
+      }
+    } else {
+      own = (ownLoInMin ? freeHi[j] : freeLo[j]) ? 1 : 0;
+      if (freeMaxSides[i] - own > 0) {
+        return false;
+      }
+    }
+    // no bound removed through a row of x_j takes this bound of x_j
+    int[] ci = cIdx[j];
+    double[] cv = cVal[j];
+    ops += cLen[j];
+    for (int e = 0; e < cLen[j]; e++) {
+      int r = ci[e];
+      double b = cv[e];
+      if (!rowAlive[r] || b == 0) {
+        continue;
+      }
+      // this bound counts in the least activity of row r: the upper side of r takes it
+      boolean inMin = upper ? b < 0 : b > 0;
+      int marks = inMin ? freeFromHi[r] : freeFromLo[r];
+      int sideWanted = inMin ? 1 : -1;
+      if (freeLo[j] && freeLoRow[j] == r && freeLoSide[j] == sideWanted) {
+        marks--;
+      }
+      if (freeHi[j] && freeHiRow[j] == r && freeHiSide[j] == sideWanted) {
+        marks--;
+      }
+      if (marks > 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // removes the upper (lower) bound of column j, implied by row i through its side
+  private void free(int j, boolean upper, int i, int side) {
+    if (upper) {
+      freeHi[j] = true;
+      freeHiRow[j] = i;
+      freeHiSide[j] = (byte) side;
+    } else {
+      freeLo[j] = true;
+      freeLoRow[j] = i;
+      freeLoSide[j] = (byte) side;
+    }
+    if (side > 0) {
+      freeFromHi[i]++;
+    } else {
+      freeFromLo[i]++;
+    }
+    int[] ci = cIdx[j];
+    double[] cv = cVal[j];
+    ops += cLen[j];
+    for (int e = 0; e < cLen[j]; e++) {
+      int r = ci[e];
+      double b = cv[e];
+      if (b == 0) {
+        continue;
+      }
+      boolean inMin = upper ? b < 0 : b > 0;
+      if (inMin) {
+        freeMinSides[r]++;
+      } else {
+        freeMaxSides[r]++;
+      }
+    }
+  }
+
+  // tightens the dual bounds by the sign of the reduced cost of column j: y a_j <= c_j without an
+  // upper bound, y a_j >= c_j without a lower bound; whether a bound moved
+  private boolean propagateDual(int j) {
+    int[] ci = cIdx[j];
+    double[] cv = cVal[j];
+    int len = cLen[j];
+    ops += 2L * len;
+    double min = 0;
+    double max = 0;
+    int minInf = 0;
+    int maxInf = 0;
+    double size = 0;
+    for (int e = 0; e < len; e++) {
+      int i = ci[e];
+      double a = cv[e];
+      if (!rowAlive[i] || a == 0) {
+        continue;
+      }
+      double l = a > 0 ? yLo[i] : yHi[i];
+      double h = a > 0 ? yHi[i] : yLo[i];
+      if (Double.isInfinite(l)) {
+        minInf++;
+      } else {
+        min += a * l;
+        size += Math.abs(a * l);
+      }
+      if (Double.isInfinite(h)) {
+        maxInf++;
+      } else {
+        max += a * h;
+        size += Math.abs(a * h);
+      }
+    }
+    double c = wtrue[j];
+    boolean useHi = noHi(j) && minInf <= 1;
+    boolean useLo = noLo(j) && maxInf <= 1;
+    if (!useHi && !useLo) {
+      return false;
+    }
+    double slack = SAME * (1 + size + Math.abs(c));
+    boolean moved = false;
+    for (int e = 0; e < len; e++) {
+      int i = ci[e];
+      double a = cv[e];
+      if (!rowAlive[i] || a == 0 || Math.abs(a) < SMALL_ENTRY) {
+        continue;
+      }
+      double l = a > 0 ? yLo[i] : yHi[i];
+      double h = a > 0 ? yHi[i] : yLo[i];
+      // a y_i <= c - (the least of the rest), a y_i >= c - (the most of the rest)
+      double up = Double.NaN;
+      double down = Double.NaN;
+      if (useHi && (minInf == 0 || Double.isInfinite(l))) {
+        up = (c - (Double.isInfinite(l) ? min : min - a * l) + slack) / a;
+      }
+      if (useLo && (maxInf == 0 || Double.isInfinite(h))) {
+        down = (c - (Double.isInfinite(h) ? max : max - a * h) - slack) / a;
+      }
+      double newHi = a > 0 ? up : down;
+      double newLo = a > 0 ? down : up;
+      if (!Double.isNaN(newHi)
+          && Math.abs(newHi) < DUAL_HUGE
+          && newHi < yHi[i] - DUAL_STEP * (1 + Math.abs(newHi))) {
+        yHi[i] = newHi;
+        moved = true;
+      }
+      if (!Double.isNaN(newLo)
+          && Math.abs(newLo) < DUAL_HUGE
+          && newLo > yLo[i] + DUAL_STEP * (1 + Math.abs(newLo))) {
+        yLo[i] = newLo;
+        moved = true;
+      }
+    }
+    dualSource[j] |= moved;
+    return moved;
   }
 
   // the dominated column is removed at value v
