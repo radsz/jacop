@@ -13988,4 +13988,43 @@ class SingleConstraintTest extends TestHelper {
     assertThat(restarts.labeling()).isTrue();
     assertThat(restarts.getIntCost()).isEqualTo(5);
   }
+
+  @Test
+  void xorSystemWhoseFirstCallWasUndoneChecksEveryRowAgain() {
+    // the first call checks every row; a row it checked at a level then removed, such as an empty
+    // row of parity 1 (xor(b, b) = 1), was not checked again and the search found solutions
+    Random random = new Random(20261126);
+    for (int t = 0; t < 300; t++) {
+      Store store = new Store();
+      int n = 3 + random.nextInt(4);
+      IntVar[] b = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        b[i] = new IntVar(store, "b" + i, 0, 1);
+      }
+      int rows = 1 + random.nextInt(3);
+      int[][] index = new int[rows][];
+      IntVar[][] vars = new IntVar[rows][];
+      int[] parity = new int[rows];
+      for (int r = 0; r < rows; r++) {
+        index[r] = random.ints(1 + random.nextInt(Math.min(4, n)), 0, n).toArray();
+        vars[r] = Arrays.stream(index[r]).mapToObj(i -> b[i]).toArray(IntVar[]::new);
+        parity[r] = random.nextInt(2);
+      }
+      int expected =
+          bruteForce(
+                  b,
+                  s -> {
+                    for (int r = 0; r < rows; r++) {
+                      if (Arrays.stream(index[r]).map(i -> s[i]).sum() % 2 != parity[r]) {
+                        return false;
+                      }
+                    }
+                    return true;
+                  })
+              .size();
+      store.impose(new XorSystem(vars, parity));
+      firstCallAboveTheRoot(store, b, random);
+      assertThat(countInOrder(store, b)).as("instance %d", t).isEqualTo(expected);
+    }
+  }
 }
