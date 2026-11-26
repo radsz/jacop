@@ -35,7 +35,6 @@ import static org.jacop.core.Store.ASSERTS_ENABLED;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import org.jacop.core.IntDomain;
 import org.jacop.core.Var;
 
 /**
@@ -172,12 +171,14 @@ public class AllowedArea extends InternalConstraint {
     // avoid allocating space
     Dbox dataBox = Dbox.getAllocatedInstance(origin.length + 1);
 
+    // the whole extent of the integers: a box of an object can reach beyond IntDomain.MAX_INT,
+    // and the area must not be filtered out for it
     switch (minlex) {
       case PRUNEMAX:
-        Arrays.fill(dataBox.origin, IntDomain.MAX_INT);
+        Arrays.fill(dataBox.origin, Integer.MAX_VALUE);
         break;
       case PRUNEMIN:
-        Arrays.fill(dataBox.origin, IntDomain.MIN_INT);
+        Arrays.fill(dataBox.origin, Integer.MIN_VALUE);
         break;
       default:
         break;

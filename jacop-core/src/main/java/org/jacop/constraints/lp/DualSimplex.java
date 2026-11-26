@@ -32,6 +32,7 @@ package org.jacop.constraints.lp;
 
 import java.util.Arrays;
 import java.util.Random;
+import java.util.function.BooleanSupplier;
 
 /**
  * A dense bounded-variable dual simplex for {@code min c x} subject to {@code L <= A x <= U} and
@@ -228,10 +229,32 @@ final class DualSimplex implements LpSolver {
    */
   @Override
   public int solve(int limit) {
+    return solve(limit, null);
+  }
+
+  // how many pivots a solve makes between two looks at its stop condition
+  private static final int STOP_CHECK_PIVOTS = 16;
+
+  /**
+   * Re-solves from the current basis with the current bounds, and stops early when asked to: the
+   * pivots of a dense tableau over thousands of columns take a millisecond each, and a root solve
+   * of a few thousand of them must not run past the time-out of the run.
+   *
+   * @param limit the most pivots
+   * @param stop checked every few pivots; the solve ends with {@link #LIMIT} once it is true, or
+   *     null
+   * @return {@link #OPTIMAL}, {@link #INFEASIBLE} or {@link #LIMIT}
+   */
+  public int solve(int limit, BooleanSupplier stop) {
     infeasibleRow = -1;
     placeNonbasic();
     updateBeta();
     for (int iter = 0; iter < limit; iter++) {
+      if (stop != null
+          && iter % STOP_CHECK_PIVOTS == STOP_CHECK_PIVOTS - 1
+          && stop.getAsBoolean()) {
+        return LIMIT;
+      }
       int r = leavingRow();
       if (r < 0) {
         return OPTIMAL;

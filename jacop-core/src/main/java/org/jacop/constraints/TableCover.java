@@ -42,6 +42,7 @@ import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -149,7 +150,9 @@ public class TableCover extends Constraint
   private final int[] touched;
   private int stamp;
 
-  private boolean firstCall = true;
+  // the first call reads every domain and checks every primary element, again when its level is
+  // removed: the tuples it killed are alive again, and only a change of a domain kills them else
+  private final InitOnce firstCall = new InitOnce();
 
   private final Map<IntVar, Integer> position = new IdentityHashMap<>();
 
@@ -361,8 +364,7 @@ public class TableCover extends Constraint
 
   @Override
   public void consistency(Store store) {
-    if (firstCall) {
-      firstCall = false;
+    if (firstCall.begin(store)) {
       for (int v = 0; v < vars.length; v++) {
         queueVariable(store.level, vars[v]);
       }

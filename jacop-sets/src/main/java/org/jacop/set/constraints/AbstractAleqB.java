@@ -116,17 +116,17 @@ public abstract class AbstractAleqB extends PrimitiveConstraint implements Expla
 
   @Override
   protected int getDefaultNestedConsistencyPruningEvent() {
-    return IntDomain.ANY;
+    return SetDomain.ANY;
   }
 
   @Override
   protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return IntDomain.ANY;
+    return SetDomain.ANY;
   }
 
   @Override
   protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.ANY;
+    return SetDomain.ANY;
   }
 
   @Override

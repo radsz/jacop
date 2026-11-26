@@ -1079,4 +1079,82 @@ class SingleConstraintTest {
     FloatVar y = new FloatVar(store, "y", -1.7e308, -1.7e308);
     assertThat(x + " " + y).isEqualTo("x = 1.7E308 y = -1.7E308");
   }
+
+  /**
+   * Reified(PneqQ, b) with b = 0 (rewritten to p = q) is woken by a bound of q before q is ground,
+   * so p follows it.
+   */
+  @Test
+  void reifiedPneqQKeepsPEqualToQWhenFalse() {
+    Store store = new Store();
+    FloatVar p = new FloatVar(store, "p", -6.5, 44.8);
+    FloatVar q = new FloatVar(store, "q", -0.25, 0.5);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new PneqQ(p, q), b));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    b.domain.in(1, b, 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(p.max()).isEqualTo(0.5);
+    store.setLevel(2);
+    q.domain.in(2, q, -0.25, 0.125);
+    assertThat(store.consistency()).isTrue();
+    assertThat(p.max()).isEqualTo(0.125);
+  }
+
+  /**
+   * An imposed LinearFloat decides satisfied() and notSatisfied() on the domains, not on lookahead
+   * bounds of its tree that a pruning which does not tighten a node leaves behind.
+   */
+  @Test
+  void linearFloatIsNeitherSatisfiedNorViolatedWhileItsDomainsAreWide() {
+    Store store = new Store();
+    FloatVar x = new FloatVar(store, "x", -1.8780677374266989E300, -1.8606912395141863E300);
+    FloatVar y = new FloatVar(store, "y", -8.221777502660739E300, -7.597346940295383E300);
+    FloatVar z = new FloatVar(store, "z", -1.671906474190407E301, 5.323658782343591E301);
+    LinearFloat c = new LinearFloat(new FloatVar[] {x, y, z}, new double[] {1, 1, -1}, "==", 0);
+    store.impose(c);
+    assertThat(store.consistency()).isTrue();
+    // x + y - z ranges over about [-8e299, 8e299]
+    assertThat(c.satisfied()).isFalse();
+    assertThat(c.notSatisfied()).isFalse();
+
+    store = new Store();
+    x = new FloatVar(store, "x", 2.3030640102294456E18, 2.305905814307228E18);
+    y = new FloatVar(store, "y", -6.010757219254396E300, -6.010431060653899E300);
+    z = new FloatVar(store, "z", -2.372857391164876E301, -6.010431060653899E300);
+    c = new LinearFloat(new FloatVar[] {x, y, z}, new double[] {1, 1, -1}, "==", 0);
+    store.impose(c);
+    assertThat(store.consistency()).isTrue();
+    // z = x + y has solutions with y inside its interval
+    assertThat(c.notSatisfied()).isFalse();
+  }
+
+  /**
+   * Optimize bisects the cost: when the lower half of the cost had no solution, the other branch
+   * imposed the negation of the choice next to the choice itself, failed at once, and minimize
+   * returned false with a cost that was not the least: z = x * x - 3 * x - 1 over [1, 5] is least,
+   * -3.25, at x = 1.5, and the first solution, x = 1, costs -3.
+   */
+  @Test
+  void floatOptimizeSearchesTheCostsAboveAChoiceWithoutSolution() {
+    double precision = FloatDomain.precision();
+    FloatDomain.setPrecision(1e-6);
+    try {
+      Store store = new Store();
+      FloatVar x = new FloatVar(store, "x", 1, 5);
+      FloatVar v = new FloatVar(store, "v", -1e6, 1e6);
+      FloatVar z = new FloatVar(store, "z", -1e6, 1e6);
+      store.impose(new PmulQeqR(x, x, v));
+      store.impose(new LinearFloat(new FloatVar[] {z, v, x}, new double[] {-1, 1, -3}, "==", 1));
+      DepthFirstSearch<FloatVar> search = new DepthFirstSearch<>();
+      SplitSelectFloat<FloatVar> select = new SplitSelectFloat<>(store, new FloatVar[] {x}, null);
+      org.jacop.floats.search.Optimize<FloatVar> optimize =
+          new org.jacop.floats.search.Optimize<>(store, search, select, z);
+      assertThat(optimize.minimize()).isTrue();
+      assertThat(optimize.getFinalCost().min()).isCloseTo(-3.25, offset(1e-4));
+    } finally {
+      FloatDomain.setPrecision(precision);
+    }
+  }
 }

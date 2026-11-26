@@ -130,6 +130,8 @@ public final class Probing {
 
   private int root;
   private long deadline;
+  // the deadline as System.currentTimeMillis(), 0 for none: a probe stops propagating there
+  private long wallDeadline;
   private List<IntVar> vars;
   private int probes;
   private int failed;
@@ -201,6 +203,9 @@ public final class Probing {
     }
     root = store.level;
     deadline = start + budgetNanos;
+    long budgetMillis = budgetNanos / 1_000_000L + 1;
+    long now = System.currentTimeMillis();
+    wallDeadline = budgetMillis < Long.MAX_VALUE - now ? now + budgetMillis : 0;
     vars = intVariables();
     long sizeBefore = totalSize();
     lastMin = new int[vars.size()];
@@ -391,12 +396,23 @@ public final class Probing {
   private boolean probe(IntVar x, int min, int max, boolean rec) {
     probes++;
     store.setLevel(root + 1);
+    // one probe can propagate for minutes when bounds converge a step per pass (x = y and x < y
+    // over floats move one ulp per pass): it stops at the deadline of the budget
+    long previous = store.getConsistencyDeadline();
+    boolean ownDeadline = wallDeadline > 0 && (previous == 0 || wallDeadline < previous);
+    if (ownDeadline) {
+      store.setConsistencyDeadline(wallDeadline);
+    }
     boolean consistent;
     try {
       x.domain.in(store.level, x, min, max);
       consistent = store.consistency();
     } catch (FailException _) {
       consistent = false;
+    }
+    boolean cut = !consistent && store.isConsistencyDeadlinePassed();
+    if (ownDeadline) {
+      store.setConsistencyDeadline(previous);
     }
     if (consistent && rec) {
       for (int i = 0; i < vars.size(); i++) {
@@ -407,6 +423,18 @@ public final class Probing {
     }
     store.removeLevel(root + 1);
     store.setLevel(root);
+    if (cut) {
+      // a failure at the deadline refutes nothing: the probe counts as a success that narrows
+      // nothing, and probing ends
+      exhausted = true;
+      if (rec) {
+        for (int i = 0; i < vars.size(); i++) {
+          lastMin[i] = vars.get(i).min();
+          lastMax[i] = vars.get(i).max();
+        }
+      }
+      return true;
+    }
     if (!consistent) {
       failed++;
     }

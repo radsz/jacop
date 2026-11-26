@@ -263,8 +263,10 @@ public class AmongSeq extends Constraint
     this.list = Arrays.copyOf(list, list.length);
     this.set = set.copy();
     this.q = q;
-    this.min = min;
-    this.max = max;
+    // a window counts 0..q values: bounds beyond it, as far as Integer.MIN_VALUE, would overflow
+    // the potentials of the difference constraints
+    this.min = Math.clamp(min, 0, q == Integer.MAX_VALUE ? q : q + 1);
+    this.max = Math.clamp(max, -1, q);
     this.n = list.length;
     this.windows = q > n ? 0 : n - q + 1;
 

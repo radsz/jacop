@@ -192,13 +192,17 @@ public class SumWeightedSet extends Constraint
         continue;
       }
 
+      int min = totalWeight.min();
+      int max = totalWeight.max();
       totalWeight.domain.in(
           store.level,
           totalWeight,
           long2int(glbSum + weightOfLastRequiredEl),
           long2int(lubSum + weightOfLastRequiredEl));
 
-      fixpointReached = true;
+      // narrower bounds of the total weight prune a again (the store does not re-queue a
+      // constraint for its own changes)
+      fixpointReached = totalWeight.min() == min && totalWeight.max() == max;
     }
   }
 

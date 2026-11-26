@@ -96,7 +96,8 @@ class GraphConstraints implements ParserTreeConstants {
         | IllegalAccessException
         | InstantiationException
         | NoSuchMethodException _) {
-      throw new RuntimeException(
+      // a constraint this build cannot post is an error of the model, not a stack trace
+      throw new IllegalArgumentException(
           "% Constraint "
               + cName
               + " is not available in this version; requires "
@@ -173,7 +174,8 @@ class GraphConstraints implements ParserTreeConstants {
         | IllegalAccessException
         | InstantiationException
         | NoSuchMethodException _) {
-      throw new RuntimeException(
+      // a constraint this build cannot post is an error of the model, not a stack trace
+      throw new IllegalArgumentException(
           "% Constraint "
               + constraintName
               + " is not available in this version; requires "
@@ -205,7 +207,8 @@ class GraphConstraints implements ParserTreeConstants {
         | IllegalAccessException
         | InstantiationException
         | NoSuchMethodException _) {
-      throw new RuntimeException(
+      // a constraint this build cannot post is an error of the model, not a stack trace
+      throw new IllegalArgumentException(
           "% Constraint "
               + cName
               + " is not available in this version; requires "
@@ -214,6 +217,19 @@ class GraphConstraints implements ParserTreeConstants {
   }
 
   // MiniZinc graph globals; node numbers start at base, the smallest index of ns
+
+  // a spanning tree of N nodes has N - 1 edges: N beyond the edges fails before the N nodes are
+  // made (2^31 - 1 nodes ran out of memory), and a negative N is an error of the model
+  private void spanningTreeNodes(SimpleNode node, String name) {
+    int n = integer(node, 0);
+    if (n < 0) {
+      throw new IllegalArgumentException(name + ": the number of nodes is negative");
+    }
+    int edges = ints(node, 1).length;
+    if (n - 1L > edges && ints(node, 2).length == edges) {
+      throw Store.failException;
+    }
+  }
 
   private int[] ints(SimpleNode node, int i) {
     return support.getIntArray((SimpleNode) node.jjtGetChild(i));
@@ -338,6 +354,7 @@ class GraphConstraints implements ParserTreeConstants {
 
   /** jacop_wst: N, from, to, w, es, K; nodes 1..N. */
   void gen_jacop_wst(SimpleNode node) {
+    spanningTreeNodes(node, "jacop_wst");
     support.poseDc(
         new WeightedSpanningTree(
             integer(node, 0),
@@ -353,6 +370,7 @@ class GraphConstraints implements ParserTreeConstants {
 
   /** jacop_dwst: N, from, to, w, r, es, K; nodes 1..N. */
   void gen_jacop_dwst(SimpleNode node) {
+    spanningTreeNodes(node, "jacop_dwst");
     support.poseDc(
         new WeightedSpanningTree(
             integer(node, 0),

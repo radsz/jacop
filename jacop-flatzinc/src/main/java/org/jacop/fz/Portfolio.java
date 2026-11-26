@@ -350,6 +350,11 @@ final class Portfolio {
     try {
       return run(args, stdout);
     } finally {
+      // a thread that has not ended within the wait prints nothing after the run returns: in
+      // process, its status line would land in the output of whatever runs next
+      for (Worker w : workers) {
+        w.closeOutput();
+      }
       synchronized (lock) {
         // a thread still running would print its own status lines into stdout
         restorePending = running > 0;
@@ -928,6 +933,10 @@ final class Portfolio {
     private final List<String> args;
     private final List<Runnable> stops = new CopyOnWriteArrayList<>();
     private volatile boolean stopped;
+    // held while the thread prints its answer or an error; closed once the portfolio has returned
+    private final Object output = new Object();
+    private boolean outputClosed;
+    private final List<Runnable> closes = new CopyOnWriteArrayList<>();
     private Thread thread;
     // what the thread printed, set before the thread starts
     private final StatusCapture capture = new StatusCapture();
@@ -956,9 +965,12 @@ final class Portfolio {
         }
       } catch (IOException | RuntimeException e) {
         // the same error in every thread is reported by the first
-        if (firstReport(e.toString())) {
-          FzConsole.printlnErr("%% portfolio thread " + name + " stopped: " + e);
-        }
+        print(
+            () -> {
+              if (firstReport(e.toString())) {
+                FzConsole.printlnErr("%% portfolio thread " + name + " stopped: " + e);
+              }
+            });
       } finally {
         CAPTURE.remove();
         ended = true;
@@ -1106,6 +1118,50 @@ final class Portfolio {
         return "complete";
       }
       return stopped ? "stopped" : "done";
+    }
+
+    /**
+     * Prints what the thread prints at the end of its run (its answer, its statistics or an error)
+     * unless the portfolio has returned already.
+     *
+     * @param print what prints
+     * @return true if it printed
+     */
+    boolean print(Runnable print) {
+      synchronized (output) {
+        if (outputClosed) {
+          return false;
+        }
+        print.run();
+        return true;
+      }
+    }
+
+    /**
+     * Registers how to close the output of the model this thread solves; it runs at once when the
+     * output is closed already.
+     *
+     * @param close the action, which may run more than once
+     */
+    void onClose(Runnable close) {
+      closes.add(close);
+      boolean closed;
+      synchronized (output) {
+        closed = outputClosed;
+      }
+      if (closed) {
+        close.run();
+      }
+    }
+
+    // the portfolio has returned: what the thread prints from now on goes nowhere
+    private void closeOutput() {
+      synchronized (output) {
+        outputClosed = true;
+      }
+      for (Runnable r : closes) {
+        r.run();
+      }
     }
 
     private void stop() {
