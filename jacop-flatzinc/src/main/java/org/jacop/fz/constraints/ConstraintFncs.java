@@ -730,13 +730,22 @@ public final class ConstraintFncs {
         low = Math.min(low, origin[d][i].min());
         high = Math.max(high, (long) origin[d][i].max() + length[d][i].max());
       }
-      box *= Math.max(1, high - low);
+      box *= (double) Math.max(1, high - low);
     }
     return area / box;
   }
 
   /** The relation sum(weights * vars) <= rhs of one way two rectangles lie apart. */
-  private record Apart(int[] weights, IntVar[] vars, int rhs) {
+  private static final class Apart {
+    final int[] weights;
+    final IntVar[] vars;
+    final int rhs;
+
+    private Apart(int[] weights, IntVar[] vars, int rhs) {
+      this.weights = weights;
+      this.vars = vars;
+      this.rhs = rhs;
+    }
 
     // origin + length - other <= 0, with the fixed terms in the right-hand side and a variable
     // that occurs twice merged
@@ -760,7 +769,7 @@ public final class ConstraintFncs {
         x[k] = e.getKey();
         w[k++] = e.getValue();
       }
-      return new Apart(w, x, (int) Math.clamp(rhs, Integer.MIN_VALUE, Integer.MAX_VALUE));
+      return new Apart(w, x, Math.clamp(rhs, Integer.MIN_VALUE, Integer.MAX_VALUE));
     }
   }
 

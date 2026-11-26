@@ -5714,9 +5714,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     long[] last = {System.currentTimeMillis()};
     int[] seen = {best};
     boolean[] stalled = {false};
-    DepthFirstSearch<T> label = fixedLabel;
+    DepthFirstSearch<T> annotation = fixedLabel;
     List<DepthFirstSearch<?>> searches = new ArrayList<>();
-    collectSearches(label, Collections.newSetFromMap(new IdentityHashMap<>()), searches);
+    collectSearches(annotation, Collections.newSetFromMap(new IdentityHashMap<>()), searches);
     ConsistencyListener[] previous = new ConsistencyListener[searches.size()];
     for (int k = 0; k < previous.length; k++) {
       DepthFirstSearch<?> search = searches.get(k);
@@ -5735,7 +5735,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                   last[0] = now;
                 } else if (now - last[0] > Math.max(minimum, (long) (factor * (last[0] - start)))) {
                   stalled[0] = true;
-                  setLabelTimeOut(label, 0);
+                  setLabelTimeOut(annotation, 0);
                 }
               }
               return c;
@@ -5766,9 +5766,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (best - 1 < cost.max()) {
         cost.domain.inMax(store.level, cost, best - 1);
       }
-      executeNonRestartSearch(label, fixedSelect, cost, fixedSolveType);
-      complete = !labelTimedOut(label);
-    } catch (FailException e) {
+      executeNonRestartSearch(annotation, fixedSelect, cost, fixedSolveType);
+      complete = !labelTimedOut(annotation);
+    } catch (FailException _) {
       // the clauses and the bound leave no better solution
       complete = true;
     } finally {
@@ -6042,7 +6042,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             () -> {
               try {
                 Thread.sleep(wait);
-                double lcgMillis = Math.max(1, (System.nanoTime() - started) / 1_000_000L);
+                double lcgMillis = (double) Math.max(1, (System.nanoTime() - started) / 1_000_000L);
                 double lcgRate = (solver.sat().decisions - decisionsBefore) / lcgMillis;
                 if (options.debug()) {
                   IO.println(
