@@ -393,4 +393,26 @@ class DominanceNogoodsTest {
     b.domain.in(store.level, b, 1, 1);
     assertThat(store.consistency()).isTrue();
   }
+
+  @Test
+  void aReificationWithAFixedBooleanDefinesNoVariable() {
+    // with r fixed, the row of r <-> h <= a1 (its left-hand side unchanged) lost r and was taken
+    // as the equality a1 = h, so a1 followed h past its maximum: the nogoods dropped h = 0 with
+    // a3 < 3 and the optimum 11 (a1 = 3, a3 = 0)
+    Store store = new Store();
+    IntVar a1 = new IntVar(store, "a1", 0, 3);
+    IntVar a3 = new IntVar(store, "a3", 0, 3);
+    IntVar h = new IntVar(store, "h", 0, 1);
+    IntVar r = new IntVar(store, "r", 1, 1);
+    IntVar obj = new IntVar(store, "obj", -100, 100);
+    store.impose(new Reified(new XlteqY(h, a1), r));
+    store.impose(new XlteqY(h, a3));
+    store.impose(new LinearInt(new IntVar[] {a1, a3, obj}, new int[] {2, -1, -1}, "==", -5));
+    assertThat(store.consistency()).isTrue();
+    new DominanceNogoods(store, obj, false).run();
+    assertThat(store.consistency()).isTrue();
+    int[] best = {Integer.MIN_VALUE};
+    search(store, new IntVar[] {a1, a3, h, obj}, 1, () -> best[0] = Math.max(best[0], obj.value()));
+    assertThat(best[0]).isEqualTo(11);
+  }
 }
