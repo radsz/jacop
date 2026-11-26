@@ -8521,4 +8521,26 @@ class FlatzincFrontEndTest {
         "--presolve",
         "on");
   }
+
+  @Test
+  void binCompletionStopsAPropagationAtTheTimeOut() {
+    // the dives before the solver of free LCG search propagated without a deadline: with the
+    // objective at its bound 1, x + 1 <= y and y <= x moved the bounds by one per pass, for minutes
+    // in process
+    assertEndsAtTheTimeOut(
+        "predicate jacop_bin_packing_capacity(array [int] of var int: bin, array [int] of int: cap,"
+            + " array [int] of int: w, int: min_bin);\n"
+            + "var 1..3: b1 :: output_var;\nvar 1..3: b2 :: output_var;\n"
+            + "var 1..3: b3 :: output_var;\nvar 1..3: cost :: output_var;\n"
+            + "var 0..500000000: x;\nvar 0..500000000: y;\nvar 0..500000000: z;\n"
+            + "constraint jacop_bin_packing_capacity([b1, b2, b3], [10, 10, 10], [3, 3, 3], 1);\n"
+            + "constraint int_le(b1, cost);\nconstraint int_le(b2, cost);\n"
+            + "constraint int_le(b3, cost);\nconstraint int_plus(x, 1, z);\n"
+            + "constraint int_lin_le([1, -1, -600000000], [z, y, cost], -600000000);\n"
+            + "constraint int_lin_le([1, -1, -600000000], [y, x, cost], -600000000);\n"
+            + "solve minimize cost;\n",
+        "-f",
+        "--lcg",
+        "on");
+  }
 }

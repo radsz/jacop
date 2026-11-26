@@ -939,6 +939,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return false;
   }
 
+  /**
+   * Propagates the store for a dive, a probe or the check of a solution made outside a search,
+   * stopping at the time-out. A failure is then no proof: a dive that fails finds nothing.
+   *
+   * @return false when the store fails or the propagation stopped at the time-out
+   */
+  private boolean diveConsistency() {
+    return store.consistencyUntil(timeOutDeadline());
+  }
+
   /** The steps of {@link #search} at the root, from the side components to the bounds. */
   private void rootSteps(ASTSolveItem node, Options opt) {
     solveSideComponents(node);
@@ -4329,10 +4339,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     int status = solver.solve();
     if (status == CdclSolver.SAT) {
       int level = store.level;
-      if (!cnf.fix(store, solver) || !store.consistency() || !fixRest() || !clausesHold()) {
-        // not a solution of the store: a compilation error, reported, and solved without it
-        FzConsole.printlnErr(
-            "%% clausal model: solution rejected by the store; solving without it");
+      if (!cnf.fix(store, solver) || !diveConsistency() || !fixRest() || !clausesHold()) {
+        // not a solution of the store: a compilation error, reported, and solved without it; a
+        // check stopped at the time-out rejects nothing, and the search then times out
+        if (!store.isConsistencyCut()) {
+          FzConsole.printlnErr(
+              "%% clausal model: solution rejected by the store; solving without it");
+        }
         store.removeLevel(store.level);
         store.setLevel(level);
         return false;
@@ -4352,7 +4365,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     for (Var v : declaredVariables()) {
       if (v instanceof IntVar x && !x.singleton()) {
         x.domain.in(store.level, x, x.min(), x.min());
-        if (!store.consistency()) {
+        if (!diveConsistency()) {
           return false;
         }
       }
@@ -6036,7 +6049,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     store.setLevel(base + 1);
     try {
       cost.domain.in(store.level, cost, k, k);
-      if (!store.consistency()) {
+      if (!diveConsistency()) {
         return false;
       }
       for (IntVar x : items) {
@@ -6105,7 +6118,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     store.setLevel(base + 1);
     try {
       cost.domain.in(store.level, cost, k, k);
-      if (!store.consistency()) {
+      if (!diveConsistency()) {
         return null;
       }
       for (int i : fixedFirst) {
@@ -6145,7 +6158,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         }
         left.get(chosen).merge(w[i], -1, Integer::sum);
         items[i].domain.in(store.level, items[i], value, value);
-        if (!store.consistency()) {
+        if (!diveConsistency()) {
           return null;
         }
       }
@@ -6215,7 +6228,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     store.setLevel(level + 1);
     try {
       x.domain.in(store.level, x, v, v);
-      if (store.consistency()) {
+      if (diveConsistency()) {
         return true;
       }
     } catch (FailException e) {
@@ -7262,25 +7275,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // the root's pending propagation first: run at the level of the check, the first
       // consistency of the constraints is undone with it, which left warehouses cap91 (MaxSAT
       // 2024) without its 7 s proof
-      if (!store.consistency()) {
+      if (!diveConsistency()) {
         return null;
       }
       store.setLevel(base + 1);
       for (int k = 0; k < starts.length; k++) {
         starts[k].domain.in(store.level, starts[k], start[k], start[k]);
       }
-      if (!store.consistency() || !cost.domain.contains(makespan) || cost.min() != makespan) {
+      if (!diveConsistency() || !cost.domain.contains(makespan) || cost.min() != makespan) {
         return null;
       }
       cost.domain.in(store.level, cost, makespan, makespan);
-      if (!store.consistency() || !collectedClausesPropagate()) {
+      if (!diveConsistency() || !collectedClausesPropagate()) {
         return null;
       }
       if (!smallestValuesAtOnce(hinted)) {
         for (IntVar x : hinted) {
           if (!x.singleton()) {
             x.domain.in(store.level, x, x.min(), x.min());
-            if (!store.consistency() || !collectedClausesPropagate()) {
+            if (!diveConsistency() || !collectedClausesPropagate()) {
               return null;
             }
           }
@@ -7322,7 +7335,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           x.domain.in(store.level, x, x.min(), x.min());
         }
       }
-      accepted = store.consistency() && collectedClausesPropagate();
+      accepted = diveConsistency() && collectedClausesPropagate();
     } catch (FailException e) {
       accepted = false;
     }
@@ -7377,7 +7390,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           changed = true;
         }
       }
-      if (changed && !store.consistency()) {
+      if (changed && !diveConsistency()) {
         return false;
       }
     }
@@ -8894,8 +8907,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // without split, where it runs at the level the labeling starts from: the linear relaxation
     // keeps root reduced costs and bounds from there, which the level of a cube would make wrong
     // for the other cubes (a multi-knapsack lost its optimum in 2 runs of 10)
-    if (!store.consistency()) {
-      tree.complete();
+    if (!diveConsistency()) {
+      if (store.isConsistencyCut()) {
+        // stopped at the time-out: the tree is not refuted
+        label.timeOutOccured = true;
+      } else {
+        tree.complete();
+      }
       return false;
     }
     boolean found = false;
@@ -8910,11 +8928,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       boolean closed = false;
       try {
         boolean result = false;
-        if (split.impose(cube)) {
+        if (split.impose(cube, deadline == Long.MAX_VALUE ? 0 : deadline)) {
           result =
               costVar != null
                   ? label.labeling(store, split, costVar)
                   : label.labeling(store, split);
+        } else if (split.cut()) {
+          // the cube stopped at the time-out, unrefuted
+          label.timeOutOccured = true;
         }
         split.retract();
         found |= result;
@@ -9174,7 +9195,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     store.setLevel(base + 1);
     try {
       cost.domain.inMax(store.level, cost, limit);
-      if (store.consistency()) {
+      if (diveConsistency()) {
         double[] point = new double[vars.length];
         for (int i = 0; i < vars.length; i++) {
           point[i] =
@@ -9437,7 +9458,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         if (limit != Double.MAX_VALUE) {
           cost.domain.inMax(store.level, cost, limit);
         }
-        rootFailed = !store.consistency();
+        rootFailed = !diveConsistency();
+        floatDive.setDeadline(timeOutDeadline());
         if (!rootFailed && floatDive.dive()) {
           if (listener != null) {
             listener.setSolutionLimit(listener.solutionsNo() + 1);
@@ -10213,7 +10235,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private void handleTrivialSolution() {
     if (!sat.collectedClauses().isEmpty()) {
       postCollectedClauses();
-      if (!store.consistency()) {
+      if (!rootConsistency()) {
         IO.println(clampedDomainsHideSolutions() ? "=====UNKNOWN=====" : "=====UNSATISFIABLE=====");
         throw new TrivialSolution();
       }
