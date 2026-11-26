@@ -320,7 +320,7 @@ public final class Xcsp2jacop {
       boolean allBool = cells.stream().allMatch(x -> x.bool);
       boolean noBool = cells.stream().noneMatch(x -> x.bool);
       if (allBool || noBool) {
-        String name = "XCSP_ARRAY_" + arrays++ + "_";
+        String name = r.m.reserve("XCSP_ARRAY_" + arrays++ + "_");
         StringBuilder s = new StringBuilder("array [1..");
         s.append(cells.size())
             .append("] of var ")

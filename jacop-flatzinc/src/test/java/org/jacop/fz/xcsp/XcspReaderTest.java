@@ -685,4 +685,21 @@ class XcspReaderTest {
     }
     return i == nonLoop && len == moved;
   }
+
+  /**
+   * An XCSP3 identifier may be a name the translation generates for the output array or a table:
+   * the generated names keep clear of it, so the one solution is printed with the right values.
+   */
+  @Test
+  void identifiersOfGeneratedNamesKeepTheirValues() throws IOException {
+    String xml =
+        "<instance format=\"XCSP3\" type=\"CSP\"><variables><var id=\"XCSP_ARRAY_0_\"> 0..3 </var>"
+            + "<array id=\"x\" size=\"[2]\"> 0..3 </array><var id=\"T_XCSP_0_\"> 0..3 </var></variables>"
+            + "<constraints><intension> lt(XCSP_ARRAY_0_,x[0]) </intension>"
+            + "<extension><list> x[0] x[1] T_XCSP_0_ </list><supports> (1,2,3)(2,0,1)(3,3,3) </supports></extension>"
+            + "<intension> ne(x[1],T_XCSP_0_) </intension><intension> eq(XCSP_ARRAY_0_,1) </intension>"
+            + "</constraints></instance>";
+    String out = competitionOutput(xml);
+    assertTrue(out.contains("s SATISFIABLE") && out.contains("<values> 1 2 0 1 </values>"), out);
+  }
 }
