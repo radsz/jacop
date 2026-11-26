@@ -2721,7 +2721,7 @@ class ConsistencyChecker {
         new Case("MaxSimple", Level.BOUNDS_Z, (s, r) -> minMaxSimple(s, r, false)),
         new Case("MinSimple", Level.BOUNDS_Z, (s, r) -> minMaxSimple(s, r, true)),
         new Case("BoolClause", Level.DOMAIN, ConsistencyChecker::boolClause),
-        new Case("CountValues", Level.NONE, ConsistencyChecker::countValues),
+        new Case("CountValues", Level.BOUNDS_Z, ConsistencyChecker::countValues),
         new Case("SeqPrecedeChain", Level.DOMAIN, (s, r) -> seqPrecedeChain(s, r, false)),
         new Case("ValuePrecedeChain", Level.DOMAIN, (s, r) -> seqPrecedeChain(s, r, true)),
         // constraint audit round 2: the next constraints by wide-set reach without a case

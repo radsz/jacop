@@ -10119,6 +10119,52 @@ class SingleConstraintTest extends TestHelper {
     assertThat(c.satisfied()).isFalse();
   }
 
+  // Counterexample of the consistency checker: only x0, x1 and x3 can take 0 or 1, and at least
+  // one of them is 0, so at most two are 1. Each counter alone has a support, the pair has not.
+  @Test
+  void testCountValuesBoundsTheCountOfTwoValuesTogether() {
+
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", new IntervalDomain(0, 1)),
+      new IntVar(store, "x1", 0, 3),
+      new IntVar(store, "x2", 2, 3),
+      new IntVar(store, "x3", 0, 1)
+    };
+    x[0].addDom(3, 3);
+    IntVar c0 = new IntVar(store, "c0", 1, 2);
+    IntVar c1 = new IntVar(store, "c1", 0, 1);
+    c1.addDom(3, 3);
+    IntVar c2 = new IntVar(store, "c2", 0, 2);
+    store.impose(new CountValues(x, new IntVar[] {c0, c1, c2}, new int[] {0, 1, 3}));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(c1.max()).isEqualTo(1);
+  }
+
+  // x0 and x1 fill the values 0 and 1, each counted at most once, so x2 and x3 take neither.
+  @Test
+  void testCountValuesRemovesValuesOfAFullSetOfValues() {
+
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 0, 1),
+      new IntVar(store, "x1", 0, 1),
+      new IntVar(store, "x2", 0, 2),
+      new IntVar(store, "x3", 0, 3)
+    };
+    IntVar c0 = new IntVar(store, "c0", 0, 1);
+    IntVar c1 = new IntVar(store, "c1", 0, 1);
+    IntVar c2 = new IntVar(store, "c2", 0, 4);
+    store.impose(new CountValues(x, new IntVar[] {c0, c1, c2}, new int[] {0, 1, 2}));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[2].value()).isEqualTo(2);
+    assertThat(x[3].min()).isEqualTo(2);
+    assertThat(c0.value()).isEqualTo(1);
+    assertThat(c1.value()).isEqualTo(1);
+  }
+
   // With min = max the windows force a period of q, so Sequence posts reified memberships on q
   // Booleans and one sum instead of Regular. It must keep the solutions and the domain
   // consistency of the Regular automaton.
