@@ -43,6 +43,7 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.In;
+import org.jacop.constraints.Not;
 import org.jacop.constraints.Reified;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -1346,5 +1347,20 @@ class SingleConstraintTest {
     assertThat(store.consistency()).isTrue();
     assertThat(x.singleton(2)).isTrue();
     assertThat(a.domain.singleton(dom(2))).isTrue();
+  }
+
+  /**
+   * Not(XinA): x loses the elements of the glb of a, and then the value it is left with is out of
+   * a.
+   */
+  @Test
+  void notXinARemovesTheLastValueOfXFromA() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", dom(1, 5));
+    SetVar a = setVar(store, "a", new int[] {5}, new int[] {1, 5});
+    store.impose(new Not(new XinA(x, a)));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.singleton(1)).isTrue();
+    assertThat(a.domain.singleton(dom(5))).isTrue();
   }
 }
