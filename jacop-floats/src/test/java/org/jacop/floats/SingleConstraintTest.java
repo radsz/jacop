@@ -1101,4 +1101,32 @@ class SingleConstraintTest {
     assertThat(store.consistency()).isTrue();
     assertThat(p.max()).isEqualTo(0.125);
   }
+
+  /**
+   * An imposed LinearFloat decides satisfied() and notSatisfied() on the domains, not on lookahead
+   * bounds of its tree that a pruning which does not tighten a node leaves behind.
+   */
+  @Test
+  void linearFloatIsNeitherSatisfiedNorViolatedWhileItsDomainsAreWide() {
+    Store store = new Store();
+    FloatVar x = new FloatVar(store, "x", -1.8780677374266989E300, -1.8606912395141863E300);
+    FloatVar y = new FloatVar(store, "y", -8.221777502660739E300, -7.597346940295383E300);
+    FloatVar z = new FloatVar(store, "z", -1.671906474190407E301, 5.323658782343591E301);
+    LinearFloat c = new LinearFloat(new FloatVar[] {x, y, z}, new double[] {1, 1, -1}, "==", 0);
+    store.impose(c);
+    assertThat(store.consistency()).isTrue();
+    // x + y - z ranges over about [-8e299, 8e299]
+    assertThat(c.satisfied()).isFalse();
+    assertThat(c.notSatisfied()).isFalse();
+
+    store = new Store();
+    x = new FloatVar(store, "x", 2.3030640102294456E18, 2.305905814307228E18);
+    y = new FloatVar(store, "y", -6.010757219254396E300, -6.010431060653899E300);
+    z = new FloatVar(store, "z", -2.372857391164876E301, -6.010431060653899E300);
+    c = new LinearFloat(new FloatVar[] {x, y, z}, new double[] {1, 1, -1}, "==", 0);
+    store.impose(c);
+    assertThat(store.consistency()).isTrue();
+    // z = x + y has solutions with y inside its interval
+    assertThat(c.notSatisfied()).isFalse();
+  }
 }
