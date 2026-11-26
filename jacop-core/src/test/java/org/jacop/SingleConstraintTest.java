@@ -11755,7 +11755,7 @@ class SingleConstraintTest extends TestHelper {
 
   // ConsistencyChecker repeated mode: an arc variable that is also an arrival time was pruned by
   // the time bounds of the same pass, which left every variable fixed to a set of predecessors that
-  // is no circuit; SequenceMdd now repeats its pass while a variable with two roles changes
+  // is no circuit; SequenceMdd repeats its pass while it prunes
   @Test
   public void testSequenceMddWithAnArcThatIsAlsoATimeAcceptsOnlyCircuits() {
     int none = org.jacop.constraints.SequenceMdd.NONE;
@@ -14255,5 +14255,64 @@ class SingleConstraintTest extends TestHelper {
             false);
     assertThat(pareto.pareto()).isEqualTo(MultiObjective.Status.OPTIMAL);
     assertThat(pareto.front()).containsExactlyInAnyOrder(new int[] {3, 6}, new int[] {6, 3});
+  }
+
+  // ConsistencyChecker counted nodes where a second call of SequenceMdd pruned more: arcs removed
+  // by
+  // a pass change the diagram of the next one, and the store does not wake the constraint for its
+  // own pruning; SequenceMdd now repeats its pass until it prunes nothing
+  @Test
+  void sequenceMddReachesItsFixpointInOneCall() {
+    int none = org.jacop.constraints.SequenceMdd.NONE;
+    Random random = new Random(7);
+    int notAtFixpoint = 0;
+    for (int t = 0; t < 400; t++) {
+      Store store = new Store();
+      int n = 3 + random.nextInt(2);
+      IntVar[] arcs = new IntVar[n];
+      IntVar[] in = new IntVar[n];
+      IntVar[] out = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        arcs[i] = new IntVar(store, "a" + i, 0, n - 1);
+        in[i] = new IntVar(store, "in" + i, 0, 6);
+        out[i] = new IntVar(store, "out" + i, 0, 6);
+        for (IntVar v : new IntVar[] {in[i], out[i]}) {
+          if (random.nextBoolean()) {
+            v.domain.inComplement(0, v, random.nextInt(7));
+          }
+        }
+      }
+      int[][] travel = new int[n][n];
+      for (int[] row : travel) {
+        for (int j = 0; j < n; j++) {
+          row[j] = random.nextInt(5) == 0 ? none : random.nextInt(3);
+        }
+      }
+      int[] delta = new int[n];
+      for (int j = 0; j < n; j++) {
+        delta[j] = random.nextInt(5) == 0 ? none : random.nextInt(2);
+      }
+      org.jacop.constraints.SequenceMdd c =
+          new org.jacop.constraints.SequenceMdd(
+              arcs, random.nextBoolean(), 0, in, out, travel, delta, 0, 1 + random.nextInt(3));
+      store.impose(c);
+      if (!store.consistency()) {
+        continue;
+      }
+      List<Var> vars = new ArrayList<>(Arrays.asList(arcs));
+      vars.addAll(Arrays.asList(in));
+      vars.addAll(Arrays.asList(out));
+      String before = vars.toString();
+      try {
+        c.consistency(store);
+      } catch (FailException _) {
+        notAtFixpoint++;
+        continue;
+      }
+      if (!before.equals(vars.toString())) {
+        notAtFixpoint++;
+      }
+    }
+    assertThat(notAtFixpoint).isZero();
   }
 }
