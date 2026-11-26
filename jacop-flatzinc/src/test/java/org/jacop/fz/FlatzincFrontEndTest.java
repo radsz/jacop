@@ -9105,4 +9105,30 @@ class FlatzincFrontEndTest {
     String out = run(model.toString(), "-a", "--lcg", "off")[0];
     assertEquals(8, out.split("----------\n", -1).length - 1, out);
   }
+
+  @Test
+  void cardinalityReadsNoSumOfMinValueWeightsAsACounter() throws IOException {
+    // -2147483648 * (count(x, 1) + y) = 0 says y = -count(x, 1); read as count(x, 1) - y = 0, the
+    // redundant GCC took y as the counter of value 1 and kept only the 8 assignments without a 1
+    StringBuilder model = new StringBuilder();
+    StringBuilder constraints = new StringBuilder();
+    for (int i = 1; i <= 3; i++) {
+      model.append("var 1..3: x").append(i).append(" :: output_var;\n");
+    }
+    model.append("var -3..3: y;\nvar 0..3: z;\n");
+    for (int i = 1; i <= 3; i++) {
+      for (int v = 1; v <= 2; v++) {
+        String k = i + "_" + v;
+        model.append("var bool: b").append(k).append(";\nvar 0..1: i").append(k).append(";\n");
+        constraints.append("constraint int_eq_reif(x" + i + "," + v + ",b" + k + ");\n");
+        constraints.append("constraint bool2int(b" + k + ",i" + k + ");\n");
+      }
+    }
+    constraints.append("constraint int_lin_eq([-2147483648,-2147483648,-2147483648,-2147483648],");
+    constraints.append("[i1_1,i2_1,i3_1,y],0);\n");
+    constraints.append("constraint int_lin_eq([1,1,1,-1],[i1_2,i2_2,i3_2,z],0);\n");
+    model.append(constraints).append("solve satisfy;\n");
+    String out = run(model.toString(), "-a", "--lcg", "off")[0];
+    assertEquals(27, out.split("----------\n", -1).length - 1, out);
+  }
 }
