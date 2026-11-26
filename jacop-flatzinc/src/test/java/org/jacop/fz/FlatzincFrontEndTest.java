@@ -7729,4 +7729,34 @@ class FlatzincFrontEndTest {
     assertFalse(out.contains("x = "), out);
     assertTrue(out.contains("=====UNKNOWN====="), out);
   }
+
+  @Test
+  void theBinCompletionHintLeavesTheRootSolveOfTheRelaxationAtTheRoot() throws IOException {
+    // the hint fixed the objective to its bound at a level of its own, where propagation failed
+    // before the linear relaxation, queued since its imposition, ran: removing the level dropped
+    // it from the queue, and its first solve came at a probe of LCG's root, whose bounds its cuts
+    // took as the root's; -f reported 7 instead of the optimum 3
+    StringBuilder model = new StringBuilder();
+    for (int i = 0; i <= 10; i++) {
+      model.append("var 0..1: s").append(i).append(" :: output_var;\n");
+    }
+    model.append("var 1..9: it :: output_var;\n");
+    for (int b = 0; b <= 8; b++) {
+      model.append("var 0..1: ld").append(b).append(" :: output_var;\n");
+    }
+    model
+        .append("var 0..39: obj :: output_var;\n")
+        .append("constraint int_lin_le([-3,-4],[s9,s0],-5);\n")
+        .append("constraint int_lin_le([-4,-1,-3],[s5,s1,s8],-3);\n")
+        .append("constraint jacop_bin_packing([it],[ld0,ld1,ld2,ld3,ld4,ld5,ld6,ld7,ld8],[1],1);\n")
+        .append("constraint int_lin_eq([1,4,4,4,5,1,5,5,5,1,3,1,-1],")
+        .append("[s0,s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,ld0,obj],0);\n")
+        .append("solve minimize obj;\n");
+    for (String[] options :
+        new String[][] {{"-f", "--lcg", "on"}, {"--lcg", "on"}, {"--lcg", "off", "--lp", "off"}}) {
+      String out = run(model.toString(), options)[0];
+      assertTrue(
+          out.contains("obj = 3;\n----------\n=========="), String.join(" ", options) + ": " + out);
+    }
+  }
 }

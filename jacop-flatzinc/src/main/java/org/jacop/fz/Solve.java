@@ -5744,6 +5744,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (packing == null) {
       return null;
     }
+    // the root's pending propagation first, as in checkSchedule: a level removed with it still
+    // queued drops it, and a linear relaxation not solved yet then took its first solve, whose
+    // bounds its cuts take as the root's, at the objective fixed below or at a probe of LCG's root
+    if (!store.consistency()) {
+      return null;
+    }
     IntVar[] items = packing.binVariables();
     int[] w = packing.itemWeights();
     IntVar[] loads = packing.loads();
