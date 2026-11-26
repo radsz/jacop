@@ -72,6 +72,7 @@ import org.jacop.constraints.XneqY;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.Table;
+import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -3156,5 +3157,115 @@ class LinearRelaxationTest {
     clauses.add(clause(new IntVar[] {x[1]}, x[3]));
     clauses.add(clause(new IntVar[] {x[2], x[3]}, x[0]));
     assertThat(LinearRelaxation.clauseRefutation(store, clauses)).isNull();
+  }
+
+  /**
+   * The first solve of a relaxation made above the root, under decisions, at a level then removed:
+   * its cuts took the bounds of that level as the root's, and the search from the root lost its
+   * optimum on about one model in thirty. The relaxation now finds the bounds below that level
+   * wider than those of the first solve and stops solving, checking only the rows of the model.
+   */
+  @Test
+  void aFirstSolveAtALevelThatIsRemovedKeepsTheOptimum() {
+    int checked = 0;
+    for (long seed = 0; seed < 400; seed++) {
+      Random r = new Random(seed);
+      int n = 3 + r.nextInt(5);
+      int m = 2 + r.nextInt(4);
+      int u = 1 + r.nextInt(r.nextBoolean() ? 2 : 6);
+      int[][] w = new int[m][n];
+      int[] rhs = new int[m];
+      String[] rel = new String[m];
+      for (int i = 0; i < m; i++) {
+        rel[i] = r.nextBoolean() ? "<=" : ">=";
+        int s = 0;
+        for (int j = 0; j < n; j++) {
+          w[i][j] = r.nextInt(3) == 0 ? 0 : r.nextInt(11) - 3;
+          s += w[i][j] * r.nextInt(u + 1);
+        }
+        rhs[i] = s + ("<=".equals(rel[i]) ? r.nextInt(3) : -r.nextInt(3));
+      }
+      int[] c = new int[n + 1];
+      for (int j = 0; j < n; j++) {
+        c[j] = r.nextInt(9) - 2;
+      }
+      c[n] = -1;
+      // the optimum by enumeration
+      int best = Integer.MAX_VALUE;
+      int[] v = new int[n];
+      for (boolean more = true; more; ) {
+        boolean holds = true;
+        for (int i = 0; i < m && holds; i++) {
+          int s = 0;
+          for (int j = 0; j < n; j++) {
+            s += w[i][j] * v[j];
+          }
+          holds = "<=".equals(rel[i]) ? s <= rhs[i] : s >= rhs[i];
+        }
+        if (holds) {
+          int s = 0;
+          for (int j = 0; j < n; j++) {
+            s += c[j] * v[j];
+          }
+          best = Math.min(best, s);
+        }
+        int j = 0;
+        while (j < n && v[j] == u) {
+          v[j++] = 0;
+        }
+        more = j < n;
+        if (more) {
+          v[j]++;
+        }
+      }
+      Store store = new Store();
+      IntVar[] x = new IntVar[n + 1];
+      for (int j = 0; j < n; j++) {
+        x[j] = new IntVar(store, "x" + j, 0, u);
+      }
+      x[n] = new IntVar(store, "cost", -1000, 1000);
+      for (int i = 0; i < m; i++) {
+        store.impose(new LinearInt(Arrays.copyOf(x, n), w[i], rel[i], rhs[i]));
+      }
+      store.impose(new LinearInt(x, c, "==", 0));
+      LinearRelaxation relaxation = LinearRelaxation.of(store, x[n], false);
+      if (relaxation == null) {
+        continue;
+      }
+      store.impose(relaxation);
+      // the relaxation's first solve comes after up to three decisions, each at a level of its own
+      int k = 1 + r.nextInt(3);
+      try {
+        for (int level = 1; level <= k; level++) {
+          store.setLevel(level);
+          IntVar y = x[r.nextInt(n + 1)];
+          if (!y.singleton()) {
+            int value = y.min() + r.nextInt(Math.max(1, Math.min(y.max() - y.min(), 2 * u + 2)));
+            if (r.nextBoolean()) {
+              y.domain.inMax(level, y, value);
+            } else {
+              y.domain.inMin(level, y, value + 1);
+            }
+          }
+        }
+        store.consistency();
+      } catch (FailException e) {
+        // the decisions fail: the level is removed all the same
+      }
+      while (store.level > 0) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      SelectChoicePoint<IntVar> select =
+          new SimpleSelect<>(Arrays.copyOf(x, n), null, new IndomainMin<>());
+      boolean found = search.labeling(store, select, x[n]);
+      assertThat(found ? search.getCostValue() : Integer.MAX_VALUE)
+          .as("seed %d", seed)
+          .isEqualTo(best);
+      checked++;
+    }
+    assertThat(checked).isGreaterThan(300);
   }
 }

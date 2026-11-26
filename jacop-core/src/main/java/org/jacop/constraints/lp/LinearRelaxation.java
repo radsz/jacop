@@ -46,6 +46,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import org.jacop.api.Copyable;
+import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Stateful;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.ChannelOrder;
@@ -95,7 +96,12 @@ import org.jacop.lcg.PbModel;
  * @version 5.0
  */
 public class LinearRelaxation extends Constraint
-    implements Explainable, LinearReasons, PbEncodable, Stateful, Copyable<LinearRelaxation> {
+    implements Explainable,
+        LinearReasons,
+        PbEncodable,
+        Stateful,
+        RemoveLevelLate,
+        Copyable<LinearRelaxation> {
 
   /** The value of a system property that turns a default-on flag off. */
   private static final String FALSE = "false";
@@ -3360,6 +3366,27 @@ public class LinearRelaxation extends Constraint
   // while suspended the relaxation only checks complete assignments
   private boolean suspended;
 
+  // the store level of the first solve, whose bounds the cuts take as the root's, and those bounds
+  private int firstBoundsLevel = -1;
+  private long[] firstLo;
+  private long[] firstHi;
+  // the rows before the first solve: the model's, which hold whatever the bounds
+  private int firstRows = -1;
+  // the level of the first solve was removed with bounds wider than the first solve's: the cuts and
+  // root forms made over them may cut solutions, so the relaxation only checks the model's rows
+  private boolean firstSolveLost;
+  private Store firstSolveStore;
+
+  /**
+   * Tells whether the level of the first solve was removed while the bounds below it are wider than
+   * those of the first solve, which then stopped the relaxation.
+   *
+   * @return true if the first solve was lost so.
+   */
+  public boolean firstSolveLost() {
+    return firstSolveLost;
+  }
+
   /**
    * Suspends or resumes solving the relaxation. While suspended, consistency only fails an
    * assignment of every variable that breaks a row, and leaves the simplex and the schedule of
@@ -3424,7 +3451,7 @@ public class LinearRelaxation extends Constraint
       return; // solved once at the root, see refutation()
     }
     // root forms made at a restart over tightened root bounds hold only while that level stays
-    if (ROOT_REDUCED_COSTS && calls > 0 && !restarting && !tightLost) {
+    if (ROOT_REDUCED_COSTS && calls > 0 && !restarting && !tightLost && !firstSolveLost) {
       rootReducedCosts(store);
     }
     if (large && calls > 0 && store.level > rootLevel && !restarting) {
@@ -3437,7 +3464,7 @@ public class LinearRelaxation extends Constraint
     // the simplex may skip a node, round its multipliers to nothing, or fix the last variables by
     // its own pruning without being run again; an assignment that breaks a row must still fail
     checkGround();
-    if (suspended || tightLost) {
+    if (suspended || tightLost || firstSolveLost) {
       return;
     }
     if (rootLevel < 0) {
@@ -3465,6 +3492,9 @@ public class LinearRelaxation extends Constraint
     long work = lp.work();
     boolean first = calls == 0;
     long callsBefore = calls;
+    if (first) {
+      rememberFirstSolve(store);
+    }
     // the bound of the objective's domain before the first solve, which the root bound must cut
     long domainBound = 0;
     if (objective != null) {
@@ -3737,7 +3767,7 @@ public class LinearRelaxation extends Constraint
         return;
       }
     }
-    int checked = tightLost ? tightFrom : rows();
+    int checked = firstSolveLost ? firstRows : tightLost ? tightFrom : rows();
     for (int i = 0; i < checked; i++) {
       int[] cs = rowColumns[i];
       long[] ws = rowWeights[i];
@@ -7505,6 +7535,67 @@ public class LinearRelaxation extends Constraint
     deducedLevel.add(store.level);
   }
 
+  // the bounds of the first solve, checked again when its level is removed (removeLevelLate)
+  private void rememberFirstSolve(Store store) {
+    firstBoundsLevel = store.level;
+    firstRows = rows();
+    if (firstBoundsLevel == 0) {
+      return; // no level below it is ever removed
+    }
+    firstSolveStore = store;
+    firstLo = new long[x.length];
+    firstHi = new long[x.length];
+    for (int j = 0; j < x.length; j++) {
+      firstLo[j] = x[j].min();
+      firstHi[j] = x[j].max();
+    }
+    store.registerRemoveLevelLateListener(this);
+  }
+
+  /**
+   * Checks, when the level of the first solve was removed, that the bounds below it are still those
+   * of the first solve: the cuts made then take them as the root's and hold for the whole search
+   * only if they are. A first solve made above the root before the root's propagation ran (a
+   * removed level drops the queue), or under decisions, would otherwise cut solutions; the
+   * relaxation then stops solving and only checks the rows of the model.
+   *
+   * @param level the level removed
+   */
+  @Override
+  public void removeLevelLate(int level) {
+    if (firstLo == null || level > firstBoundsLevel) {
+      return;
+    }
+    // the columns of the rows, cuts included, and the objective's: a column of a row left out
+    // (fewer than two nonzero weights) is in no cut
+    boolean[] used = new boolean[x.length];
+    if (objective != null) {
+      used[0] = true;
+    }
+    for (int[] cs : rowColumns) {
+      for (int j : cs) {
+        if (j < used.length) {
+          used[j] = true;
+        }
+      }
+    }
+    boolean same = true;
+    for (int j = 0; j < x.length && same; j++) {
+      same = !used[j] || lpOnly[j] || x[j].min() >= firstLo[j] && x[j].max() <= firstHi[j];
+    }
+    if (same) {
+      // the first solve holds at the level below as well
+      firstBoundsLevel = level - 1;
+    } else {
+      firstSolveLost = true;
+    }
+    if (!same || firstBoundsLevel <= 0) {
+      firstLo = null;
+      firstHi = null;
+      firstSolveStore.removeLevelLateListeners.remove(this);
+    }
+  }
+
   @Override
   public void removeLevel(int level) {
     if (tightFrom >= 0 && level <= rootLevel) {
@@ -7604,8 +7695,9 @@ public class LinearRelaxation extends Constraint
     for (LinearForm f : forms) {
       copies.add(new LinearForm(copied(f.vars(), map, columns), f.weights(), f.c(), f.relation()));
     }
-    // the capacity cuts are rows of the copy: the prunings made with them stay explained by them
-    for (LinearForm f : capacityForms) {
+    // the capacity cuts are rows of the copy: the prunings made with them stay explained by them;
+    // over the bounds of a first solve that was lost they may not hold
+    for (LinearForm f : firstSolveLost ? List.<LinearForm>of() : capacityForms) {
       copies.add(new LinearForm(copied(f.vars(), map, columns), f.weights(), f.c(), f.relation()));
     }
     List<LinearForm> extraCopies = new ArrayList<>();
