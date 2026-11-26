@@ -369,6 +369,8 @@ public class Fz2jacop {
               + (parser.getStore().size() + parser.getTables().getNumberBoolVariables()));
       IO.println("%%%mzn-stat: propagators=" + parser.getStore().numberConstraints());
       IO.println("\n%%%mzn-stat: propagations=" + parser.getStore().numberConsistencyCalls);
+      // the block ends as every other block of statistics does
+      IO.println("%%%mzn-stat-end");
     }
   }
 

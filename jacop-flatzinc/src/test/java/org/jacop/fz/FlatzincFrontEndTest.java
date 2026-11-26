@@ -8654,4 +8654,21 @@ class FlatzincFrontEndTest {
       assertEquals(Double.parseDouble(printed), Double.parseDouble(objective), out);
     }
   }
+
+  @Test
+  void theStatisticsOfAModelThatFailsAtTheRootEndTheirBlock() throws IOException {
+    // a model that failed while it was built printed variables, propagators and propagations
+    // without the %%%mzn-stat-end that closes every other block of statistics
+    String model =
+        "var 1..3: x :: output_var;\nvar 1..3: y :: output_var;\n"
+            + "constraint int_lt(x, y);\nconstraint int_lt(y, x);\nsolve satisfy;\n";
+    for (String lcg : new String[] {"on", "off"}) {
+      String out = run(model, "-s", "--lcg", lcg)[0];
+      assertTrue(out.startsWith("=====UNSATISFIABLE=====\n"), out);
+      int propagations = out.indexOf("%%%mzn-stat: propagations=");
+      assertTrue(propagations >= 0, out);
+      String rest = out.substring(out.indexOf('\n', propagations) + 1);
+      assertTrue(rest.startsWith("%%%mzn-stat-end\n"), out);
+    }
+  }
 }
