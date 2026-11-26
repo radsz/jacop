@@ -423,10 +423,7 @@ final class ObjectiveBlockBound {
     // only when it closes enough of the objective's range to pay for the constraints it adds, and
     // when the blocks it raises hold at least half of the terms; otherwise the terms outside them
     // decide the objective's bound during search and the extra sums only cost time (chessboard4)
-    int raisedTerms = 0;
-    for (Pending b : pending) {
-      raisedTerms += b.xs.size();
-    }
+    int raisedTerms = termsOf(pending);
     long termsLo = constant;
     for (Map.Entry<IntVar, Long> t : terms.entrySet()) {
       long w = t.getValue();
@@ -593,6 +590,15 @@ final class ObjectiveBlockBound {
       return solver.value(cost);
     }
     return lower[0];
+  }
+
+  // the objective terms of the blocks
+  private static int termsOf(List<Pending> pending) {
+    int n = 0;
+    for (Pending b : pending) {
+      n += b.xs.size();
+    }
+    return n;
   }
 
   private static long elapsed(long start) {
