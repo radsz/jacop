@@ -72,6 +72,7 @@ import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
+import org.jacop.constraints.AmongSeq;
 import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.And;
 import org.jacop.constraints.AndBoolSimple;
@@ -13272,5 +13273,21 @@ class SingleConstraintTest extends TestHelper {
             x, new IntVar[] {top, low, zero}, new int[] {Integer.MAX_VALUE, IntDomain.MIN_INT, 0}));
     // two x are MIN_INT and the third one is none of the counted values: 3 * 3 solutions
     assertThat(noOfAllSolutions(count, x, new IntVar[] {top, low, zero})).isEqualTo(9);
+  }
+
+  @Test
+  public void sequenceBoundsBeyondTheWindow() {
+    // a bound of AmongSeq beyond 0..q, as far as Integer.MIN_VALUE, overflowed the weights of its
+    // difference constraints, and the model with at most one 1 in each pair failed
+    int[][] bounds = {{Integer.MIN_VALUE, 1, 216}, {1, Integer.MAX_VALUE, 40}, {-5, 7, 256}};
+    for (int[] b : bounds) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[4];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 3);
+      }
+      store.impose(new AmongSeq(x, new IntervalDomain(1, 1), 2, b[0], b[1]));
+      assertThat(noOfAllSolutions(store, x)).as("%d..%d", b[0], b[1]).isEqualTo(b[2]);
+    }
   }
 }
