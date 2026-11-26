@@ -261,7 +261,31 @@ public final class LinearExplanation {
       boolean lessOrEqual,
       boolean greaterOrEqual,
       EntryList out) {
-    return explainFailure(trail, vars, weights, c, lessOrEqual, greaterOrEqual, false, out);
+    return explainFailure(trail, vars, weights, c, lessOrEqual, greaterOrEqual, false, true, out);
+  }
+
+  /**
+   * Adds to {@code out} the reason of a failure of the relation as {@link #explainFailure} does,
+   * but only when the bounds of the variables violate it: their lifted bounds.
+   *
+   * @param trail the trail
+   * @param vars the variables
+   * @param weights their weights
+   * @param c the right-hand side
+   * @param lessOrEqual whether the relation contains {@code sum <= c}
+   * @param greaterOrEqual whether the relation contains {@code sum >= c}
+   * @param out where the reason entries are added
+   * @return false when the bounds do not violate the relation, or a sum overflows a {@code long}
+   */
+  public static boolean explainBoundFailure(
+      AtomicTrail trail,
+      IntVar[] vars,
+      long[] weights,
+      long c,
+      boolean lessOrEqual,
+      boolean greaterOrEqual,
+      EntryList out) {
+    return explainFailure(trail, vars, weights, c, lessOrEqual, greaterOrEqual, false, false, out);
   }
 
   /**
@@ -280,7 +304,7 @@ public final class LinearExplanation {
    */
   public static boolean explainDomainFailure(
       AtomicTrail trail, IntVar[] vars, long[] weights, long c, EntryList out) {
-    return explainFailure(trail, vars, weights, c, true, true, true, out);
+    return explainFailure(trail, vars, weights, c, true, true, true, true, out);
   }
 
   private static boolean explainFailure(
@@ -291,6 +315,7 @@ public final class LinearExplanation {
       boolean lessOrEqual,
       boolean greaterOrEqual,
       boolean allWindows,
+      boolean holes,
       EntryList out) {
     int now = trail.size();
     long smallest = 0;
@@ -323,7 +348,8 @@ public final class LinearExplanation {
     } else if (greaterOrEqual && largest < c) {
       upperSide = false;
     } else {
-      return lessOrEqual
+      return holes
+          && lessOrEqual
           && greaterOrEqual
           && explainHoleFailure(trail, vars, weights, c, allWindows, out);
     }
