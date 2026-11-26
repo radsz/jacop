@@ -8735,4 +8735,37 @@ class FlatzincFrontEndTest {
       assertTrue(out.endsWith("==========\n"), out);
     }
   }
+
+  @Test
+  void localSearchBeforeTheSolverStartsFromThePropagatedRoot() throws IOException {
+    // local search opened a level of its own while the linear relaxation, queued since its
+    // imposition, had not run: removing the level dropped it from the queue, so the relaxation
+    // took its first solve, whose bounds its cuts take as the root's, above the root. The root's
+    // pending propagation now runs before each phase that opens a level (asserted under -ea)
+    String model =
+        "var 0..5: x0 :: output_var;\n"
+            + "var 0..8: x1 :: output_var;\n"
+            + "var 0..7: x2 :: output_var;\n"
+            + "var 0..8: x3 :: output_var;\n"
+            + "var 0..3: x4 :: output_var;\n"
+            + "var 0..5: x5 :: output_var;\n"
+            + "var 0..1000: z :: output_var;\n"
+            + "constraint int_lin_le([6,9,5,8,5,5],[x0,x1,x2,x3,x4,x5],30);\n"
+            + "constraint int_lin_le([3,1,8,9,5,6],[x0,x1,x2,x3,x4,x5],41);\n"
+            + "constraint int_lin_le([5,8,5,9,6,6],[x0,x1,x2,x3,x4,x5],28);\n"
+            + "constraint int_lin_eq([1,-1],[x5,x2],1);\n"
+            + "constraint int_lin_eq([7,6,3,8,6,6,-1],[x0,x1,x2,x3,x4,x5,z],0);\n"
+            + "solve :: int_search([x0,x1,x2,x3,x4,x5], input_order, indomain_min, complete)"
+            + " maximize z;\n";
+    for (String[] options :
+        new String[][] {
+          {"-f", "--lp", "on", "--free-config", "ls=0.2,ls-max=300"},
+          {"-f", "--lp", "on", "--lcg", "off", "--free-config", "ls=0.2,ls-max=300"},
+          {"-f", "--lp", "on", "--free-config", "pump=1,ls=0.2,ls-max=300"}
+        }) {
+      String out = run(model, options)[0];
+      assertTrue(
+          out.contains("z = 34;\n----------\n=========="), String.join(" ", options) + ": " + out);
+    }
+  }
 }
