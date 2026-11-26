@@ -13572,4 +13572,79 @@ class SingleConstraintTest extends TestHelper {
           .isEqualTo(16);
     }
   }
+
+  // solutions of a network flow with flows 0..fmax, arcs {from, to, weight min, weight max} and
+  // the cost in low..high, found by search and, as the second element, in long arithmetic
+  private long[] networkFlowCounts(int[] balance, int[][] arcs, int fmax, int low, int high) {
+    Store store = new Store();
+    NetworkBuilder net = new NetworkBuilder();
+    Node[] node = new Node[balance.length];
+    for (int i = 0; i < balance.length; i++) {
+      node[i] = net.addNode("n" + i, balance[i]);
+    }
+    IntVar[] vars = new IntVar[2 * arcs.length + 1];
+    for (int i = 0; i < arcs.length; i++) {
+      vars[2 * i] = new IntVar(store, "f" + i, 0, fmax);
+      vars[2 * i + 1] = new IntVar(store, "w" + i, arcs[i][2], arcs[i][3]);
+      net.addArc(node[arcs[i][0]], node[arcs[i][1]], vars[2 * i + 1], vars[2 * i]);
+    }
+    IntVar cost = new IntVar(store, "cost", low, high);
+    vars[2 * arcs.length] = cost;
+    net.setCostVariable(cost);
+    // the cost is a function of the flows and weights, and its domain may be wide
+    long expected =
+        bruteForce(
+                Arrays.copyOf(vars, 2 * arcs.length),
+                t -> {
+                  long[] out = new long[balance.length];
+                  long sum = 0;
+                  for (int i = 0; i < arcs.length; i++) {
+                    out[arcs[i][0]] += t[2 * i];
+                    out[arcs[i][1]] -= t[2 * i];
+                    sum += (long) t[2 * i] * t[2 * i + 1];
+                  }
+                  for (int i = 0; i < balance.length; i++) {
+                    if (out[i] != balance[i]) {
+                      return false;
+                    }
+                  }
+                  return sum >= low && sum <= high;
+                })
+            .size();
+    store.impose(new NetworkFlow(net));
+    return new long[] {noOfAllSolutionsNoRecord(store, vars), expected};
+  }
+
+  @Test
+  void networkFlowComputesCostsBeyondTheIntegersInLong() {
+    // the cost of a ground flow below MIN_INT was cast to int, which wrapped it into the domain
+    // of the cost: 126 solutions instead of 4; the slack between the cost bound and an optimum
+    // below MIN_INT was clamped to Integer.MAX_VALUE, and the bound of a weight wrapped
+    int m = IntDomain.MAX_INT;
+    int[][] arcs = {
+      {1, 0, 3, 4}, {1, 0, -m, -m}, {0, 1, 100_000, 100_001}, {1, 0, -m, -m}, {0, 1, -m / 2, -m / 2}
+    };
+    long[] counts = networkFlowCounts(new int[] {0, 0}, arcs, 2, -30, 30);
+    assertThat(counts[0]).isEqualTo(counts[1]).isEqualTo(4);
+    arcs =
+        new int[][] {
+          {2, 0, 1_000_000, 1_000_000},
+          {1, 2, -m - 1, -m - 1},
+          {1, 3, -m, -m + 1},
+          {3, 0, 100_000_000, 100_000_000},
+          {3, 1, -m - 1, -m - 1}
+        };
+    counts = networkFlowCounts(new int[] {-1, 1, 0, 0}, arcs, 2, -30, 30);
+    assertThat(counts[0]).isEqualTo(counts[1]).isEqualTo(0);
+    arcs =
+        new int[][] {
+          {1, 0, m, m},
+          {0, 1, -m, -m},
+          {1, 0, -100_000_000, -100_000_000},
+          {1, 0, 2, 2},
+          {0, 1, -m - 1, -m}
+        };
+    counts = networkFlowCounts(new int[] {2, -2}, arcs, 2, -m - 1, m);
+    assertThat(counts[0]).isEqualTo(counts[1]).isEqualTo(0);
+  }
 }

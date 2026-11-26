@@ -499,7 +499,7 @@ public class NetworkFlow extends Constraint
 
     // Slack between the optimal flow cost and the largest allowed cost. costVariable.min() can be
     // larger than the optimum, so it must not be used here or arcs of valid solutions get pruned.
-    int costLimit = (int) Math.min(Integer.MAX_VALUE, costVariable.max() - cost);
+    long costLimit = costVariable.max() - cost;
     network.pruneNodesWithSmallDegree();
     network.analyze(costLimit);
 
@@ -530,6 +530,10 @@ public class NetworkFlow extends Constraint
       }
     }
     if (allVarsGround) {
+      if (cost < costVariable.min()) {
+        // also a cost below the integers, which the cast below would wrap
+        throw Store.failException;
+      }
       costVariable.domain.inMax(store.level, costVariable, (int) cost);
     }
   }
