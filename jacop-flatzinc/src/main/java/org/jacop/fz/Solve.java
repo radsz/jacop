@@ -4897,11 +4897,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // LCG gives way only with a solution to hand over: without one, the check is made again until
     // LCG has one or is no longer slow. cutstock type16 TEST9 found its first solution with LCG at
     // 37 s and none without
-    if (solver.sat().conflicts
-            >= slowRate(solver.sat().conflicts, solver.sat().learntLiterals, rate, perLiteral)
-                * (now - lcgStart)
-                / 1e9
-        || tooLateForFreeSearch(solver)) {
+    double slow = slowRate(solver.sat().conflicts, solver.sat().learntLiterals, rate, perLiteral);
+    if (solver.sat().conflicts >= slow * (now - lcgStart) / 1e9 || tooLateForFreeSearch(solver)) {
       return false;
     }
     long cost = bestPrintedCost.get();
@@ -4916,7 +4913,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       long before = lcgCostAt(now - stallNanos, costs.peekFirst()[1]);
       long raised =
           boundGained(now, stallNanos, lcgBoundGain, cost) ? lcgBoundRaised : Long.MIN_VALUE;
-      if (stillProgressing(now, stallNanos, gain, raised, before, cost)) {
+      if (stillProgressing(
+          now,
+          stallNanos,
+          scaledGain(gain, slow, solver.sat().conflicts, now - lcgStart),
+          raised,
+          before,
+          cost)) {
         lcgSlowDeferred++;
       } else if (coresRising(now)) {
         lcgSlowCoreKeeps++;
@@ -5431,6 +5434,34 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @param after the best cost printed now
    * @return true if LCG should go on
    */
+  // the largest factor by which a slow LCG's gain must exceed lcg-slow-gain (lcg-slow-gain-scale)
+  private double slowGainScale = Double.NaN;
+
+  /**
+   * The share of its best cost by which a slow LCG must improve it over the window of the speed
+   * check to keep going: lcg-slow-gain times how many times slower than the slow rate LCG makes its
+   * conflicts, up to lcg-slow-gain-scale times (default 20; 1 = lcg-slow-gain alone).
+   *
+   * @param gain lcg-slow-gain
+   * @param slow the slow rate, in conflicts per second
+   * @param conflicts LCG's conflicts so far
+   * @param nanos LCG's time so far
+   * @return the share of the best cost
+   */
+  private double scaledGain(double gain, double slow, long conflicts, long nanos) {
+    if (Double.isNaN(slowGainScale)) {
+      slowGainScale = Double.parseDouble(options.freeConfig("lcg-slow-gain-scale", "20"));
+    }
+    return scaledGain(gain, slow, conflicts / Math.max(1e-9, nanos / 1e9), slowGainScale);
+  }
+
+  static double scaledGain(double gain, double slow, double actual, double maxScale) {
+    if (maxScale <= 1) {
+      return gain;
+    }
+    return gain * Math.min(maxScale, Math.max(1, slow / Math.max(actual, 1e-9)));
+  }
+
   static boolean stillProgressing(
       long now, long window, double gain, long boundRaised, long before, long after) {
     if (boundRaised != Long.MIN_VALUE && now - boundRaised < window) {
