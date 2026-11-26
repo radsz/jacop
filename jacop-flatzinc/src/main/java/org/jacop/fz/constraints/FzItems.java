@@ -118,4 +118,66 @@ final class FzItems implements ParserTreeConstants {
     }
     return Optional.of(array);
   }
+
+  /** An element over a constant array: value = array[index - first]. */
+  static final class ConstElement {
+    private final ASTConstElem node;
+    private final int[] array;
+    private final int first;
+    private final IntVar index;
+    private final IntVar value;
+
+    ConstElement(ASTConstElem node, int[] array, int first, IntVar index, IntVar value) {
+      this.node = node;
+      this.array = array;
+      this.first = first;
+      this.index = index;
+      this.value = value;
+    }
+
+    ASTConstElem node() {
+      return node;
+    }
+
+    int[] array() {
+      return array;
+    }
+
+    int first() {
+      return first;
+    }
+
+    IntVar index() {
+      return index;
+    }
+
+    IntVar value() {
+      return value;
+    }
+  }
+
+  /**
+   * It reads an element constraint (index, array, value and, for the nonshifted ones, the first
+   * index) whose array is fixed and whose index is not.
+   *
+   * @param support the support of the FlatZinc front end.
+   * @param node the element constraint.
+   * @return the element, or empty when the index is fixed or the array is not.
+   */
+  static Optional<ConstElement> constElement(Support support, ASTConstElem node) {
+    int first =
+        node.getName().endsWith("_nonshifted")
+            ? support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3))
+            : 1;
+    IntVar index = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+    if (index.singleton()) {
+      return Optional.empty();
+    }
+    Optional<int[]> array = fixedValues(support, (SimpleNode) node.jjtGetChild(1));
+    if (array.isEmpty()) {
+      return Optional.empty();
+    }
+    IntVar value = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+    return Optional.of(new ConstElement(node, array.get(), first, index, value));
+  }
 }

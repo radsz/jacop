@@ -32,7 +32,6 @@ package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -43,12 +42,11 @@ import org.jacop.constraints.TableCliques;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 import org.jacop.fz.ASTConstElem;
 import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.FzConsole;
-import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
+import org.jacop.fz.constraints.FzItems.ConstElement;
 
 /**
  * Element constraints over constant arrays whose index is a linear function of a few variables
@@ -78,7 +76,12 @@ import org.jacop.fz.SimpleNode;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-public class LinearIndexElementDetector implements ParserTreeConstants {
+public class LinearIndexElementDetector extends ModelRewrite {
+
+  // the element constraints over an array of constants that are read
+  private static final Set<String> ELEMENTS =
+      Set.of(
+          "array_int_element", "array_var_int_element", "jacop_array_var_int_element_nonshifted");
 
   /** At most this many combinations of the defining variables (the rows of the table). */
   static final int MAX_ROWS = 1 << 15;
@@ -86,46 +89,7 @@ public class LinearIndexElementDetector implements ParserTreeConstants {
   /** At most this many variables in the definition of the index, besides the index. */
   static final int MAX_TERMS = 4;
 
-  private final Support support;
-
-  private final Set<IntVar> kept;
-
-  private final Set<SimpleNode> replaced = new HashSet<>();
-
-  private final Set<Var> removed = new HashSet<>();
-
   private int tables;
-
-  /** One element: value = array[index - first]. */
-  private static final class Element {
-    private final ASTConstElem node;
-    private final int[] array;
-    private final int first;
-    private final IntVar value;
-
-    Element(ASTConstElem node, int[] array, int first, IntVar value) {
-      this.node = node;
-      this.array = array;
-      this.first = first;
-      this.value = value;
-    }
-
-    ASTConstElem node() {
-      return node;
-    }
-
-    int[] array() {
-      return array;
-    }
-
-    int first() {
-      return first;
-    }
-
-    IntVar value() {
-      return value;
-    }
-  }
 
   /** The definition index = sign * (constant - sum coefficients[k] * vars[k]). */
   private static final class Definition {
@@ -165,8 +129,7 @@ public class LinearIndexElementDetector implements ParserTreeConstants {
    * @param kept the variables of the solve item and of the output, which stay in the model.
    */
   public LinearIndexElementDetector(Support support, Set<IntVar> kept) {
-    this.support = support;
-    this.kept = kept;
+    super(support, kept);
   }
 
   /**
@@ -179,24 +142,6 @@ public class LinearIndexElementDetector implements ParserTreeConstants {
   }
 
   /**
-   * The definitions and elements that a table replaced; they are not posted.
-   *
-   * @return the constraint nodes.
-   */
-  public Set<SimpleNode> replaced() {
-    return replaced;
-  }
-
-  /**
-   * The index variables that left the model.
-   *
-   * @return the variables.
-   */
-  public Set<Var> removed() {
-    return removed;
-  }
-
-  /**
    * It scans the constraint items of the model and posts one table for each index variable that a
    * linear equality defines and that only elements over constant arrays read.
    *
@@ -205,7 +150,7 @@ public class LinearIndexElementDetector implements ParserTreeConstants {
    */
   public void detect(SimpleNode astTree, Set<SimpleNode> skipped) {
     List<ASTConstElem> all = FzItems.constraints(astTree, skipped);
-    Map<IntVar, List<Element>> elements = new IdentityHashMap<>();
+    Map<IntVar, List<ConstElement>> elements = new IdentityHashMap<>();
     List<IntVar> order = new ArrayList<>();
     for (ASTConstElem c : all) {
       collect(c, elements, order);
@@ -252,36 +197,27 @@ public class LinearIndexElementDetector implements ParserTreeConstants {
     }
   }
 
-  private void collect(ASTConstElem node, Map<IntVar, List<Element>> groups, List<IntVar> order) {
-    int first;
-    switch (node.getName()) {
-      case "array_int_element", "array_var_int_element" -> first = 1;
-      case "jacop_array_var_int_element_nonshifted" ->
-          first = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
-      default -> {
-        return;
-      }
-    }
-    IntVar index = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
-    if (index.singleton()) {
+  private void collect(
+      ASTConstElem node, Map<IntVar, List<ConstElement>> groups, List<IntVar> order) {
+    if (!ELEMENTS.contains(node.getName())) {
       return;
     }
-    Optional<int[]> fixed = FzItems.fixedValues(support, (SimpleNode) node.jjtGetChild(1));
-    if (fixed.isEmpty()) {
+    Optional<ConstElement> read = FzItems.constElement(support, node);
+    if (read.isEmpty()) {
       return;
     }
-    int[] array = fixed.get();
-    IntVar value = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-    if (value == index) {
+    ConstElement element = read.get();
+    IntVar index = element.index();
+    if (element.value() == index) {
       return;
     }
-    List<Element> group = groups.get(index);
+    List<ConstElement> group = groups.get(index);
     if (group == null) {
       group = new ArrayList<>();
       groups.put(index, group);
       order.add(index);
     }
-    group.add(new Element(node, array, first, value));
+    group.add(element);
   }
 
   // the index a definition defines
@@ -293,7 +229,7 @@ public class LinearIndexElementDetector implements ParserTreeConstants {
   // whose combinations are few; the index goes last in vars, with coefficient 0. An index shifted
   // from one variable stays an element: the table would only copy it (stable-goods 2020 s-d19 lost
   // its first solution in the default search with 75 such tables).
-  private Definition definition(ASTConstElem c, Map<IntVar, List<Element>> elements) {
+  private Definition definition(ASTConstElem c, Map<IntVar, List<ConstElement>> elements) {
     if (!c.getName().equals("int_lin_eq")) {
       return null;
     }
@@ -348,7 +284,7 @@ public class LinearIndexElementDetector implements ParserTreeConstants {
       SimpleNode arg,
       ASTConstElem c,
       Map<IntVar, Definition> definitions,
-      Map<IntVar, List<Element>> elements,
+      Map<IntVar, List<ConstElement>> elements,
       Set<IntVar> other) {
     if (arg.getId() == JJTARRAYLITERAL) {
       for (int i = 0; i < arg.jjtGetNumChildren(); i++) {
@@ -365,7 +301,7 @@ public class LinearIndexElementDetector implements ParserTreeConstants {
         continue;
       }
       boolean own = false;
-      for (Element el : elements.get(v)) {
+      for (ConstElement el : elements.get(v)) {
         if (el.node() == c && c.jjtGetChild(0) == e) {
           own = true;
           break;
@@ -377,7 +313,7 @@ public class LinearIndexElementDetector implements ParserTreeConstants {
     }
   }
 
-  private void post(IntVar z, Definition d, List<Element> group) {
+  private void post(IntVar z, Definition d, List<ConstElement> group) {
     int terms = d.vars().length - 1;
     // the columns: the defining variables, then each distinct value variable once
     Map<IntVar, Integer> column = new LinkedHashMap<>();
@@ -424,7 +360,7 @@ public class LinearIndexElementDetector implements ParserTreeConstants {
     }
     support.pose(new HybridTable(vars, tuples));
     replaced.add(d.node());
-    for (Element e : group) {
+    for (ConstElement e : group) {
       replaced.add(e.node());
     }
     removed.add(z);
@@ -438,7 +374,7 @@ public class LinearIndexElementDetector implements ParserTreeConstants {
   private static int[] row(
       IntVar z,
       Definition d,
-      List<Element> group,
+      List<ConstElement> group,
       int[] columnOf,
       int arity,
       int[][] values,
@@ -457,7 +393,7 @@ public class LinearIndexElementDetector implements ParserTreeConstants {
       return null;
     }
     for (int e = 0; e < group.size(); e++) {
-      Element el = group.get(e);
+      ConstElement el = group.get(e);
       long k = index - el.first();
       if (k < 0 || k >= el.array().length) {
         return null;

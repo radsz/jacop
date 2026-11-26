@@ -43,11 +43,9 @@ import java.util.Set;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.ValueEnumeration;
-import org.jacop.core.Var;
 import org.jacop.fz.ASTConstElem;
 import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.FzConsole;
-import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
 
 /**
@@ -77,7 +75,7 @@ import org.jacop.fz.SimpleNode;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-public class AffineFolding implements ParserTreeConstants {
+public class AffineFolding extends ModelRewrite {
 
   private static final String LIN_EQ = "int_lin_eq";
 
@@ -101,14 +99,6 @@ public class AffineFolding implements ParserTreeConstants {
   // the image of x is checked value by value up to this many values, by its bounds above
   private static final int ENUMERATED = 10_000;
 
-  private final Support support;
-
-  private final Set<IntVar> kept;
-
-  private final Set<SimpleNode> replaced = new HashSet<>();
-
-  private final Set<Var> removed = new HashSet<>();
-
   /** A definition z = p*x + q by the constraint node. */
   private record Definition(ASTConstElem node, IntVar x, long p, long q) {}
 
@@ -119,8 +109,7 @@ public class AffineFolding implements ParserTreeConstants {
    * @param kept the variables that must stay: those of the solve item and the output variables.
    */
   public AffineFolding(Support support, Set<IntVar> kept) {
-    this.support = support;
-    this.kept = kept;
+    super(support, kept);
   }
 
   /**
@@ -130,24 +119,6 @@ public class AffineFolding implements ParserTreeConstants {
    */
   public static boolean enabled() {
     return !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.affineFolding"));
-  }
-
-  /**
-   * The definitions that are not posted.
-   *
-   * @return the constraint nodes of the folded definitions.
-   */
-  public Set<SimpleNode> replaced() {
-    return replaced;
-  }
-
-  /**
-   * The variables folded out of the model.
-   *
-   * @return the removed variables.
-   */
-  public Set<Var> removed() {
-    return removed;
   }
 
   /**

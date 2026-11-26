@@ -44,10 +44,10 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.fz.ASTConstElem;
-import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.FzConsole;
 import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
+import org.jacop.fz.constraints.FzItems.ConstElement;
 
 /**
  * Element constraints over constant arrays that share one index variable become one table.
@@ -73,6 +73,16 @@ import org.jacop.fz.SimpleNode;
  */
 public class ElementTableDetector implements ParserTreeConstants {
 
+  // the element constraints over an array of constants that are read
+  private static final Set<String> ELEMENTS =
+      Set.of(
+          "array_int_element",
+          "array_bool_element",
+          "array_var_int_element",
+          "array_var_bool_element",
+          "jacop_array_var_int_element_nonshifted",
+          "jacop_array_var_bool_element_nonshifted");
+
   /** At most this many rows in one merged table. */
   static final int MAX_ROWS = 1 << 20;
 
@@ -81,37 +91,6 @@ public class ElementTableDetector implements ParserTreeConstants {
   private final Set<SimpleNode> replaced = new HashSet<>();
 
   private int tables;
-
-  /** One element: value = array[index - first]. */
-  private static final class Element {
-    private final ASTConstElem node;
-    private final int[] array;
-    private final int first;
-    private final IntVar value;
-
-    Element(ASTConstElem node, int[] array, int first, IntVar value) {
-      this.node = node;
-      this.array = array;
-      this.first = first;
-      this.value = value;
-    }
-
-    ASTConstElem node() {
-      return node;
-    }
-
-    int[] array() {
-      return array;
-    }
-
-    int first() {
-      return first;
-    }
-
-    IntVar value() {
-      return value;
-    }
-  }
 
   /**
    * It creates a detector reading variables through the given support.
@@ -158,7 +137,7 @@ public class ElementTableDetector implements ParserTreeConstants {
    * @param skipped constraint nodes that are not posted.
    */
   public void detect(SimpleNode astTree, Set<SimpleNode> skipped) {
-    Map<IntVar, List<Element>> groups = new IdentityHashMap<>();
+    Map<IntVar, List<ConstElement>> groups = new IdentityHashMap<>();
     List<IntVar> order = new ArrayList<>();
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
@@ -172,7 +151,7 @@ public class ElementTableDetector implements ParserTreeConstants {
       }
     }
     for (IntVar index : order) {
-      List<Element> group = groups.get(index);
+      List<ConstElement> group = groups.get(index);
       if (group.size() >= 2) {
         merge(index, group);
       }
@@ -183,41 +162,27 @@ public class ElementTableDetector implements ParserTreeConstants {
     }
   }
 
-  private void collect(ASTConstElem node, Map<IntVar, List<Element>> groups, List<IntVar> order) {
-    String name = node.getName();
-    int first;
-    switch (name) {
-      case "array_int_element",
-          "array_bool_element",
-          "array_var_int_element",
-          "array_var_bool_element" ->
-          first = 1;
-      case "jacop_array_var_int_element_nonshifted", "jacop_array_var_bool_element_nonshifted" ->
-          first = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
-      default -> {
-        return;
-      }
-    }
-    IntVar index = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
-    if (index.singleton()) {
+  private void collect(
+      ASTConstElem node, Map<IntVar, List<ConstElement>> groups, List<IntVar> order) {
+    if (!ELEMENTS.contains(node.getName())) {
       return;
     }
-    Optional<int[]> fixed = FzItems.fixedValues(support, (SimpleNode) node.jjtGetChild(1));
-    if (fixed.isEmpty()) {
+    Optional<ConstElement> read = FzItems.constElement(support, node);
+    if (read.isEmpty()) {
       return;
     }
-    int[] array = fixed.get();
-    IntVar value = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-    List<Element> group = groups.get(index);
+    ConstElement element = read.get();
+    IntVar index = element.index();
+    List<ConstElement> group = groups.get(index);
     if (group == null) {
       group = new ArrayList<>();
       groups.put(index, group);
       order.add(index);
     }
-    group.add(new Element(node, array, first, value));
+    group.add(element);
   }
 
-  private void merge(IntVar index, List<Element> group) {
+  private void merge(IntVar index, List<ConstElement> group) {
     if (index.getSize() > MAX_ROWS) {
       return;
     }
@@ -264,7 +229,7 @@ public class ElementTableDetector implements ParserTreeConstants {
       support.dictionary.addTable(vars, tuples);
     }
     support.pose(new HybridTable(vars, tuples));
-    for (Element e : group) {
+    for (ConstElement e : group) {
       replaced.add(e.node());
       support.permutationElementSums.add(index, e.array(), e.value(), e.first());
     }
@@ -275,13 +240,13 @@ public class ElementTableDetector implements ParserTreeConstants {
    * The row of index value i, the index in the last column, or null when an array has no entry i or
    * two entries of one column disagree.
    */
-  private static int[] row(int i, List<Element> group, int[] columnOf, int arity) {
+  private static int[] row(int i, List<ConstElement> group, int[] columnOf, int arity) {
     int[] row = new int[arity];
     boolean[] set = new boolean[arity];
     row[arity - 1] = i;
     set[arity - 1] = true;
     for (int e = 0; e < group.size(); e++) {
-      Element el = group.get(e);
+      ConstElement el = group.get(e);
       long k = (long) i - el.first();
       if (k < 0 || k >= el.array().length) {
         return null;
