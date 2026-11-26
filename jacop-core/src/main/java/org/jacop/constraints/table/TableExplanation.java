@@ -126,8 +126,17 @@ final class TableExplanation {
 
   private long[] candidates;
 
-  // The columns with an entry in the reason have columnChosen[j] == call.
+  // The columns with an entry in the reason have columnChosen[j] == call; they are listed in
+  // increasing order in chosenColumns[0 .. chosenCount - 1].
   private final int[] columnChosen;
+  private final int[] chosenColumns;
+  private int chosenCount;
+
+  // The columns with a covered value in this call have columnCovered[j] == call, listed in
+  // coveredColumns[0 .. coveredCount - 1]: a tuple of a wide table looks only at those.
+  private final int[] columnCovered;
+  private final int[] coveredColumns;
+  private int coveredCount;
 
   TableExplanation(HybridTable table) {
     this.table = table;
@@ -139,6 +148,9 @@ final class TableExplanation {
     leLatest = new int[arity];
     roots = new IntDomain[arity];
     columnChosen = new int[arity];
+    chosenColumns = new int[arity];
+    columnCovered = new int[arity];
+    coveredColumns = new int[arity];
     valueStamp = new int[arity][];
     valueStatus = new int[arity][];
     valueAlt = new int[arity][];
@@ -225,6 +237,7 @@ final class TableExplanation {
       call = 1;
       Arrays.fill(built, 0);
       Arrays.fill(columnChosen, 0);
+      Arrays.fill(columnCovered, 0);
       for (int[] stamp : valueStamp) {
         if (stamp != null) {
           Arrays.fill(stamp, 0);
@@ -236,6 +249,8 @@ final class TableExplanation {
         }
       }
     }
+    chosenCount = 0;
+    coveredCount = 0;
     mark = trail.newEntryMark(position);
     chosen = trail.entryMarks();
   }
@@ -255,7 +270,8 @@ final class TableExplanation {
     int base = t * arity;
     Restriction[] cells = table.cells;
     // a value covered earlier in this call kills the tuple with no entry, as the checks below would
-    for (int j = 0; j < arity; j++) {
+    for (int c = 0; c < coveredCount; c++) {
+      int j = coveredColumns[c];
       if (coveredSlot(cells[base + j], j) >= 0) {
         return true;
       }
@@ -267,8 +283,9 @@ final class TableExplanation {
         return true;
       }
     }
-    for (int j = 0; j < arity; j++) {
-      if (j != i && columnChosen[j] == call) {
+    for (int c = 0; c < chosenCount; c++) {
+      int j = chosenColumns[c];
+      if (j != i) {
         int status = evaluate(cells[base + j], j, i, rlo, rhi);
         if (status == FREE || status > 0 && cost() == 0) {
           cover(cells[base + j], j);
@@ -279,6 +296,19 @@ final class TableExplanation {
     int best = Integer.MAX_VALUE;
     int bestColumn = -2;
     for (int j = 0; j <= arity && best > 0; j++) {
+      if (best == 1 && bestColumn < arity && span(bestColumn) == 0 && j < arity) {
+        // one entry on a column fixed before the position: no column of the same cost has
+        // narrower bounds, so only a free column can still win, which a look at the root domains
+        // finds (a tuple of a wide table spent most of the explanation in the other columns'
+        // snapshots: minimal-decision-sets, 195 boolean columns)
+        int free = onlyFree(cells, base, j, i, rlo, rhi);
+        if (free > 0) {
+          return true;
+        }
+        if (free == 0) {
+          break;
+        }
+      }
       int status =
           j == arity
               ? between(cells, base, i, rlo, rhi)
@@ -317,6 +347,36 @@ final class TableExplanation {
   }
 
   /**
+   * Whether one of the columns from {@code from} on is free (dead by the domains at the start of
+   * recording): 1 if one is, 0 if none is and the tuple has no restriction between columns, -1 when
+   * it has one, which the caller then evaluates as before.
+   */
+  private int onlyFree(Restriction[] cells, int base, int from, int i, int rlo, int rhi) {
+    int arity = table.x.length;
+    for (int k = 0; k < arity; k++) {
+      if (cells[base + k].isBinary()) {
+        return -1;
+      }
+    }
+    for (int j = from; j < arity; j++) {
+      Restriction r = cells[base + j];
+      if (r.kind == Restriction.Kind.EQ) {
+        int v = r.value;
+        if (j == i && (v < rlo || v > rhi)) {
+          return 1;
+        }
+        // a value still in the domain now is in the root domain: the common case reads no trail
+        if (!table.x[j].domain.contains(v) && !trail.rootDomain(table.x[j]).contains(v)) {
+          return 1;
+        }
+      } else if (evaluate(r, j, i, rlo, rhi) == FREE) {
+        return 1;
+      }
+    }
+    return 0;
+  }
+
+  /**
    * The cache slot of the equality r on column j when its value was evaluated in this call and is
    * covered, or -1.
    */
@@ -347,6 +407,10 @@ final class TableExplanation {
     int k = r.value - valueBase[j];
     if (k >= 0 && k < stamp.length && stamp[k] == call) {
       valueCovered[j][k] = call;
+      if (columnCovered[j] != call) {
+        columnCovered[j] = call;
+        coveredColumns[coveredCount++] = j;
+      }
     }
   }
 
@@ -424,7 +488,16 @@ final class TableExplanation {
     IntVar y = trail.variable(e);
     for (int j = 0; j < table.x.length; j++) {
       if (table.x[j] == y) {
-        columnChosen[j] = call;
+        if (columnChosen[j] != call) {
+          columnChosen[j] = call;
+          // kept in increasing order, the order in which kill() tries them
+          int c = chosenCount++;
+          while (c > 0 && chosenColumns[c - 1] > j) {
+            chosenColumns[c] = chosenColumns[c - 1];
+            c--;
+          }
+          chosenColumns[c] = j;
+        }
       }
     }
   }

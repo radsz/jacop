@@ -176,6 +176,19 @@ public final class EntryList {
   }
 
   /**
+   * Copies the entry at one position, with its slack, to another position.
+   *
+   * @param from the position copied, below {@link #size()}
+   * @param to the position written, below {@link #size()}
+   */
+  public void move(int from, int to) {
+    entries[to] = entries[from];
+    if (slacks != null) {
+      slacks[to] = slacks[from];
+    }
+  }
+
+  /**
    * Returns the number of entries.
    *
    * @return the size
