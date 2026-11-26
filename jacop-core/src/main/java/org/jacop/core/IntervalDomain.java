@@ -1093,7 +1093,8 @@ public class IntervalDomain extends IntDomain {
     }
 
     IntervalDomain result = new IntervalDomain(size + 1);
-    if (min() != MIN_INT) {
+    // a domain built by a propagator can reach beyond MIN_INT..MAX_INT (y - c of a y at MIN_INT)
+    if (min() > MIN_INT) {
       result.appendInterval(MIN_INT, bounds[0] - 1);
     }
 
@@ -1101,7 +1102,7 @@ public class IntervalDomain extends IntDomain {
       result.appendInterval(bounds[2 * i + 1] + 1, bounds[2 * (i + 1)] - 1);
     }
 
-    if (max() != MAX_INT) {
+    if (max() < MAX_INT) {
       result.appendInterval(max() + 1, MAX_INT);
     }
 

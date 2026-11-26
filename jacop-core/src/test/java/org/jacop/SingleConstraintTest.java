@@ -13182,4 +13182,18 @@ class SingleConstraintTest extends TestHelper {
     assertThat(noOfAllSolutions(store, a, b, c, d, new IntVar[] {costC, costD}, x))
         .isEqualTo(2 * 2 * 3 * 3 * 2 * 2);
   }
+
+  @Test
+  public void distanceAtTheEndOfTheIntegers() {
+    // |x - y| = 2 at IntDomain.MIN_INT: y - 2 lies below MIN_INT, and the complement of that range
+    // in the check of SmallDenseDomain.in made an interval with min above max
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", IntDomain.MIN_INT, IntDomain.MIN_INT + 2);
+    IntVar y = new IntVar(store, "y", IntDomain.MIN_INT, IntDomain.MIN_INT + 4);
+    IntVar z = new IntVar(store, "z", 2, 2);
+    store.impose(new Distance(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    // (MIN, MIN + 2), (MIN + 1, MIN + 3), (MIN + 2, MIN), (MIN + 2, MIN + 4)
+    assertThat(noOfAllSolutions(store, new IntVar[] {x, y})).isEqualTo(4);
+  }
 }
