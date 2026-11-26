@@ -82,12 +82,50 @@ final class BoundedCycleRows {
   private final Support support;
 
   // label = labels[index - first] with an array of variables, by index variable
-  private record LabelElement(IntVar[] labels, IntVar value, int first) {}
+  private static final class LabelElement {
+    private final IntVar[] labels;
+    private final IntVar value;
+    private final int first;
+
+    LabelElement(IntVar[] labels, IntVar value, int first) {
+      this.labels = labels;
+      this.value = value;
+      this.first = first;
+    }
+
+    IntVar[] labels() {
+      return labels;
+    }
+
+    IntVar value() {
+      return value;
+    }
+
+    int first() {
+      return first;
+    }
+  }
 
   private final Map<IntVar, List<LabelElement>> labelElements = new IdentityHashMap<>();
 
   // bin packing of unit items: the bins and the largest capacity
-  private record UnitPacking(IntVar[] bins, int capacity) {}
+  private static final class UnitPacking {
+    private final IntVar[] bins;
+    private final int capacity;
+
+    UnitPacking(IntVar[] bins, int capacity) {
+      this.bins = bins;
+      this.capacity = capacity;
+    }
+
+    IntVar[] bins() {
+      return bins;
+    }
+
+    int capacity() {
+      return capacity;
+    }
+  }
 
   private final List<UnitPacking> packings = new ArrayList<>();
 

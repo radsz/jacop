@@ -37,6 +37,7 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.jacop.constraints.TableCliques;
 import org.jacop.constraints.table.HybridTable;
@@ -96,10 +97,66 @@ public class LinearIndexElementDetector implements ParserTreeConstants {
   private int tables;
 
   /** One element: value = array[index - first]. */
-  private record Element(ASTConstElem node, int[] array, int first, IntVar value) {}
+  private static final class Element {
+    private final ASTConstElem node;
+    private final int[] array;
+    private final int first;
+    private final IntVar value;
+
+    Element(ASTConstElem node, int[] array, int first, IntVar value) {
+      this.node = node;
+      this.array = array;
+      this.first = first;
+      this.value = value;
+    }
+
+    ASTConstElem node() {
+      return node;
+    }
+
+    int[] array() {
+      return array;
+    }
+
+    int first() {
+      return first;
+    }
+
+    IntVar value() {
+      return value;
+    }
+  }
 
   /** The definition index = sign * (constant - sum coefficients[k] * vars[k]). */
-  private record Definition(ASTConstElem node, IntVar[] vars, long[] coefficients, long constant) {}
+  private static final class Definition {
+    private final ASTConstElem node;
+    private final IntVar[] vars;
+    private final long[] coefficients;
+    private final long constant;
+
+    Definition(ASTConstElem node, IntVar[] vars, long[] coefficients, long constant) {
+      this.node = node;
+      this.vars = vars;
+      this.coefficients = coefficients;
+      this.constant = constant;
+    }
+
+    ASTConstElem node() {
+      return node;
+    }
+
+    IntVar[] vars() {
+      return vars;
+    }
+
+    long[] coefficients() {
+      return coefficients;
+    }
+
+    long constant() {
+      return constant;
+    }
+  }
 
   /**
    * It creates a detector reading variables through the given support.
@@ -147,21 +204,11 @@ public class LinearIndexElementDetector implements ParserTreeConstants {
    * @param skipped constraint nodes that are not posted.
    */
   public void detect(SimpleNode astTree, Set<SimpleNode> skipped) {
-    List<ASTConstElem> all = new ArrayList<>();
+    List<ASTConstElem> all = FzItems.constraints(astTree, skipped);
     Map<IntVar, List<Element>> elements = new IdentityHashMap<>();
     List<IntVar> order = new ArrayList<>();
-    for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
-      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
-      if (node.getId() == JJTCONSTRAINTITEMS) {
-        for (int j = 0; j < node.jjtGetNumChildren(); j++) {
-          SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
-          if (item.getId() == JJTCONSTELEM && !skipped.contains(item)) {
-            ASTConstElem c = (ASTConstElem) item;
-            all.add(c);
-            collect(c, elements, order);
-          }
-        }
-      }
+    for (ASTConstElem c : all) {
+      collect(c, elements, order);
     }
     if (order.isEmpty()) {
       return;
@@ -219,14 +266,11 @@ public class LinearIndexElementDetector implements ParserTreeConstants {
     if (index.singleton()) {
       return;
     }
-    IntVar[] vars = support.getVarArray((SimpleNode) node.jjtGetChild(1));
-    int[] array = new int[vars.length];
-    for (int k = 0; k < vars.length; k++) {
-      if (!vars[k].singleton()) {
-        return;
-      }
-      array[k] = vars[k].value();
+    Optional<int[]> fixed = FzItems.fixedValues(support, (SimpleNode) node.jjtGetChild(1));
+    if (fixed.isEmpty()) {
+      return;
     }
+    int[] array = fixed.get();
     IntVar value = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
     if (value == index) {
       return;
@@ -315,22 +359,7 @@ public class LinearIndexElementDetector implements ParserTreeConstants {
     if (!(arg instanceof ASTScalarFlatExpr e)) {
       return;
     }
-    IntVar[] vars;
-    if (e.getType() == 2) {
-      if (support.dictionary.getDeclaredVariableArray(e.getIdent()) != null) {
-        vars = support.getVarArray(e);
-      } else if (support.dictionary.getVariable(e) != null) {
-        vars = new IntVar[] {support.getVariable(e)};
-      } else {
-        return;
-      }
-    } else if (e.getType() == 3
-        && support.dictionary.getDeclaredVariableArray(e.getIdent()) != null) {
-      vars = new IntVar[] {support.getVariable(e)};
-    } else {
-      return;
-    }
-    for (IntVar v : vars) {
+    for (IntVar v : FzItems.variables(support, e)) {
       Definition d = v == null ? null : definitions.get(v);
       if (d == null || c == d.node()) {
         continue;

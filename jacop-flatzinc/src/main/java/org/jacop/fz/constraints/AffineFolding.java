@@ -157,18 +157,7 @@ public class AffineFolding implements ParserTreeConstants {
    * @param skipped constraint nodes that are not posted.
    */
   public void detect(SimpleNode astTree, Set<SimpleNode> skipped) {
-    List<ASTConstElem> all = new ArrayList<>();
-    for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
-      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
-      if (node.getId() == JJTCONSTRAINTITEMS) {
-        for (int j = 0; j < node.jjtGetNumChildren(); j++) {
-          SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
-          if (item.getId() == JJTCONSTELEM && !skipped.contains(item)) {
-            all.add((ASTConstElem) item);
-          }
-        }
-      }
-    }
+    List<ASTConstElem> all = FzItems.constraints(astTree, skipped);
     // the definitions first: the occurrences are read only when there is one (a clause model has
     // none, and the occurrences of its millions of clauses took seconds)
     List<Definition> definitions = new ArrayList<>();
@@ -460,24 +449,7 @@ public class AffineFolding implements ParserTreeConstants {
     if (!(arg instanceof ASTScalarFlatExpr e)) {
       return;
     }
-    IntVar[] vars;
-    if (e.getType() == 2) {
-      // read as the constraints read their arguments, so that aliases resolve the same way
-      if (support.dictionary.getDeclaredVariableArray(e.getIdent()) != null) {
-        vars = support.getVarArray(e);
-      } else if (support.dictionary.getVariable(e) != null) {
-        vars = new IntVar[] {support.getVariable(e)};
-      } else {
-        return;
-      }
-    } else if (e.getType() == 3
-        && support.dictionary.getDeclaredVariableArray(e.getIdent()) != null) {
-      // an element of an array of integer variables; float and set arrays are not ours
-      vars = new IntVar[] {support.getVariable(e)};
-    } else {
-      return;
-    }
-    for (IntVar v : vars) {
+    for (IntVar v : FzItems.variables(support, e)) {
       if (v != null && !v.singleton()) {
         occurrences.computeIfAbsent(v, x -> new Occurrences()).add(c);
       }

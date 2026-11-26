@@ -36,6 +36,7 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.jacop.constraints.TableCliques;
 import org.jacop.constraints.table.HybridTable;
@@ -201,14 +202,11 @@ public class ElementTableDetector implements ParserTreeConstants {
     if (index.singleton()) {
       return;
     }
-    IntVar[] vars = support.getVarArray((SimpleNode) node.jjtGetChild(1));
-    int[] array = new int[vars.length];
-    for (int k = 0; k < vars.length; k++) {
-      if (!vars[k].singleton()) {
-        return;
-      }
-      array[k] = vars[k].value();
+    Optional<int[]> fixed = FzItems.fixedValues(support, (SimpleNode) node.jjtGetChild(1));
+    if (fixed.isEmpty()) {
+      return;
     }
+    int[] array = fixed.get();
     IntVar value = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
     List<Element> group = groups.get(index);
     if (group == null) {
