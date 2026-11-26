@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.cumulative.CumulativeUnary;
@@ -76,6 +77,9 @@ import org.jacop.fz.SimpleNode;
  * @version 5.0
  */
 public final class PermutedTasksDetector implements ParserTreeConstants {
+
+  private static final Set<String> GATE_KINDS =
+      Set.of("jacop_alldiff", "all_different_int", "fzn_all_different_int");
 
   // y = array[index - first]; a plain class, since a record would compare its array by identity
   private static final class Element {
@@ -136,6 +140,10 @@ public final class PermutedTasksDetector implements ParserTreeConstants {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
+    // the permutations are all-different constraints: a model without them is not read
+    if (!support.hasConstraint(astTree, GATE_KINDS)) {
+      return;
+    }
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {

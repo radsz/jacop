@@ -78,6 +78,17 @@ class SetConsistencyChecker {
   @ParameterizedTest(name = "{0}")
   @MethodSource("org.jacop.set.SetImposeGroundingTest#cases")
   void setConstraintsPruneSoundly(String name, Function<Random, Case> generator) {
+    check(name, generator);
+  }
+
+  /** The relations, AllDisjoint, XeqA, SetMirror and repeated variables. */
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("org.jacop.set.SetConsistencyCases#cases")
+  void otherSetConstraintsPruneSoundly(String name, Function<Random, Case> generator) {
+    check(name, generator);
+  }
+
+  private static void check(String name, Function<Random, Case> generator) {
     Random random = new Random(name.hashCode());
     long nodes = 0;
     long weak = 0;

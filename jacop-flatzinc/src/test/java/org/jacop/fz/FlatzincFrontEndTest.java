@@ -1782,13 +1782,16 @@ class FlatzincFrontEndTest {
         .append("solve :: int_search([x],input_order,indomain_min,complete) satisfy;\n");
 
     // the GCD of the equality's coefficients (2) does not divide 25, which the linear system
-    // detector proves at the root: switch it off to keep the search that times out
+    // detector and the parity of the equation (XorSystemDetector) prove at the root: switch both
+    // off to keep the search that times out
     String out;
     System.setProperty("org.jacop.fz.lattice", "false");
+    System.setProperty("org.jacop.fz.xorSystem", "false");
     try {
       out = run(fzn.toString(), "-t", "300")[0];
     } finally {
       System.clearProperty("org.jacop.fz.lattice");
+      System.clearProperty("org.jacop.fz.xorSystem");
     }
     assertTrue(!out.contains("=====UNSATISFIABLE====="), out);
     assertTrue(out.contains("=====UNKNOWN====="), out);
@@ -7581,5 +7584,241 @@ class FlatzincFrontEndTest {
         run(
             "var 1..3: x :: output_var;\n"
                 + "array [1..0] of var int: b :: output_array([1..0]) = [];\nsolve satisfy;\n")[0]);
+  }
+
+  @Test
+  void symmetryBreakingDoesNotChannelSetsWithElementsFarApart() throws IOException {
+    // the channel of a set variable that symmetries move makes one Boolean per value from the
+    // smallest to the largest element of its upper bound: 300,001 here (and out of memory for
+    // {-100000000, 100000000}), so such sets keep a colour of their own
+    String out =
+        run(
+            "var set of {0, 300000}: s0 :: output_var;\n"
+                + "var set of {0, 300000}: s1 :: output_var;\n"
+                + "constraint set_union(s0, s1, {0, 300000});\n"
+                + "solve :: set_search([s0, s1], input_order, indomain_min, complete) satisfy;\n",
+            "-s",
+            "-v",
+            "--symmetry",
+            "on")[0];
+    assertTrue(out.contains("s0 = {0, 300000};"), out);
+    assertTrue(out.contains("%%%mzn-stat: symmetryConstraints=0\n"), out);
+  }
+
+  @Test
+  void setVariablesThatAreNotOutputAreCompleted() throws IOException {
+    // after the search on the output variables the completion search labelled only the integer and
+    // Boolean variables left: s0 = {-5} with b0 = false was printed, although s1 != {-5} makes s1
+    // empty and so a subset of s2
+    String model =
+        "var set of {-5, 0}: s0 :: output_var;\n"
+            + "var set of -5..-5: s1;\n"
+            + "var set of {-5, 0}: s2;\n"
+            + "var bool: b0 :: output_var;\n"
+            + "constraint set_superset_reif(s2, s1, b0);\n"
+            + "constraint set_ne(s1, s0);\n"
+            + "solve :: set_search([s0], input_order, indomain_min, complete) satisfy;\n";
+    List<String> all = solveAllInOrder(model, "--lcg", "off");
+    assertEquals(7, all.size(), all.toString());
+    assertFalse(all.contains("b0 = false; s0 = -5..-5;"), all.toString());
+  }
+
+  @Test
+  void floatVariablesThatAreNotOutputAreCompleted() throws IOException {
+    // the completion search after the search on the output variables labelled only the integer
+    // and Boolean variables: a = 1 was printed, although it asks f * g >= 0.1 with g = -f
+    String model =
+        "var 0..1: a :: output_var;\n"
+            + "var -1.0..1.0: f;\n"
+            + "var -1.0..1.0: g;\n"
+            + "var -1.0..1.0: h;\n"
+            + "var bool: b;\n"
+            + "constraint float_lin_eq([1.0, 1.0], [f, g], 0.0);\n"
+            + "constraint float_times(f, g, h);\n"
+            + "constraint int_eq_reif(a, 1, b);\n"
+            + "constraint float_le_reif(0.1, h, b);\n"
+            + "solve :: int_search([a], input_order, indomain_min, complete) satisfy;\n";
+    List<String> all = solveAllInOrder(model, "--lcg", "off");
+    assertEquals(List.of("a = 0;"), all, all.toString());
+  }
+
+  @Test
+  void floatObjectiveImprovesFromSolutionToSolution() throws IOException {
+    // with precision 0.01 the objective of a solution is an interval up to 0.01 wide, printed as
+    // its middle; each next solution had only to raise its minimum by one float, so the printed
+    // objective went down: 5.8786, 5.8775, 5.8757
+    String model =
+        "var -1000.0..1000.0: x :: output_var;\n"
+            + "var -10.0..10.0: y :: output_var;\n"
+            + "var -2..2: i :: output_var;\n"
+            + "var -1000.0..1000.0: fi;\n"
+            + "var -1.0e9..1.0e9: obj :: output_var;\n"
+            + "constraint int2float(i, fi);\n"
+            + "constraint float_lin_le([2.63,2.76,-2.14],[x,y,fi],6.07);\n"
+            + "constraint float_lin_le([1.75,0.9,-2.71],[x,y,fi],-3.27);\n"
+            + "constraint float_lin_eq([-1.09,2.77,0.86],[x,y,fi],6.16);\n"
+            + "constraint float_lin_eq([0.53,-2.22,-0.49,-1.0],[x,y,fi,obj],0.0);\n"
+            + "solve :: float_search([x,y],0.01,input_order,indomain_split,complete)"
+            + " maximize obj;\n";
+    List<String> all = solveAllInOrder(model, "--lcg", "off");
+    double last = Double.NEGATIVE_INFINITY;
+    for (String solution : all) {
+      Matcher m = Pattern.compile("obj = ([-0-9.Ee]+);").matcher(solution);
+      assertTrue(m.find(), solution);
+      double obj = Double.parseDouble(m.group(1));
+      assertTrue(obj > last, all.toString());
+      last = obj;
+    }
+  }
+
+  @Test
+  void statisticsCountTheSolutionsReportedWithACompletionOfHiddenFloats() throws IOException {
+    // the search on a, the completion of b and the float completion of f, g and h each counted
+    // solutions of their own, and the statistics took the completion's count: solutions=2 for
+    // the one solution a = 0
+    String model =
+        "var 0..1: a :: output_var;\n"
+            + "var -1.0..1.0: f;\n"
+            + "var -1.0..1.0: g;\n"
+            + "var -1.0..1.0: h;\n"
+            + "var bool: b;\n"
+            + "constraint float_lin_eq([1.0, 1.0], [f, g], 0.0);\n"
+            + "constraint float_times(f, g, h);\n"
+            + "constraint int_eq_reif(a, 1, b);\n"
+            + "constraint float_le_reif(0.1, h, b);\n"
+            + "solve :: int_search([a], input_order, indomain_min, complete) satisfy;\n";
+    String out = run(model, "-a", "-s", "--lcg", "off")[0];
+    assertEquals(1, out.lines().filter(l -> l.equals("----------")).count(), out);
+    assertTrue(out.contains("%%%mzn-stat: solutions=1\n"), out);
+  }
+
+  @Test
+  void floatVariablesThatAreNotOutputAreCompletedUnderAFloatObjective() throws IOException {
+    // the float completion was left out under a float objective: a = 1 with obj = 1.0 was printed
+    // as the optimum, although a = 1 asks f * g >= 0.1 with g = -f
+    String model =
+        "var 0..1: a :: output_var;\n"
+            + "var -1.0..1.0: f;\n"
+            + "var -1.0..1.0: g;\n"
+            + "var -1.0..1.0: h;\n"
+            + "var 0.0..1.0: obj :: output_var;\n"
+            + "var bool: b;\n"
+            + "constraint int2float(a, obj);\n"
+            + "constraint float_lin_eq([1.0, 1.0], [f, g], 0.0);\n"
+            + "constraint float_times(f, g, h);\n"
+            + "constraint int_eq_reif(a, 1, b);\n"
+            + "constraint float_le_reif(0.1, h, b);\n"
+            + "solve :: int_search([a], input_order, indomain_min, complete) maximize obj;\n";
+    List<String> all = solveAllInOrder(model, "--lcg", "off");
+    assertEquals(List.of("a = 0; obj = 0.0;"), all, all.toString());
+  }
+
+  @Test
+  void floatPowWithASingletonExponentKeepsItsSolutions() throws IOException {
+    // with precision 0.01 the exponent 1.995..2.004 counted as the constant 1.995, its lower end,
+    // and 10^1.995 = 98.86 is outside z: UNSATISFIABLE, although 10^2 = 100 is a solution
+    String model =
+        "var 10.0..10.0: x :: output_var;\n"
+            + "var 1.995..2.004: y :: output_var;\n"
+            + "var 99.5..100.5: z :: output_var;\n"
+            + "constraint float_pow(x, y, z);\n"
+            + "solve satisfy;\n";
+    String out = run(model, "--precision", "0.01")[0];
+    assertTrue(out.contains("----------"), out);
+  }
+
+  @Test
+  void floatDomainBeyondTheFloatRangeHasNoValue() throws IOException {
+    // 1.5e308..1.5e308 is above JaCoP's float range 1e150: the bounds became 1.5e308..1e150, an
+    // inverted domain, and x = 7.5E307 (outside the declared domain) was printed as a solution
+    String model =
+        "var 1.5e308..1.5e308: x :: output_var;\n"
+            + "var -1.0..1.0: y :: output_var;\n"
+            + "constraint float_le(y, 0.5);\n"
+            + "solve satisfy;\n";
+    String out = run(model)[0];
+    assertFalse(out.contains("x = "), out);
+    assertTrue(out.contains("=====UNKNOWN====="), out);
+  }
+
+  @Test
+  void theBinCompletionHintLeavesTheRootSolveOfTheRelaxationAtTheRoot() throws IOException {
+    // the hint fixed the objective to its bound at a level of its own, where propagation failed
+    // before the linear relaxation, queued since its imposition, ran: removing the level dropped
+    // it from the queue, and its first solve came at a probe of LCG's root, whose bounds its cuts
+    // took as the root's; -f reported 7 instead of the optimum 3
+    StringBuilder model = new StringBuilder();
+    for (int i = 0; i <= 10; i++) {
+      model.append("var 0..1: s").append(i).append(" :: output_var;\n");
+    }
+    model.append("var 1..9: it :: output_var;\n");
+    for (int b = 0; b <= 8; b++) {
+      model.append("var 0..1: ld").append(b).append(" :: output_var;\n");
+    }
+    model
+        .append("var 0..39: obj :: output_var;\n")
+        .append("constraint int_lin_le([-3,-4],[s9,s0],-5);\n")
+        .append("constraint int_lin_le([-4,-1,-3],[s5,s1,s8],-3);\n")
+        .append("constraint jacop_bin_packing([it],[ld0,ld1,ld2,ld3,ld4,ld5,ld6,ld7,ld8],[1],1);\n")
+        .append("constraint int_lin_eq([1,4,4,4,5,1,5,5,5,1,3,1,-1],")
+        .append("[s0,s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,ld0,obj],0);\n")
+        .append("solve minimize obj;\n");
+    for (String[] options :
+        new String[][] {{"-f", "--lcg", "on"}, {"--lcg", "on"}, {"--lcg", "off", "--lp", "off"}}) {
+      String out = run(model.toString(), options)[0];
+      assertTrue(
+          out.contains("obj = 3;\n----------\n=========="), String.join(" ", options) + ": " + out);
+    }
+  }
+
+  @Test
+  void binPackingCostBoundSkipsLoadsWhereTheCostIsUndefined() throws IOException {
+    // y = T[load - 1] is undefined for loads 0 and 1, which LoadFunctionDetector marks with
+    // Long.MIN_VALUE; the enumeration took that as a cost, its sums wrapped, it cut the packing of
+    // cost -6 and posted the sum of the costs >= -4, so every search reported the optimum 0
+    StringBuilder model = new StringBuilder();
+    model
+        .append("var 1..3: b0 :: output_var;\n")
+        .append("var {1,3}: b1 :: output_var;\n")
+        .append("var 1..1: b2 :: output_var;\n")
+        .append("var 1..3: b3 :: output_var;\n")
+        .append("var 1..3: b4 :: output_var;\n");
+    for (int p = 0; p < 3; p++) {
+      model
+          .append("var 0..13: l")
+          .append(p)
+          .append(" :: output_var;\n")
+          .append("var -5..20: d")
+          .append(p)
+          .append(";\n")
+          .append("var -10..20: y")
+          .append(p)
+          .append(" :: output_var;\n");
+    }
+    model
+        .append("var -100..100: obj :: output_var;\n")
+        .append("constraint jacop_bin_packing([b0,b1,b2,b3,b4],[l0,l1,l2],[3,2,2,3,3],1);\n");
+    for (int p = 0; p < 3; p++) {
+      model
+          .append("constraint int_lin_eq([1,-1],[l")
+          .append(p)
+          .append(",d")
+          .append(p)
+          .append("],1);\n")
+          .append("constraint array_int_element(d")
+          .append(p)
+          .append(",[6,-2,9,7,4,-2,-4,3,0,8,-3,-4],y")
+          .append(p)
+          .append(");\n");
+    }
+    model
+        .append("constraint int_lin_eq([1,1,1,-1],[y0,y1,y2,obj],0);\n")
+        .append("solve minimize obj;\n");
+    for (String[] options : new String[][] {{"--lcg", "on"}, {"--lcg", "off"}, {"-f"}}) {
+      String out = run(model.toString(), options)[0];
+      assertTrue(
+          out.contains("obj = -6;\n----------\n=========="),
+          String.join(" ", options) + ": " + out);
+    }
   }
 }

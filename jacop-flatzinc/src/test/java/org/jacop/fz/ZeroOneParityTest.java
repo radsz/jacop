@@ -133,6 +133,32 @@ class ZeroOneParityTest {
     assertEquals(Integer.valueOf(1), solve(evenColouring(true)));
   }
 
+  // each row twice, an opposite with another bound before its true opposite, which lists the
+  // variables in another order and one of them twice: the rows still pair up into equations
+  @Test
+  void opposedInequalitiesPairDespiteRepeatsAndOrder() throws IOException {
+    String model = evenColouring(true);
+    StringBuilder sb = new StringBuilder();
+    for (String line : model.split("\n")) {
+      if (line.startsWith("constraint int_lin_le([1,1,1,1,1]")) {
+        sb.append(line).append('\n').append(line).append('\n');
+        sb.append(line.replace("[1,1,1,1,1]", "[-1,-1,-1,-1,-1]").replace("], 3);", "], -2);"));
+        sb.append('\n');
+      } else if (line.startsWith("constraint int_lin_le([-1,-1,-1,-1,-1]")) {
+        String vars = line.substring(line.indexOf("], [") + 4, line.lastIndexOf("]"));
+        String[] v = vars.split(", ");
+        sb.append("constraint int_lin_le([-1,-1,-1,-1,1,-2], [")
+            .append(String.join(", ", v[4], v[3], v[2], v[1], v[0], v[0]))
+            .append("], -3);\n");
+      } else {
+        sb.append(line).append('\n');
+      }
+    }
+    String out = run(sb.toString(), "-debug");
+    assertTrue(out.contains("% XorSystem: 1 systems, 5 rows"), out);
+    assertEquals(Integer.valueOf(1), solve(sb.toString()));
+  }
+
   @Test
   void exactlyOneRowsStayOut() throws IOException {
     String model =

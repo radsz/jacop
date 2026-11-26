@@ -412,6 +412,12 @@ public class LinearRelaxation extends Constraint
   public int pairCliques;
 
   /**
+   * Statistics: the cardinality rows in place of the clauses over all subsets of a set of literals
+   * ({@link SubsetCardinalities}), in a refutation.
+   */
+  public int subsetCardinalities;
+
+  /**
    * Statistics: the rows over the terms of the objective for which the sparse simplex was taken,
    * since they did not fit the dense tableau; 0 when that did not happen.
    */
@@ -2044,7 +2050,8 @@ public class LinearRelaxation extends Constraint
       List<LinearForm> model = substituted.isEmpty() ? given : substitute(given, substituted, null);
       return pseudoObjectiveRefutation(model);
     }
-    PairCliques merged = PairCliques.merge(rows, List.of());
+    SubsetCardinalities counted = SubsetCardinalities.merge(rows);
+    PairCliques merged = PairCliques.merge(counted.rows, List.of());
     rows = merged.rows;
     Simplex simplex = sparseTakes(rows) ? Simplex.SPARSE : Simplex.DENSE;
     if (tooLarge(rows, simplex)) {
@@ -2053,6 +2060,7 @@ public class LinearRelaxation extends Constraint
     LinearRelaxation r = new LinearRelaxation(rows, List.of(), null, false, simplex);
     r.refutation = true;
     r.pairCliques = merged.cliques;
+    r.subsetCardinalities = counted.cardinalities;
     r.cutsTried = true;
     return r.rows() < 2 ? null : r;
   }
@@ -2096,7 +2104,11 @@ public class LinearRelaxation extends Constraint
     return f.relation() == LinearForm.GE ? f.c() == 1 - negative : f.c() == positive - 1;
   }
 
-  private static LinearRelaxation pseudoObjectiveRefutation(List<LinearForm> given) {
+  private static LinearRelaxation pseudoObjectiveRefutation(List<LinearForm> model) {
+    // the clauses that encode cardinality constraints by subsets, as those constraints: they are
+    // the rows the objective and the cuts work on (fixed-bandwidth)
+    SubsetCardinalities counted = SubsetCardinalities.merge(model);
+    List<LinearForm> given = counted.rows;
     // the inequality whose variables are in the most rows: the cardinality row over every vertex
     // of a vertex cover, the row that bounds the exits of the blocks of a pigeonhole formula with
     // exits (php-exit, each exit in the 93 pigeon rows of its block), not one of those rows
@@ -2173,6 +2185,7 @@ public class LinearRelaxation extends Constraint
     r.refutation = true;
     r.pseudoObjective = true;
     r.pairCliques = merged.cliques;
+    r.subsetCardinalities = counted.cardinalities;
     return r.rows() < 2 ? null : r;
   }
 
@@ -2220,8 +2233,9 @@ public class LinearRelaxation extends Constraint
       return null;
     }
     given.addAll(simplified.rows);
-    PairCliques merged = PairCliques.merge(given, List.of());
-    if (merged.cliques < CLAUSE_REFUTATION_CLIQUES) {
+    SubsetCardinalities counted = SubsetCardinalities.merge(given);
+    PairCliques merged = PairCliques.merge(counted.rows, List.of());
+    if (merged.cliques + counted.cardinalities < CLAUSE_REFUTATION_CLIQUES) {
       return null;
     }
     List<LinearForm> rows = merged.rows;
@@ -2232,6 +2246,7 @@ public class LinearRelaxation extends Constraint
     LinearRelaxation r = new LinearRelaxation(rows, List.of(), null, false, simplex);
     r.refutation = true;
     r.pairCliques = merged.cliques;
+    r.subsetCardinalities = counted.cardinalities;
     r.clauseRefutation = true;
     r.clauseUnits = simplified.units;
     r.clauseEquivalences = simplified.equivalences;

@@ -636,6 +636,30 @@ class RevisedDualSimplexTest {
   }
 
   @Test
+  void presolvePassesThatFindNothingChargeNoWork() {
+    // x + y = 1 with x, y in [0, 5]: no row with one side to stuff, and the bounds the row implies
+    // (x, y <= 1) remove no other row. The work of the LP paces its calls in the search, so the two
+    // passes leave it as it was (nightly 26 Nov: accap instance5 and evm-super-compilation changed
+    // search from a scan that found nothing)
+    Presolve p =
+        new Presolve(
+            2,
+            new int[][] {{0, 1}},
+            new double[][] {{1, 1}},
+            new int[][] {{0}, {0}},
+            new double[][] {{1}, {1}},
+            new int[] {1, 1},
+            new double[] {1, 2},
+            new double[] {1, 2},
+            new double[] {0, 0, 1},
+            new double[] {5, 5, 1});
+    long before = p.ops();
+    assertThat(p.stuffing()).isZero();
+    assertThat(p.impliedRows()).isZero();
+    assertThat(p.ops()).isEqualTo(before);
+  }
+
+  @Test
   void rowKeptByTheBoundsOtherRowsImplyIsRemoved() {
     // x + y + v = 10 and z + w + u = 5 with every column >= 0 imply x <= 10 and z <= 5, so
     // x + z <= 30 holds over those bounds alone and goes; no column bound changes. min -x - z: -15

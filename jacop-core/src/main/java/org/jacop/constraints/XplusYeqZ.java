@@ -229,14 +229,26 @@ public class XplusYeqZ extends AbstractConstraintXandYandZ
     return new XplusYeqZ(map.get(x), map.get(y), map.get(z));
   }
 
+  // bound reasons and failures from the lifted bounds before the shift of a fixed term
+  private static final boolean SHIFT_LAST =
+      !"false".equals(System.getProperty("jacop.lcg.shiftLast"));
+
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
     if (getClass() != XplusYeqZ.class || x == y || x == z || y == z) {
       return false;
     }
+    IntVar[] vars = {x, y, z};
+    long[] weights = {1, 1, -1};
+    // a bound the others' bounds imply needs only those bounds, lifted; a fixed term's shift would
+    // cite both of its bounds
+    if (SHIFT_LAST
+        && trail.kind(entry) != AtomicTrail.NE
+        && LinearExplanation.explainChecked(trail, entry, vars, weights, 0, true, true, out)) {
+      return true;
+    }
     return ShiftExplanation.explainSum(trail, entry, x, y, z, out)
-        || LinearExplanation.explainChecked(
-            trail, entry, new IntVar[] {x, y, z}, new long[] {1, 1, -1}, 0, true, true, out);
+        || LinearExplanation.explainChecked(trail, entry, vars, weights, 0, true, true, out);
   }
 
   @Override
@@ -244,9 +256,14 @@ public class XplusYeqZ extends AbstractConstraintXandYandZ
     if (getClass() != XplusYeqZ.class || x == y || x == z || y == z) {
       return false;
     }
+    IntVar[] vars = {x, y, z};
+    long[] weights = {1, 1, -1};
+    if (SHIFT_LAST
+        && LinearExplanation.explainBoundFailure(trail, vars, weights, 0, true, true, out)) {
+      return true;
+    }
     return ShiftExplanation.explainSumFailure(trail, x, y, z, out)
-        || LinearExplanation.explainFailure(
-            trail, new IntVar[] {x, y, z}, new long[] {1, 1, -1}, 0, true, true, out);
+        || LinearExplanation.explainFailure(trail, vars, weights, 0, true, true, out);
   }
 
   // the equality, for entailment and negation

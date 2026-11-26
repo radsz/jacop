@@ -44,6 +44,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
@@ -54,6 +55,7 @@ import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.ImpliesNot;
+import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Linearizations;
 import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.Reified;
@@ -69,6 +71,7 @@ import org.jacop.constraints.cumulative.MultiCumulative;
 import org.jacop.constraints.diffn.DiffnK;
 import org.jacop.constraints.lp.PartitionCuts;
 import org.jacop.constraints.regular.MultiCostRegular;
+import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -839,22 +842,67 @@ public class Support implements ParserTreeConstants {
    * @throws ModelTimeOut when the time-out has passed.
    */
   public boolean hasConstraint(SimpleNode astTree, Set<String> kinds) {
-    if ("false".equals(System.getProperty("org.jacop.fz.detectorGates"))) {
+    if (DISABLED.equals(System.getProperty("org.jacop.fz.detectorGates"))) {
       return true;
     }
-    for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
-      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
-      if (node.getId() == JJTCONSTRAINTITEMS) {
-        for (int j = 0; j < node.jjtGetNumChildren(); j++) {
-          checkTimeOut();
-          SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
-          if (item instanceof ASTConstElem c && kinds.contains(c.getName())) {
-            return true;
-          }
-        }
+    checkTimeOut();
+    Set<String> present = constraintKinds(astTree);
+    for (String kind : kinds) {
+      if (present.contains(kind)) {
+        return true;
       }
     }
     return false;
+  }
+
+  /**
+   * Tells whether the model has a constraint whose name passes a test, as {@link
+   * #hasConstraint(SimpleNode, Set)} does for a set of names.
+   *
+   * @param astTree the root of the parsed model.
+   * @param kind the test of a constraint name.
+   * @return true when a constraint name passes the test, or the gates are off.
+   * @throws ModelTimeOut when the time-out has passed.
+   */
+  public boolean hasConstraint(SimpleNode astTree, Predicate<String> kind) {
+    if (DISABLED.equals(System.getProperty("org.jacop.fz.detectorGates"))) {
+      return true;
+    }
+    checkTimeOut();
+    for (String name : constraintKinds(astTree)) {
+      if (kind.test(name)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // the names of the constraints of the model whose root is kindsOf, read once: the constraint
+  // items and their names do not change while the detectors read the model, and a scan per gate
+  // of the 1.9 million rows of PB 2006 haplotype simp-nonunif cost 0.1 s each
+  private SimpleNode kindsOf;
+
+  private Set<String> kinds;
+
+  private Set<String> constraintKinds(SimpleNode astTree) {
+    if (kindsOf != astTree) {
+      Set<String> present = new HashSet<>();
+      for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
+        SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
+        if (node.getId() == JJTCONSTRAINTITEMS) {
+          for (int j = 0; j < node.jjtGetNumChildren(); j++) {
+            checkTimeOut();
+            SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
+            if (item instanceof ASTConstElem c) {
+              present.add(c.getName());
+            }
+          }
+        }
+      }
+      kinds = present;
+      kindsOf = astTree;
+    }
+    return kinds;
   }
 
   /**
@@ -991,6 +1039,94 @@ public class Support implements ParserTreeConstants {
     }
   }
 
+  // the bin packings whose loads are also posted as sums of their items, see addLoadSums
+  private final List<Object[]> loadSums = new ArrayList<>();
+
+  /**
+   * Collects a bin packing whose loads are also posted, with the delayed constraints, as the sums
+   * of the items in each bin: a 0/1 variable per item and bin that says the item is in it, the one
+   * the model reifies when it has one. Binpacking explains a load bound or a removed bin by the
+   * bins of many items at once (97 atoms per reason on MZNC 2017 steelmillslab bench_19_5); the
+   * sums give the learnt clauses those 0/1 variables and lifted linear reasons.
+   *
+   * @param bin the bin of each item
+   * @param load the load of each bin
+   * @param w the weight of each item
+   * @param minBin the number of the first bin
+   */
+  void addLoadSums(IntVar[] bin, IntVar[] load, int[] w, int minBin) {
+    loadSums.add(new Object[] {bin, load, w, minBin});
+  }
+
+  /** The most item-bin pairs whose load sums are posted beside a bin packing. */
+  private static final int LOAD_SUM_PAIRS = 1 << 16;
+
+  // load[i] = sum of w[k] * [bin[k] = i + minBin] over the items k, with the 0/1 variables
+  // channelled to the bins
+  private void poseLoadSums(IntVar[] bin, IntVar[] load, int[] w, int minBin) {
+    int n = bin.length;
+    int m = load.length;
+    if ((long) n * m > LOAD_SUM_PAIRS) {
+      return;
+    }
+    List<List<IntVar>> terms = new ArrayList<>();
+    List<List<Integer>> weights = new ArrayList<>();
+    for (int i = 0; i < m; i++) {
+      terms.add(new ArrayList<>());
+      weights.add(new ArrayList<>());
+    }
+    long[] fixed = new long[m];
+    for (int k = 0; k < n; k++) {
+      if (w[k] == 0) {
+        continue;
+      }
+      IntDomain d = bin[k].dom();
+      if (bin[k].singleton()) {
+        int i = bin[k].value() - minBin;
+        if (i >= 0 && i < m) {
+          fixed[i] += w[k];
+        }
+        continue;
+      }
+      Map<Integer, IntVar> reified = reif.cs.get(bin[k]);
+      for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        int i = v - minBin;
+        if (i < 0 || i >= m) {
+          continue;
+        }
+        IntVar b = reified == null ? null : reified.get(v);
+        if (b == null) {
+          b = new BooleanVar(store);
+          addReified(bin[k], v, b);
+        }
+        terms.get(i).add(b);
+        weights.get(i).add(w[k]);
+      }
+    }
+    for (int i = 0; i < m; i++) {
+      List<IntVar> t = terms.get(i);
+      IntVar[] vs = new IntVar[t.size() + 1];
+      int[] ws = new int[t.size() + 1];
+      for (int j = 0; j < t.size(); j++) {
+        vs[j] = t.get(j);
+        ws[j] = weights.get(i).get(j);
+      }
+      vs[t.size()] = load[i];
+      ws[t.size()] = -1;
+      if (fixed[i] > Integer.MAX_VALUE) {
+        return;
+      }
+      pose(new LinearInt(vs, ws, "==", (int) -fixed[i]));
+    }
+  }
+
+  private void poseLoadSums() {
+    for (Object[] p : loadSums) {
+      poseLoadSums((IntVar[]) p[0], (IntVar[]) p[1], (int[]) p[2], (Integer) p[3]);
+    }
+  }
+
   /** Imposes all delayed constraints. */
   public void poseDelayedConstraints() {
     binPackingCardinality.attach();
@@ -1040,6 +1176,8 @@ public class Support implements ParserTreeConstants {
     implied(this::poseOverlappingAlldiffs);
     implied(this::posePartitionSums);
     poseAlldiffSums();
+
+    poseLoadSums();
 
     // generate channeling constraints instead of reified constraints
     reif.pose();

@@ -69,6 +69,8 @@ import org.jacop.fz.SimpleNode;
  */
 public class BalanceDetector implements ParserTreeConstants {
 
+  private static final Set<String> GATE_KINDS = Set.of("int_abs", "int_times", "int_pow");
+
   private final Support support;
 
   /** A variable defined as p * y + q by a two-variable linear equation. */
@@ -114,6 +116,10 @@ public class BalanceDetector implements ParserTreeConstants {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
+    // the totals are of absolute values and squares: a model without them is not read
+    if (!support.hasConstraint(astTree, GATE_KINDS)) {
+      return;
+    }
     support.forEachConstraint(astTree, this::collect);
     if (absolute.isEmpty() && square.isEmpty()) {
       return;

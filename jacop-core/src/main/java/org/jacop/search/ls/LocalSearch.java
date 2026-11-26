@@ -34,6 +34,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -300,6 +301,8 @@ public final class LocalSearch {
   private int unsupportedCount;
   // constraint classes by how they are evaluated, for statistics
   private final Map<String, Integer> classes = new java.util.TreeMap<>();
+  // variables replaced by their linear definitions, see Builder#substituted
+  private final Set<IntVar> substituted;
   private long deadline;
   private volatile boolean stopRequested;
 
@@ -321,6 +324,8 @@ public final class LocalSearch {
       definedVars.addAll(b.defined);
     }
     patienceMillis = b.patienceMillis;
+    substituted = Collections.newSetFromMap(new IdentityHashMap<>());
+    substituted.addAll(b.substituted);
     extra = b.extra;
     jump = b.jump;
     permutations = b.permutations;
@@ -641,11 +646,25 @@ public final class LocalSearch {
     List<Object[]> rows = new ArrayList<>();
     List<Constraint> checked = new ArrayList<>();
     List<Violation> measured = new ArrayList<>();
+    Set<Constraint> definitions = Collections.newSetFromMap(new IdentityHashMap<>());
+    Map<Constraint, LinearForm> expanded = substitutions(constraints, definitions);
     for (Constraint c : constraints) {
       if (leftOut(c)) {
         continue;
       }
+      if (definitions.contains(c)) {
+        classes.merge("D:" + c.getClass().getSimpleName(), 1, Integer::sum);
+        continue;
+      }
       int before = rows.size();
+      LinearForm form = expanded.get(c);
+      if (form != null) {
+        if (addRow(form, null, rows, varList)) {
+          classes.merge("L:" + c.getClass().getSimpleName(), 1, Integer::sum);
+          continue;
+        }
+        rows.subList(before, rows.size()).clear();
+      }
       if (compileLinear(c, rows, varList)) {
         classes.merge("L:" + c.getClass().getSimpleName(), 1, Integer::sum);
         continue;
@@ -2136,6 +2155,157 @@ public final class LocalSearch {
    * Adds the rows of a linear constraint, or of a reified or implied one: {@code b <=> form} is the
    * two rows {@code b = 1 -> form} and {@code b = 0 -> not form}.
    */
+  /**
+   * The linear constraints with the substituted variables replaced by their definitions; the
+   * definitions themselves go to definitions. A variable is substituted when it occurs once in a
+   * linear equality with weight 1 or -1, every constraint on it is linear, and it is neither a
+   * variable of the order nor the cost.
+   */
+  private Map<Constraint, LinearForm> substitutions(
+      Set<Constraint> constraints, Set<Constraint> definitions) {
+    Map<Constraint, LinearForm> out = new IdentityHashMap<>();
+    if (substituted.isEmpty()) {
+      return out;
+    }
+    Map<Constraint, LinearForm> forms = new IdentityHashMap<>();
+    for (Constraint c : constraints) {
+      if (c instanceof LinearRelaxation
+          || skipImplied && store.isImplied(c)
+          || symmetry.contains(c)
+          || extra != null && extra.contains(c)) {
+        continue;
+      }
+      LinearForm f = LinearForms.of(c);
+      if (f != null) {
+        forms.put(c, f);
+      }
+    }
+    Set<IntVar> kept = Collections.newSetFromMap(new IdentityHashMap<>());
+    if (order != null) {
+      kept.addAll(Arrays.asList(order));
+    }
+    if (cost != null) {
+      kept.add(cost);
+    }
+    Map<IntVar, LinearForm> definition = new IdentityHashMap<>();
+    for (Map.Entry<Constraint, LinearForm> e : forms.entrySet()) {
+      LinearForm f = e.getValue();
+      if (f.relation() != LinearForm.EQ) {
+        continue;
+      }
+      for (int k = 0; k < f.vars().length; k++) {
+        IntVar y = f.vars()[k];
+        if (Math.abs(f.weights()[k]) == 1
+            && substituted.contains(y)
+            && !kept.contains(y)
+            && !y.singleton()
+            && !definition.containsKey(y)
+            && occurrences(f, y) == 1
+            && store.valueWatchers(y).isEmpty()
+            && forms.keySet().containsAll(y.dom().constraints())) {
+          definition.put(y, f);
+          definitions.add(e.getKey());
+          break;
+        }
+      }
+    }
+    try {
+      for (Map.Entry<Constraint, LinearForm> e : forms.entrySet()) {
+        LinearForm f = e.getValue();
+        if (!definitions.contains(e.getKey()) && mentions(f, definition)) {
+          Map<IntVar, Long> terms = new IdentityHashMap<>();
+          long rhs = expand(f, null, 1, terms, definition, 0) + f.c();
+          List<IntVar> vs = new ArrayList<>();
+          List<Long> ws = new ArrayList<>();
+          for (Map.Entry<IntVar, Long> t : terms.entrySet()) {
+            if (t.getValue() != 0) {
+              vs.add(t.getKey());
+              ws.add(t.getValue());
+            }
+          }
+          out.put(
+              e.getKey(),
+              new LinearForm(
+                  vs.toArray(new IntVar[0]),
+                  ws.stream().mapToLong(Long::longValue).toArray(),
+                  rhs,
+                  f.relation()));
+        }
+      }
+    } catch (ArithmeticException | IllegalStateException _) {
+      // an overflow or a cycle of definitions: no substitution
+      definitions.clear();
+      out.clear();
+    }
+    return out;
+  }
+
+  // the deepest definition of a definition, which a tree of split sums never reaches
+  private static final int SUBSTITUTION_DEPTH = 64;
+
+  /**
+   * Adds the terms of f times mult, without the term of y, to terms with the substituted variables
+   * replaced by their definitions; returns what moves to the right-hand side.
+   */
+  private static long expand(
+      LinearForm f,
+      IntVar y,
+      long mult,
+      Map<IntVar, Long> terms,
+      Map<IntVar, LinearForm> definition,
+      int depth) {
+    if (depth > SUBSTITUTION_DEPTH) {
+      throw new IllegalStateException("cyclic definitions");
+    }
+    long rhs = 0;
+    for (int k = 0; k < f.vars().length; k++) {
+      IntVar x = f.vars()[k];
+      if (x == y) {
+        continue;
+      }
+      long w = Math.multiplyExact(mult, f.weights()[k]);
+      LinearForm d = definition.get(x);
+      if (d == null) {
+        terms.merge(x, w, Math::addExact);
+        continue;
+      }
+      // wx x + S = c with wx = 1 or -1, so w x = w wx c - w wx S
+      long wx = weightOf(d, x);
+      long m = Math.multiplyExact(w, wx);
+      rhs = Math.subtractExact(rhs, Math.multiplyExact(m, d.c()));
+      rhs = Math.addExact(rhs, expand(d, x, Math.negateExact(m), terms, definition, depth + 1));
+    }
+    return rhs;
+  }
+
+  private static long weightOf(LinearForm f, IntVar x) {
+    for (int k = 0; k < f.vars().length; k++) {
+      if (f.vars()[k] == x) {
+        return f.weights()[k];
+      }
+    }
+    throw new IllegalStateException("not in its definition");
+  }
+
+  private static int occurrences(LinearForm f, IntVar y) {
+    int n = 0;
+    for (IntVar x : f.vars()) {
+      if (x == y) {
+        n++;
+      }
+    }
+    return n;
+  }
+
+  private static boolean mentions(LinearForm f, Map<IntVar, LinearForm> definition) {
+    for (IntVar x : f.vars()) {
+      if (definition.containsKey(x)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private boolean compileLinear(Constraint c, List<Object[]> rows, List<IntVar> varList) {
     LinearForm f = LinearForms.of(c);
     if (f != null) {
@@ -3799,12 +3969,58 @@ public final class LocalSearch {
     if (violatedCount == 0) {
       return true;
     }
+    // variables the canonicalizer does not know, such as the partial sums of a long sum split
+    // under LCG, take the values propagation gives them from the decision variables
+    if (orderCount > 0 && valuesFromStore()) {
+      evaluateAll();
+      if (violatedCount == 0) {
+        return true;
+      }
+    }
     System.arraycopy(before, 0, val, 0, val.length);
     evaluateAll();
     return false;
   }
 
   private long canonicalized;
+
+  /**
+   * Fixes the variables of the order to their values in the store, propagates, and takes the values
+   * of the other variables that propagation fixes.
+   *
+   * @return false when propagation fails
+   */
+  private boolean valuesFromStore() {
+    int base = store.level;
+    store.setLevel(store.level + 1);
+    try {
+      for (int i = 0; i < orderCount; i++) {
+        IntVar x = vars[i];
+        if (!x.domain.contains(val[i])) {
+          return false;
+        }
+        if (!x.singleton()) {
+          x.domain.in(store.level, x, val[i], val[i]);
+        }
+      }
+      if (!store.consistency()) {
+        return false;
+      }
+      for (int i = orderCount; i < vars.length; i++) {
+        if (vars[i].singleton()) {
+          val[i] = vars[i].value();
+        }
+      }
+      return true;
+    } catch (FailException _) {
+      return false;
+    } finally {
+      while (store.level > base) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+      }
+    }
+  }
 
   /**
    * Fixes the variables of the given order to their values and propagates; then the other
@@ -3991,6 +4207,7 @@ public final class LocalSearch {
     private long stallSteps = 20_000;
     private long patienceMillis;
     private Collection<? extends Var> defined;
+    private Collection<? extends IntVar> substituted = List.of();
     private Collection<? extends Constraint> extra;
     private boolean jump;
     private boolean permutations = true;
@@ -4223,6 +4440,20 @@ public final class LocalSearch {
      */
     public Builder defined(Collection<? extends Var> vars) {
       this.defined = vars;
+      return this;
+    }
+
+    /**
+     * Gives variables that are each defined by one linear equality, such as the block sums of a
+     * long sum split for lazy clause generation, and occur in linear constraints only. Local search
+     * replaces them in those constraints by their definitions and leaves them out, so a move
+     * changes a long sum at once.
+     *
+     * @param vars the variables
+     * @return this builder
+     */
+    public Builder substituted(Collection<? extends IntVar> vars) {
+      this.substituted = vars;
       return this;
     }
 

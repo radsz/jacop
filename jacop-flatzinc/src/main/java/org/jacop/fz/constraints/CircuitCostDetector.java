@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.jacop.constraints.CircuitCost;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.CostAlldifferent;
@@ -85,6 +86,21 @@ import org.jacop.fz.SimpleNode;
  * @version 5.0
  */
 public class CircuitCostDetector implements ParserTreeConstants {
+
+  private static final Set<String> TARGET_KINDS =
+      Set.of(
+          "jacop_circuit",
+          "jacop_circuit_offset",
+          "jacop_subcircuit",
+          "jacop_alldiff",
+          "jacop_assignment",
+          "jacop_count_values",
+          "jacop_count_values_bounds",
+          "jacop_gcc");
+
+  private static final Set<String> ELEMENT_KINDS =
+      Set.of(
+          "array_int_element", "array_var_int_element", "jacop_array_var_int_element_nonshifted");
 
   // the most pairs of sums weighed against each other on one subcircuit
   private static final int MAX_PAIRS = 2;
@@ -204,6 +220,12 @@ public class CircuitCostDetector implements ParserTreeConstants {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
+    // the costs are elements over the successors of circuits, all-different and counted sets: a
+    // model without both is not read
+    if (!support.hasConstraint(astTree, TARGET_KINDS)
+        || !support.hasConstraint(astTree, ELEMENT_KINDS)) {
+      return;
+    }
     support.forEachConstraint(astTree, this::collect);
     if (targets.isEmpty() || elements.isEmpty() || linears.isEmpty()) {
       return;

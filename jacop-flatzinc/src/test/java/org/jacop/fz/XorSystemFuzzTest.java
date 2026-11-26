@@ -309,6 +309,36 @@ class XorSystemFuzzTest {
     assertTrue(!run(mixed, "-debug").contains("% XorSystem:"));
   }
 
+  // an equation taken modulo 2 that leaves one 0/1 variable (a value) or two (an equivalence) is
+  // posted as such: the low bit of a product of the factor-mod formulas of the PB competition, x
+  // + 2 s + 2 t + 2 u = 3 with x the and of a and b, forces a = b = 1, which bounds reasoning does
+  // not see; an equation with no odd coefficient and an odd right-hand side has no solution
+  @Test
+  void equationsModuloTwoGiveValuesAndEquivalences() throws IOException {
+    String product =
+        "var bool: a;\nvar bool: b;\nvar bool: p;\nvar 0..1: x;\nvar 0..1: s;\nvar 0..1: t;\n"
+            + "var 0..1: u;\nvar 0..1: c;\nvar 0..1: d;\nvar 0..1: e;\n"
+            + "var 0..2: obj :: output_var;\n"
+            + "constraint array_bool_and([a, b], p);\nconstraint bool2int(p, x);\n"
+            + "constraint int_lin_eq([1, 2, 2, 2], [x, s, t, u], 3);\n"
+            + "constraint int_lin_eq([1, 1, 2, 2], [c, d, s, e], 2);\n"
+            + "constraint int_lin_eq([1, 1, -1], [x, c, obj], 0);\n"
+            + "solve minimize obj;\n";
+    String out = run(product, "--search-statistics");
+    assertTrue(out.contains("%%%mzn-stat: xorImpliedParities=2"), out);
+    assertTrue(out.contains("obj = 1;"), out);
+    // the same with the parities off: still the right optimum
+    System.setProperty("org.jacop.fz.xorSystem", "false");
+    try {
+      assertTrue(run(product).contains("obj = 1;"));
+    } finally {
+      System.clearProperty("org.jacop.fz.xorSystem");
+    }
+    String even =
+        "var 0..1: s;\nvar 0..1: t;\nconstraint int_lin_eq([2, 2], [s, t], 1);\nsolve satisfy;\n";
+    assertTrue(run(even).contains("=====UNSATISFIABLE====="));
+  }
+
   @Test
   void rootConflictOfAProbeIsKeptWithoutXorSystem() throws IOException {
     // trial 123 of seed rotation 6: a probe of the core-guided search had its level undone by a
