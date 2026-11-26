@@ -1299,10 +1299,13 @@ class GlobalConstraints implements ParserTreeConstants {
 
     IntVar[] counter = new IntVar[cover.length];
     for (int i = 0; i < cover.length; i++) {
-      if (low[i] > up[i]) {
+      // a count is in 0..n, whatever bounds beyond JaCoP's range the model gives
+      int min = Math.max(0, low[i]);
+      int max = Math.min(x.length, up[i]);
+      if (min > max) {
         throw Store.failException;
       }
-      counter[i] = new IntVar(store, store.freshVariableId("counter" + i), low[i], up[i]);
+      counter[i] = new IntVar(store, store.freshVariableId("counter" + i), min, max);
     }
 
     poseClosedGcc(x, cover, counter);

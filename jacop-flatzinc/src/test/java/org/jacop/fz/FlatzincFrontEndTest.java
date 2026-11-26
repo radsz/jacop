@@ -8543,4 +8543,22 @@ class FlatzincFrontEndTest {
         "--lcg",
         "on");
   }
+
+  @Test
+  void countValuesBoundsBelowTheIntegersCountsFromZero() throws IOException {
+    // the circuit cost detector made a counter of domain -2^31..2 for the lower bound -2^31, on
+    // which lazy clause generation split its domain and threw IllegalStateException; 52 of the
+    // 81 assignments have at most two 0s and one or two 1s
+    String model =
+        "predicate jacop_count_values_bounds(array [int] of var int: x, array [int] of int: cover,"
+            + " array [int] of int: lbound, array [int] of int: ubound);\n"
+            + "array [1..4] of var 0..2: x :: output_array([1..4]);\n"
+            + "constraint jacop_count_values_bounds(x, [0, 1], [-2147483648, 1], [2, 2]);\n"
+            + "solve satisfy;\n";
+    for (String lcg : new String[] {"on", "off"}) {
+      String out = run(model, "-a", "--lcg", lcg)[0];
+      assertEquals(52, out.split("----------", -1).length - 1, out);
+      assertTrue(out.endsWith("==========\n"), out);
+    }
+  }
 }

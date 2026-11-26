@@ -312,12 +312,20 @@ public class CircuitCostDetector implements ParserTreeConstants {
       case "jacop_count_values_bounds" -> {
         int[] low = support.getIntArray(child(node, 2));
         int[] up = support.getIntArray(child(node, 3));
+        IntVar[] x = support.getVarArray(child(node, 0));
         if (low != null && up != null && low.length == up.length) {
           IntVar[] counters = new IntVar[low.length];
-          for (int k = 0; k < low.length && low[k] <= up[k]; k++) {
-            counters[k] = new IntVar(support.store, low[k], up[k]);
+          for (int k = 0; k < low.length; k++) {
+            // a count is in 0..n: bounds beyond it, as far as the integers go, would give the
+            // counter a domain beyond JaCoP's range, on which lazy clause generation fails
+            int min = Math.max(0, low[k]);
+            int max = Math.min(x.length, up[k]);
+            if (min > max) {
+              break;
+            }
+            counters[k] = new IntVar(support.store, min, max);
           }
-          gcc(support.getVarArray(child(node, 0)), support.getIntArray(child(node, 1)), counters);
+          gcc(x, support.getIntArray(child(node, 1)), counters);
         }
       }
       case "jacop_gcc" -> {
