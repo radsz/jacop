@@ -13699,4 +13699,78 @@ class SingleConstraintTest extends TestHelper {
     store.impose(new AmongVar(new IntVar[] {v[0], v[1]}, new IntVar[] {v[2]}, v[3]));
     assertThat(countInOrder(store, v)).isEqualTo(expected);
   }
+
+  /**
+   * Solutions of org.jacop.constraints.Cumulative (with profile, limit as a capacity) over the
+   * intervals min[k]..max[k] of n starts, n durations, n resources and the limit, and the
+   * brute-force count: every task within the limit, and the load at no time above it.
+   */
+  private static int[] profileCumulativeCounts(int n, int[] min, int[] max, boolean edgeFinding) {
+    int expected = 0;
+    int[] value = min.clone();
+    while (true) {
+      boolean ok = true;
+      for (int i = 0; i < n; i++) {
+        ok &= value[2 * n + i] <= value[3 * n];
+      }
+      for (int i = 0; i < n && ok; i++) {
+        // the load is highest at the start of some task
+        long load = 0;
+        for (int j = 0; j < n; j++) {
+          if (value[j] <= value[i] && value[i] < (long) value[j] + value[n + j]) {
+            load += value[2 * n + j];
+          }
+        }
+        ok = load <= value[3 * n];
+      }
+      expected += ok ? 1 : 0;
+      int k = 0;
+      while (k < value.length && ++value[k] > max[k]) {
+        value[k] = min[k];
+        k++;
+      }
+      if (k == value.length) {
+        break;
+      }
+    }
+    Store store = new Store();
+    IntVar[] v = new IntVar[3 * n + 1];
+    for (int k = 0; k < v.length; k++) {
+      v[k] = new IntVar(store, "v" + k, min[k], max[k]);
+    }
+    store.impose(
+        new org.jacop.constraints.Cumulative(
+            Arrays.copyOfRange(v, 0, n),
+            Arrays.copyOfRange(v, n, 2 * n),
+            Arrays.copyOfRange(v, 2 * n, 3 * n),
+            v[3 * n],
+            edgeFinding,
+            true,
+            false));
+    return new int[] {expected, countInOrder(store, v)};
+  }
+
+  @Test
+  void profileCumulativeKeepsTasksThatStartBeforeZero() {
+    // the profile took a piece starting at -1 for an empty one and the task with no compulsory
+    // part for one using [-1, ...): it lost load at -1 and pruned tasks of negative start that fit
+    int[][][] instances = {
+      {{-2, -3, -2, 1, 1, 1, 0, 1, 0, 2}, {-1, -1, 0, 2, 1, 2, 1, 2, 1, 2}},
+      {{-6, -6, -2, 1, 1, 2, 0, 0, 1, 1}, {-6, -5, -1, 2, 1, 3, 1, 0, 2, 1}},
+      {{-2, -2, -4, 2, 2, 0, 1, 2, 2, 2}, {0, -1, -3, 2, 2, 1, 1, 3, 3, 3}},
+      {{-1, 1, 1, 1}, {-1, 1, 1, 1}},
+      {{-2, 5, 1, 1}, {-2, 5, 1, 1}}
+    };
+    for (int[][] instance : instances) {
+      int n = (instance[0].length - 1) / 3;
+      for (boolean edgeFinding : new boolean[] {true, false}) {
+        int[] counts = profileCumulativeCounts(n, instance[0], instance[1], edgeFinding);
+        assertThat(counts[1])
+            .as(
+                "%s..%s, edge finding %s",
+                Arrays.toString(instance[0]), Arrays.toString(instance[1]), edgeFinding)
+            .isEqualTo(counts[0]);
+      }
+    }
+  }
 }

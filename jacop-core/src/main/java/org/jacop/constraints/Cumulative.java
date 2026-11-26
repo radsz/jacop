@@ -1088,14 +1088,16 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       int mustUseMax,
       ProfileItem p) {
     if (limit.max() - p.value < resources.min()) {
-      if (mustUseMin != -1) {
+      if (mustUseMin != ProfileItem.NO_POINT) {
         profileCheckOverlappingWithMustUse(
             store, start, duration, resources, mustUseMin, mustUseMax, p);
       } else {
         profileNarrowStartFromProfile(store, start, duration, p.min, p.max);
       }
     } else {
-      if (mustUseMin != -1 && mustUseMax > p.getMin() && mustUseMin < p.getMax()) {
+      if (mustUseMin != ProfileItem.NO_POINT
+          && mustUseMax > p.getMin()
+          && mustUseMin < p.getMax()) {
         int offset =
             intervalOverlap(p.getMin(), p.getMax(), mustUseMin, mustUseMax) ? resources.min() : 0;
         if (debugNarrEnabled) {
@@ -1122,13 +1124,15 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     ProfileItem right = new ProfileItem();
     p.subtract(use, left, right);
 
-    if (left.min != -1) {
+    if (left.min != ProfileItem.NO_POINT) {
       applyProfileLeftNarrow(store, start, duration, left);
     }
-    if (right.min != -1) {
+    if (right.min != ProfileItem.NO_POINT) {
       applyProfileRightNarrow(store, start, duration, right);
     }
-    if (start.max() < right.min && start.dom().noIntervals() == 1) {
+    if (right.min != ProfileItem.NO_POINT
+        && start.max() < right.min
+        && start.dom().noIntervals() == 1) {
       int rs = right.min - start.min();
       if (rs < duration.max()) {
         if (debugNarrEnabled) {
@@ -1206,8 +1210,8 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     for (Task t : ts) {
       // check only for tasks which cannot allow to have duration or resources = 0
       if (t.nonZeroTask()) {
-        int a = -1;
-        int b = -1;
+        int a = ProfileItem.NO_POINT;
+        int b = ProfileItem.NO_POINT;
         if (t.minUse(minUse)) {
           a = minUse.start();
           b = minUse.stop();
