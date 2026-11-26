@@ -14027,4 +14027,57 @@ class SingleConstraintTest extends TestHelper {
       assertThat(countInOrder(store, b)).as("instance %d", t).isEqualTo(expected);
     }
   }
+
+  @Test
+  void tableCoverWhoseFirstCallWasUndoneReadsEveryDomainAgain() {
+    // the first call kills the tuples out of the domains and checks every element; when its level
+    // was removed the tuples came back alive and the flag kept the call from being made again, so
+    // a value no tuple supports any more was kept
+    Random random = new Random(20261126);
+    for (int t = 0; t < 300; t++) {
+      Store store = new Store();
+      int groups = 2 + random.nextInt(2);
+      IntVar[][] g = new IntVar[groups][];
+      int[][][] tuples = new int[groups][][];
+      for (int i = 0; i < groups; i++) {
+        int size = 1 + random.nextInt(2);
+        g[i] = new IntVar[size];
+        for (int l = 0; l < size; l++) {
+          g[i][l] = new IntVar(store, "g" + i + "_" + l, 0, 4);
+        }
+        tuples[i] = new int[1 + random.nextInt(5)][size];
+        for (int[] tuple : tuples[i]) {
+          for (int l = 0; l < size; l++) {
+            tuple[l] = random.nextInt(5);
+          }
+        }
+      }
+      IntVar[] all = Arrays.stream(g).flatMap(Arrays::stream).toArray(IntVar[]::new);
+      int expected =
+          bruteForce(
+                  all,
+                  s -> {
+                    if (Arrays.stream(s).distinct().count() != s.length) {
+                      return false;
+                    }
+                    int at = 0;
+                    for (int i = 0; i < groups; i++) {
+                      int from = at;
+                      if (Arrays.stream(tuples[i])
+                          .noneMatch(
+                              tu ->
+                                  Arrays.equals(
+                                      tu, Arrays.copyOfRange(s, from, from + tu.length)))) {
+                        return false;
+                      }
+                      at += g[i].length;
+                    }
+                    return true;
+                  })
+              .size();
+      store.impose(new TableCover(g, tuples, false));
+      firstCallAboveTheRoot(store, all, random);
+      assertThat(countInOrder(store, all)).as("instance %d", t).isEqualTo(expected);
+    }
+  }
 }
