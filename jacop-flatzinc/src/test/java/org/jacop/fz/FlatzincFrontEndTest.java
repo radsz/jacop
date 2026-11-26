@@ -9131,4 +9131,29 @@ class FlatzincFrontEndTest {
     String out = run(model.toString(), "-a", "--lcg", "off")[0];
     assertEquals(27, out.split("----------\n", -1).length - 1, out);
   }
+
+  @Test
+  void countPartnersReadNoSumOfMinValueWeightsAsADisequality() throws IOException {
+    // -2147483648 * (x0 + x1) != 0 says x0 + x1 != 0; read as x0 != x1 (and x0 != x2 alike), x3
+    // was left the only partner of x0 and x0 = x3 removed 8 of the 15 solutions
+    StringBuilder model = new StringBuilder();
+    for (int i = 0; i < 4; i++) {
+      model.append("var {-1,1,2}: x").append(i).append(" :: output_var;\n");
+    }
+    int[] values = {-1, 1, 2};
+    StringBuilder constraints = new StringBuilder();
+    for (int k = 0; k < values.length; k++) {
+      model.append("var 0..4: n").append(k).append(";\n");
+      constraints.append("constraint int_ne(n").append(k).append(",1);\n");
+      constraints.append("constraint jacop_count([x0,x1,x2,x3],").append(values[k]);
+      constraints.append(",n").append(k).append(");\n");
+    }
+    model.append(constraints);
+    model.append("constraint int_lin_ne([-2147483648,-2147483648],[x0,x1],0);\n");
+    model.append("constraint int_lin_ne([-2147483648,-2147483648],[x0,x2],0);\n");
+    model.append("solve satisfy;\n");
+    String out = run(model.toString(), "-a", "--lcg", "off")[0];
+    assertEquals(15, out.split("----------\n", -1).length - 1, out);
+  }
+
 }
