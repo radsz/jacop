@@ -68,6 +68,7 @@ import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.ConvexAllocationDetector;
 import org.jacop.fz.constraints.CostNetworkDetector;
 import org.jacop.fz.constraints.CountPartnersDetector;
+import org.jacop.fz.constraints.CountStepCostBound;
 import org.jacop.fz.constraints.CyclicDistanceDetector;
 import org.jacop.fz.constraints.DifferenceBoundsDetector;
 import org.jacop.fz.constraints.DifferenceCyclesDetector;
@@ -385,6 +386,13 @@ public class Constraints implements ParserTreeConstants {
           dictionary.removeFromDefaultSearch(linear.removed());
           dictionary.unusedVariables.addAll(linear.removed());
         }
+      }
+
+      // the step costs of the counts of one array cannot all stay low: their least sum bounds the
+      // objective
+      if (CountStepCostBound.enabled() && options.proof() == null) {
+        new CountStepCostBound(support)
+            .detect(astTree, replaced, ObjectiveScaling.objective(dictionary, astTree));
       }
 
       // the tables check their rows against the domains, and --proof does not encode them

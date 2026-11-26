@@ -9217,6 +9217,21 @@ Version 5.0 (unreleased)
    worse. Wide-quick at 240 s is unchanged (-f total 0.978 without the
    seed-noisy work-task-variation, default 1.004).
 
+514. The FlatZinc front end bounds an objective that sums step costs of
+   counts of values in one array (MiniZinc Challenge ptv: passengers
+   per service and station, cost 0 below 265, 10 below 529, ...). For
+   every such array the least cost of its counts over the assignments
+   of the array's variables is found by a branch and bound over the
+   step of each count with a maximum flow check, and posted as
+   objective = sum of the arrays' costs + the other terms, each cost at
+   least its least value: the bound of a separable concave cost over
+   the transportation polytope of the counts (Guisewite and Pardalos,
+   Annals of Operations Research 1990). On ptv pax_period_20_5a the
+   bound is the optimum 50, which is now proved with -f in 18-81 s
+   (never in 1200 s before; CP-SAT 2.3 s, Chuffed stalls at 70); the
+   other four ptv instances are unchanged. It fires on none of the 240
+   wide-set instances. -Dorg.jacop.fz.countStepCost=false turns it off.
+
 Version 4.11
 =============
 
