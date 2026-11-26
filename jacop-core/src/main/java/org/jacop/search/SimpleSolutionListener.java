@@ -218,14 +218,18 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
   private void updateParentAfterRecordSolution() {
     if (parentSolutionListener != null) {
-      parentSolutionNo[noSolutions] = parentSolutionListener.solutionsNo() - 1;
+      // the master search records its solution after this one, under the number it has now
+      parentSolutionNo[noSolutions - 1] = parentSolutionListener.solutionsNo();
     }
   }
 
   private void updateParentAfterOverwriteSolution() {
     if (parentSolutionListener != null) {
       parentSolutionNo[0] = parentSolutionListener.solutionsNo();
-      ((SimpleSolutionListener<?>) parentSolutionListener).noSolutions = noSolutions;
+      // a parent that records its solutions keeps its own count, the size of its records
+      if (!parentSolutionListener.isRecordingSolutions()) {
+        ((SimpleSolutionListener<?>) parentSolutionListener).noSolutions = noSolutions;
+      }
     }
   }
 

@@ -14470,4 +14470,46 @@ class SingleConstraintTest extends TestHelper {
     IntVar[] all = Arrays.stream(p).flatMap(Arrays::stream).toArray(IntVar[]::new);
     assertThat(noOfAllSolutions(store, all)).isEqualTo(4);
   }
+
+  @Test
+  void childSearchRecordsItsSolutionsWithTheMasterSolutionNumbers() {
+    // a child search recording its solutions wrote the master's number one past the end of its
+    // array (an exception at its first solution), and a child that did not record them overwrote
+    // the count of a master that did, which then copied past the end of its arrays
+    for (boolean masterRecords : new boolean[] {false, true}) {
+      for (boolean childRecords : new boolean[] {false, true}) {
+        Store store = new Store();
+        IntVar x = new IntVar(store, "x", 0, 2);
+        IntVar y = new IntVar(store, "y", 0, 1);
+        DepthFirstSearch<IntVar> master = new DepthFirstSearch<>();
+        DepthFirstSearch<IntVar> child = new DepthFirstSearch<>();
+        master.setPrintInfo(false);
+        child.setPrintInfo(false);
+        child.setSelectChoicePoint(new SimpleSelect<>(new IntVar[] {y}, null, new IndomainMin<>()));
+        master.addChildSearch(child);
+        master.getSolutionListener().searchAll(true);
+        child.getSolutionListener().searchAll(true);
+        master.getSolutionListener().recordSolutions(masterRecords);
+        child.getSolutionListener().recordSolutions(childRecords);
+        assertThat(
+                master.labeling(
+                    store, new SimpleSelect<>(new IntVar[] {x}, null, new IndomainMin<>())))
+            .isTrue();
+        assertThat(child.getSolutionListener().solutionsNo()).isEqualTo(6);
+        assertThat(x.singleton() && y.singleton()).isTrue();
+        if (masterRecords) {
+          assertThat(master.getSolutionListener().solutionsNo()).isEqualTo(3);
+        }
+        if (masterRecords && childRecords) {
+          for (int i = 1; i <= 6; i++) {
+            int parent = child.getSolutionListener().getParentSolution(i);
+            assertThat(parent).isEqualTo((i - 1) / 2);
+            assertThat(
+                    ((IntDomain) master.getSolutionListener().getSolution(parent + 1)[0]).value())
+                .isEqualTo((i - 1) / 2);
+          }
+        }
+      }
+    }
+  }
 }
