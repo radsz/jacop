@@ -119,6 +119,15 @@ final class ScratchCopy {
     return true;
   }
 
+  /**
+   * Copies a variable that the constraints may not have, with its initial domain.
+   *
+   * @return false when the variable cannot be copied
+   */
+  boolean copyVariable(IntVar x) {
+    return copy(x);
+  }
+
   /** Returns the copy of an integer variable, or null when it is not one of the constraint. */
   IntVar get(IntVar x) {
     return (IntVar) copies.get(x);
