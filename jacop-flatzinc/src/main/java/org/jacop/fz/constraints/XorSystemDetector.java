@@ -38,9 +38,13 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XorSystem;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
+import org.jacop.core.Store;
 import org.jacop.fz.ASTConstElem;
 import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.FzConsole;
@@ -114,6 +118,9 @@ public class XorSystemDetector implements ParserTreeConstants {
   /** Statistics: the rows from equations over 0/1 variables only. */
   int zeroOneRows;
 
+  /** Statistics: the values and equivalences implied by equations taken modulo 2. */
+  int impliedParities;
+
   /** Statistics: the equations read as two opposite inequalities. */
   int pairedRows;
 
@@ -179,6 +186,9 @@ public class XorSystemDetector implements ParserTreeConstants {
     support.forEachConstraint(astTree, this::collect);
     lessEquals.clear();
     clauseRows();
+    if (support.options.searchStatistics() && impliedParities > 0) {
+      FzConsole.println("%%%mzn-stat: xorImpliedParities=" + impliedParities + "\n%%%mzn-stat-end");
+    }
     if (rows.size() < 2) {
       return;
     }
@@ -1022,8 +1032,14 @@ public class XorSystemDetector implements ParserTreeConstants {
         nonBinary = true;
       }
     }
-    if (x.size() < 2) {
-      return;
+    if (x.size() < 2 || x.size() == 2 && x.size() < a.length) {
+      // the equation taken modulo 2 is a unit or an equivalence that no constraint of the model
+      // states: the parity of a product modulo 2^k (PB competition factor-mod, where the low bit
+      // of each partial product is the and of the low bits of its factors)
+      impliedParity(x, parity);
+      if (x.size() < 2) {
+        return;
+      }
     }
     // a plain 0/1 equation such as x_1 + ... + x_k = 1 is no parity information beyond itself
     if (!nonBinary && !(ZERO_ONE_EQUALITIES && zeroOneParity(a, v, rhs))) {
@@ -1034,6 +1050,25 @@ public class XorSystemDetector implements ParserTreeConstants {
     }
     linearRows++;
     row(x.toArray(new IntVar[0]), parity);
+  }
+
+  // posts xor(x) = parity of one variable (a value) or two (an equivalence or a negation); none
+  // with parity 1 has no solution
+  private void impliedParity(List<IntVar> x, int parity) {
+    if (x.isEmpty()) {
+      if (parity == 1) {
+        throw Store.failException;
+      }
+      return;
+    }
+    if (x.size() == 1) {
+      support.pose(new XeqC(x.get(0), parity));
+    } else if (parity == 0) {
+      support.pose(new XeqY(x.get(0), x.get(1)));
+    } else {
+      support.pose(new XneqY(x.get(0), x.get(1)));
+    }
+    impliedParities++;
   }
 
   // whether an equation over 0/1 variables enters the system: two variables (an equivalence or a

@@ -387,6 +387,112 @@ class RootRefutationFuzzTest {
     return m;
   }
 
+  // cardinalities encoded by subsets (fixed-bandwidth of the PB Competition 2015): the variables
+  // covered once by groups of at least k_g true, each the clauses over all its subsets of n_g -
+  // k_g + 1 literals, and once by groups of at most u_g true, each the clauses of the negated
+  // literals over all its subsets of u_g + 1; the bounds add up to a count at or just past what
+  // the other cover allows, which only the cardinality rows, not the clauses, give the LP
+  private static Model subsetCounts(Random r) {
+    int n = 7 + r.nextInt(6);
+    Model m = new Model("subsetCounts", n + r.nextInt(2), new int[0], new int[0]);
+    int flip = r.nextInt(4) == 0 ? 1 : 0;
+    List<int[]> lower = groups(r, n);
+    List<int[]> upper = groups(r, n);
+    int least = 0;
+    int[] at = new int[lower.size()];
+    for (int g = 0; g < lower.size(); g++) {
+      at[g] = 1 + r.nextInt(lower.get(g).length - 1);
+      least += at[g];
+    }
+    // the upper bounds sum to least - 1 (no solution) or to least (perhaps one)
+    int most = least - (r.nextBoolean() ? 1 : 0);
+    int[] cap = new int[upper.size()];
+    int sum = 0;
+    for (int g = 0; g < upper.size(); g++) {
+      cap[g] = upper.get(g).length - 1;
+      sum += cap[g];
+    }
+    for (int g = 0; sum > most && g < 10 * upper.size(); g++) {
+      int q = r.nextInt(upper.size());
+      if (cap[q] > 1) {
+        cap[q]--;
+        sum--;
+      }
+    }
+    for (int g = 0; g < lower.size(); g++) {
+      int[] vs = lower.get(g);
+      for (int[] t : subsets(vs, vs.length - at[g] + 1)) {
+        subsetClause(m, r, t, flip);
+      }
+    }
+    for (int g = 0; g < upper.size(); g++) {
+      int[] vs = upper.get(g);
+      for (int[] t : subsets(vs, cap[g] + 1)) {
+        subsetClause(m, r, t, flip ^ 1);
+      }
+    }
+    if (r.nextBoolean()) {
+      sideConstraint(m, r);
+    }
+    return m;
+  }
+
+  // the variables 0..n-1 shuffled into groups of 3 to 5
+  private static List<int[]> groups(Random r, int n) {
+    List<Integer> vars = new ArrayList<>();
+    for (int v = 0; v < n; v++) {
+      vars.add(v);
+    }
+    Collections.shuffle(vars, r);
+    List<int[]> out = new ArrayList<>();
+    int k = 0;
+    while (k < n) {
+      int size = Math.min(n - k, 3 + r.nextInt(3));
+      if (n - k - size > 0 && n - k - size < 3) {
+        size = n - k;
+      }
+      int[] g = new int[size];
+      for (int i = 0; i < size; i++) {
+        g[i] = vars.get(k + i);
+      }
+      out.add(g);
+      k += size;
+    }
+    return out;
+  }
+
+  private static List<int[]> subsets(int[] vs, int k) {
+    List<int[]> out = new ArrayList<>();
+    for (int mask = 0; mask < 1 << vs.length; mask++) {
+      if (Integer.bitCount(mask) == k) {
+        int[] t = new int[k];
+        int i = 0;
+        for (int b = 0; b < vs.length; b++) {
+          if ((mask & (1 << b)) != 0) {
+            t[i++] = vs[b];
+          }
+        }
+        out.add(t);
+      }
+    }
+    return out;
+  }
+
+  // the clause over the variables as literals of sign flip, as a clause or as its row
+  private static void subsetClause(Model m, Random r, int[] vs, int flip) {
+    int[] lits = new int[vs.length];
+    for (int i = 0; i < vs.length; i++) {
+      lits[i] = 2 * vs[i] + flip;
+    }
+    if (r.nextBoolean()) {
+      clause(m, lits);
+    } else {
+      int[] ones = new int[lits.length];
+      Arrays.fill(ones, 1);
+      row(m, r, ones, lits, GE, 1);
+    }
+  }
+
   // a vertex cover of at most k vertices of odd cycles, k at or just below the least cover
   private static Model oddCycles(Random r) {
     int cycles = 1 + r.nextInt(2);
@@ -607,11 +713,12 @@ class RootRefutationFuzzTest {
 
   private static Model randomModel(Random r) {
     Model m =
-        switch (r.nextInt(9)) {
+        switch (r.nextInt(10)) {
           case 0, 1, 2 -> random01(r);
           case 3, 4 -> pigeons(r);
           case 5 -> oddCycles(r);
           case 6 -> values(r);
+          case 7 -> subsetCounts(r);
           default -> counts(r);
         };
     // variables fixed where they are declared
@@ -825,6 +932,8 @@ class RootRefutationFuzzTest {
     return null;
   }
 
+  private static final Pattern CARDINALITIES = Pattern.compile("lpRefutationCardinalities=[1-9]");
+
   private static final Pattern KIND = Pattern.compile("lpRefutationKind=(\\w+)");
 
   @Test
@@ -837,6 +946,7 @@ class RootRefutationFuzzTest {
     Map<String, Integer> refutedBy = new TreeMap<>();
     int unsatisfiable = 0;
     int refuted = 0;
+    int cardinalityRefuted = 0;
     int trials = 0;
     int skipped = 0;
     while (trials < TRIALS && failures.isEmpty()) {
@@ -880,6 +990,9 @@ class RootRefutationFuzzTest {
                   + model);
           break;
         }
+        if (refutes && options == RUNS[0] && CARDINALITIES.matcher(out).find()) {
+          cardinalityRefuted++;
+        }
         if (refutes && kind == null && (options == RUNS[0] || options == RUNS[1])) {
           Matcher k = KIND.matcher(out);
           kind = k.find() ? k.group(1) : "?";
@@ -899,7 +1012,9 @@ class RootRefutationFuzzTest {
             + "; refuted by the root LP "
             + refuted
             + " "
-            + refutedBy;
+            + refutedBy
+            + ", with subset cardinality rows "
+            + cardinalityRefuted;
     System.out.println("RootRefutationFuzzTest: " + summary);
     assertTrue(failures.isEmpty(), String.join("\n", failures));
     // each pass keeps firing on the unsatisfiable models: over 3 seeds of 20,000 trials the counted
@@ -907,6 +1022,7 @@ class RootRefutationFuzzTest {
     // value encodings 100 per seed; half of that share is asked
     if (TRIALS >= 300) {
       assertTrue(refuted * 6 >= unsatisfiable, summary);
+      assertTrue(cardinalityRefuted > 0, "no refutation with subset cardinalities: " + summary);
       for (String k : List.of("values", "objective", "clauses")) {
         assertTrue(refutedBy.getOrDefault(k, 0) > 0, "no " + k + " refutation: " + summary);
       }

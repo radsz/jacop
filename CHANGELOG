@@ -9409,6 +9409,28 @@ Version 5.0 (unreleased)
    changes (split sums under -f): proved 9 -> 10, total 1,376 -> 1,277 s,
    no objective worse.
 
+520. Pseudo-Boolean models: two root deductions that CP-SAT makes and
+   JaCoP missed on small PB16 instances (Pseudo-Boolean Competition 2016).
+   The XorSystem detector reads an equation modulo 2 whose odd
+   coefficients leave one or two variables as what it states: x = parity,
+   or x = y / x != y (before, such equations were too short for a parity
+   row and dropped); -s prints xorImpliedParities. factor-mod-size=8
+   (OPT-NLC): optimum proved in 2 s, before not proved in 600 s. The root
+   LP refutations merge clauses over every subset of m literals of a set
+   of n literals (the binomial encoding of a cardinality constraint) into
+   the row sum >= n - m + 1 (SubsetCardinalities; cardinality detection in
+   CNF after A. Biere, D. Le Berre, E. Lonca and N. Manthey, "Detecting
+   cardinality constraints in CNF", SAT 2014; resolution needs
+   exponential proofs of such counting arguments, A. Haken, "The
+   intractability of resolution", TCS 39, 1985); -s prints
+   lpRefutationCardinalities. fixed-bandwidth-19 (PB 2015, cardinalities
+   in clauses): unsatisfiable in 0.7 s, before unknown at 600 s;
+   ECgrid5x30split 94 -> 1.5 s. On the 26 instances of the wide set, PB25
+   and PB16 where either fires, 600 s: total 2,509 -> 1,708 s (default
+   search) and 2,326 -> 1,410 s (-f), one more proved, none lost.
+   -Dorg.jacop.lp.subsetCardinalities=false turns the merge off,
+   org.jacop.lp.subsetCardinalityLength (default 5) bounds the clauses.
+
 521. Lazy clause generation under a fixed search on an optimisation model
    first runs the annotation's search without learning for 0.5 % of the
    time limit, at most a second, and LCG then gets three times as long,
