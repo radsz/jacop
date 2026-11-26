@@ -848,8 +848,14 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         if (earlyReturn.isPresent()) {
           return earlyReturn.get();
         }
-        noSolutions +=
+        int found =
             lastChildSearchRun.getSolutionListener().solutionsNo() - lastChildSolutionsBefore;
+        if (found == 0) {
+          // the child searches failed: no solution to report
+          visited.set(index, false);
+          return false;
+        }
+        noSolutions += found;
         constraineCostFromChild(lastChildSearchRun);
       } else {
         constraineCost();
@@ -941,8 +947,13 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       if (earlyReturn.isPresent()) {
         return earlyReturn.get();
       }
-      noSolutions +=
-          lastChildSearchRun.getSolutionListener().solutionsNo() - lastChildSolutionsBefore;
+      int found = lastChildSearchRun.getSolutionListener().solutionsNo() - lastChildSolutionsBefore;
+      if (found == 0) {
+        // the child searches failed: no solution to report
+        visited.set(index, false);
+        return false;
+      }
+      noSolutions += found;
       if (noSolutions >= solutionsLimit) {
         throw new SolutionsLimitReached();
       }

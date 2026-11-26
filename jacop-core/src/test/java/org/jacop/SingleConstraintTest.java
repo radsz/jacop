@@ -14663,4 +14663,45 @@ class SingleConstraintTest extends TestHelper {
           .containsExactly(0, 0, 2, -2);
     }
   }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void prioritySearchReportsNoSolutionWhenItsChildSearchFails() {
+    // when the child search found no solution for the last assignment of the priority search, the
+    // priority search still reported that assignment as a solution and assigned it at the end
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    IntVar sum = new IntVar(store, "sum", 0, 2);
+    IntVar a = new IntVar(store, "a", 0, 1);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar c = new IntVar(store, "c", 0, 2);
+    store.impose(new XplusYeqZ(x, y, sum));
+    // c != 2 when x = y = 1, and then a, b and c cannot differ, which only the search finds
+    store.impose(new XneqY(c, sum));
+    store.impose(new XneqY(a, b));
+    store.impose(new XneqY(b, c));
+    store.impose(new XneqY(a, c));
+    DepthFirstSearch<IntVar>[] searches = new DepthFirstSearch[2];
+    searches[0] = new DepthFirstSearch<>();
+    searches[0].setSelectChoicePoint(
+        new SimpleSelect<>(new IntVar[] {x}, null, new IndomainMin<>()));
+    searches[1] = new DepthFirstSearch<>();
+    searches[1].setSelectChoicePoint(
+        new SimpleSelect<>(new IntVar[] {y}, null, new IndomainMin<>()));
+    DepthFirstSearch<IntVar> child = new DepthFirstSearch<>();
+    child.setSelectChoicePoint(
+        new SimpleSelect<>(new IntVar[] {a, b, c}, null, new IndomainMin<>()));
+    for (DepthFirstSearch<IntVar> search : List.of(searches[0], searches[1], child)) {
+      search.setPrintInfo(false);
+    }
+    PrioritySearch<IntVar> priority = new PrioritySearch<>(new IntVar[] {x, y}, null, searches);
+    priority.setPrintInfo(false);
+    priority.addChildSearch(child);
+    priority.setSolutionLimit(Integer.MAX_VALUE);
+    assertThat(priority.labeling(store)).isTrue();
+    assertThat(priority.getSolutionListener().solutionsNo()).isEqualTo(3);
+    assertThat(List.of(x.value(), y.value(), a.value(), b.value(), c.value()))
+        .containsExactly(1, 0, 0, 1, 2);
+  }
 }
