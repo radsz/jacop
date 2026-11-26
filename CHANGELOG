@@ -9188,6 +9188,19 @@ Version 5.0 (unreleased)
    instance10-duplicated_0.23 proved in 332 s), total time 0.960; default
    the same 26 solved, total 0.998.
 
+513. Opt-in -Dorg.jacop.lp.columnRows=true: when the linear relaxation has
+   more rows than its share, every further row over columns already in the
+   relaxation goes to the tail of rows the sparse simplex tries last, not
+   only the clause rows of 503. MiniZinc Challenge 2017 routing-flexible
+   drops the reified leg-length and direction rows of the path: GCM_0005
+   root bound 10,509 -> 46,529 (cut bound 50,926; optimum 76,514), GCM_0006
+   9,628 -> 66,473 proved in 91 s at 600 s (default; base no proof), 59 ->
+   20 s under -f. 2024 cable-tree-wiring A041 default bound 375,450 ->
+   630,395. 2023 unit-commitment L12 bound 1,328,295 -> 1,303,645 (default)
+   and 1,348,290 -> 1,321,165 (-f). On the 39 instances whose relaxation it
+   changes, 600 s: default one more solved (GCM_0006), total time 0.949;
+   -f the same solved, total time 0.968.
+
 Version 4.11
 =============
 
