@@ -197,6 +197,7 @@ import org.jacop.constraints.XplusClteqZImplied;
 import org.jacop.constraints.XplusCneqZ;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.XplusYgtC;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.binpacking.VectorBinpacking;
@@ -251,6 +252,7 @@ import org.jacop.search.IndomainMax;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.IndomainRandom;
 import org.jacop.search.InputOrderSelect;
+import org.jacop.search.MultiObjective;
 import org.jacop.search.RandomSelect;
 import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
@@ -14230,5 +14232,28 @@ class SingleConstraintTest extends TestHelper {
       firstCallAboveTheRoot(store, vars, random);
       assertThat(countInOrder(store, vars)).as("instance %d", t).isEqualTo(expected);
     }
+  }
+
+  @Test
+  void paretoFrontOfAModelNotPropagatedAtTheRootKeepsAConstraintThatPrunesOnce() {
+    // each subproblem of MultiObjective makes its first consistency call at a level of its own,
+    // removed when it ends: In(x, {3, 6}) ran in the first subproblem only, and a failure of a
+    // later call dropped it from the queue again, so the front held points with x out of {3, 6}
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    IntervalDomain allowed = new IntervalDomain(3, 3);
+    allowed.unionAdapt(6, 6);
+    store.impose(new In(x, allowed));
+    store.impose(new XplusYgtC(x, y, 8));
+    IntVar[] v = {x, y};
+    MultiObjective<int[]> pareto =
+        new MultiObjective<>(
+            new MultiObjective.DepthFirst<>(
+                store, new SimpleSelect<>(v, null, new IndomainMin<>()), v, v),
+            false,
+            false);
+    assertThat(pareto.pareto()).isEqualTo(MultiObjective.Status.OPTIMAL);
+    assertThat(pareto.front()).containsExactlyInAnyOrder(new int[] {3, 6}, new int[] {6, 3});
   }
 }

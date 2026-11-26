@@ -1019,8 +1019,10 @@ public class Store {
    * @return true if some constraint waits for its consistency function.
    */
   public boolean hasPendingConstraints() {
-    if (undoneRunsSize > 0) {
-      return true;
+    for (int i = 0; i < undoneRunsSize; i++) {
+      if (dueFirstRun(undoneRuns[i])) {
+        return true;
+      }
     }
     for (int i = currentQueue; i < queueNo; i++) {
       if (!changed[i].isEmpty()) {
@@ -1630,6 +1632,8 @@ public class Store {
       undoneRuns[i] = null;
       if (c.imposedAt() < level) {
         undoneRuns[kept++] = c;
+      } else {
+        c.setFirstRunOwed(false);
       }
     }
     undoneRunsSize = kept;
@@ -1882,13 +1886,15 @@ public class Store {
 
   /**
    * Records the first consistency call of a constraint at the current level. If an earlier first
-   * call was undone by removing its level, the constraint's variables are queued again, as imposing
-   * the constraint did, since the constraint dropped what it had queued with that level.
+   * call was undone by removing its level, or the call is owed after the queue was cleared, the
+   * constraint's variables are queued again, as imposing the constraint did, since the constraint
+   * may have dropped what it had queued with that level.
    *
    * @param c the constraint about to be called.
    */
   private void startFirstRun(Constraint c) {
-    if (c.firstRunAt() == Constraint.RUN_UNDONE && c instanceof UsesQueueVariable) {
+    if ((c.firstRunAt() == Constraint.RUN_UNDONE || c.firstRunOwed())
+        && c instanceof UsesQueueVariable) {
       c.arguments().forEach(v -> c.queueVariable(level, v));
     }
     c.setFirstRunAt(level);
@@ -1918,6 +1924,10 @@ public class Store {
   }
 
   private void oweFirstRun(Constraint c) {
+    if (c.firstRunOwed()) {
+      return;
+    }
+    c.setFirstRunOwed(true);
     if (undoneRunsSize == undoneRuns.length) {
       undoneRuns = Arrays.copyOf(undoneRuns, 2 * undoneRunsSize);
     }
@@ -1929,14 +1939,26 @@ public class Store {
    * they run again, as after their imposition.
    */
   private void queueUndoneRuns() {
+    int kept = 0;
     for (int i = 0; i < undoneRunsSize; i++) {
       Constraint c = undoneRuns[i];
       undoneRuns[i] = null;
-      if (c.firstRunAt() < 0 && c.imposedAt() <= level && !c.isEntailed()) {
+      if (c.firstRunAt() >= 0) {
+        // run since
+        c.setFirstRunOwed(false);
+        continue;
+      }
+      // kept until it runs: a failure of this call may drop it from the queue again
+      undoneRuns[kept++] = c;
+      if (dueFirstRun(c)) {
         addChanged(c);
       }
     }
-    undoneRunsSize = 0;
+    undoneRunsSize = kept;
+  }
+
+  private boolean dueFirstRun(Constraint c) {
+    return c.firstRunAt() < 0 && c.imposedAt() <= level && !c.isEntailed();
   }
 
   /**
