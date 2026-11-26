@@ -1438,7 +1438,9 @@ public final class TimeIndexedBound extends Constraint
     return true;
   }
 
-  // the latest solve whose bound reaches v and whose assumed objective bound held before position
+  // the latest solve whose bound reaches v and whose assumed objective bound and root bounds held
+  // before position: a later solve from bounds that do not hold there (a restart, another phase)
+  // may reach v too, but its reason would cite atoms the trail does not have
   private Solve solveFor(AtomicTrail trail, int position, long v) {
     long limit =
         maximize
@@ -1446,11 +1448,24 @@ public final class TimeIndexedBound extends Constraint
             : trail.maxBefore(objective, position);
     for (int k = proved.size() - 1; k >= 0; k--) {
       Solve s = proved.get(k);
-      if (s.bound() >= v && limit <= s.assumed()) {
+      if (s.bound() >= v && limit <= s.assumed() && heldBefore(s, trail, position)) {
         return s;
       }
     }
     return null;
+  }
+
+  // whether the bounds before position lie in the root bounds of a solve, as contains checks now
+  private boolean heldBefore(Solve s, AtomicTrail trail, int position) {
+    for (int j = 0; j < vars.length; j++) {
+      if ((j != 0 || !maximize) && trail.minBefore(vars[j], position) < s.lo()[j]) {
+        return false;
+      }
+      if ((j != 0 || maximize) && trail.maxBefore(vars[j], position) > s.hi()[j]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   // the objective at most cap (the limit the solve assumed, or below its bound for a failure),
