@@ -9236,7 +9236,41 @@ Version 5.0 (unreleased)
    holds on 3 of the 187 optimisation instances of the wide set, and the
    wide-quick set at 240 s gives way on none.
 
-513. Pseudo-Boolean models: two root deductions that CP-SAT makes and
+513. Opt-in variable-bound MIR of the Gomory rows of the linear relaxation
+   (-Dorg.jacop.lp.vbGomory=true). The exact slack Gomory separator, which
+   aggregates the rows by an integer scaling of a row of the basis inverse
+   with the row slacks as integer columns, also builds the complemented MIR
+   of that aggregation with the variable bounds x <= a u and x >= a u
+   substituted (H. Marchand and L. A. Wolsey, Aggregation and mixed integer
+   rounding to solve MIPs, Operations Research 49(3), 2001; R. E. Gomory,
+   An algorithm for integer solutions to linear programs, 1963), and
+   substitutes the slacks back by their rows. It counts in lpVbCuts. The
+   relative progress a cut round must make to go on is now a property,
+   -Dorg.jacop.lp.cutProgress (default 0.01). On MiniZinc Challenge 2023
+   unit-commitment L10 the root cut bound goes from 1,698,000 to 1,699,000
+   (1,700,500 with cutProgress 0.0005, cutRoundsMax 100 and
+   cutExtraSeconds 20; the HiGHS root reaches 1,702,500). 600 s bounds with
+   clauseRows and vbMir on in both: L10 1,696,315 -> 1,697,495 (-f) and
+   1,695,410 -> 1,696,915 (default), L12 1,419,720 -> 1,433,245 (-f) and
+   1,418,835 -> 1,434,205 (default). On the 41 instances whose relaxation
+   the flags of 503 change, 600 s: -f 26 -> 27 solved (physician-scheduling
+   instance10-duplicated_0.23 proved in 332 s), total time 0.960; default
+   the same 26 solved, total 0.998.
+
+514. Opt-in -Dorg.jacop.lp.columnRows=true: when the linear relaxation has
+   more rows than its share, every further row over columns already in the
+   relaxation goes to the tail of rows the sparse simplex tries last, not
+   only the clause rows of 503. MiniZinc Challenge 2017 routing-flexible
+   drops the reified leg-length and direction rows of the path: GCM_0005
+   root bound 10,509 -> 46,529 (cut bound 50,926; optimum 76,514), GCM_0006
+   9,628 -> 66,473 proved in 91 s at 600 s (default; base no proof), 59 ->
+   20 s under -f. 2024 cable-tree-wiring A041 default bound 375,450 ->
+   630,395. 2023 unit-commitment L12 bound 1,328,295 -> 1,303,645 (default)
+   and 1,348,290 -> 1,321,165 (-f). On the 39 instances whose relaxation it
+   changes, 600 s: default one more solved (GCM_0006), total time 0.949;
+   -f the same solved, total time 0.968.
+
+515. Pseudo-Boolean models: two root deductions that CP-SAT makes and
    JaCoP missed on small PB16 instances (Pseudo-Boolean Competition 2016).
    The XorSystem detector reads an equation modulo 2 whose odd
    coefficients leave one or two variables as what it states: x = parity,
