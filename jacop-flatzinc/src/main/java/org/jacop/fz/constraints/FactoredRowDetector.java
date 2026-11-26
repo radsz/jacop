@@ -213,26 +213,43 @@ public class FactoredRowDetector {
     }
     IntVar[] vars = new IntVar[terms.size()];
     int[] w = new int[terms.size()];
+    if (!fitsInt(terms, vars, w)) {
+      return;
+    }
+    String rel = relation(eq, m);
+    if (!posted.add(List.of(List.of((Object[]) vars), m, rel, terms.values().toString()))) {
+      return;
+    }
+    support.pose(new LinearInt(vars, w, rel, 0));
+    count++;
+  }
+
+  private static String relation(boolean eq, IntVar m) {
+    if (eq) {
+      return "==";
+    }
+    return m.min() >= 0 ? "<=" : ">=";
+  }
+
+  /**
+   * Copies the terms into vars and w; false if a coefficient or the reach of the row overflows int.
+   */
+  private static boolean fitsInt(Map<IntVar, Long> terms, IntVar[] vars, int[] w) {
     int k = 0;
     long reach = 0;
     for (Map.Entry<IntVar, Long> e : terms.entrySet()) {
       long c = e.getValue();
       IntVar v = e.getKey();
       if (c > Integer.MAX_VALUE || c < -Integer.MAX_VALUE) {
-        return;
+        return false;
       }
       reach += Math.abs(c) * Math.max(Math.abs((long) v.min()), Math.abs((long) v.max()));
       if (reach > Integer.MAX_VALUE) {
-        return;
+        return false;
       }
       vars[k] = v;
       w[k++] = (int) c;
     }
-    String rel = eq ? "==" : (m.min() >= 0 ? "<=" : ">=");
-    if (!posted.add(List.of(List.of((Object[]) vars), m, rel, terms.values().toString()))) {
-      return;
-    }
-    support.pose(new LinearInt(vars, w, rel, 0));
-    count++;
+    return true;
   }
 }
