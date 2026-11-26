@@ -3372,6 +3372,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         lcgHinted = null;
         lcgHint = null;
       }
+    } else if (quickStartTakes(costVar)) {
+      int quick = quickStart(costVar);
+      if (quick != CdclSolver.UNKNOWN) {
+        lcgStatus = quick;
+        return numberSolutions > 0;
+      }
     }
     // a solution of the probe bounds the search
     boolean probed = probeValues != null && costVar instanceof IntVar;
@@ -8563,6 +8569,104 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return CdclSolver.UNKNOWN;
   }
 
+  // -Dorg.jacop.fz.quickStart=ms: under free search, a small model is first searched for at most
+  // this long (and quickStartConflicts conflicts) by a plain LCG solver of its own, without the
+  // set-up of free search (local search, root probing, hints, the core-guided phase); 0 is off
+  private static final long QUICK_START_MS = Long.getLong("org.jacop.fz.quickStart", 300);
+
+  private static final long QUICK_START_CONFLICTS =
+      Long.getLong("org.jacop.fz.quickStartConflicts", 2_000);
+
+  // -Dorg.jacop.fz.quickStartSize=n: the most variables and constraints of the store together for
+  // the quick start
+  private static final int QUICK_START_SIZE =
+      Integer.getInteger("org.jacop.fz.quickStartSize", 20_000);
+
+  // after a quick start that did not finish, the best cost it printed: free search does not print
+  // its solutions that are no better
+  private int quickStartPrinted = Integer.MAX_VALUE;
+
+  private boolean quickStartTakes(Var costVar) {
+    return QUICK_START_MS > 0
+        && options.freeSearch()
+        && !enumerating(costVar)
+        && options.portfolioWorker() == null
+        && options.proof() == null
+        && dictionary.onRestart == null
+        && freeFirstValues == null
+        && (costVar == null || costVar instanceof IntVar)
+        && store.size() + store.numberConstraints() <= QUICK_START_SIZE;
+  }
+
+  /**
+   * The quick start of free search on a small model: a plain LCG solver of its own searches for
+   * org.jacop.fz.quickStart ms (at most org.jacop.fz.quickStartConflicts conflicts), before free
+   * search sets up its local search, root probing, hints and core-guided phase, which take about
+   * half a second on models that the plain solver finishes in a tenth of it (zephyrus and
+   * stochastic-vrp of the MiniZinc Challenge 2019). When it does not finish, the store is as before
+   * and free search runs as without it; it prints only solutions better than those of the quick
+   * start.
+   *
+   * @return the answer of the quick start, or UNKNOWN when it did not finish
+   */
+  private int quickStart(Var costVar) {
+    long start = System.nanoTime();
+    long millis = QUICK_START_MS;
+    if (options.getTimeOut() > 0) {
+      millis = Math.min(millis, options.getRemainingTimeOut() / 20);
+    }
+    int level = store.level;
+    store.setLevel(level + 1);
+    LcgSolver quick = new LcgSolver(store);
+    quick.setSeed(options.getRandomSeed());
+    quick.setUnusedVariables(dictionary.unusedVariables);
+    quick.setUnusedVariables(
+        dictionary.binaryEqAliases.stream().filter(x -> x.dom().sizeConstraints() == 0).toList());
+    for (IntVar[][] clause : sat.collectedClauses()) {
+      quick.addClause(clause[0], clause[1]);
+    }
+    quick.onSolution(this::printSolution);
+    if (costVar instanceof IntVar) {
+      quick.onBound(
+          lower -> {
+            if (reportBound(lower)) {
+              quick.stop();
+            }
+          });
+    }
+    quick.sat().setDeadline(quick.sat().now() + Math.max(1, millis) * 1_000_000L);
+    quick.sat().setConflictLimit(QUICK_START_CONFLICTS);
+    lcg = quick;
+    int answer;
+    try {
+      answer = costVar == null ? quick.solve() : quick.minimize((IntVar) costVar);
+    } finally {
+      lcg = null;
+    }
+    boolean finished = answer != CdclSolver.UNKNOWN || gapReached();
+    if (options.getStatistics()) {
+      IO.print(
+          "%%%mzn-stat: quickStart="
+              + (finished ? "finished" : "unfinished")
+              + "\n%%%mzn-stat: quickStartConflicts="
+              + quick.sat().conflicts
+              + "\n%%%mzn-stat: quickStartTime="
+              + (System.nanoTime() - start) / 1e9
+              + "\n");
+    }
+    if (finished) {
+      lcg = quick;
+      return answer;
+    }
+    quick.detach();
+    store.removeLevel(level + 1);
+    store.setLevel(level);
+    if (numberSolutions > 0 && costVar instanceof IntVar) {
+      quickStartPrinted = bestPrintedCost.get();
+    }
+    return CdclSolver.UNKNOWN;
+  }
+
   /** The fixed search, first for a short time without the relaxation (org.jacop.fz.lpProbe). */
   @SuppressWarnings("unchecked")
   private boolean executeProbeSearch(
@@ -10591,6 +10695,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   @SuppressWarnings("unchecked")
   void printSolution() {
 
+    if (costVariable instanceof IntVar cost
+        && cost.singleton()
+        && cost.value() >= quickStartPrinted) {
+      // printed by the quick start already
+      return;
+    }
     StringBuffer printBuffer = new StringBuffer();
     numberSolutions++;
     solutionFound = true;
