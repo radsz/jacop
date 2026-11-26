@@ -2698,7 +2698,7 @@ public class LinearRelaxation extends Constraint
     for (LinearForm f : candidates) {
       int added = newColumns(vars, f);
       boolean ownShare = own.contains(f);
-      if (overLimit(simplex, rows, nonzeros, vars.size() + added, f, denseCap, columns)) {
+      if (overLimit(simplex, rows, nonzeros, (long) vars.size() + added, f, denseCap, columns)) {
         return false;
       }
       boolean pastShare = denseCap && simplex != Simplex.DENSE && !ownShare && counted >= share;
