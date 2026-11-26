@@ -51,6 +51,8 @@ import org.jacop.api.Violation;
 import org.jacop.constraints.AlldiffSum;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.Count;
+import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.ImpliesNot;
@@ -1781,6 +1783,62 @@ public class Support implements ParserTreeConstants {
         store.setConsistencyDeadline(0);
       }
     }
+  }
+
+  /**
+   * Poses the count of value in list, between lo and hi or equal to counter. With lazy clause
+   * generation a count of more than {@code lcg-split} variables is split as {@link LinearSplit}
+   * splits a sum: a Count over each block of about sqrt(n) variables defines the block's count, and
+   * the sum of the block counts is the counter. The explanation of a count cites every variable
+   * that is or cannot be the value, about n literals; over blocks a reason cites the counts of the
+   * other blocks, and learnt clauses can speak of a block's count. This is the totalizer of
+   * Bailleux and Boufkhad ("Efficient CNF encoding of Boolean cardinality constraints", CP 2003)
+   * with lazily created count literals, as lazy clause generation splits long sums (Abio and
+   * Stuckey, "Encoding linear constraints into SAT", CP 2014). Peaceable queens 8 (MiniZinc
+   * Challenge 2021), whose objective counts one colour over 64 squares, is proved only with it.
+   * {@code lcg-split-count=0} keeps counts whole.
+   *
+   * @param list the counted variables, each of which can take value
+   * @param value the counted value
+   * @param counter the number of variables equal to value, or null for the bounds lo and hi
+   * @param lo the least count when counter is null
+   * @param hi the largest count when counter is null
+   */
+  void poseCount(List<IntVar> list, int value, IntVar counter, int lo, int hi) {
+    int limit = options.lcg() ? Integer.parseInt(options.freeConfig("lcg-split", "20")) : 0;
+    int n = list.size();
+    if (limit <= 1 || n <= limit || "0".equals(options.freeConfig("lcg-split-count", "1"))) {
+      pose(
+          counter == null ? new CountBounds(list, value, lo, hi) : new Count(list, counter, value));
+      return;
+    }
+    int size = Math.min((int) Math.ceil(Math.sqrt(n)), limit);
+    List<IntVar> sums = new ArrayList<>();
+    int from = 0;
+    while (from < n) {
+      // a last block of one variable joins the block before it
+      int to = n - (from + size) == 1 ? n : Math.min(n, from + size);
+      List<IntVar> block = list.subList(from, to);
+      IntVar s = new IntVar(store, 0, block.size());
+      Constraint blockCount = new Count(block, s, value);
+      propagateUntilTimeOut(() -> store.imposeWithConsistency(blockCount));
+      dictionary.addSplitCount(s);
+      sums.add(s);
+      from = to;
+    }
+    IntVar c = counter == null ? new IntVar(store, lo, hi) : counter;
+    IntVar[] top = new IntVar[sums.size() + 1];
+    int[] w = new int[top.length];
+    for (int i = 0; i < sums.size(); i++) {
+      top[i] = sums.get(i);
+      w[i] = 1;
+    }
+    top[sums.size()] = c;
+    w[sums.size()] = -1;
+    LinearInt sum = new LinearInt(top, w, "==", 0);
+    // dom/wdeg weighs the counted variables when the sum of the blocks fails
+    sum.setWeightedVariables(list.toArray(new IntVar[0]));
+    pose(sum);
   }
 
   void pose(Constraint c) throws FailException {

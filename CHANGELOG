@@ -9409,6 +9409,28 @@ Version 5.0 (unreleased)
    changes (split sums under -f): proved 9 -> 10, total 1,376 -> 1,277 s,
    no objective worse.
 
+521. Lazy clause generation: a count over more than lcg-split (20)
+   variables is split like a long sum, into counts over blocks of about
+   sqrt(n) variables and a sum of the block counts, the totalizer of
+   O. Bailleux and Y. Boufkhad, Efficient CNF encoding of Boolean
+   cardinality constraints, CP 2003, LNCS 2833, cut to one level as for
+   linear constraints in I. Abio and P. J. Stuckey, Encoding linear
+   constraints into SAT, CP 2014, LNCS 8656. A reason of the whole count
+   cites every variable that takes or misses the value; a block count
+   cites its block and the sum its block counts, so learnt clauses stay
+   short (peaceable queens 8: 53 -> 3.8 atoms per Count reason). The
+   block counts are defined variables, which free LCG search branches
+   on last; the linear relaxation keeps them as columns with the value
+   rows of their blocks (substituting them as block sums lost the count
+   row: kletzander test03 root bound 9,385 -> 350). -s prints
+   lcgSplitCounts; --free-config lcg-split-count=0 keeps counts whole.
+   MZNC 2021 peaceable_queens 8 -f: time-out at 240 s -> proved in 88 s.
+   240 s, the 16 wide set instances with such counts: -f proved 14 ->
+   15, total 589 -> 546 s; default total 1,041 -> 950 s. The 62 MZNC
+   instances (2011-2026) with such counts, -f: total 4,271 -> 4,279 s
+   without the 8 league instances, whose times swing both ways between
+   rounds; gametes, arithmetic-target and pq_n7 faster in both rounds.
+
 Version 4.11
 =============
 

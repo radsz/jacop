@@ -6542,6 +6542,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + inputOrderCount
             + "\n%%%mzn-stat: lcgSplitSums="
             + dictionary.splitSums().size()
+            + "\n%%%mzn-stat: lcgSplitCounts="
+            + dictionary.splitCounts().size()
             + "\n%%%mzn-stat: lcgLateDecisions="
             + lcg.lateDecisions
             + "\n%%%mzn-stat: lcgTargetDecisions="
