@@ -72,6 +72,7 @@ import org.jacop.fz.constraints.CyclicDistanceDetector;
 import org.jacop.fz.constraints.DifferenceBoundsDetector;
 import org.jacop.fz.constraints.DifferenceCyclesDetector;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
+import org.jacop.fz.constraints.DisjunctiveListsDifferDetector;
 import org.jacop.fz.constraints.ElementTableDetector;
 import org.jacop.fz.constraints.EnforcementInliner;
 import org.jacop.fz.constraints.ExactCoverDetector;
@@ -413,6 +414,20 @@ public class Constraints implements ParserTreeConstants {
         if (!lists.replaced().isEmpty()) {
           replaced = new HashSet<>(replaced);
           replaced.addAll(lists.replaced());
+        }
+      }
+
+      // lists that differ written as clauses of reified disequalities become AllDifferentLists over
+      // the largest group of lists that all differ pairwise
+      if (DisjunctiveListsDifferDetector.enabled() && options.proof() == null) {
+        DisjunctiveListsDifferDetector lists =
+            new DisjunctiveListsDifferDetector(support, solveItemVariables(astTree));
+        lists.detect(astTree);
+        if (!lists.replaced().isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(lists.replaced());
+          dictionary.removeFromDefaultSearch(lists.removed());
+          dictionary.unusedVariables.addAll(lists.removed());
         }
       }
 

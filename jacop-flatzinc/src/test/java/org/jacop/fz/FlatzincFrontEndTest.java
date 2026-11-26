@@ -4032,7 +4032,15 @@ class FlatzincFrontEndTest {
               "--search-statistics",
               "--free-config",
               "lcg-split-tree=0");
-      String[] tree = run(model.toString(), "--lcg", "--search-statistics");
+      // the objective block bound would add six sums of about 280 terms (one per y), which
+      // are not split: measure the split sums alone
+      String[] tree;
+      System.setProperty("org.jacop.fz.blockBound", "false");
+      try {
+        tree = run(model.toString(), "--lcg", "--search-statistics");
+      } finally {
+        System.clearProperty("org.jacop.fz.blockBound");
+      }
       assertEquals(cp, lastObjective(blocks), model.toString());
       assertEquals(cp, lastObjective(tree), model.toString());
       // 1,701 terms with s: 41 blocks of up to 42 terms; in the tree 86 blocks of up to 20
@@ -7356,5 +7364,222 @@ class FlatzincFrontEndTest {
     String out = run(model)[0];
     assertEquals("a = 2;\ncounter0 = 1;\ncounter1 = 2;\n----------\n", out);
     assertEquals(1, solveAll(model).size());
+  }
+
+  @Test
+  void variablesNamedLikeLatticeVariablesKeepTheirConstraints() throws IOException {
+    // the market split system x1..x7 is reformulated over lattice variables named _lattice0_0,
+    // _lattice0_1, ..., which hid the model's own _lattice0_0 and _lattice0_1 from the store's
+    // constraints: the components missed _lattice0_0 + _lattice0_1 <= 3 and refuted the model
+    String model =
+        """
+        var 0..1: x1;
+        var 0..1: x2;
+        var 0..1: x3;
+        var 0..1: x4;
+        var 0..1: x5;
+        var 0..1: x6;
+        var 0..1: x7;
+        var 1..2: a :: output_var;
+        var 1..2: _lattice0_0 :: output_var;
+        var 1..2: _lattice0_1 :: output_var;
+        var 1..2: p1;
+        var 1..2: p2;
+        var 1..2: p3;
+        var bool: r;
+        var bool: s12;
+        var bool: s13;
+        var bool: s23;
+        var 1..2: y1;
+        var 1..2: y2;
+        constraint int_lin_eq([12,23,37,41,53,17,29],[x1,x2,x3,x4,x5,x6,x7],119);
+        constraint int_lin_eq([31,13,27,19,11,43,22],[x1,x2,x3,x4,x5,x6,x7],99);
+        constraint int_ne(a, _lattice0_0);
+        constraint int_lin_le([1,1],[_lattice0_0,_lattice0_1],3);
+        constraint int_eq_reif(_lattice0_1, 1, r);
+        constraint int_ne_reif(p1, p2, s12);
+        constraint int_ne_reif(p1, p3, s13);
+        constraint int_ne_reif(p2, p3, s23);
+        constraint bool_clause([s12],[r]);
+        constraint bool_clause([s13],[r]);
+        constraint bool_clause([s23],[r]);
+        solve satisfy;
+        """;
+    // r = 1 puts three pigeons p1..p3 into two holes, so _lattice0_1 = 2, _lattice0_0 = 1, a = 2
+    String out = run(model)[0];
+    assertEquals("a = 2;\n_lattice0_0 = 1;\n_lattice0_1 = 2;\n----------\n", out);
+  }
+
+  @Test
+  void anObjectiveThatIsNoIdentifierOfTheModelIsAnError() throws IOException {
+    // minimizing an undeclared q was solved as satisfaction (and -a printed every solution, -p 2
+    // no ==========), maximizing it threw a NullPointerException
+    for (String sense : new String[] {"minimize", "maximize"}) {
+      String model = "var 1..3: x :: output_var;\nsolve " + sense + " q;\n";
+      for (String[] options : new String[][] {{}, {"-a"}, {"-p", "2"}}) {
+        String[] out = run(model, options);
+        assertEquals("", out[0], sense + " " + Arrays.toString(options));
+        assertTrue(out[1].contains("%% Error: Symbol \"q\""), out[1]);
+        assertEquals(1, lastStatus);
+      }
+    }
+    // a parameter as objective is still solved
+    assertEquals(
+        "x = 1;\n----------\n==========\n",
+        run("var 1..3: x :: output_var;\nint: c = 2;\nsolve minimize c;\n")[0]);
+  }
+
+  @Test
+  void anUndefinedSymbolIsAnErrorOfTheModel() throws IOException {
+    // an undeclared y threw a RuntimeException out of the run, a stack trace on the command line,
+    // where -p 2 printed a message
+    String model = "var 1..3: x :: output_var;\nconstraint int_le(x, y);\nsolve satisfy;\n";
+    for (String[] options : new String[][] {{}, {"-p", "2"}}) {
+      String[] out = run(model, options);
+      assertEquals("", out[0], Arrays.toString(options));
+      assertTrue(out[1].contains("%% Error: Symbol \"y\""), out[1]);
+      assertEquals(1, lastStatus);
+    }
+  }
+
+  @Test
+  void aParameterInTheArrayOfASearchAnnotationIsAConstant() throws IOException {
+    // a parameter in the array of a search was looked up as a variable only: the null in its place
+    // threw a NullPointerException in every variable selection but input_order, and in set_search
+    // and float_search
+    String ints =
+        "var 1..3: x :: output_var;\nint: c = 2;\n"
+            + "solve :: int_search([c, x], first_fail, indomain_max, complete) satisfy;\n";
+    assertEquals("x = 3;\n----------\n", run(ints)[0]);
+    assertEquals(3, solveAll(ints).size());
+    String sets =
+        "var set of 1..3: s :: output_var;\nset of int: p = {1};\n"
+            + "solve :: set_search([s, p], first_fail, indomain_min, complete) satisfy;\n";
+    assertEquals(8, solveAll(sets).size());
+    String floats =
+        "var 1.0..3.0: f :: output_var;\nfloat: p = 1.0;\n"
+            + "solve :: float_search([f, p], 0.1, input_order, indomain_split, complete) satisfy;\n";
+    assertTrue(run(floats)[0].endsWith("----------\n"), run(floats)[0]);
+  }
+
+  @Test
+  void boolSearchWithIndomainMiddleOrMedianLabelsTheBooleans() throws IOException {
+    // indomain_middle and indomain_median refused the bounds domain of a Boolean variable under
+    // jacop.asserts.enabled, although they label it like any other domain (as they did without it)
+    for (String value : List.of("indomain_middle", "indomain_median")) {
+      String model =
+          """
+          var bool: a :: output_var;
+          var bool: b :: output_var;
+          var bool: c :: output_var;
+          constraint bool_clause([a,b],[c]);
+          solve :: bool_search([a,b,c], input_order, %s, complete) satisfy;
+          """
+              .formatted(value);
+      assertEquals(7, solveAll(model).size(), value);
+    }
+  }
+
+  /**
+   * The shutdown hook of a portfolio (a run with -s killed by SIGTERM) prints the answer while the
+   * threads still run: a solution a thread finds after it is not printed under -a, after the
+   * status.
+   */
+  @Test
+  void portfolioPrintsNoSolutionAfterItsAnswerAtShutdown() {
+    Options options = new Options(new String[] {"-p", "2", "-a", "-t", "1000", "m.fzn"});
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    PrintStream out = new PrintStream(buffer, true, StandardCharsets.UTF_8);
+    PrintStream saved = System.out;
+    try {
+      System.setOut(out);
+      Portfolio portfolio = new Portfolio(options);
+      Portfolio.Worker w = portfolio.new Worker("w", List.of());
+      portfolio.printAtShutdown(out, System.currentTimeMillis());
+      w.solution("x = 5;\n----------\n", 5, false, new String[0], new int[0]);
+    } finally {
+      System.setOut(saved);
+    }
+    assertEquals(
+        "=====UNKNOWN=====\n%% =====TIME-OUT=====\n", buffer.toString(StandardCharsets.UTF_8));
+  }
+
+  /**
+   * The shutdown hook of a run with -s (SIGTERM) prints the answer while the search runs: once the
+   * search printed its answer, the hook prints no second one after its status (the best solution
+   * again after ==========, 2 of 63 runs killed near their end).
+   */
+  @Test
+  void theShutdownHookPrintsNoSecondAnswer() throws IOException, ParseException {
+    Path fzn = tmp.resolve("hook.fzn");
+    Files.writeString(
+        fzn,
+        """
+        var 0..9: x :: output_var;
+        var 0..9: y :: output_var;
+        constraint int_lin_le([1, 1], [x, y], 12);
+        constraint int_ne(x, y);
+        solve :: int_search([x, y], input_order, indomain_min, complete) maximize x;
+        """,
+        StandardCharsets.UTF_8);
+    Options opt =
+        new Options(new String[] {"-s", "--lcg", "off", "--presolve", "off", fzn.toString()});
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+    try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8);
+        java.io.FileInputStream input = new java.io.FileInputStream(fzn.toFile())) {
+      System.setOut(capture);
+      Parser parser = new Parser(input);
+      parser.setOptions(opt);
+      parser.model();
+      new RunWhenShuttingDown(parser).run();
+    } finally {
+      System.setOut(originalOut);
+    }
+    String out = buffer.toString(StandardCharsets.UTF_8);
+    assertEquals(1, out.split("----------", -1).length - 1, out);
+    assertTrue(out.strip().contains("==========\n"), out);
+    assertEquals(out.indexOf("x = 9;"), out.lastIndexOf("x = 9;"), out);
+  }
+
+  @Test
+  void anInvalidOptionValueIsAnErrorOfTheCommandLine() throws IOException {
+    // -t abc and the others threw a NumberFormatException out of the run, a stack trace
+    String model = "var 1..3: x :: output_var;\nsolve satisfy;\n";
+    Map<List<String>, String> options =
+        Map.of(
+            List.of("-t", "abc"),
+            "option -t: abc is not a valid number",
+            List.of("-p", "x"),
+            "option -p: x is not a valid number",
+            List.of("-n", "q"),
+            "option -n: q is not a valid number",
+            List.of("-d", "z"),
+            "option -d: z is not a valid number",
+            List.of("-r", "1.5"),
+            "option -r: 1.5 is not a valid number",
+            List.of("--gap", "x"),
+            "--gap x: not a number",
+            List.of("-p", "2", "--free-config", "portfolio-split=x"),
+            "option --free-config portfolio-split=x: not a number");
+    for (Map.Entry<List<String>, String> o : options.entrySet()) {
+      String[] out = run(model, o.getKey().toArray(new String[0]));
+      assertEquals("", out[0], o.getKey().toString());
+      assertEquals("%% Error: " + o.getValue() + "\n", out[1], o.getKey().toString());
+      assertEquals(1, lastStatus, o.getKey().toString());
+    }
+    String valid = run(model, "-n", "1")[0];
+    assertTrue(valid.startsWith("x = 1;\n----------\n"), valid);
+  }
+
+  @Test
+  void anEmptyOutputArrayIsPrintedUnderAsserts() throws IOException {
+    // output_array([1..0]) of an empty array, which MiniZinc writes, made IntervalDomain(1, 0) and
+    // failed under jacop.asserts.enabled (as the tests run); without it the array was printed
+    assertEquals(
+        "x = 1;\nb = array1d({}, []);\n----------\n",
+        run(
+            "var 1..3: x :: output_var;\n"
+                + "array [1..0] of var int: b :: output_array([1..0]) = [];\nsolve satisfy;\n")[0]);
   }
 }

@@ -427,7 +427,12 @@ public class AffineFolding implements ParserTreeConstants {
     }
     literal.jjtSetParent(c);
     c.jjtAddChild(literal, 0);
+    // an identity of the model of that name would be replaced by the folded row for every later
+    // reader of its array
     String ident = "X_JACOP_AFFINE_" + index;
+    while (support.dictionary.isIdentifier(ident)) {
+      ident += "_";
+    }
     support.dictionary.addVariableArray(ident, r.vars());
     ASTScalarFlatExpr array = new ASTScalarFlatExpr(JJTSCALARFLATEXPR);
     array.setType(2);

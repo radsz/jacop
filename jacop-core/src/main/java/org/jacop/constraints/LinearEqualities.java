@@ -582,7 +582,12 @@ public final class LinearEqualities {
     }
     IntVar[] lambda = new IntVar[d];
     for (int k = 0; k < d; k++) {
-      lambda[k] = new IntVar(store, "_lattice" + lattice.size() + "_" + k, lmin[k], lmax[k]);
+      lambda[k] =
+          new IntVar(
+              store,
+              store.freshVariableId("_lattice" + lattice.size() + "_" + k),
+              lmin[k],
+              lmax[k]);
     }
     for (int k = d - 1; k >= 0; k--) {
       lattice.add(lambda[k]);

@@ -1,0 +1,67 @@
+#!/bin/bash
+# Makes fzn-jacop-native, a GraalVM native image of JaCoP's FlatZinc front end. It starts in a few
+# milliseconds and runs compiled code at once, so an easy model takes 0.03-0.1 s instead of the
+# 0.3-0.6 s of the JVM (osolpro benchmarks/native-startup). Needs GraalVM 25 or later with
+# native-image (GRAALVM_HOME, or native-image on the PATH) and 3 GB of memory. Run it again after
+# replacing the jar.
+#
+# With Oracle GraalVM (GraalVM Free Terms and Conditions) the image is compiled with profile-guided
+# optimization: an instrumented image first solves the models in aot-training/ (or the .fzn files
+# given as arguments), and the final image is compiled with their profiles. That takes about 8
+# minutes and makes long runs as fast as on the JVM or faster; without it (GraalVM Community, about 2
+# minutes) long runs search 0-60 % fewer nodes per second than the JVM. NATIVE_PGO=0 skips the
+# training.
+#
+# NATIVE_MARCH sets the CPU the code is compiled for (default x86-64-v3, any x86 CPU since about
+# 2015; "native" for this machine only, "compatibility" for any x86-64 CPU).
+set -e
+cd "$(dirname "$0")"
+JACOP_JAR="jacop-all-${project.version}.jar"
+
+NATIVE_IMAGE=native-image
+JAVA=java
+if [ -n "$GRAALVM_HOME" ]; then
+  NATIVE_IMAGE="$GRAALVM_HOME/bin/native-image"
+  JAVA="$GRAALVM_HOME/bin/java"
+fi
+
+# only the logging jars: the others in lib/ are for the Scala and test parts of JaCoP
+CLASSPATH="$JACOP_JAR"
+for jar in lib/slf4j-*.jar lib/reload4j-*.jar; do
+  [ -f "$jar" ] && CLASSPATH="$CLASSPATH:$jar"
+done
+
+# the reflection JaCoP uses, from the classes in the jar (org.jacop.fz.NativeMetadata)
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
+"$JAVA" -cp "$CLASSPATH" org.jacop.fz.NativeMetadata "$JACOP_JAR" "$WORK/config/reachability-metadata.json"
+
+# --install-exit-handlers: SIGTERM (the MiniZinc time-out) runs the shutdown hooks that print the
+# best solution, as in the JVM
+OPTIONS=(-cp "$CLASSPATH" -H:ConfigurationFileDirectories="$WORK/config" --gc=serial
+  --install-exit-handlers -march="${NATIVE_MARCH:-x86-64-v3}" --no-fallback)
+
+PGO=()
+if [ "${NATIVE_PGO:-1}" != 0 ] && "$NATIVE_IMAGE" --version | grep -q "Oracle GraalVM"; then
+  if [ $# -gt 0 ]; then
+    MODELS=("$@")
+  else
+    MODELS=(aot-training/*.fzn)
+  fi
+  "$NATIVE_IMAGE" "${OPTIONS[@]}" --pgo-instrument -o "$WORK/instrumented" org.jacop.fz.NativeMain
+  # each model with its own search, with free search and with lazy clause generation, 20 s each
+  n=0
+  for fzn in "${MODELS[@]}"; do
+    for mode in "" -f --lcg; do
+      n=$((n + 1))
+      "$WORK/instrumented" -XX:ProfilesDumpFile="$WORK/p$n.iprof" $mode -t 20000 "$fzn" \
+        > /dev/null 2>&1 || true
+    done
+  done
+  PROFILES=$(ls "$WORK"/p*.iprof | tr '\n' ',')
+  PGO=(--pgo="${PROFILES%,}")
+fi
+
+"$NATIVE_IMAGE" "${OPTIONS[@]}" "${PGO[@]}" -o fzn-jacop-native.tmp org.jacop.fz.NativeMain
+mv -f fzn-jacop-native.tmp fzn-jacop-native
+echo "Wrote $(pwd)/fzn-jacop-native"
