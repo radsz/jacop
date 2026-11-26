@@ -8986,4 +8986,32 @@ class FlatzincFrontEndTest {
     assertEquals(2, atReturn.split("----------", -1).length - 1, atReturn);
     assertEquals("", later.substring(atReturn.length()));
   }
+
+  void listsDifferClausesReadNoSumOfMinValueWeightsAsADifference() throws IOException {
+    // int_lin_ne_imp([-2147483648, -2147483648], [p_i, p_j], 0, b) says p_i + p_j != 0, but
+    // a[0] == -a[1] holds for it in int arithmetic, so DisjunctiveListsDifferDetector read it as
+    // p_i != p_j and AllDifferentLists lost the 4 solutions with p_i = -p_j != 0 and q_i = q_j
+    StringBuilder model = new StringBuilder();
+    for (int i = 0; i < 3; i++) {
+      model.append("var -1..1: p").append(i).append(" :: output_var;\n");
+      model.append("var 0..1: q").append(i).append(" :: output_var;\n");
+    }
+    for (int b = 0; b < 6; b++) {
+      model.append("var bool: b").append(b).append(";\n");
+    }
+    int b = 0;
+    for (int i = 0; i < 3; i++) {
+      for (int j = i + 1; j < 3; j++) {
+        model.append("constraint int_lin_ne_imp([-2147483648,-2147483648],[p" + i + ",p" + j);
+        model.append("],0,b").append(b).append(");\n");
+        model.append("constraint int_ne_imp(q" + i + ",q" + j + ",b" + (b + 1) + ");\n");
+        model.append("constraint bool_clause([b" + b + ",b" + (b + 1) + "],[]);\n");
+        b += 2;
+      }
+    }
+    model.append("solve satisfy;\n");
+    String out = run(model.toString(), "-a", "--lcg", "off")[0];
+    // brute force: p in -1..1 and q in 0..1 with p_i + p_j != 0 or q_i != q_j for every pair
+    assertEquals(124, out.split("----------\n", -1).length - 1, out);
+  }
 }
