@@ -2794,6 +2794,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         if (freeSearchFirst(costVar)) {
           return freeSearch.getSolutions() > 0;
         }
+        if (fixedSearchFirst(label, select, costVar, solveType)) {
+          return numberSolutions > 0;
+        }
         return executeLcgSearch(costVar);
       }
       if (lpProbing && useFreeSearchEngine(costVar)) {
@@ -3513,6 +3516,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       } else if (worker != null) {
         lcg.setSharedBound(worker::sharedBound);
       }
+    } else if (fixedFirstCost != Integer.MAX_VALUE && !probed) {
+      // the best solution of the annotation's search without learning, which ran first
+      int firstCost = fixedFirstCost;
+      lcgLastCost = firstCost;
+      // no bound: LCG searches as without the first search, and prints only better solutions; with
+      // the bound from the start its search changed (lot-sizing pigment20a 82 s to 163 s, and
+      // city-5-06 not proved in 240 s, against 152-171 s without it)
+      if ("1".equals(options.freeConfig("fixed-first-bound", "0"))) {
+        lcg.setSharedBound(() -> firstCost);
+      }
     } else if (probed) {
       lcgLastCost = probeCost;
       lcg.setSharedBound(
@@ -3539,7 +3552,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     for (IntVar[][] clause : sat.collectedClauses()) {
       lcg.addClause(clause[0], clause[1]);
     }
-    if ((ls != null || scheduled != null || probed || freeFirstValues != null)
+    if ((ls != null
+            || scheduled != null
+            || probed
+            || freeFirstValues != null
+            || fixedFirstCost != Integer.MAX_VALUE)
         && costVar instanceof IntVar cost) {
       // the solution of local search was printed already; the core-guided phase, which ignores
       // the bound, or the first descent, before the bound is taken, can find one no better. The
@@ -3547,6 +3564,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // free search without learning printed before them: it printed 10 again after 10
       lcg.onSolution(
           () -> {
+            fixedFirstLcgBest = Math.min(fixedFirstLcgBest, cost.value());
             if (cost.value() < Math.min(lcgLastCost, bestPrintedCost.get())) {
               printSolution();
             }
@@ -3895,6 +3913,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         worker == null && (free || fixedLabel != null) && !enumerate
             ? slowLcgCheck(costVar, !free)
             : null;
+    Thread firstCheck = fixedFirstMillis > 0 ? fixedFirstCheck(lcg) : null;
     if (lpProbing) {
       linearRelaxation.rememberSearchStart();
       lcg.atRootAfter(lpProbeMs * 1_000_000L, this::resumeRelaxation);
@@ -3908,6 +3927,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     if (lcgProbe > 0 && lcgProbeDelay > 0 && lcg.probePasses > 0) {
       printProbeStatistics(lcg);
+    }
+    if (firstCheck != null) {
+      firstCheck.interrupt();
+      firstCheck = null;
     }
     if (slowCheck != null) {
       slowCheck.interrupt();
@@ -5654,6 +5677,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @return whether a solution was found
    */
   private boolean continueFixedWithoutLcg(Var costVar) {
+    if (fixedFirstOutcome == 3
+        && numberSolutions > 0
+        && costVar instanceof IntVar cost
+        && restartCalculator == null
+        && Double.parseDouble(options.freeConfig("fixed-first-stall", "2")) > 0) {
+      return fixedFirstUntilStall(cost);
+    }
     slowLcg = SlowLcg.of(lcg);
     lcg.release();
     lcg = null;
@@ -5667,7 +5697,404 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (restartCalculator != null) {
       return executeRestartSearch(fixedLabel, fixedSelect, costVar, fixedSolveType);
     }
+    if (numberSolutions > 0 && costVar instanceof IntVar cost) {
+      // LCG gave way after the search without learning that ran first (fixedSearchFirst): the
+      // annotation's search goes on from the root under the best cost printed
+      int best = bestPrintedCost.get();
+      if (best == Integer.MIN_VALUE || best - 1 < cost.min()) {
+        // nothing better is left
+        return true;
+      }
+      if (best - 1 < cost.max()) {
+        cost.domain.inMax(store.level, cost, best - 1);
+      }
+      // the solutions printed before count: the search may find no better one
+      executeNonRestartSearch(fixedLabel, fixedSelect, costVar, fixedSolveType);
+      return true;
+    }
     return executeNonRestartSearch(fixedLabel, fixedSelect, costVar, fixedSolveType);
+  }
+
+  /**
+   * Runs the annotation's search without learning under the best cost after LCG gave way to it
+   * ({@link #fixedFirstCheck}), in a store level lent by the solver, until it goes
+   * fixed-first-stall (2) times as long as it had run, from the start of the search, without a
+   * better solution, and at least fixed-first-stall-min ms (10,000); LCG then goes on under the
+   * best cost to the end. The search without learning finds the same solutions faster at first, but
+   * some models need learning further on: at 600 s it stayed at -514 on cgt 5 h27 (MiniZinc
+   * Challenge 2025, LCG alone -55,276), at 2873 from 14 s on nside EASY_200_50 (2019, LCG proves
+   * 2916 in 27 s) and at 109 on median-string p1_15_20-1 (2019, LCG 106), while on city-position
+   * (2017) it improves until its proof and on liner-sf-repositioning tp7_4 (2019) proved the
+   * optimum at 52 s after 28 s without a better solution, which LCG alone did not in 600 s.
+   *
+   * @param cost the cost variable
+   * @return whether a solution was found
+   */
+  private boolean fixedFirstUntilStall(IntVar cost) {
+    LcgSolver solver = lcg;
+    int best = bestPrintedCost.get();
+    if (best == Integer.MIN_VALUE || best - 1 < cost.min()) {
+      // nothing better is left
+      lcgStatus = CdclSolver.SAT;
+      return true;
+    }
+    double factor = Double.parseDouble(options.freeConfig("fixed-first-stall", "2"));
+    long minimum = Long.parseLong(options.freeConfig("fixed-first-stall-min", "10000"));
+    long start = fixedFirstStart;
+    long[] last = {System.currentTimeMillis()};
+    int[] seen = {best};
+    boolean[] stalled = {false};
+    DepthFirstSearch<T> annotation = fixedLabel;
+    List<DepthFirstSearch<?>> searches = new ArrayList<>();
+    collectSearches(annotation, Collections.newSetFromMap(new IdentityHashMap<>()), searches);
+    ConsistencyListener[] previous = new ConsistencyListener[searches.size()];
+    for (int k = 0; k < previous.length; k++) {
+      DepthFirstSearch<?> search = searches.get(k);
+      ConsistencyListener before = search.getConsistencyListener();
+      previous[k] = before;
+      search.setConsistencyListener(
+          new ConsistencyListener() {
+            @Override
+            public boolean executeAfterConsistency(boolean consistent) {
+              boolean c = before == null ? consistent : before.executeAfterConsistency(consistent);
+              if (!stalled[0]) {
+                long now = System.currentTimeMillis();
+                int b = bestPrintedCost.get();
+                if (b < seen[0]) {
+                  seen[0] = b;
+                  last[0] = now;
+                } else if (now - last[0] > Math.max(minimum, (long) (factor * (last[0] - start)))) {
+                  stalled[0] = true;
+                  setLabelTimeOut(annotation, 0);
+                }
+              }
+              return c;
+            }
+
+            @Override
+            public void setChildrenListeners(ConsistencyListener[] children) {
+              // no children
+            }
+
+            @Override
+            public void setChildrenListeners(ConsistencyListener child) {
+              // no children
+            }
+          });
+    }
+    if (options.debug()) {
+      IO.println("%% the annotation's search without learning under " + best + " until it stalls");
+    }
+    int root = store.level;
+    store.setLevel(root + 1);
+    Runnable giveBack = solver.lend();
+    boolean complete;
+    try {
+      for (IntVar[][] clause : this.sat.collectedClauses()) {
+        store.impose(new BoolClause(clause[0], clause[1]));
+      }
+      if (best - 1 < cost.max()) {
+        cost.domain.inMax(store.level, cost, best - 1);
+      }
+      executeNonRestartSearch(annotation, fixedSelect, cost, fixedSolveType);
+      complete = !labelTimedOut(annotation);
+    } catch (FailException _) {
+      // the clauses and the bound leave no better solution
+      complete = true;
+    } finally {
+      for (int k = 0; k < previous.length; k++) {
+        searches.get(k).setConsistencyListener(previous[k]);
+      }
+      store.removeLevel(root + 1);
+      store.setLevel(root);
+      giveBack.run();
+    }
+    if (complete) {
+      // the search without learning explored the whole tree under the best cost
+      lcgStatus = CdclSolver.SAT;
+      return true;
+    }
+    if (!stalled[0] || options.getRemainingTimeOut() <= 0) {
+      return true;
+    }
+    fixedFirstOutcome = 4;
+    if (options.debug()) {
+      IO.println(
+          "%% search without learning stalled at " + bestPrintedCost.get() + "; LCG goes on");
+    }
+    lcgSlow = false;
+    solver.unstop();
+    int status = solver.minimize(cost);
+    // no better solution than the best printed one: it is optimal
+    lcgStatus = status == CdclSolver.UNKNOWN ? CdclSolver.UNKNOWN : CdclSolver.SAT;
+    return true;
+  }
+
+  private static void collectSearches(
+      DepthFirstSearch<?> label, Set<Search<?>> seen, List<DepthFirstSearch<?>> searches) {
+    if (!seen.add(label)) {
+      return;
+    }
+    searches.add(label);
+    if (label.childSearches != null) {
+      for (Search<? extends Var> child : label.childSearches) {
+        if (child instanceof DepthFirstSearch<?> d) {
+          collectSearches(d, seen, searches);
+        }
+      }
+    }
+  }
+
+  // the time the annotation's search without learning ran before LCG (fixedSearchFirst), in
+  // milliseconds (0 = it did not run), and the best cost it found
+  private long fixedFirstMillis;
+  private int fixedFirstCost = Integer.MAX_VALUE;
+  // the best cost of LCG's own solutions, printed or not: LCG that reached the first search's best
+  // cost goes on (open-stacks problem_15_15: the first search found the optimum 7 at once, and LCG,
+  // which proves it in 7 s, gave way to a proof of 14 s)
+  // the nodes of that search
+  private long fixedFirstNodes;
+  // when that search started, by System.currentTimeMillis()
+  private long fixedFirstStart;
+
+  private volatile int fixedFirstLcgBest = Integer.MAX_VALUE;
+  // the outcome of fixedSearchFirst, for the statistics: 0 not run, 1 it decided the model, 2 LCG
+  // kept, 3 LCG gave way to it
+  private int fixedFirstOutcome;
+
+  private void printFixedFirstStatistics() {
+    if (fixedFirstOutcome > 0 && options.getStatistics()) {
+      // the annotation's search without learning before LCG: it decided the model, LCG went on, or
+      // LCG gave way to it
+      IO.println(
+          "%%%mzn-stat: fixedFirst="
+              + switch (fixedFirstOutcome) {
+                case 1 -> "decided";
+                case 2 -> "lcg";
+                case 4 -> "cp-lcg";
+                default -> "cp";
+              });
+    }
+  }
+
+  /**
+   * Runs the annotation's depth-first search without learning before LCG fixed search on an
+   * optimisation model, for the share fixed-first of the time (default 0.005; 0 = off). LCG then
+   * searches as it would have from the start, printing only solutions better than the best one
+   * printed, and gets fixed-first-lcg (3) times as much time to reach that cost, at least a second
+   * ({@link #fixedFirstCheck}); when it does not, it gives way to the annotation's search without
+   * learning, which goes on from the root under the best cost. Both searches take the decisions of
+   * the annotation, so on a model where learning cuts little they find the same solutions one after
+   * the other, and the one that finds them faster gets further in the same time. On city-position
+   * (MiniZinc Challenge 2017, first_fail on 10 coordinates, an objective of 16 absolute
+   * differences) LCG and the search without learning found the same 589 solutions, LCG in 232 s and
+   * the search without learning in 14 s: LCG makes about 7,000 conflicts a second, each with about
+   * 1,900 propagations of the order literals of domains of a million values, and backjumps one
+   * level a conflict. JaCoP 4.10 proved city-5-05 in 52 s, and 5.0 not in 240 s.
+   *
+   * @param label the annotation's search
+   * @param select its choice points
+   * @param costVar the cost variable
+   * @param solveType the kind of solve item, for the debug output
+   * @return true if the search decided the model (an optimum or no solution proved)
+   */
+  private boolean fixedSearchFirst(
+      DepthFirstSearch<T> label, SelectChoicePoint<T> select, Var costVar, String solveType) {
+    double share = Double.parseDouble(options.freeConfig("fixed-first", "0.005"));
+    if (share <= 0
+        || options.freeSearch()
+        || options.getTimeOut() <= 0
+        || options.portfolioWorker() != null
+        || options.proof() != null
+        || !(costVar instanceof IntVar)
+        || restartCalculator != null
+        || dictionary.onRestart != null
+        || CdclSolver.VIRTUAL_CLOCK
+        || label == null) {
+      return false;
+    }
+    // at most fixed-first-max ms, default 1000: a slice that does not decide the model is paid by
+    // every easy one (freepizza pizza6 at 600 s, a 3 s slice: 2.3 s to 5.4 s), and a second
+    // measured the rates of city-position at 240 s
+    long millis =
+        Math.max(
+            1,
+            Math.min(
+                (long) (share * options.getRemainingTimeOut()),
+                Long.parseLong(options.freeConfig("fixed-first-max", "1000"))));
+    setLabelTimeOut(label, millis);
+    long start = System.nanoTime();
+    int before = numberSolutions;
+    long nodesBefore = labelNodes(label);
+    fixedFirstStart = System.currentTimeMillis();
+    // the clauses kept for the LCG solver, which the store does not hold, in a level of their own
+    int root = store.level;
+    store.setLevel(root + 1);
+    try {
+      for (IntVar[][] clause : sat.collectedClauses()) {
+        store.impose(new BoolClause(clause[0], clause[1]));
+      }
+      executeNonRestartSearch(label, select, costVar, solveType);
+    } finally {
+      store.removeLevel(root + 1);
+      store.setLevel(root);
+    }
+    boolean stopped = labelTimedOut(label);
+    if (!stopped) {
+      fixedFirstOutcome = 1;
+      return true;
+    }
+    resetLabelTimeOut(label);
+    if (numberSolutions > before) {
+      fixedFirstCost = bestPrintedCost.get();
+      fixedFirstMillis = Math.max(1, (System.nanoTime() - start) / 1_000_000L);
+      fixedFirstNodes = labelNodes(label) - nodesBefore;
+    }
+    if (options.debug()) {
+      IO.println(
+          "% fixed search first: "
+              + (numberSolutions - before)
+              + " solutions in "
+              + (System.nanoTime() - start) / 1_000_000L
+              + " ms, best "
+              + (fixedFirstCost == Integer.MAX_VALUE ? "none" : fixedFirstCost));
+    }
+    return false;
+  }
+
+  /** The nodes of the annotation's searches: the label, its child searches and the final ones. */
+  private long labelNodes(DepthFirstSearch<?> label) {
+    Set<Search<?>> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    long nodes = labelNodes(label, seen);
+    if (finalSearch != null) {
+      for (DepthFirstSearch<T> s : finalSearch) {
+        nodes += s == null ? 0 : labelNodes(s, seen);
+      }
+    }
+    if (listSeqSearches != null) {
+      for (Search<T> s : listSeqSearches) {
+        nodes += s instanceof DepthFirstSearch<?> d ? labelNodes(d, seen) : 0;
+      }
+    }
+    return nodes;
+  }
+
+  private static long labelNodes(DepthFirstSearch<?> label, Set<Search<?>> seen) {
+    if (!seen.add(label)) {
+      return 0;
+    }
+    long nodes = label.getNodes();
+    if (label.childSearches != null) {
+      for (Search<? extends Var> child : label.childSearches) {
+        if (child instanceof DepthFirstSearch<?> d) {
+          nodes += labelNodes(d, seen);
+        }
+      }
+    }
+    return nodes;
+  }
+
+  private static void setLabelTimeOut(DepthFirstSearch<?> label, long millis) {
+    label.setTimeOutMilliseconds(millis);
+    if (label.childSearches != null) {
+      for (Search<? extends Var> child : label.childSearches) {
+        if (child instanceof DepthFirstSearch<?> d) {
+          setLabelTimeOut(d, millis);
+        } else {
+          child.setTimeOutMilliseconds(millis);
+        }
+      }
+    }
+  }
+
+  private static boolean labelTimedOut(DepthFirstSearch<?> label) {
+    if (label.timeOutOccured) {
+      return true;
+    }
+    if (label.childSearches != null) {
+      for (Search<? extends Var> child : label.childSearches) {
+        if (child instanceof DepthFirstSearch<?> d && labelTimedOut(d)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /** Clears the time-out of the annotation's search and gives it the time left. */
+  private void resetLabelTimeOut(DepthFirstSearch<?> label) {
+    clearTimeOut(label);
+    setLabelTimeOut(label, Math.max(1, options.getRemainingTimeOut()));
+  }
+
+  private static void clearTimeOut(DepthFirstSearch<?> label) {
+    label.timeOutOccured = false;
+    if (label.childSearches != null) {
+      for (Search<? extends Var> child : label.childSearches) {
+        if (child instanceof DepthFirstSearch<?> d) {
+          clearTimeOut(d);
+        }
+      }
+    }
+  }
+
+  /**
+   * Starts the check of {@link #fixedSearchFirst}: once LCG has searched fixed-first-lcg times as
+   * long as the search without learning ran first, at least a second, LCG gives way to that search
+   * when it found no better solution.
+   *
+   * @param solver the LCG solver
+   * @return the thread of the check
+   */
+  private Thread fixedFirstCheck(LcgSolver solver) {
+    // LCG gets more time than the search without learning had, and at least a second: in its first
+    // tenths of a second the JIT compiles its code (cargo challenge02 at 30 s, a first search of
+    // 0.15 s: LCG found no better solution in as much time in one run of two, and then the
+    // search without learning, which stays at its first solution, took over)
+    long wait =
+        Math.max(
+            (long)
+                (Double.parseDouble(options.freeConfig("fixed-first-lcg", "3")) * fixedFirstMillis),
+            Long.parseLong(options.freeConfig("fixed-first-lcg-min", "1000")));
+    int firstCost = fixedFirstCost;
+    // LCG gives way only when it is much slower per node: at 240 s, the search without learning
+    // ran 6.8 times as many nodes per second in its first second as LCG after it on city-5-06
+    // (MZNC 2017), but 0.5 and 0.7 times on celar graph11 (2013) and mapping mesh_star_mpeg
+    // (2021), where LCG, behind at first, proved the optimum (mapping 13 s against 31 s) or ended
+    // better (celar 450009 against 492506) than after giving way
+    double ratio = Double.parseDouble(options.freeConfig("fixed-first-rate", "3"));
+    double firstRate = (double) fixedFirstNodes / fixedFirstMillis;
+    long decisionsBefore = solver.sat().decisions;
+    long started = System.nanoTime();
+    fixedFirstOutcome = 2;
+    return Thread.ofVirtual()
+        .start(
+            () -> {
+              try {
+                Thread.sleep(wait);
+                double lcgMillis = (double) Math.max(1, (System.nanoTime() - started) / 1_000_000L);
+                double lcgRate = (solver.sat().decisions - decisionsBefore) / lcgMillis;
+                if (options.debug()) {
+                  IO.println(
+                      "% fixed search first: "
+                          + firstRate
+                          + " nodes/ms, LCG "
+                          + lcgRate
+                          + " nodes/ms, best "
+                          + fixedFirstLcgBest);
+                }
+                if (fixedFirstLcgBest > firstCost
+                    && firstRate >= ratio * lcgRate
+                    && !tooLateForFreeSearch(solver)) {
+                  fixedFirstOutcome = 3;
+                  lcgSlow = true;
+                  solver.stop();
+                }
+              } catch (InterruptedException _) {
+                // LCG search ended first
+                Thread.currentThread().interrupt();
+              }
+            });
   }
 
   // the best solution of LCG free search before it gave way to free search without learning
@@ -9646,6 +10073,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     printLinearRelaxationStatistics();
     printCostNetworkStatistics();
+    printFixedFirstStatistics();
 
     if (label == null) {
       IO.println("%% =====INTERRUPTED=====\n%% Model not yet posed..");
@@ -10342,6 +10770,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     printLinearRelaxationStatistics();
     printCostNetworkStatistics();
+    printFixedFirstStatistics();
 
     if (lcg != null || pureSat != null) {
       printLcgStatistics(interrupted);

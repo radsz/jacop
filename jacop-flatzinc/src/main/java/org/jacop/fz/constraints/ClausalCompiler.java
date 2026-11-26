@@ -91,6 +91,7 @@ public final class ClausalCompiler {
   private static final String ALLDISTINCT = "jacop_alldistinct";
   private static final String COUNT_VALUES = "jacop_count_values";
   private static final String AMONG = "jacop_among";
+  private static final String INT_LIN_EQ = "int_lin_eq";
   private static final String INCREASING = "jacop_increasing";
   private static final String SHORT_TABLE_INT = "jacop_short_table_int";
   private static final String TABLE_INT = "jacop_table_int";
@@ -100,7 +101,7 @@ public final class ClausalCompiler {
   static final Set<String> SUPPORTED =
       Set.of(
           "int_times",
-          "int_lin_eq",
+          INT_LIN_EQ,
           "int_lin_le",
           "int_lin_ne",
           "int_lin_eq_reif",
@@ -704,7 +705,7 @@ public final class ClausalCompiler {
     for (ASTConstElem item : items) {
       String name = item.getName();
       if (name.startsWith("int_lin_") && longSum(item)) {
-        if (name.startsWith("int_lin_eq")) {
+        if (name.startsWith(INT_LIN_EQ)) {
           checkSumDomains(item);
         }
         // a sum of three or more terms is a diagram or adders over direct literals
@@ -827,7 +828,7 @@ public final class ClausalCompiler {
   private void compile(ASTConstElem n) {
     switch (n.getName()) {
       case "int_times" -> times(var(n, 0), var(n, 1), var(n, 2));
-      case "int_lin_eq",
+      case INT_LIN_EQ,
           "int_lin_le",
           "int_lin_ne",
           "int_lin_eq_reif",
