@@ -186,12 +186,15 @@ class CoveringDominanceFlatzincTest {
     if (covering != null) {
       System.setProperty("org.jacop.fz.coveringDominance", covering);
     }
+    // the random models are small, so the rule fixes from one dominated variable on
+    System.setProperty("org.jacop.fz.coveringDominance.min", "1");
     try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8)) {
       System.setOut(capture);
       new Fz2jacop().callMain(args);
     } finally {
       System.setOut(originalOut);
       System.clearProperty("org.jacop.fz.coveringDominance");
+      System.clearProperty("org.jacop.fz.coveringDominance.min");
     }
     return buffer.toString(StandardCharsets.UTF_8);
   }

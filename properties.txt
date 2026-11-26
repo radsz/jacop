@@ -742,6 +742,8 @@ unless stated otherwise):
   in the objective and positively in clauses only is fixed to 0 when
   another such column of no higher cost is in all its clauses; default
   true.
+- org.jacop.fz.coveringDominance.min: the fewest dominated columns for
+  which the rule fixes them; default 100.
 - jacop.dominance.budget, jacop.dominance.time: the work budget (steps)
   and the time (ms) of the dominance rule; default 50000000 and 1000.
 - jacop.dominance.domain, jacop.dominance.nogoods: the most values of a

@@ -65,8 +65,9 @@ import org.jacop.lcg.LinearForm;
  * pseudo-Boolean competition's pdc.r (6,904 covering clauses over 19,021 variables) keeps 2,968 of
  * them, and JaCoP proves its optimum 94 in 17-21 s, where it found 97 in 120 s before.
  *
- * <p>The rule removes optimal solutions, so it runs only for a minimized or maximized objective,
- * without proof logging.
+ * <p>The variables are fixed only when at least {@link #minFixed()} of them are dominated. The rule
+ * removes optimal solutions, so it runs only for a minimized or maximized objective, without proof
+ * logging.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -80,6 +81,16 @@ final class CoveringDominance {
    */
   static boolean enabled() {
     return !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.coveringDominance"));
+  }
+
+  /**
+   * The fewest dominated variables for which the rule fixes them (system property
+   * org.jacop.fz.coveringDominance.min, default 100).
+   *
+   * @return the threshold
+   */
+  static int minFixed() {
+    return Integer.getInteger("org.jacop.fz.coveringDominance.min", 100);
   }
 
   // the most clause memberships compared in all
@@ -259,12 +270,10 @@ final class CoveringDominance {
         }
       }
     }
-    int fixed = 0;
+    List<IntVar> toFix = new ArrayList<>();
     for (int y = 0; y < m; y++) {
       if (zero[y]) {
-        IntVar v = vars.get(y);
-        v.domain.in(store.level, v, 0, 0);
-        fixed++;
+        toFix.add(vars.get(y));
       }
     }
     // the candidates in no clause, of cost at least 0, are 0 in an optimal solution as well
@@ -276,10 +285,18 @@ final class CoveringDominance {
           && v.min() == 0
           && v.max() == 1
           && onlyIn(store, v, definitions)) {
-        v.domain.in(store.level, v, 0, 0);
-        fixed++;
+        toFix.add(v);
       }
     }
+    // a few fixings shrink the model little but move the search: fir09_area_opers (2 fixings)
+    // found its optimum 34 in 142 s without them and not in 600 s with them
+    if (toFix.size() < minFixed()) {
+      return new Outcome(candidates, 0);
+    }
+    for (IntVar v : toFix) {
+      v.domain.in(store.level, v, 0, 0);
+    }
+    int fixed = toFix.size();
     if (fixed > 0) {
       simplify(clauses);
     }
