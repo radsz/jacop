@@ -9209,4 +9209,23 @@ class FlatzincFrontEndTest {
     assertEquals(18, out.split("----------\n", -1).length - 1, out);
   }
 
+  @Test
+  void weightedCompletionReadsNoSumOfMinValueWeightsAsAPrecedence() throws IOException {
+    // -2147483648 * (x1 + s1) <= 0 says x1 >= -s1; read as x1 >= s1, the weighted completion
+    // bound of the unary resource raised the optimum of x1 + x2 from -10 to 2
+    String model =
+        "var 0..6: s1 :: output_var;\n"
+            + "var 0..6: s2 :: output_var;\n"
+            + "var -10..10: x1 :: output_var;\n"
+            + "var -10..10: x2 :: output_var;\n"
+            + "var -20..20: obj :: output_var;\n"
+            + "constraint jacop_cumulative([s1,s2],[2,2],[1,1],1);\n"
+            + "constraint int_lin_le([MIN,MIN],[x1,s1],0);\n"
+            + "constraint int_lin_le([MIN,MIN],[x2,s2],0);\n"
+            + "constraint int_lin_eq([1,1,-1],[x1,x2,obj],0);\n"
+            + "solve minimize obj;\n";
+    String out = run(model.replace("MIN", "-2147483648"), "--lcg", "off")[0];
+    assertTrue(out.contains("obj = -10;"), out);
+  }
+
 }
