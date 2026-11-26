@@ -13309,4 +13309,42 @@ class SingleConstraintTest extends TestHelper {
       assertThat(noOfAllSolutions(store, x, new IntVar[] {index})).as("max %b", max).isEqualTo(64);
     }
   }
+
+  @Test
+  void cumulativeUnaryWhoseFirstCallWasUndoneMakesItsTrailAgain() {
+    // the trail of the tasks left out was made at the first consistency call, at level 1: once
+    // that level was removed it held no value, and the next call read position -1
+    Store store = new Store();
+    int n = 3;
+    IntVar[] s = new IntVar[n];
+    IntVar[] d = new IntVar[n];
+    IntVar[] r = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      s[i] = new IntVar(store, "s" + i, 0, 6);
+      d[i] = new IntVar(store, "d" + i, 2, 2);
+      r[i] = new IntVar(store, "r" + i, 1, 1);
+    }
+    store.impose(new CumulativeUnary(s, d, r, new IntVar(store, "one", 1, 1), true));
+    store.setLevel(1);
+    s[0].domain.in(1, s[0], 0, 0);
+    assertThat(store.consistency()).isTrue();
+    store.removeLevel(1);
+    store.setLevel(0);
+    // the reference: three tasks of length 2 in 0..8 that do not overlap
+    int expected = 0;
+    for (int a = 0; a <= 6; a++) {
+      for (int b = 0; b <= 6; b++) {
+        for (int c = 0; c <= 6; c++) {
+          if (Math.abs(a - b) >= 2 && Math.abs(a - c) >= 2 && Math.abs(b - c) >= 2) {
+            expected++;
+          }
+        }
+      }
+    }
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.getSolutionListener().searchAll(true);
+    assertThat(search.labeling(store, new SimpleSelect<>(s, null, new IndomainMin<>()))).isTrue();
+    assertThat(search.getSolutionListener().solutionsNo()).isEqualTo(expected);
+  }
 }
