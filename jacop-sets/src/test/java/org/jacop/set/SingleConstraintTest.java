@@ -1394,4 +1394,16 @@ class SingleConstraintTest {
     propagateAtNextLevel(store, () -> a.domain.inLubComplement(store.level, a, 1));
     assertThat(a.domain.singleton(dom())).isTrue();
   }
+
+  /** SumWeightedSet prunes a again once the bounds of the total weight have narrowed. */
+  @Test
+  void sumWeightedSetPrunesAgainAfterNarrowingTheTotal() {
+    Store store = new Store();
+    SetVar a = setVar(store, "a", new int[] {}, new int[] {-1, 0});
+    IntVar total = new IntVar(store, "total", dom(0, 7, 9, 10));
+    store.impose(new SumWeightedSet(a, new int[] {0, 3}, new int[] {3, 1}, total));
+    assertThat(store.consistency()).isTrue();
+    assertThat(total.singleton(0)).isTrue();
+    assertThat(a.domain.singleton(dom())).isTrue();
+  }
 }
