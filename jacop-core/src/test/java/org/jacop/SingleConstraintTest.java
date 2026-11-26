@@ -13836,4 +13836,61 @@ class SingleConstraintTest extends TestHelper {
     store.impose(new ConvexAllocation(new IntVar[] {a, b}, f, total, cost));
     assertThat(countInOrder(store, a, b, cost)).isEqualTo((int) expected);
   }
+
+  @Test
+  void diff2AndDisjointPruneAnOriginWhoseForbiddenIntervalEndsBeyondTheIntegerRange() {
+    // a forbidden interval of the origins ending one past IntDomain.MAX_INT (a rectangle ending at
+    // MAX_INT + 1) gave the domain MIN_INT..a plus MAX_INT + 1..MAX_INT: the narrowed domain was
+    // malformed and the search threw ArrayIndexOutOfBoundsException. Three rectangles near the top
+    // of the range; Diff2 lets rectangles of zero length overlap, Disjoint does not.
+    // the first instance hits the narrowing by obligatory rectangles, the second the profile
+    int[][][] instances = {
+      {
+        {0, 536870905, 0, 1, 536870908, 536870906, 1, 1, 536870908, 536870906, 1, 2},
+        {0, 536870907, 1, 1, 536870909, 536870908, 1, 1, 536870909, 536870906, 1, 2}
+      },
+      {
+        {3, 536870907, 0, 1, 536870907, 536870907, 1, 2, 536870906, 536870907, 2, 2},
+        {5, 536870907, 0, 1, 536870909, 536870909, 2, 3, 536870907, 536870909, 3, 2}
+      }
+    };
+    for (int q = 0; q < 2 * instances.length; q++) {
+      boolean disjoint = q % 2 == 1;
+      int[] min = instances[q / 2][0];
+      int[] max = instances[q / 2][1];
+      Store store = new Store();
+      IntVar[] x = new IntVar[12];
+      for (int i = 0; i < 12; i++) {
+        x[i] = new IntVar(store, "v" + i, min[i], max[i]);
+      }
+      IntVar[][] rect = {
+        Arrays.copyOfRange(x, 0, 4), Arrays.copyOfRange(x, 4, 8), Arrays.copyOfRange(x, 8, 12)
+      };
+      long expected =
+          bruteForce(
+                  x,
+                  t -> {
+                    for (int a = 0; a < 3; a++) {
+                      for (int b = a + 1; b < 3; b++) {
+                        boolean apart = false;
+                        boolean empty = false;
+                        for (int k = 0; k < 2; k++) {
+                          apart |=
+                              (long) t[4 * a + k] + t[4 * a + 2 + k] <= t[4 * b + k]
+                                  || (long) t[4 * b + k] + t[4 * b + 2 + k] <= t[4 * a + k];
+                          empty |= t[4 * a + 2 + k] == 0 || t[4 * b + 2 + k] == 0;
+                        }
+                        if (!apart && (disjoint || !empty)) {
+                          return false;
+                        }
+                      }
+                    }
+                    return true;
+                  })
+              .size();
+      boolean profile = q / 2 == 1;
+      store.impose(disjoint ? new Disjoint(rect, profile) : new Diff2(rect, profile));
+      assertThat(countInOrder(store, x)).as("instance %d", q).isEqualTo((int) expected);
+    }
+  }
 }

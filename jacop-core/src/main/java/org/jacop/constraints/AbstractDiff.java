@@ -283,8 +283,7 @@ abstract class AbstractDiff extends Constraint
     if (exclude.max == -1) {
       return;
     }
-    IntervalDomain update = new IntervalDomain(IntDomain.MIN_INT, exclude.min - r.length[i].min());
-    update.unionAdapt(exclude.max, IntDomain.MAX_INT);
+    IntervalDomain update = outside((long) exclude.min - r.length[i].min(), exclude.max);
     if (traceNarrOn) {
       log.debug(
           "7. Obligatory rectangles Narrow {} in {} --> {}", r.origin[i], update, r.origin[i]);
@@ -312,6 +311,20 @@ abstract class AbstractDiff extends Constraint
     if (traceOn) {
       log.debug("+++ {}", durMax);
     }
+  }
+
+  // the values up to below and from above on; a forbidden interval or a profile item can end one
+  // past IntDomain.MAX_INT, and the values below it can end below IntDomain.MIN_INT: such parts
+  // are left out
+  private static IntervalDomain outside(long below, long above) {
+    IntervalDomain update = new IntervalDomain();
+    if (below >= IntDomain.MIN_INT) {
+      update.unionAdapt(IntDomain.MIN_INT, (int) Math.min(below, IntDomain.MAX_INT));
+    }
+    if (above <= IntDomain.MAX_INT) {
+      update.unionAdapt((int) Math.max(above, IntDomain.MIN_INT), IntDomain.MAX_INT);
+    }
+    return update;
   }
 
   private static boolean meets(IntVar start, int excludeMin, int excludeMax) {
@@ -496,8 +509,7 @@ abstract class AbstractDiff extends Constraint
    */
   protected void narrowStartDomain(
       Store store, IntVar start, ProfileItem p, int dur, String traceMessage) {
-    IntervalDomain update = new IntervalDomain(IntDomain.MIN_INT, p.min - dur);
-    update.unionAdapt(p.max, IntDomain.MAX_INT);
+    IntervalDomain update = outside((long) p.min - dur, p.max);
 
     if (traceNarrOn && traceMessage != null) {
       log.debug(traceMessage, start, update, start);
