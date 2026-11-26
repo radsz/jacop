@@ -1782,13 +1782,16 @@ class FlatzincFrontEndTest {
         .append("solve :: int_search([x],input_order,indomain_min,complete) satisfy;\n");
 
     // the GCD of the equality's coefficients (2) does not divide 25, which the linear system
-    // detector proves at the root: switch it off to keep the search that times out
+    // detector and the parity of the equation (XorSystemDetector) prove at the root: switch both
+    // off to keep the search that times out
     String out;
     System.setProperty("org.jacop.fz.lattice", "false");
+    System.setProperty("org.jacop.fz.xorSystem", "false");
     try {
       out = run(fzn.toString(), "-t", "300")[0];
     } finally {
       System.clearProperty("org.jacop.fz.lattice");
+      System.clearProperty("org.jacop.fz.xorSystem");
     }
     assertTrue(!out.contains("=====UNSATISFIABLE====="), out);
     assertTrue(out.contains("=====UNKNOWN====="), out);

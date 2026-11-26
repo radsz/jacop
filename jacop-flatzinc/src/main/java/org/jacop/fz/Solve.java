@@ -1303,6 +1303,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + refutation.rows()
               + "\n%%%mzn-stat: lpRefutationCliques="
               + refutation.pairCliques
+              + "\n%%%mzn-stat: lpRefutationCardinalities="
+              + refutation.subsetCardinalities
               + "\n%%%mzn-stat: lpRefutation="
               + refutation.refutationOutcome()
               + "\n%%%mzn-stat: lpRefutationObjective="
