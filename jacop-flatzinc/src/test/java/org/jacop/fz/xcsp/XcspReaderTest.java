@@ -702,4 +702,18 @@ class XcspReaderTest {
     String out = competitionOutput(xml);
     assertTrue(out.contains("s SATISFIABLE") && out.contains("<values> 1 2 0 1 </values>"), out);
   }
+
+  /**
+   * A matrix element whose column index has no value in the column range is unsatisfiable: the
+   * constant matrix was read as a table over the index domains as they were, out of the matrix.
+   */
+  @Test
+  void matrixElementWithAnIndexOutOfRangeIsUnsatisfiable() throws IOException {
+    String xml =
+        "<instance format=\"XCSP3\" type=\"CSP\"><variables><array id=\"x\" size=\"[3]\"> 0..1 </array>"
+            + "</variables><constraints><element><matrix startColIndex=\"2\"> (-2) </matrix>"
+            + "<index> x[0] x[1] </index><value> x[2] </value></element></constraints></instance>";
+    String out = competitionOutput(xml);
+    assertTrue(out.contains("s UNSATISFIABLE"), out);
+  }
 }
