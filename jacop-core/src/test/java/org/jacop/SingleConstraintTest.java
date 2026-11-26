@@ -111,6 +111,7 @@ import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.EqBool;
+import org.jacop.constraints.ExactCover;
 import org.jacop.constraints.ExtensionalConflictVa;
 import org.jacop.constraints.ExtensionalSupportStr;
 import org.jacop.constraints.ExtensionalSupportVa;
@@ -13346,5 +13347,55 @@ class SingleConstraintTest extends TestHelper {
     search.getSolutionListener().searchAll(true);
     assertThat(search.labeling(store, new SimpleSelect<>(s, null, new IndomainMin<>()))).isTrue();
     assertThat(search.getSolutionListener().solutionsNo()).isEqualTo(expected);
+  }
+
+  @Test
+  void exactCoverWhoseFirstConsistencyCallWasUndoneKeepsItsSolutions() {
+    // the first call pushed the fixed options and forced the elements of one option at a level
+    // above the root; removing that level undid them, and the flag of the first call kept them from
+    // being made again: elements left uncovered, or the counts out of step with the domains
+    Random random = new Random(20261126);
+    for (int t = 0; t < 300; t++) {
+      int n = 2 + random.nextInt(4);
+      int k = 2 + random.nextInt(6);
+      int[][] sets = new int[k][];
+      for (int o = 0; o < k; o++) {
+        sets[o] = random.ints(0, n).distinct().limit(1 + random.nextInt(n)).sorted().toArray();
+      }
+      int expected = 0;
+      for (int m = 0; m < 1 << k; m++) {
+        int[] covered = new int[n];
+        for (int o = 0; o < k; o++) {
+          if ((m >> o & 1) == 1) {
+            for (int e : sets[o]) {
+              covered[e]++;
+            }
+          }
+        }
+        expected += Arrays.stream(covered).allMatch(c -> c == 1) ? 1 : 0;
+      }
+      Store store = new Store();
+      IntVar[] x = new IntVar[k];
+      for (int o = 0; o < k; o++) {
+        x[o] = new IntVar(store, "o" + o, 0, 1);
+      }
+      store.impose(new ExactCover(x, sets, n));
+      // the first call after a decision at level 2, both levels removed
+      store.setLevel(1);
+      store.setLevel(2);
+      IntVar d = x[random.nextInt(k)];
+      d.domain.in(2, d, random.nextInt(2), d.max());
+      store.consistency();
+      store.removeLevel(2);
+      store.removeLevel(1);
+      store.setLevel(0);
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      search.getSolutionListener().searchAll(true);
+      search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()));
+      assertThat(search.getSolutionListener().solutionsNo())
+          .as("instance %d", t)
+          .isEqualTo(expected);
+    }
   }
 }
