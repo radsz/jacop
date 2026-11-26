@@ -529,6 +529,80 @@ class LcgSolverTest {
   }
 
   @Test
+  void wideTablesAgreeWithBruteForce() {
+    // tables of an index and many 0/1 columns, as merged element groups of a constant matrix
+    // (minimal-decision-sets), two of them sharing columns, next to other constraints: their
+    // explanations stop scanning columns once a fixed column kills a tuple with one atom
+    Random rnd = new Random(97);
+    int sat = 0;
+    int unsat = 0;
+    for (int instance = 0; instance < 600; instance++) {
+      Store store = new Store();
+      int columns = 6 + rnd.nextInt(5);
+      IntVar[] x = new IntVar[columns + 2];
+      for (int i = 0; i < columns; i++) {
+        x[i] = new IntVar(store, "b" + i, 0, 1);
+      }
+      List<Relation> relations = new ArrayList<>();
+      int[][] first = null;
+      for (int g = 0; g < 2; g++) {
+        int rows = 2 + rnd.nextInt(4);
+        x[columns + g] = new IntVar(store, "i" + g, 1, rows);
+        IntVar[] scope = new IntVar[columns + 1];
+        System.arraycopy(x, 0, scope, 0, columns);
+        scope[columns] = x[columns + g];
+        int[][] tuples = new int[rows][columns + 1];
+        for (int r = 0; r < rows; r++) {
+          for (int k = 0; k < columns; k++) {
+            // the second table mostly repeats rows of the first, so that the two often agree
+            tuples[r][k] =
+                first != null && rnd.nextInt(8) != 0 ? first[r % first.length][k] : rnd.nextInt(2);
+          }
+          tuples[r][columns] = r + 1;
+        }
+        first = tuples;
+        int index = columns + g;
+        relations.add(
+            new Relation(
+                new HybridTable(scope, tuples),
+                t ->
+                    Arrays.stream(tuples)
+                        .anyMatch(
+                            row ->
+                                row[columns] == t[index]
+                                    && IntStream.range(0, columns).allMatch(k -> row[k] == t[k]))));
+      }
+      for (int c = 1 + rnd.nextInt(2); c > 0; c--) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[x.length], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[x.length];
+        for (int i = 0; i < x.length; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+    }
+    assertThat(sat).isGreaterThan(30);
+    assertThat(unsat).isGreaterThan(50);
+  }
+
+  @Test
   void tablesAsClausesAgreeWithBruteForce() {
     // tables of 2 to 4 columns, some over a fixed variable, written as clauses (support or
     // direct, jacop.lcg.tableClauses) next to other constraints; tuples may name values outside
