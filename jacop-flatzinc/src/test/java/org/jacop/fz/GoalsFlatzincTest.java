@@ -345,4 +345,20 @@ class GoalsFlatzincTest {
     }
     return out.toString(StandardCharsets.UTF_8);
   }
+
+  @Test
+  void aVariableNamedLikeAGoalVariableKeepsItsConstraintsAndOutput() throws IOException {
+    // the goal was copied into a variable X_JACOP_GOAL_0_, declared again over the model's own:
+    // the model's 3 <= X_JACOP_GOAL_0_ then held for the goal a, a + a <= 4 failed and the model
+    // was refuted, and the model's variable was left out of the output
+    String model =
+        """
+        var 0..3: a:: output_var;
+        var 0..3: X_JACOP_GOAL_0_:: output_var;
+        constraint int_lin_le([1,1],[a,X_JACOP_GOAL_0_],4);
+        constraint int_le(3,X_JACOP_GOAL_0_);
+        solve :: goal_hierarchy([max_goal(a)]) satisfy;
+        """;
+    assertEquals("a = 1;\nX_JACOP_GOAL_0_ = 3;\n----------\n==========\n", run(model));
+  }
 }

@@ -294,6 +294,9 @@ public class Options {
                 lcg-literal-runs=<n>, lcg-literal-runs-solved=<n> (with --lcg and an
                 annotation: runs on literals in each turn of the annotation, the literals and
                 activity branching, before and after a first solution; defaults 1 and 6),
+                lcg-annotation-drop=<n> (with --lcg and an annotation: after n conflicts without a
+                solution the turns of the annotation are dropped and the literals and activity
+                branching take turns; default 50000, 0 never),
                 lcg-chain-limit=<n> (with --lcg: linked bound literals per variable past which
                 short reasons on its new bounds are used once, not kept, so its chain
                 [x >= v] -> [x >= u] stops growing; default 64, a huge value turns it off),
@@ -355,7 +358,10 @@ public class Options {
                 ls-patience=<ms> (local search stops after this long without a solution or fewer
                 violated constraints, default 1000; 5000 for ls-auto), ls-auto=1|0 (1, the default:
                 without ls, a disjunctive scheduling model whose cost is the makespan gets the
-                critical-path tabu search alone for half of the time left, until it stalls), ls-moves=fj|walk (fj, the default:
+                critical-path tabu search alone for half of the time left, until it stalls),
+                ls-lex=1|0 (1, the default: without ls, a model whose own lex-leader constraints
+                are a symmetry of it gets local search for half of the time left, until it stalls,
+                with those constraints left to its canonicalizer), ls-moves=fj|walk (fj, the default:
                 feasibility jump, the best jump of a sample of variables, all violated constraints
                 weigh more at a minimum; walk: a step moves a variable of one violated constraint),
                 ls-perm=1|0 (1, the default: an all different constraint over one domain of as many
@@ -464,7 +470,13 @@ public class Options {
     String[] args = splitValues(given);
     int i = 0;
     while (i < args.length - 1) {
-      i = parseOption(args, i);
+      try {
+        i = parseOption(args, i);
+      } catch (NumberFormatException _) {
+        // the value of a numeric option, or the file name after an option without its value
+        throw new IllegalArgumentException(
+            "option " + args[i] + ": " + args[i + 1] + " is not a valid number");
+      }
     }
     fileName = args[args.length - 1];
   }

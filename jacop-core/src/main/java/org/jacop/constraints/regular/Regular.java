@@ -279,7 +279,7 @@ public class Regular extends LayeredGraphConstraint implements Copyable<Regular>
     IntVar[] q = new IntVar[list.length + 1];
 
     for (int i = 0; i < q.length; i++) {
-      q[i] = new IntVar(store, "Q" + i, 0, fsm.allStates.size());
+      q[i] = new IntVar(store, store.freshVariableId("Q" + i), 0, fsm.allStates.size());
     }
 
     constraints = new ArrayList<>();

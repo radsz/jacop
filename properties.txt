@@ -406,6 +406,18 @@ unless stated otherwise):
   .out: cumulatives posted, default 5; .disjoint=false lifts over the
   cumulatives only; .useful=false also posts those whose capacity
   bound does not exceed that of an input cumulative or clique.
+- org.jacop.fz.blockBound: lower bounds on the parts of a linear
+  objective that belong to loosely coupled blocks of the model (the
+  independent lower bound of the travelling tournament problem), found
+  by LCG in a copy of each block and posted as redundant constraints
+  before search; default true, off under --proof. .share: share of the
+  time limit, default 0.02; .ms: at most this many milliseconds, default
+  5000; .blockMs: per block, default 1000; .gain: posted only when the
+  lower bound rises by this share of the distance to the upper bound,
+  default 0.05; .trace=true prints the blocks.
+- org.jacop.fz.optionalUnary: redundant unary resources with optional
+  tasks for flexible job shops, from disjunctions of two precedences
+  that apply only when two tasks run on the same machine; default true.
 - org.jacop.fz.elementTable: element constraints over constant arrays
   that share one index variable become one table.
 - org.jacop.fz.energyPrecedence: EnergyPrecedence on cumulatives
@@ -499,7 +511,7 @@ unless stated otherwise):
 - org.jacop.fz.costNetwork: CostNetworkBound on an objective that is a
   sum of unary and binary cost tables (weighted constraint satisfaction:
   frequency assignment, photograph selection, protein design); default
-  false, off under --proof.
+  true, off under --proof.
 - org.jacop.cfn.rootMs, org.jacop.cfn.sweeps: the most milliseconds and
   sweeps of the reparametrisation at the root; default 2000 and 1000.
 - org.jacop.cfn.maxDomain, org.jacop.cfn.maxEntries, org.jacop.cfn.nodes:
@@ -507,8 +519,10 @@ unless stated otherwise):
   the network and the most nodes of the tabulation; default 1024,
   12000000 and 40000000.
 - org.jacop.cfn.gate: post the bound only when its root bound is above
-  the objective's bound at the root after the linear relaxation; default
-  true.
+  the objective's bound at the root after the linear relaxation and the
+  network has at most org.jacop.cfn.maxTerms cost terms; default true.
+- org.jacop.cfn.maxTerms: the most cost terms of a network whose bound is
+  posted (its reasons cite every network variable); default 500.
 - org.jacop.cfn.prune: remove the values whose cost lifts the bound past
   the objective's other bound; false keeps only the objective bound;
   default true.
@@ -731,6 +745,12 @@ unless stated otherwise):
 - org.jacop.fz.symmetryModelLex: lex-leader constraints of the model
   that are verified to compare the variables in one order let value
   precedence be posted on those variables too; default true.
+- org.jacop.fz.symmetryModelLexLs: lex-leader constraints of the model
+  whose swap of X and Y, with the variables the model defines from them,
+  is checked to be a symmetry of the rest of the model are left to the
+  canonicalizer of local search, as those JaCoP posts; with -f and no
+  ls, local search then runs for half of the time left (ls-lex=0 turns
+  that off); default true.
 - org.jacop.fz.symmetrySetValues: the elements of set variables that
   only set operations, comparisons and cardinalities constrain may be
   renamed by symmetries; default true.
@@ -962,6 +982,11 @@ Explanations:
   propagation allows, and a value excluded by a bound explained by the
   earliest bound beyond it; default true.
 - jacop.lcg.replay: replayed explanations; default true.
+- jacop.lcg.valueLiterals: a reason that needs only a value out of a
+  variable (value precedence: "v is in no earlier variable") cites the
+  literal x != v in place of the bound that removed v, when the solver
+  has it (made on first need), so learnt clauses also hold where the
+  variable takes another value; default true.
 - jacop.lcg.replayGroups: reasons with more groups than this get the
   generic reason; default 256.
 - jacop.lcg.replayShare: the most consistency calls the replays of a

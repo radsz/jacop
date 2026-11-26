@@ -113,6 +113,19 @@ public final class DualFeasibleFunctions {
   /** Number of tests that failed, for statistics. */
   public long failures;
 
+  /** Number of tests answered from the memo of earlier tests, for statistics. */
+  public long memoHits;
+
+  // the memo of earlier tests: a direct-mapped table of keys (the container's sides, then each
+  // rectangle's sides, packed in a long and sorted) and their outcomes. The test is a function of
+  // these sizes only, as a set, and search meets the same sets again and again: root probing of
+  // rectangle-packing rpp23 (MiniZinc Challenge 2014) made 34,513 tests on 346 distinct sets
+  private static final int MEMO_SIZE = 1 << 12;
+
+  private long[][] memoKeys;
+  private boolean[] memoFails;
+  private long[] key = new long[0];
+
   /**
    * The dual feasible function u^(k) of Fekete and Schepers [1], scaled by C * k: {@code x * k} if
    * {@code (k + 1) * x} is a multiple of C, and {@code floor((k + 1) * x / C) * C} otherwise. It
@@ -212,6 +225,41 @@ public final class DualFeasibleFunctions {
     if (2 * area <= space - corner) {
       return false;
     }
+    int slot = memoKey(width, height, cw, ch, m);
+    long[] known = memoKeys[slot];
+    if (known != null && Arrays.equals(known, 0, known.length, key, 0, m + 1)) {
+      memoHits++;
+      return memoFails[slot];
+    }
+    boolean fails = dffTest(width, height, cw, ch, m);
+    memoKeys[slot] = Arrays.copyOf(key, m + 1);
+    memoFails[slot] = fails;
+    return fails;
+  }
+
+  // the key of a test in key[0..m], and its slot in the memo
+  private int memoKey(int width, int height, int[] cw, int[] ch, int m) {
+    if (memoKeys == null) {
+      memoKeys = new long[MEMO_SIZE][];
+      memoFails = new boolean[MEMO_SIZE];
+    }
+    if (key.length < m + 1) {
+      key = new long[Math.max(m + 1, 2 * key.length)];
+    }
+    key[0] = (long) width << 32 | height;
+    for (int i = 0; i < m; i++) {
+      key[i + 1] = (long) cw[i] << 32 | ch[i];
+    }
+    Arrays.sort(key, 1, m + 1);
+    long hash = 0;
+    for (int i = 0; i <= m; i++) {
+      hash = (hash + key[i]) * 0x9E3779B97F4A7C15L;
+    }
+    return (int) (hash >>> 52) & (MEMO_SIZE - 1);
+  }
+
+  // the test of the pairs of functions on the m rectangles cw x ch, past Steinberg's theorem
+  private boolean dffTest(int width, int height, int[] cw, int[] ch, int m) {
     tests++;
     functions(0, width, cw, m);
     functions(1, height, ch, m);
