@@ -361,6 +361,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   DepthFirstSearch<T>[] finalSearch;
   // labels the variables a search on output variables leaves out
   DepthFirstSearch<T> completionSearch;
+  // labels the integer and Boolean variables it leaves out, after completionSearch labelled the
+  // set variables
+  DepthFirstSearch<T> completionChild;
+  // splits the float variables it leaves out, below completionSearch or in its place
+  DepthFirstSearch<T> floatCompletion;
   // Values for search created from flatzinc
   DepthFirstSearch<T> flatzincDfs;
   SelectChoicePoint<T> flatzincVariableSelection;
@@ -2630,7 +2635,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     DepthFirstSearch<T> parentSearch = null;
     do {
       s.getSolutionListener().recordSolutions(false);
-      s.getSolutionListener().searchAll(s != completionSearch);
+      s.getSolutionListener()
+          .searchAll(s != completionSearch && s != completionChild && s != floatCompletion);
 
       if (parentSearch != null) {
         s.getSolutionListener().setParentSolutionListener(parentSearch.getSolutionListener());
@@ -5853,6 +5859,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     if (packing == null) {
+      return null;
+    }
+    // the root's pending propagation first, as in checkSchedule: a level removed with it still
+    // queued drops it, and a linear relaxation not solved yet then took its first solve, whose
+    // bounds its cuts take as the root's, at the objective fixed below or at a probe of LCG's root
+    if (!store.consistency()) {
       return null;
     }
     IntVar[] items = packing.binVariables();
@@ -9660,7 +9672,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (options.getStatistics()) {
       int[] stats = gatherSingleSearchStats();
-      printStatisticsOutput(stats[0], stats[1], stats[2], stats[3]);
+      // the searches below the first one count the solutions of their own and of each other
+      // (with a completion of hidden floats below that of hidden integers, 2 for one solution), so
+      // count the solutions that were reported instead
+      printStatisticsOutput(stats[0], stats[1], stats[2], numberSolutions);
     }
   }
 
@@ -9913,10 +9928,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
-   * Adds a search on the integer and Boolean variables that the search on output variables leaves
-   * out. Propagation alone does not guarantee that they can take values consistent with the output
-   * variables, so a solution is reported only once they do. One assignment is enough: the search
-   * stops at the first one, also when all solutions are requested.
+   * Adds a search on the set, integer and Boolean variables that the search on output variables
+   * leaves out. Propagation alone does not guarantee that they can take values consistent with the
+   * output variables, so a solution is reported only once they do. One assignment is enough: the
+   * search stops at the first one, also when all solutions are requested.
    */
   @SuppressWarnings("unchecked")
   private DepthFirstSearch<T> addCompletionSearch(DepthFirstSearch<T> lastSearch) {
@@ -9924,8 +9939,48 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     allVars.defaultVars();
     LinkedHashSet<IntVar> rest = new LinkedHashSet<>(Arrays.asList(allVars.getIntVars()));
     rest.addAll(Arrays.asList(allVars.getBoolVars()));
+    // the float variables whose constraints a reformulation replaced take any value, and those
+    // MiniZinc introduced are intermediate results that the others define
+    Set<Var> unused = new HashSet<>(dictionary.unusedVariables);
+    unused.addAll(dictionary.introducedFloatVariables());
+    FloatVar[] floats =
+        Arrays.stream(allVars.getFloatVars())
+            .filter(v -> !unused.contains(v))
+            .toArray(FloatVar[]::new);
+    floatCompletion = null;
+    completionChild = null;
+    // the sets whose constraints a reformulation replaced take any value
+    Set<Var> unusedSets = new HashSet<>(dictionary.unusedVariables);
+    SetVar[] sets =
+        Arrays.stream(allVars.getSetVars())
+            .filter(v -> !unusedSets.contains(v))
+            .toArray(SetVar[]::new);
+    DepthFirstSearch<T> first = null;
+    if (sets.length > 0) {
+      // the set variables first, then the others below this search
+      DepthFirstSearch<T> setCompletion = new DepthFirstSearch<>();
+      if (options.debug()) {
+        setCompletion.setConsistencyListener(failStatistics);
+      }
+      setCompletion.setSelectChoicePoint(
+          (SelectChoicePoint<T>) new SimpleSelect<>(sets, null, new IndomainSetMin<>()));
+      setCompletion.setPrintInfo(false);
+      lastSearch.setSolutionListener(new SimpleSolutionListener<>());
+      setCompletion.setSolutionListener(new CostListener<>());
+      lastSearch.addChildSearch(setCompletion);
+      setSearchTimeout(setCompletion);
+      if (rest.isEmpty()) {
+        completionSearch = setCompletion;
+        completionChild = null;
+        addFloatCompletion(setCompletion, floats);
+        return setCompletion;
+      }
+      first = setCompletion;
+      lastSearch = setCompletion;
+    }
     if (rest.isEmpty()) {
-      return null;
+      completionSearch = addFloatCompletion(lastSearch, floats);
+      return completionSearch;
     }
 
     DepthFirstSearch<T> completion = new DepthFirstSearch<>();
@@ -9944,8 +9999,94 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     completion.setSolutionListener(new CostListener<>());
     lastSearch.addChildSearch(completion);
     setSearchTimeout(completion);
-    completionSearch = completion;
+    addFloatCompletion(completion, floats);
+    if (first == null) {
+      completionSearch = completion;
+      return completion;
+    }
+    completionSearch = first;
+    completionChild = completion;
+    return first;
+  }
+
+  /**
+   * Adds below lastSearch a search that splits the float variables the search on output variables
+   * leaves out, which propagation alone does not show to have values consistent with the rest (x =
+   * y and x != y over 0..1 holds no solution but propagates). It stops at the first solution.
+   *
+   * @return the search, or null when there are no such variables
+   */
+  @SuppressWarnings("unchecked")
+  private DepthFirstSearch<T> addFloatCompletion(
+      DepthFirstSearch<T> lastSearch, FloatVar[] floats) {
+    if (floats.length == 0) {
+      return null;
+    }
+    // under a float objective the split only shows that a solution exists and is undone:
+    // splitting a variable the cost depends on narrowed the cost below the box the search found,
+    // so each completed solution improved on the last by a few floats (ex2_1_1 with its squares
+    // plain variables: 1001 solutions and no proof in 30 s; with the check, the optimum in 61 s,
+    // since it refutes most boxes of x that the search accepts, and 22 s without any completion)
+    DepthFirstSearch<T> completion =
+        costVariable instanceof FloatVar
+            ? new FloatExtensionCheck(floats)
+            : new DepthFirstSearch<>();
+    if (options.debug()) {
+      completion.setConsistencyListener(failStatistics);
+    }
+    completion.setSelectChoicePoint(
+        costVariable instanceof FloatVar
+            ? (SelectChoicePoint<T>) new SimpleSelect<>(new IntVar[0], null, new IndomainMin<>())
+            : (SelectChoicePoint<T>) new SplitSelectFloat<>(store, floats, null));
+    completion.setPrintInfo(false);
+    lastSearch.setSolutionListener(new SimpleSolutionListener<>());
+    completion.setSolutionListener(new CostListener<>());
+    lastSearch.addChildSearch(completion);
+    setSearchTimeout(completion);
+    floatCompletion = completion;
     return completion;
+  }
+
+  /**
+   * A search over no variables that reports the solution of the searches above it once a split of
+   * the given float variables, at a level of its own and undone after it, shows that they have
+   * values consistent with it. The store and so the cost keep the box of the searches above.
+   */
+  private final class FloatExtensionCheck extends DepthFirstSearch<T> {
+    private final FloatVar[] floats;
+
+    FloatExtensionCheck(FloatVar[] floats) {
+      this.floats = floats;
+    }
+
+    @Override
+    public boolean labeling() {
+      Store s = this.store;
+      int level = s.level;
+      DepthFirstSearch<Var> check = new DepthFirstSearch<>();
+      check.setPrintInfo(false);
+      check.setAssignSolution(false);
+      SimpleSolutionListener<Var> listener = new SimpleSolutionListener<>();
+      listener.searchAll(false);
+      check.setSolutionListener(listener);
+      int to = options.getRemainingTimeOut();
+      if (to > 0) {
+        check.setTimeOutMilliseconds(to);
+      }
+      boolean extended;
+      s.setLevel(level + 1);
+      try {
+        extended = check.labeling(s, new SplitSelectFloat<>(s, floats, null));
+      } finally {
+        s.removeLevel(level + 1);
+        s.setLevel(level);
+      }
+      if (check.timeOutOccured) {
+        timeOutOccured = true;
+        return false;
+      }
+      return extended && super.labeling();
+    }
   }
 
   private boolean shouldUseDefaultSearchVars(

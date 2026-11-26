@@ -38,7 +38,6 @@ import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatVar;
 
@@ -87,6 +86,17 @@ public class TanPeqR extends Constraint implements SatisfiedPresent, Copyable<Ta
 
   void boundConsistency(Store store) {
 
+    if (p == q) {
+      // tan(x) - x is increasing between the poles at -PI/2 and PI/2, so 0 is the only solution
+      // there, which bound propagation would only approach by about x^3 per pass; Math.PI / 2 is
+      // below the real pole, so the open intervals removed hold no other solution
+      double pole = FloatDomain.PI / 2;
+      FloatIntervalDomain outside = new FloatIntervalDomain(FloatDomain.MIN_FLOAT, -pole);
+      outside.unionAdapt(0.0, 0.0);
+      outside.unionAdapt(pole, FloatDomain.MAX_FLOAT);
+      p.domain.in(store.level, p, outside);
+    }
+
     if (p.max() - p.min() >= FloatDomain.PI) {
       return;
     }
@@ -106,10 +116,12 @@ public class TanPeqR extends Constraint implements SatisfiedPresent, Copyable<Ta
       double cosMin = Math.cos(min);
       double cosMax = Math.cos(max);
       if (cosMin == 0.0 || cosMax == 0.0 || (cosMin < 0) != (cosMax < 0)) {
-        if (new FloatInterval(min, max).singleton()) {
-          throw Store.failException;
+        // a pole is in p, also when p is a singleton (an interval up to the precision wide): tan
+        // rises from tan(min) to +inf left of it and from -inf to tan(max) right of it
+        if (!prunePole(store, min, max)) {
+          return;
         }
-        return;
+        continue;
       }
 
       // tan is increasing between two poles
@@ -120,6 +132,49 @@ public class TanPeqR extends Constraint implements SatisfiedPresent, Copyable<Ta
       updateFirstDomainFromSecond(store, qMin, qMax);
 
     } while (store.propagationHasOccurred);
+  }
+
+  /**
+   * Prunes p and q when p, narrower than PI, contains the pole between the branch of min and the
+   * branch of max.
+   *
+   * @return false when the branches cannot be told apart and nothing is pruned
+   */
+  private boolean prunePole(Store store, double min, double max) {
+    double kRight = Math.rint(max / FloatDomain.PI);
+    double kLeft = kRight - 1;
+    if (Math.rint(min / FloatDomain.PI) != kLeft || cosMinOrMaxZero(min, max)) {
+      return false;
+    }
+    double tanMin = FloatDomain.down(Math.tan(min));
+    double tanMax = FloatDomain.up(Math.tan(max));
+    boolean left = q.max() >= tanMin;
+    boolean right = q.min() <= tanMax;
+    if (!left && !right) {
+      throw Store.failException;
+    }
+    FloatIntervalDomain pDom = new FloatIntervalDomain(4);
+    if (left) {
+      double high = FloatDomain.up(Math.atan(q.max())) + kLeft * FloatDomain.PI;
+      high = FloatDomain.up(high + AbstractTrigConstraint.reductionError(high, FloatDomain.PI));
+      pDom.unionAdapt(min, Math.max(min, high));
+    }
+    if (right) {
+      double low = FloatDomain.down(Math.atan(q.min())) + kRight * FloatDomain.PI;
+      low = FloatDomain.down(low - AbstractTrigConstraint.reductionError(low, FloatDomain.PI));
+      pDom.unionAdapt(Math.min(low, max), max);
+    }
+    p.domain.in(store.level, p, pDom);
+    if (tanMax < tanMin) {
+      FloatIntervalDomain qDom = new FloatIntervalDomain(FloatDomain.MIN_FLOAT, tanMax);
+      qDom.unionAdapt(tanMin, FloatDomain.MAX_FLOAT);
+      q.domain.in(store.level, q, qDom);
+    }
+    return true;
+  }
+
+  private static boolean cosMinOrMaxZero(double min, double max) {
+    return Math.cos(min) == 0.0 || Math.cos(max) == 0.0;
   }
 
   private void updateFirstDomainFromSecond(Store store, double qminValue, double qmaxValue) {

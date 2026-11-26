@@ -149,6 +149,8 @@ public final class DominanceNogoods {
   private long[][] linWeights;
   private int[][] freeVars;
   private int[][] freeDirs;
+  // per row, whether it may define a variable (see Row.defines)
+  private boolean[] defines;
   private int[][] varCons;
   // the defining equality of a variable and its weight there, or -1
   private long[] constants;
@@ -773,6 +775,9 @@ public final class DominanceNogoods {
     LongUnaryOperator valueOf;
     int valIn = -1;
     int valOut = -1;
+    // false for the row of a reification: its lhs stays as it is, but it is no equality whose
+    // variable follows the others, also when the 0/1 variable is fixed and so left out of the row
+    boolean defines = true;
   }
 
   private final List<Row> rows = new ArrayList<>();
@@ -793,8 +798,10 @@ public final class DominanceNogoods {
     linWeights = new long[n][];
     freeVars = new int[n][];
     freeDirs = new int[n][];
+    defines = new boolean[n];
     for (int c = 0; c < n; c++) {
       Row r = rows.get(c);
+      defines[c] = r.defines;
       constants[c] = r.constant;
       relation[c] = r.relation;
       linVars[c] = r.linVars;
@@ -911,6 +918,7 @@ public final class DominanceNogoods {
         }
       }
       free.put(r.b, implies ? Monotone.DECREASE : 0);
+      row.defines = false;
     } else {
       Monotone m = con instanceof Monotone mm ? mm : null;
       for (Var v : con.arguments()) {
@@ -1054,7 +1062,7 @@ public final class DominanceNogoods {
     Arrays.fill(definition, -1);
     boolean[] used = new boolean[relation.length];
     for (int c : varCons[obj]) {
-      if (relation[c] == EQ && freeVars[c].length == 0) {
+      if (relation[c] == EQ && freeVars[c].length == 0 && defines[c]) {
         RowSums sums = new RowSums(c);
         if (sums.covers(obj, true)) {
           definition[obj] = c;
@@ -1065,7 +1073,11 @@ public final class DominanceNogoods {
       }
     }
     for (int c = 0; c < relation.length; c++) {
-      if (used[c] || relation[c] != EQ || freeVars[c].length > 0 || linVars[c].length < 2) {
+      if (used[c]
+          || relation[c] != EQ
+          || freeVars[c].length > 0
+          || !defines[c]
+          || linVars[c].length < 2) {
         continue;
       }
       // the bounds of the row are summed once, so that a row of n terms is checked in O(n)
