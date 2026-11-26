@@ -14617,4 +14617,50 @@ class SingleConstraintTest extends TestHelper {
       assertThat(List.of(x.value(), y.value(), cost.value())).containsExactly(1, 0, -4);
     }
   }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void prioritySearchAssignsTheSolutionOfAChildSearchThatRecordsItsSolutions() {
+    // the child search of a priority search numbered its solutions by the listener of the linking
+    // search, so no child solution matched the priority search's and the child's variables were
+    // left open after the search
+    for (boolean optimize : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", 0, 1);
+      IntVar y = new IntVar(store, "y", 0, 1);
+      IntVar z = new IntVar(store, "z", 0, 2);
+      IntVar cost = new IntVar(store, "cost", -10, 10);
+      store.impose(new LinearInt(new IntVar[] {x, y, z, cost}, new int[] {1, 2, -1, -1}, "==", 0));
+      DepthFirstSearch<IntVar>[] searches = new DepthFirstSearch[2];
+      searches[0] = new DepthFirstSearch<>();
+      searches[0].setSelectChoicePoint(
+          new SimpleSelect<>(new IntVar[] {x}, null, new IndomainMax<>()));
+      searches[1] = new DepthFirstSearch<>();
+      searches[1].setSelectChoicePoint(
+          new SimpleSelect<>(new IntVar[] {y}, null, new IndomainMax<>()));
+      DepthFirstSearch<IntVar> child = new DepthFirstSearch<>();
+      child.setSelectChoicePoint(new SimpleSelect<>(new IntVar[] {z}, null, new IndomainMin<>()));
+      child.getSolutionListener().searchAll(true);
+      child.getSolutionListener().recordSolutions(true);
+      for (DepthFirstSearch<IntVar> search : List.of(searches[0], searches[1], child)) {
+        search.setPrintInfo(false);
+      }
+      PrioritySearch<IntVar> priority =
+          new PrioritySearch<>(new IntVar[] {x, y}, new SmallestDomain<>(), searches);
+      priority.setPrintInfo(false);
+      priority.addChildSearch(child);
+      boolean found;
+      if (optimize) {
+        found = priority.labeling(store, cost);
+      } else {
+        priority.setSolutionLimit(Integer.MAX_VALUE);
+        found = priority.labeling(store);
+      }
+      assertThat(found).isTrue();
+      assertThat(child.getSolutionListener().solutionsNo()).isEqualTo(optimize ? 6 : 12);
+      // the last solution: x = 0 and y = 0 last, and z = 2 the last (and best) under them
+      assertThat(List.of(x.value(), y.value(), z.value(), cost.value()))
+          .containsExactly(0, 0, 2, -2);
+    }
+  }
 }

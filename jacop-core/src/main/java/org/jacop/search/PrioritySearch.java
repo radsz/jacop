@@ -865,7 +865,13 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         DepthFirstSearch<T> child = (DepthFirstSearch<T>) asDfs(childObj);
         lastChildSearchRun = child;
         child.setStore(store);
-        child.getSolutionListener().setParentSolutionListener(solutionListener);
+        // a child that records its solutions matches them with those of the priority search
+        child
+            .getSolutionListener()
+            .setParentSolutionListener(
+                child.getSolutionListener().isRecordingSolutions()
+                    ? master.solutionListener
+                    : solutionListener);
         child.setCostVar(costVariable);
         int currentChildSolutionNo = child.getSolutionListener().solutionsNo();
         lastChildSolutionsBefore = currentChildSolutionNo;
@@ -894,7 +900,13 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         DepthFirstSearch<T> child = (DepthFirstSearch<T>) asDfs(childObj);
         lastChildSearchRun = child;
         child.setStore(store);
-        child.getSolutionListener().setParentSolutionListener(solutionListener);
+        // a child that records its solutions matches them with those of the priority search
+        child
+            .getSolutionListener()
+            .setParentSolutionListener(
+                child.getSolutionListener().isRecordingSolutions()
+                    ? master.solutionListener
+                    : solutionListener);
         int currentChildSolutionNo = child.getSolutionListener().solutionsNo();
         lastChildSolutionsBefore = currentChildSolutionNo;
         boolean result = child.labeling();
