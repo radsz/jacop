@@ -1162,7 +1162,73 @@ public final class LocalSearch {
       swaps[c] = false;
       classes.merge("P:" + con.getClass().getSimpleName(), 1, Integer::sum);
     }
+    List<Integer> ones = new ArrayList<>();
+    for (int k = 0; k < found.size(); k++) {
+      ones.add(-1);
+    }
+    if (CARDINALITY_GROUPS) {
+      for (int c = 0; c < linearCount; c++) {
+        int k = cardinality(c);
+        if (k < 0) {
+          continue;
+        }
+        for (int i : scope[c]) {
+          groupOf[i] = found.size();
+        }
+        found.add(scope[c].clone());
+        ones.add(k);
+        scope[c] = new int[0];
+        coef[c] = new long[0];
+        rhs[c] = 0;
+        classes.merge("P:cardinality", 1, Integer::sum);
+      }
+    }
     groups = found.toArray(new int[0][]);
+    groupOnes = ones.stream().mapToInt(Integer::intValue).toArray();
+  }
+
+  // whether 0/1 variables of exactly-k rows move only by swaps (jacop.ls.cardinalityGroups)
+  private static final boolean CARDINALITY_GROUPS =
+      !"false".equals(System.getProperty("jacop.ls.cardinalityGroups"));
+
+  // per group, the number of its variables that are 1 for a cardinality group, -1 for a permutation
+  private int[] groupOnes = new int[0];
+
+  /**
+   * The k of a row {@code x_1 + ... + x_n = k}, with 0 < k < n, over distinct 0/1 variables that
+   * are not defined, not the cost and in no group yet, without an enforcer; else -1. Its variables
+   * can keep k of them at 1 and move only by swaps of a 1 and a 0, so the row is never violated
+   * (the cardinality neighbourhood of constraint-based local search, as for a permutation).
+   */
+  private int cardinality(int c) {
+    int[] s = scope[c];
+    long[] a = coef[c];
+    if (rel[c] != EQ || enforcer[c] >= 0 || s.length < 3 || s.length > GROUP_LIMIT) {
+      return -1;
+    }
+    long unit = a[0];
+    if (unit != 1 && unit != -1 || rhs[c] % unit != 0) {
+      return -1;
+    }
+    long k = rhs[c] / unit;
+    if (k <= 0 || k >= s.length) {
+      return -1;
+    }
+    for (int p = 0; p < s.length; p++) {
+      int i = s[p];
+      if (a[p] != unit
+          || groupOf[i] >= 0
+          || i == costIndex
+          || domains[i].min() != 0
+          || domains[i].max() != 1
+          || (definedVars != null && definedVars.contains(vars[i]))) {
+        return -1;
+      }
+    }
+    if (Arrays.stream(s).distinct().count() != s.length) {
+      return -1;
+    }
+    return (int) k;
   }
 
   // groups larger than this are not kept a permutation (the matching that repairs them is cubic)
@@ -1196,11 +1262,34 @@ public final class LocalSearch {
    */
   private void repairGroups() {
     for (int g = 0; g < groups.length; g++) {
+      if (groupOnes[g] >= 0) {
+        countGroup(groups[g], groupOnes[g]);
+        continue;
+      }
       if (groups[g].length > 0 && !matchGroup(groups[g])) {
         for (int i : groups[g]) {
           groupOf[i] = -1;
         }
         groups[g] = new int[0];
+      }
+    }
+  }
+
+  // gives exactly k variables of a cardinality group the value 1, changing random ones
+  private void countGroup(int[] g, int k) {
+    int have = 0;
+    for (int i : g) {
+      have += val[i];
+    }
+    int offset = random.nextInt(g.length);
+    for (int t = 0; t < g.length && have != k; t++) {
+      int i = g[(offset + t) % g.length];
+      if (have > k && val[i] == 1) {
+        val[i] = 0;
+        have--;
+      } else if (have < k && val[i] == 0) {
+        val[i] = 1;
+        have++;
       }
     }
   }
@@ -1275,7 +1364,10 @@ public final class LocalSearch {
     int offset = g.length > SWAP_SCAN ? random.nextInt(g.length) : 0;
     for (int t = 0; t < scan; t++) {
       int j = g[(offset + t) % g.length];
-      if (j == i || !domains[i].contains(val[j]) || !domains[j].contains(val[i])) {
+      if (j == i
+          || val[j] == val[i]
+          || !domains[i].contains(val[j])
+          || !domains[j].contains(val[i])) {
         continue;
       }
       double d = trySwap(i, j);
