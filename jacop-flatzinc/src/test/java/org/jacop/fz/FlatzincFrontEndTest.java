@@ -9370,4 +9370,37 @@ class FlatzincFrontEndTest {
       System.clearProperty("jacop.lcg.check");
     }
   }
+
+  @Test
+  void dominanceNogoodsTieAnAffineViewToItsBase() throws IOException {
+    // the fast presolve level makes b1 the view 2 * x11; the dominance nogoods read b1 as a
+    // variable of its own, which only the objective row holds, raised it to 6, so x11 = 3, and
+    // every search reported the model unsatisfiable (x11 = 2 in each solution, the optimum is 78)
+    String model =
+        "var {0,2,3}: x0 :: output_var;\n"
+            + "var 0..2: x1 :: output_var;\n"
+            + "var 1..4: x2 :: output_var;\n"
+            + "var 2..3: x3 :: output_var;\n"
+            + "var 2..5: x6 :: output_var;\n"
+            + "var 2..5: x7 :: output_var;\n"
+            + "var {1,2,4,5,6}: x8 :: output_var;\n"
+            + "var 2..6: x9 :: output_var;\n"
+            + "var -1..4: x11 :: output_var;\n"
+            + "var 2..6: x12 :: output_var;\n"
+            + "var 11..27: b0;\n"
+            + "var 1..7: b1;\n"
+            + "var 31..43: b2;\n"
+            + "var -1000..1000: obj :: output_var;\n"
+            + "constraint int_lin_eq([2,1,-1],[x7,x6,x3],7);\n"
+            + "constraint int_lin_eq([-1,1,2,-1],[x3,x7,x1,x11],1);\n"
+            + "constraint jacop_alldiff([x9,x3,x7]);\n"
+            + "constraint int_lin_eq([2,-1],[x11,b1],0);\n"
+            + "constraint int_lin_eq([1,3,1,2,2,1,1,-1],[x6,x12,x9,x2,x7,x8,x0,b2],0);\n"
+            + "constraint int_lin_eq([1,2,1,-1],[b0,b1,b2,obj],0);\n"
+            + "solve maximize obj;\n";
+    for (String level : new String[] {"fast", "medium"}) {
+      String out = run(model, "--presolve", "on", "--lcg", "off", "--presolve-level", level)[0];
+      assertTrue(out.contains("obj = 78;\n----------\n=========="), level + ": " + out);
+    }
+  }
 }
