@@ -46,6 +46,11 @@ public final class EntryList {
   // how much weaker than its entry's bound each position's atom may be; null while all are 0
   private int[] slacks;
 
+  // the value whose removal each position's bound entry stands for, when the reason needs only
+  // that removal (see addExcludedValue); null while there is none, and valid only where hasValue
+  private int[] values;
+  private boolean[] hasValues;
+
   /**
    * Adds an entry.
    *
@@ -70,6 +75,13 @@ public final class EntryList {
       if (slacks != null) {
         slacks = Arrays.copyOf(slacks, 2 * size);
       }
+      if (values != null) {
+        values = Arrays.copyOf(values, 2 * size);
+        hasValues = Arrays.copyOf(hasValues, 2 * size);
+      }
+    }
+    if (values != null) {
+      hasValues[size] = false;
     }
     if (slack != 0 && slacks == null) {
       slacks = new int[entries.length];
@@ -78,6 +90,46 @@ public final class EntryList {
       slacks[size] = slack;
     }
     entries[size++] = entry;
+  }
+
+  /**
+   * Adds a bound entry that removed a value, for a reason that needs only the removal of that
+   * value: the solver may cite {@code x != value} in place of the bound when it has a literal for
+   * it that holds, which is weaker than the bound and so makes a more general clause. Lists that
+   * are sorted ({@link #sortUnique}) or copied ({@link #addFrom}) keep the bound.
+   *
+   * @param entry a bound entry that removed the value
+   * @param value the value
+   */
+  public void addExcludedValue(int entry, int value) {
+    add(entry);
+    if (values == null) {
+      values = new int[entries.length];
+      hasValues = new boolean[entries.length];
+    }
+    values[size - 1] = value;
+    hasValues[size - 1] = true;
+  }
+
+  /**
+   * Whether the atom at a position may be cited as the removal of one value (see {@link
+   * #addExcludedValue}).
+   *
+   * @param position the position, below {@link #size()}
+   * @return true when {@link #excludedValue} gives the value
+   */
+  public boolean hasExcludedValue(int position) {
+    return values != null && hasValues[position];
+  }
+
+  /**
+   * Returns the value whose removal the atom at a position stands for.
+   *
+   * @param position the position, below {@link #size()}, with {@link #hasExcludedValue}
+   * @return the value
+   */
+  public int excludedValue(int position) {
+    return values[position];
   }
 
   /**
@@ -118,6 +170,9 @@ public final class EntryList {
    */
   public void set(int position, int entry) {
     entries[position] = entry;
+    if (values != null) {
+      hasValues[position] = false;
+    }
   }
 
   /**
@@ -157,6 +212,8 @@ public final class EntryList {
    * @param from the first position sorted
    */
   public void sortUnique(int from) {
+    values = null;
+    hasValues = null;
     if (size - from < 2) {
       return;
     }
@@ -195,5 +252,7 @@ public final class EntryList {
   /** Removes all entries. */
   public void clear() {
     size = 0;
+    values = null;
+    hasValues = null;
   }
 }
