@@ -14374,4 +14374,30 @@ class SingleConstraintTest extends TestHelper {
       assertThat(v.dom().eq(new IntervalDomain(0, 2))).as(v.toString()).isTrue();
     }
   }
+
+  @Test
+  void diff2ImposedAboveTheRootChecksRectanglesFixedBeforeTheNextLevel() {
+    // imposed in a search without a consistency (as from a ConsistencyListener), Diff2 queued all
+    // its variables; the decision of the next level cleared that queue, so the two rectangles fixed
+    // earlier were skipped as checked and their overlap was accepted
+    Store store = new Store();
+    IntVar[][] r = new IntVar[3][4];
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 4; j++) {
+        r[i][j] = new IntVar(store, "r" + i + j, j < 2 ? 0 : 1, j < 2 ? 3 : 1);
+      }
+    }
+    store.setLevel(1);
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < 2; j++) {
+        r[i][j].domain.in(1, r[i][j], 0, 0);
+      }
+    }
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(2);
+    store.impose(new Diff2(r));
+    store.setLevel(3);
+    r[2][0].domain.in(3, r[2][0], 3, 3);
+    assertThat(store.consistency()).isFalse();
+  }
 }

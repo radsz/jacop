@@ -75,7 +75,6 @@ abstract class AbstractDiff extends Constraint
   protected Rectangle[] rectangles;
 
   Store currentStore;
-  int stamp;
   Set<IntVar> variableQueue = new HashSet<>();
 
   /** It specifies if the constraint should compute and use the profile. */
@@ -635,13 +634,10 @@ abstract class AbstractDiff extends Constraint
 
   @Override
   public void queueVariable(int level, Var v) {
-    if (level == stamp) {
-      variableQueue.add((IntVar) v);
-    } else {
-      variableQueue.clear();
-      stamp = level;
-      variableQueue.add((IntVar) v);
-    }
+    // the variables queued at a lower level are kept: when the constraint was imposed or a
+    // variable changed without a consistency before the level was raised, they are still to check
+    // (a consistency takes the queue, and removing a level clears it)
+    variableQueue.add((IntVar) v);
   }
 
   /**
