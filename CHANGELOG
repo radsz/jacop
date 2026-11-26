@@ -9409,7 +9409,7 @@ Version 5.0 (unreleased)
    changes (split sums under -f): proved 9 -> 10, total 1,376 -> 1,277 s,
    no objective worse.
 
-512. FlatZinc set-up on big Pseudo-Boolean models is faster, with the same
+521. FlatZinc set-up on big Pseudo-Boolean models is faster, with the same
    search. The output-variable check used by alias merging is a set
    instead of a scan of every output array, side components take only
    their own clauses, LinearOverlapDetector walks the shorter row, the
