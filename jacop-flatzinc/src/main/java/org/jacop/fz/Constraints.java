@@ -72,8 +72,10 @@ import org.jacop.fz.constraints.CyclicDistanceDetector;
 import org.jacop.fz.constraints.DifferenceBoundsDetector;
 import org.jacop.fz.constraints.DifferenceCyclesDetector;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
+import org.jacop.fz.constraints.DisjunctiveListsDifferDetector;
 import org.jacop.fz.constraints.ElementTableDetector;
 import org.jacop.fz.constraints.EnforcementInliner;
+import org.jacop.fz.constraints.EntailedDisequalities;
 import org.jacop.fz.constraints.ExactCoverDetector;
 import org.jacop.fz.constraints.GiantTourDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
@@ -170,6 +172,24 @@ public class Constraints implements ParserTreeConstants {
   void setOptions(Options options) {
     support.options = options;
     debug = options.debug();
+  }
+
+  /**
+   * Removes the disequalities that the declared domains already satisfy, before {@link
+   * #generateAllConstraints} and its detectors scan them; see {@link EntailedDisequalities}.
+   *
+   * @param astTree the model
+   */
+  void removeEntailedDisequalities(SimpleNode astTree) {
+    // with clamped domains a disequality true over the clamped domain need not be true over the
+    // declared one
+    if (!EntailedDisequalities.enabled() || dictionary.domainsClamped()) {
+      return;
+    }
+    int entailed = new EntailedDisequalities(support).remove(astTree);
+    if (support.options.debug() && entailed > 0) {
+      FzConsole.println("% " + entailed + " disequalities true by the domains removed");
+    }
   }
 
   void generateAllConstraints(SimpleNode astTree) throws Throwable {
@@ -398,6 +418,20 @@ public class Constraints implements ParserTreeConstants {
         if (!lists.replaced().isEmpty()) {
           replaced = new HashSet<>(replaced);
           replaced.addAll(lists.replaced());
+        }
+      }
+
+      // lists that differ written as clauses of reified disequalities become AllDifferentLists over
+      // the largest group of lists that all differ pairwise
+      if (DisjunctiveListsDifferDetector.enabled() && options.proof() == null) {
+        DisjunctiveListsDifferDetector lists =
+            new DisjunctiveListsDifferDetector(support, solveItemVariables(astTree));
+        lists.detect(astTree);
+        if (!lists.replaced().isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(lists.replaced());
+          dictionary.removeFromDefaultSearch(lists.removed());
+          dictionary.unusedVariables.addAll(lists.removed());
         }
       }
 

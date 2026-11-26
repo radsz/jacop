@@ -4862,6 +4862,68 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return !tooLateForFreeSearch(solver);
   }
 
+  // set when a fast LCG free search gave way because learning cut its tree too little, for the
+  // statistics
+  private volatile boolean lcgWeak;
+
+  /**
+   * Whether learning cuts the tree of an optimisation free search too little to pay for its cost
+   * per node, by the test of satisfaction searches ({@link #learningCutsLittle}) on the conflicts
+   * so far, with its own thresholds lcg-opt-jump and lcg-opt-lbd (a negative jump turns it off). On
+   * the 2017 community-detection instances of the MiniZinc Challenge, whose objective is a sum of
+   * pair weights of about 10,000 kept within a window of 10 to 103 above a constant, LCG makes
+   * 4,000 conflicts/s, jumps back 1.05 to 1.2 levels a conflict with an LBD of 0.65 to 0.8 times
+   * the depth, and plain CP makes 100 times its nodes per second: at 240 s Sampson.s10.k3 is proved
+   * (10) in 13 s without learning and stays at 6 to 8 with LCG; Strike.s2.k8 is proved in 4 to 8 s
+   * instead of 23 to 245 s; dolphin.s62.k3 reaches 65 instead of 43 to 49.
+   *
+   * @param solver the LCG solver
+   * @param now the time of the check (CdclSolver.now of the LCG solver)
+   * @return true if search without learning should take over once LCG stops making progress
+   */
+  private boolean optimisationLearningCutsLittle(LcgSolver solver, long now) {
+    double maxJump = Double.parseDouble(options.freeConfig("lcg-opt-jump", "1.3"));
+    String mode = options.freeConfig("lcg-opt-probe", "on");
+    if (maxJump <= 0 || "off".equals(mode)) {
+      return false;
+    }
+    CdclSolver sat = solver.sat();
+    long conflicts = sat.conflicts;
+    if (conflicts == 0) {
+      return false;
+    }
+    double level = (double) sat.conflictLevels / conflicts;
+    double jump = (double) sat.backjumpLevels / conflicts;
+    double lbd = (double) sat.lbdSum() / conflicts;
+    boolean weak =
+        learningCutsLittle(
+            conflicts,
+            level,
+            jump,
+            lbd,
+            maxJump,
+            Double.parseDouble(options.freeConfig("lcg-opt-lbd", "0.35")));
+    if (!lcgOptProbePrinted && ("report".equals(mode) || options.searchStatistics())) {
+      // printed once, at the first check that finds LCG fast enough
+      lcgOptProbePrinted = true;
+      IO.println(
+          String.format(
+              Locale.ROOT,
+              "%%%%%%mzn-stat: lcgOptProbe=%.1f,%d,%.2f,%.3f,%.2f,%b,%b",
+              (now - lcgStart) / 1e9,
+              conflicts,
+              level,
+              jump,
+              lbd,
+              weak,
+              solutionFound));
+    }
+    return weak;
+  }
+
+  // whether the first check of an optimisation search's learning was printed
+  private boolean lcgOptProbePrinted;
+
   /**
    * Whether learning cuts the tree of a satisfaction search too little to pay for its cost per
    * node. A conflict whose first-UIP clause jumps back about one level, with an LBD close to the
@@ -4941,12 +5003,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // LCG gives way only with a solution to hand over: without one, the check is made again until
     // LCG has one or is no longer slow. cutstock type16 TEST9 found its first solution with LCG at
     // 37 s and none without
-    if (solver.sat().conflicts
-            >= slowRate(solver.sat().conflicts, solver.sat().learntLiterals, rate, perLiteral)
-                * (now - lcgStart)
-                / 1e9
-        || tooLateForFreeSearch(solver)) {
+    if (tooLateForFreeSearch(solver)) {
       return false;
+    }
+    boolean weak = false;
+    if (solver.sat().conflicts
+        >= slowRate(solver.sat().conflicts, solver.sat().learntLiterals, rate, perLiteral)
+            * (now - lcgStart)
+            / 1e9) {
+      // fast enough; it still gives way when learning cuts the tree too little to pay for its cost
+      // per node, and it stopped making progress
+      weak = !unsolvedOnly && optimisationLearningCutsLittle(solver, now) && solutionFound;
+      if (!weak || "report".equals(options.freeConfig("lcg-opt-probe", "on"))) {
+        return false;
+      }
     }
     long cost = bestPrintedCost.get();
     costs.addLast(new long[] {now, cost});
@@ -4965,6 +5035,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       } else if (coresRising(now)) {
         lcgSlowCoreKeeps++;
       } else {
+        lcgWeak = weak;
         lcgSlow = true;
         sliceInsteadOfHandOver();
         solver.stop();
@@ -9539,6 +9610,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           IO.println("%%%mzn-stat: lcgSlowDeferred=" + lcgSlowDeferred);
           IO.println("%%%mzn-stat: lcgSlowUnsolved=" + lcgSlowUnsolved);
           IO.println("%%%mzn-stat: lcgHopeless=" + lcgHopeless);
+          IO.println("%%%mzn-stat: lcgWeak=" + lcgWeak);
           IO.println("%%%mzn-stat: lcgSlowCoreKeeps=" + lcgSlowCoreKeeps);
         }
       }

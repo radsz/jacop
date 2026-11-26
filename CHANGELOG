@@ -9068,7 +9068,29 @@ Version 5.0 (unreleased)
    atom, from int arrays: the same search, sudoku_opt p29 and
    gfd-schedule n100 -2.9 % each, wide-quick -f -0.9 %, default -0.2 %.
 
-507. The JaLP presolve stuffs singleton columns (G. Gamrath, T. Koch,
+507. The FlatZinc front end posts lists that differ, written as clauses of
+   reified disequalities (x[1] != y[1]) \/ ... \/ (x[k] != y[k]), as one
+   AllDifferentLists over the largest group of lists that all differ
+   pairwise (DisjunctiveListsDifferDetector; allDifferent on lists,
+   F. Boussemart, C. Lecoutre, G. Audemard and C. Piette, XCSP3-core: A
+   format for representing constraint satisfaction/optimization problems,
+   arXiv:2009.00514, 2020, section 4.1.1). A clause qualifies when each of
+   its Booleans is defined by one int_ne_imp, int_lin_ne_imp or
+   reification and used nowhere else; a plain disequality of two lists
+   counts as an edge too, and a greedy clique is taken per connected group.
+   ExaminationTimetabling1 of XCSP 2026 states "no two events in the same
+   room and period" this way: 32k clauses and 64k half reifications over
+   261 events. 600 s, -f, 10 instances: 6 better (D1-2-16 568 -> 538,
+   D1-2-17 677 -> 658, D1-1-16 395 -> 384), 2 equal, 2 worse (D7-1-17
+   404 -> 434, D7-2-17 803 -> 848), and the first solution of the D1
+   instances comes in 13-59 s instead of 43-121 s; with the native XCSP
+   reader D1-3-17 finds its first solution in 15 s and none in 60 s
+   without it. SocialGolfers of XCSP 2024 (18 CSP instances, 240 s): the
+   same 9 decided in the same time. It fires on 1 of the 240 instances of
+   the wide set (gfd-schedule n180f7d50m30k18, neutral).
+   -Dorg.jacop.fz.listsDifferClauses=false turns it off.
+
+508. The JaLP presolve stuffs singleton columns (G. Gamrath, T. Koch,
    A. Martin, M. Miltenberger and D. Weninger, "Progress in presolving
    for mixed integer programming", Mathematical Programming Computation
    7, 2015): in a row with one side, the column singletons whose cost
@@ -9078,7 +9100,7 @@ Version 5.0 (unreleased)
    stays at the other. trucking_15 presolves to 87 x 98 like HiGHS (was
    87 x 600). -Dorg.jacop.jalp.presolveStuffing=false turns it off.
 
-508. The JaLP presolve removes rows that the bounds other rows imply on
+509. The JaLP presolve removes rows that the bounds other rows imply on
    their columns keep (E. D. Andersen and K. D. Andersen, "Presolving in
    linear programming", Mathematical Programming 71, 1995, section 3.3,
    with implied column bounds as HiGHS keeps them). Each row bounds its
@@ -9090,7 +9112,7 @@ Version 5.0 (unreleased)
    and rocII-5-11 presolve to HiGHS's size. -Dorg.jacop.jalp.presolveImpliedRows=false
    turns it off.
 
-509. Free search (-f) with an annotation drops the annotation's runs when
+510. Free search (-f) with an annotation drops the annotation's runs when
    50,000 conflicts found no solution: from then on LCG takes turns of
    the SAT solver's own decisions on literals and of activity branching
    only, as without an annotation (--free-config lcg-annotation-drop=<n>,
@@ -9108,7 +9130,7 @@ Version 5.0 (unreleased)
    93 -> 94, total time 3,996 -> 3,648 s. The rule fires on 3 of the 240
    instances of the wide set within 60 s.
 
-510. FlatZinc front end as a GraalVM native image (fzn-jacop-native): it
+511. FlatZinc front end as a GraalVM native image (fzn-jacop-native): it
    starts in milliseconds and runs compiled code at once, where the JVM,
    even with its ahead-of-time cache, needs 0.1 s to start and runs JaCoP
    in its interpreter for the first 0.2-0.5 s. fzn-jacop-native-build (or
@@ -9126,7 +9148,7 @@ Version 5.0 (unreleased)
    the instances both solve; at 600 s two -f proofs past 400 s are lost
    (celar graph11, whirlpool d29).
 
-511. Root probing and the Diffn area check are cheaper, with the same search.
+512. Root probing and the Diffn area check are cheaper, with the same search.
    DualFeasibleFunctions keeps a memo of its packing tests, keyed by the
    container and the set of item sizes: root probing of MiniZinc Challenge
    2014 rectangle-packing rpp23 made 34,513 tests on 346 distinct sets.
@@ -9185,6 +9207,34 @@ Version 5.0 (unreleased)
    187 optimisation instances build a network (4.5 s of detection in all,
    at most 0.5 s on one); the bound is posted only on proteindesign12.
    -Dorg.jacop.fz.costNetwork=false turns it off.
+
+511. The FlatZinc front end removes int_ne and int_lin_ne constraints that
+   the declared domains already satisfy (disjoint domains, a fixed side
+   outside the other domain, a constant outside the range of the sum)
+   before the detectors run, and IntensionTableDetector looks output
+   variables up in a set. gfd-schedule n180f7d50m30k18 drops 15,040 of
+   its 15,041 disequalities and its set-up takes 3.7 s instead of 4.4 s;
+   on the 20 gfd-schedule Challenge instances and 2 cryptanalysis ones
+   free search totals -19 % at 600 s, fixed search the same. -Dorg.jacop.fz.entailedDisequalities=false
+   keeps them.
+
+512. LCG free search (-f) of an optimisation model that is fast enough for
+   the speed check (lcg-slow-rate) now also gives way to free search
+   without learning at that check when learning cuts its tree little: its
+   conflicts jump back fewer than 1.3 levels with an LBD of at least 0.35
+   times their depth (the test of the satisfaction probe; --free-config
+   lcg-opt-jump, lcg-opt-lbd) and it stopped improving (lcg-slow-stall,
+   lcg-slow-gain). lcg-opt-probe=report only prints the test as
+   lcgOptProbe, off turns it off; -s prints lcgWeak. On the MiniZinc
+   Challenge 2017 community-detection instances, whose objective is a sum
+   of pair weights of about 10,000 kept in a window of 10 to 103 values,
+   LCG jumps back 1.05 to 1.3 levels and free search without learning
+   makes about 100 times its nodes per second: at 600 s, two runs each,
+   Sampson.s10.k3 is proved in 65 and 68 s (base: 111 s and not proved),
+   mexican.s26.k4 ends at 48 instead of 42, dolphin.s62.k3 at 67 and 71
+   instead of 45 and 65, Strike.s2.k8 and s6.k5 are unchanged. The test
+   holds on 3 of the 187 optimisation instances of the wide set, and the
+   wide-quick set at 240 s gives way on none.
 
 Version 4.11
 =============
