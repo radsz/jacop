@@ -93,6 +93,8 @@ import org.jacop.constraints.Conditional;
 import org.jacop.constraints.ConditionalSelect;
 import org.jacop.constraints.ConjunctionSum;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.ConvexAllocation;
+import org.jacop.constraints.ConvexCost;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.CountValues;
@@ -13811,5 +13813,27 @@ class SingleConstraintTest extends TestHelper {
     store.impose(
         new Diffn(new IntVar[][] {{x, x, one, two}, {x, x, one, two}, {x, x, one, one}}, true));
     assertThat(countInOrder(store, x)).isEqualTo((int) expected);
+  }
+
+  @Test
+  void convexAllocationEvaluatesTheCostOfAVariableWiderThanItsTable() {
+    // the cost of a variable whose initial domain is too wide to be tabulated was evaluated by a
+    // call to the same method, which recursed until the stack overflowed
+    ConvexCost[] f = {ConvexCost.abs(1, 1, -2), ConvexCost.square(1, 1, 0)};
+    long expected = 0;
+    for (int a = 0; a <= 70_000; a++) {
+      for (int b = 0; b <= 2; b++) {
+        for (int c = 0; c <= 3; c++) {
+          expected += a + b == 3 && c >= f[0].value(a) + f[1].value(b) ? 1 : 0;
+        }
+      }
+    }
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 0, 70_000);
+    IntVar b = new IntVar(store, "b", 0, 2);
+    IntVar total = new IntVar(store, "total", 3, 3);
+    IntVar cost = new IntVar(store, "cost", 0, 3);
+    store.impose(new ConvexAllocation(new IntVar[] {a, b}, f, total, cost));
+    assertThat(countInOrder(store, a, b, cost)).isEqualTo((int) expected);
   }
 }
