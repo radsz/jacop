@@ -9171,4 +9171,42 @@ class FlatzincFrontEndTest {
     assertEquals(15, out.split("----------\n", -1).length - 1, out);
   }
 
+  @Test
+  void antichainReadsNoSumOfMinValueWeightsAsAnOrder() throws IOException {
+    // three vectors of 0..2 pairwise incomparable, but one literal of the clauses is
+    // -2147483648 * (v1_1 + v0_1) <= -1, which says v0_1 + v1_1 >= 1; read as v0_1 < v1_1, the
+    // LYM inequality kept only vectors of rank 2, 6 of the 18 solutions
+    StringBuilder model = new StringBuilder();
+    for (int i = 0; i < 3; i++) {
+      for (int c = 0; c < 2; c++) {
+        model.append("var 0..2: v").append(i).append('_').append(c).append(" :: output_var;\n");
+      }
+    }
+    StringBuilder constraints = new StringBuilder();
+    int r = 0;
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+        if (i == j) {
+          continue;
+        }
+        StringBuilder clause = new StringBuilder();
+        for (int c = 0; c < 2; c++) {
+          model.append("var bool: r").append(r).append(";\n");
+          if (i == 0 && j == 1 && c == 1) {
+            constraints.append("constraint int_lin_le_reif([-2147483648,-2147483648],[v1_1,v0_1]");
+          } else {
+            constraints.append("constraint int_lin_le_reif([1,-1],[v" + i + "_" + c + ",v" + j);
+            constraints.append("_").append(c).append(']');
+          }
+          constraints.append(",-1,r").append(r).append(");\n");
+          clause.append(c == 0 ? "" : ",").append('r').append(r++);
+        }
+        constraints.append("constraint bool_clause([").append(clause).append("],[]);\n");
+      }
+    }
+    model.append(constraints).append("solve satisfy;\n");
+    String out = run(model.toString(), "-a", "--lcg", "off")[0];
+    assertEquals(18, out.split("----------\n", -1).length - 1, out);
+  }
+
 }
