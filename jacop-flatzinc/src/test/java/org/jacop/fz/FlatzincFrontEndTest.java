@@ -9079,4 +9079,30 @@ class FlatzincFrontEndTest {
     String out = run(model.toString(), "-a", "--lcg", "off")[0];
     assertEquals(8, out.split("----------\n", -1).length - 1, out);
   }
+
+  @Test
+  void agreementCountReadsNoSumOfMinValueWeightsAsADisequality() throws IOException {
+    // b_ij <-> -2147483648 * (m_i + m_j) != 0 with every b_ij true says m_i + m_j != 0, true over
+    // 1..2; read as m_i != m_j, three pairwise different values out of two made the agreement
+    // count infeasible
+    StringBuilder model = new StringBuilder();
+    for (int i = 0; i < 3; i++) {
+      model.append("var 1..2: m").append(i).append(" :: output_var;\n");
+    }
+    for (int b = 0; b < 3; b++) {
+      model.append("var bool: b").append(b).append(";\n");
+    }
+    int b = 0;
+    for (int i = 0; i < 3; i++) {
+      for (int j = i + 1; j < 3; j++) {
+        model.append("constraint int_lin_ne_reif([-2147483648,-2147483648],[m" + i + ",m" + j);
+        model.append("],0,b").append(b).append(");\n");
+        model.append("constraint bool_clause([b").append(b).append("],[]);\n");
+        b++;
+      }
+    }
+    model.append("solve satisfy;\n");
+    String out = run(model.toString(), "-a", "--lcg", "off")[0];
+    assertEquals(8, out.split("----------\n", -1).length - 1, out);
+  }
 }
