@@ -8561,4 +8561,45 @@ class FlatzincFrontEndTest {
       assertTrue(out.endsWith("==========\n"), out);
     }
   }
+
+  @Test
+  void geostBoxesNearTheEndOfTheIntegers() throws IOException {
+    // geost_bb with l = -2^31 computed u - l with overflow and failed (960 solutions); a size or
+    // an offset of 2^31 - 1 made the sweep of Geost loop for ever (240 and 116 solutions, the boxes
+    // that do not fit in the bounding box removed first); without a bounding box a size of 2^31 - 1
+    // gave 996 solutions instead of 708, and a negative size, which the MiniZinc library sends to
+    // its decomposition, was taken as a box: both are errors of the model
+    String vars =
+        "array [1..4] of var 0..3: x :: output_array([1..4]);\n"
+            + "array [1..2] of var 1..2: k :: output_array([1..2]);\n";
+    String[][] counted = {
+      {"[1, 1, 1, 1], [0, 0, 0, 0]", ", [-2147483648, 0], [2147483647, 10]", "960"},
+      {"[1, 1, 2, 2147483647], [0, 0, 0, 0]", ", [0, 0], [4, 4]", "240"},
+      {"[1, 1, 2, 1], [2147483647, 0, 0, 0]", ", [0, 0], [4, 4]", "116"}
+    };
+    for (String[] c : counted) {
+      String model =
+          vars
+              + "constraint jacop_geost_bb(2, "
+              + c[0]
+              + ", [{1}, {2}], x, k"
+              + c[1]
+              + ");\nsolve satisfy;\n";
+      String out =
+          assertTimeoutPreemptively(Duration.ofSeconds(60), () -> run(model, "-a", "--lcg", "off"))[
+              0];
+      assertEquals(Integer.parseInt(c[2]), out.split("----------", -1).length - 1, c[0]);
+      assertTrue(out.endsWith("==========\n"), out);
+    }
+    assertModelError(
+        vars
+            + "constraint jacop_geost(2, [1, 1, 2, 2147483647], [0, 0, 0, 0], [{1}, {2}], x, k);\n"
+            + "solve satisfy;\n",
+        "jacop_geost: box 2 of object 1 reaches beyond the integers");
+    assertModelError(
+        vars
+            + "constraint jacop_geost(2, [-1, 1, 2, 1], [0, 0, 0, 0], [{1}, {2}], x, k);\n"
+            + "solve satisfy;\n",
+        "jacop_geost: box 1 has the negative size -1");
+  }
 }

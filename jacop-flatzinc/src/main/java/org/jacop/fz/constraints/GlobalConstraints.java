@@ -4270,6 +4270,16 @@ class GlobalConstraints implements ParserTreeConstants {
     all = removeDuplicates(all);
     IntVar[] xx = Arrays.copyOfRange(all, 0, x.length);
     IntVar[] kk = Arrays.copyOfRange(all, x.length, all.length);
+    checkGeostExtents(
+        withBoundingBox ? "jacop_geost_bb" : "jacop_geost",
+        dim,
+        rectSize,
+        rectOffset,
+        shape,
+        xx,
+        kk,
+        withBoundingBox ? support.getIntArray((SimpleNode) node.jjtGetChild(6)) : null,
+        withBoundingBox ? support.getIntArray((SimpleNode) node.jjtGetChild(7)) : null);
 
     ArrayList<Shape> shapes = new ArrayList<>();
 
@@ -4331,20 +4341,142 @@ class GlobalConstraints implements ParserTreeConstants {
       int[] lb = support.getIntArray((SimpleNode) node.jjtGetChild(6));
       int[] ub = support.getIntArray((SimpleNode) node.jjtGetChild(7));
 
-      // geost_bb gives the box as bounds l..u, while Dbox takes an origin and a length
+      // geost_bb gives the box as bounds l..u, while Dbox takes an origin and a length; u - l of
+      // bounds far apart overflowed (l = -2^31 made the box empty and the model fail). Every box
+      // lies within the integers (checkGeostExtents), so the bounds of the box are clamped to the
+      // extent of the boxes
+      int[] origin = new int[dim];
       int[] length = new int[dim];
       for (int j = 0; j < dim; j++) {
-        length[j] = ub[j] - lb[j];
-        if (length[j] < 0 && kind.length > 0) {
+        long low = Long.MAX_VALUE;
+        long high = Long.MIN_VALUE;
+        for (int i = 0; i < kk.length; i++) {
+          low = Math.min(low, (long) xx[i * dim + j].min() + minOffset(rectOffset, dim, j));
+          high =
+              Math.max(high, (long) xx[i * dim + j].max() + maxEnd(rectOffset, rectSize, dim, j));
+        }
+        long l = Math.max(lb[j], low);
+        long u = Math.min(ub[j], high);
+        if (ub[j] < lb[j] || u < l) {
           throw Store.failException;
         }
+        origin[j] = (int) l;
+        length[j] = (int) (u - l);
       }
 
-      InArea constraint2 = new InArea(new Dbox(lb, length), null);
+      InArea constraint2 = new InArea(new Dbox(origin, length), null);
       constraints.add(constraint2);
     }
 
     support.pose(new Geost(objects, constraints, shapes));
+  }
+
+  /**
+   * Checks that the boxes of geost have sizes of at least 0, as Dbox requires (the MiniZinc library
+   * sends other sizes to its decomposition), and that no box of an object reaches beyond the
+   * integers at a position of its domain: Geost computes in int, and a box of size or offset near
+   * 2^31 - 1 made its sweep loop for ever or overlap other boxes. With a bounding box l..u the
+   * kinds whose boxes cannot lie in it are removed first, and the coordinates are narrowed to the
+   * positions where the boxes of some kind lie in it.
+   *
+   * @param lb the lower bounds of the bounding box, or null for none
+   * @param ub its upper bounds
+   */
+  // the least offset of the boxes in dimension j
+  private static long minOffset(int[] rectOffset, int dim, int j) {
+    long m = Long.MAX_VALUE;
+    for (int r = j; r < rectOffset.length; r += dim) {
+      m = Math.min(m, rectOffset[r]);
+    }
+    return m;
+  }
+
+  // the largest offset plus size of the boxes in dimension j
+  private static long maxEnd(int[] rectOffset, int[] rectSize, int dim, int j) {
+    long m = Long.MIN_VALUE;
+    for (int r = j; r < rectOffset.length; r += dim) {
+      m = Math.max(m, (long) rectOffset[r] + rectSize[r]);
+    }
+    return m;
+  }
+
+  private void checkGeostExtents(
+      String name,
+      int dim,
+      int[] rectSize,
+      int[] rectOffset,
+      IntDomain[] shape,
+      IntVar[] x,
+      IntVar[] kind,
+      int[] lb,
+      int[] ub) {
+    for (int r = 0; r < rectSize.length; r++) {
+      if (rectSize[r] < 0) {
+        throw new IllegalArgumentException(
+            name + ": box " + (r / dim + 1) + " has the negative size " + rectSize[r]);
+      }
+    }
+    for (int i = 0; i < kind.length; i++) {
+      if (lb != null) {
+        long[] lo = new long[dim];
+        long[] hi = new long[dim];
+        Arrays.fill(lo, Long.MAX_VALUE);
+        Arrays.fill(hi, Long.MIN_VALUE);
+        for (int s = 1; s <= shape.length; s++) {
+          if (!kind[i].domain.contains(s)) {
+            continue;
+          }
+          long[] from = new long[dim];
+          long[] to = new long[dim];
+          boolean fits = true;
+          for (int k = 0; k < dim; k++) {
+            from[k] = x[i * dim + k].min();
+            to[k] = x[i * dim + k].max();
+            for (ValueEnumeration e = shape[s - 1].valueEnumeration(); e.hasMoreElements(); ) {
+              int j = e.nextElement() - 1;
+              long offset = rectOffset[j * dim + k];
+              from[k] = Math.max(from[k], lb[k] - offset);
+              to[k] = Math.min(to[k], ub[k] - offset - rectSize[j * dim + k]);
+            }
+            fits &= from[k] <= to[k];
+          }
+          if (!fits) {
+            kind[i].domain.inComplement(store.level, kind[i], s);
+            continue;
+          }
+          for (int k = 0; k < dim; k++) {
+            lo[k] = Math.min(lo[k], from[k]);
+            hi[k] = Math.max(hi[k], to[k]);
+          }
+        }
+        for (int k = 0; k < dim && lo[k] <= hi[k]; k++) {
+          IntVar c = x[i * dim + k];
+          c.domain.in(store.level, c, (int) lo[k], (int) hi[k]);
+        }
+      }
+      for (int s = 1; s <= shape.length; s++) {
+        if (!kind[i].domain.contains(s)) {
+          continue;
+        }
+        for (ValueEnumeration e = shape[s - 1].valueEnumeration(); e.hasMoreElements(); ) {
+          int j = e.nextElement() - 1;
+          for (int k = 0; k < dim; k++) {
+            IntVar c = x[i * dim + k];
+            long offset = rectOffset[j * dim + k];
+            if (c.min() + offset < Integer.MIN_VALUE
+                || c.max() + offset + rectSize[j * dim + k] > Integer.MAX_VALUE) {
+              throw new IllegalArgumentException(
+                  name
+                      + ": box "
+                      + (j + 1)
+                      + " of object "
+                      + (i + 1)
+                      + " reaches beyond the integers");
+            }
+          }
+        }
+      }
+    }
   }
 
   void gen_jacop_if_then_else_bool(SimpleNode node) {
