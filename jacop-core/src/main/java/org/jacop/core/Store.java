@@ -905,6 +905,15 @@ public class Store {
   }
 
   /**
+   * It specifies whether {@link #interrupt()} has stopped the searches of this store.
+   *
+   * @return true once interrupted
+   */
+  public boolean isInterrupted() {
+    return interrupted;
+  }
+
+  /**
    * It specifies whether consistency() has failed because of the deadline since it was set.
    *
    * @return true if the deadline set by {@link #setConsistencyDeadline(long)} has passed.

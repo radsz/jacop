@@ -3047,8 +3047,16 @@ public class LinearRelaxation extends Constraint
   // whether the time-out of the run has passed: no root solve starts after it (a dense one is done
   // in one call)
   private boolean runDeadlinePassed() {
-    return runDeadline != Long.MAX_VALUE && System.nanoTime() - runDeadline > 0;
+    if (runDeadline != Long.MAX_VALUE && System.nanoTime() - runDeadline > 0) {
+      return true;
+    }
+    // a store whose search was stopped (a thread of a portfolio that has its answer) ends the root
+    // solves and their rounds of cuts too
+    return deadlineStore != null && deadlineStore.isInterrupted();
   }
+
+  // the store of the last consistency call, whose interruption also ends the root work
+  private Store deadlineStore;
 
   /**
    * Returns whether the relaxation is large: over the size caps of the sparse simplex in search,
@@ -3411,6 +3419,7 @@ public class LinearRelaxation extends Constraint
 
   @Override
   public void consistency(Store store) {
+    deadlineStore = store;
     if (refutation && calls > 0) {
       return; // solved once at the root, see refutation()
     }
@@ -4470,8 +4479,8 @@ public class LinearRelaxation extends Constraint
     if (runDeadlinePassed()) {
       return LpSolver.LIMIT;
     }
-    if (s instanceof DualSimplex) {
-      return s.solve(pivots);
+    if (s instanceof DualSimplex d) {
+      return d.solve(pivots, this::runDeadlinePassed);
     }
     if (large) {
       // the pivots of a large relaxation cost far more than its work estimate says, and its root
@@ -5062,6 +5071,10 @@ public class LinearRelaxation extends Constraint
     int[] stallRows = null;
     int stallCuts = 0;
     for (int round = 0; round < Math.max(CUT_ROUNDS, CUT_ROUNDS_MAX); round++) {
+      if (runDeadlinePassed()) {
+        // past the time-out the rounds only delay the end of the run
+        break;
+      }
       if (round >= CUT_ROUNDS) {
         // further rounds only while the cuts still move the bound, and for a short time
         long now = System.nanoTime();
@@ -6787,7 +6800,10 @@ public class LinearRelaxation extends Constraint
     boolean stop = false;
     for (int i = 0; i < prefixes.length && !stop; i++) {
       int p = prefixes[i];
-      if (full != null && (p < tiered || kept == lead)) {
+      if (i > 0 && runDeadlinePassed()) {
+        // the trials of the other prefixes would only delay the end of the run
+        stop = true;
+      } else if (full != null && (p < tiered || kept == lead)) {
         stop = true;
       } else {
         LpSolver trial = trialRows(status, before, m, p, columnsOf(p), p == plain);
@@ -7133,8 +7149,8 @@ public class LinearRelaxation extends Constraint
     if (runDeadlinePassed()) {
       return LpSolver.LIMIT;
     }
-    if (s instanceof DualSimplex) {
-      return s.solve(pivots);
+    if (s instanceof DualSimplex d) {
+      return d.solve(pivots, this::runDeadlinePassed);
     }
     long cap = nanos;
     if (large) {

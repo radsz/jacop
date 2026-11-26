@@ -458,4 +458,24 @@ class PortfolioOneParseTest {
       assertEquals(0, count(text, "=====UNSATISFIABLE=====") + count(text, "=========="), text);
     }
   }
+
+  @Test
+  void theThreadsHaveEndedWhenTheRunReturns() throws Exception {
+    // the root of the linear relaxation looked neither at the time-out within a dense solve or
+    // between its rounds of cuts nor at the stop of the portfolio: its threads went on for up to
+    // a second after the time-out, past the wait of the portfolio
+    Path fzn = write(golombRuler());
+    for (int timeOut = 350; timeOut <= 850; timeOut += 100) {
+      java.util.Set<Thread> before = new java.util.HashSet<>(Thread.getAllStackTraces().keySet());
+      String out = run("-p", "3", "--lcg", "on", "-t", Integer.toString(timeOut), fzn.toString());
+      // a short grace for a thread that printed its last line and is ending
+      Thread.sleep(100);
+      java.util.List<String> running =
+          Thread.getAllStackTraces().keySet().stream()
+              .filter(t -> !before.contains(t) && t.getName().startsWith("jacop-portfolio-"))
+              .map(Thread::getName)
+              .toList();
+      assertEquals(java.util.List.of(), running, out);
+    }
+  }
 }

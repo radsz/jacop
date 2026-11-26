@@ -202,6 +202,9 @@ public class Fz2jacop {
     Parser parser = new Parser(file);
     parser.setOptions(opt);
     if (opt.portfolioWorker() != null) {
+      // a thread the portfolio stops while it builds the model or works at the root (the linear
+      // relaxation, presolve) stops there too, not only in its search
+      opt.portfolioWorker().onStop(parser.getStore()::interrupt);
       // once the portfolio has returned, the thread prints nothing more
       opt.portfolioWorker().onClose(parser.solver::closeAnswer);
     }
