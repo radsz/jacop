@@ -151,7 +151,9 @@ final class SymmetryCanonicalizer implements LocalSearch.Canonicalizer {
       }
     }
     try {
-      for (int round = 0; round < ROUNDS; round++) {
+      // a pass over the lex-leader constraints of adjacent vectors moves a vector up one place
+      int rounds = ROUNDS + lexX.size();
+      for (int round = 0; round < rounds; round++) {
         boolean changed = false;
         for (IntVar[][] columns : chains) {
           changed |= sort(columns, values);

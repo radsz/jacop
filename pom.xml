@@ -256,6 +256,7 @@ setup to run configuration. -->
                                 <include>**/BasisLuTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
+                                <include>**/ColumnRowsTest.java</include>
                                 <include>**/ZeroHalfCutsTest.java</include>
                                 <include>**/CoverCutsTest.java</include>
                                 <include>**/PartitionCutsTest.java</include>
@@ -473,6 +474,7 @@ setup to run configuration. -->
                                 <include>**/FreeFirstFlatzincTest.java</include>
                                 <include>**/FixedFirstFlatzincTest.java</include>
                                 <include>**/NValueBlocksFlatzincTest.java</include>
+                                <include>**/EntailedDisequalitiesFlatzincTest.java</include>
                                 <include>**/PureClauseFlatzincTest.java</include>
                                 <include>**/ClausalFlatzincTest.java</include>
                                 <include>**/RootProbingFlatzincTest.java</include>
@@ -546,6 +548,7 @@ setup to run configuration. -->
                                 <include>**/BasisLuTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
+                                <include>**/ColumnRowsTest.java</include>
                                 <include>**/ZeroHalfCutsTest.java</include>
                                 <include>**/CoverCutsTest.java</include>
                                 <include>**/PartitionCutsTest.java</include>
@@ -769,6 +772,7 @@ setup to run configuration. -->
                                 <include>**/FreeFirstFlatzincTest.java</include>
                                 <include>**/FixedFirstFlatzincTest.java</include>
                                 <include>**/NValueBlocksFlatzincTest.java</include>
+                                <include>**/EntailedDisequalitiesFlatzincTest.java</include>
                                 <include>**/PureClauseFlatzincTest.java</include>
                                 <include>**/ClausalFlatzincTest.java</include>
                                 <include>**/RootProbingFlatzincTest.java</include>
@@ -836,6 +840,7 @@ setup to run configuration. -->
                                 <include>**/BasisLuTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
+                                <include>**/ColumnRowsTest.java</include>
                                 <include>**/ZeroHalfCutsTest.java</include>
                                 <include>**/CoverCutsTest.java</include>
                                 <include>**/PartitionCutsTest.java</include>
@@ -1059,6 +1064,7 @@ setup to run configuration. -->
                                 <include>**/FreeFirstFlatzincTest.java</include>
                                 <include>**/FixedFirstFlatzincTest.java</include>
                                 <include>**/NValueBlocksFlatzincTest.java</include>
+                                <include>**/EntailedDisequalitiesFlatzincTest.java</include>
                                 <include>**/PureClauseFlatzincTest.java</include>
                                 <include>**/ClausalFlatzincTest.java</include>
                                 <include>**/RootProbingFlatzincTest.java</include>
@@ -1126,6 +1132,7 @@ setup to run configuration. -->
                                 <include>**/BasisLuTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
+                                <include>**/ColumnRowsTest.java</include>
                                 <include>**/ZeroHalfCutsTest.java</include>
                                 <include>**/CoverCutsTest.java</include>
                                 <include>**/PartitionCutsTest.java</include>

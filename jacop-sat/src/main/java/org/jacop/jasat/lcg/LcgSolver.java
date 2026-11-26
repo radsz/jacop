@@ -3304,6 +3304,58 @@ public final class LcgSolver implements ExternalPropagator {
     return trail.kind(entry) == AtomicTrail.GE ? geLit(i, v - slack) : -geLit(i, v + slack + 1);
   }
 
+  /**
+   * The literal of {@code x != v} for a bound entry of x that removed v, when the solver has [x =
+   * v] linked to the bounds and false before a solver trail position; otherwise the entry's own
+   * literal. A missing [x = v] is made at the next {@link #externalClause}, so that later reasons
+   * can cite it.
+   *
+   * @param entry the bound entry
+   * @param v the value it removed
+   * @param before the solver trail position of the literal the reason is for
+   */
+  private int valueOutLit(int entry, int v, int before) {
+    if (!citeValues || proof != null) {
+      return atomLit(entry);
+    }
+    int i = trail.id(trail.variable(entry));
+    int d = eq[i].get(v);
+    if (d == LiteralMap.NONE || transientLit[d]) {
+      // made at the next external clause, not while the solver analyses a conflict
+      missingValueLiterals.add((long) i << 32 | (v & 0xffffffffL));
+      return atomLit(entry);
+    }
+    if (sat.value(-d) > 0) {
+      int position = sat.trailPosition(-d);
+      if (position >= 0 && position < before) {
+        valueLiterals++;
+        return -d;
+      }
+    }
+    return atomLit(entry);
+  }
+
+  // whether reasons cite [x != v] for the bound entries explanations mark as one value's removal
+  // (jacop.lcg.valueLiterals, default true)
+  private boolean citeValues = !FALSE.equals(System.getProperty("jacop.lcg.valueLiterals"));
+
+  /**
+   * Sets whether reasons cite {@code x != v} in place of a bound entry that an explanation marks as
+   * the removal of value v ({@link EntryList#addExcludedValue}), when the solver has the literal;
+   * on by default (system property {@code jacop.lcg.valueLiterals}).
+   *
+   * @param on true to cite the value literals
+   */
+  public void setValueLiterals(boolean on) {
+    citeValues = on;
+  }
+
+  /** Reasons' value removals cited as [x != v] in place of a bound. */
+  public long valueLiterals;
+
+  // the [x = v] literals that valueOutLit found missing: (variable index, value)
+  private final Set<Long> missingValueLiterals = new LinkedHashSet<>();
+
   // reasons may cite literals true before this solver trail position (see weakest)
   private int liftBefore = Integer.MAX_VALUE;
 
@@ -3414,6 +3466,24 @@ public final class LcgSolver implements ExternalPropagator {
   private record Atom(int var, int kind, int value, boolean holds) {
     Atom negated() {
       return new Atom(var, kind, value, !holds);
+    }
+
+    // equals and hashCode written out, with the values of the generated ones (so that sets of
+    // atoms keep their order): the generated ones go through method handles that stay slow until
+    // compiled, and root probing of a short run spends much of its time in them (a fifth of the
+    // samples of probing rectangle-packing rpp23 of the MiniZinc Challenge 2014)
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Atom a
+          && a.var == var
+          && a.kind == kind
+          && a.value == value
+          && a.holds == holds;
+    }
+
+    @Override
+    public int hashCode() {
+      return ((var * 31 + kind) * 31 + value) * 31 + Boolean.hashCode(holds);
     }
   }
 
@@ -3739,11 +3809,11 @@ public final class LcgSolver implements ExternalPropagator {
         complete = false;
         continue;
       }
-      Set<Atom> atoms = consequences(implied);
       if (common == null) {
-        common = atoms;
-      } else {
-        common.retainAll(atoms);
+        common = consequences(implied);
+      } else if (!common.isEmpty()) {
+        // once no atom is common to the values probed, the rest cannot lift one
+        common.retainAll(consequences(implied));
       }
     }
     if (complete && common != null && !common.isEmpty()) {
@@ -5409,6 +5479,34 @@ public final class LcgSolver implements ExternalPropagator {
   public void setLiteralRuns(int before, int solved) {
     literalRuns = Math.max(1, before);
     literalRunsSolved = Math.max(1, solved);
+  }
+
+  // conflicts without a solution after which free search drops the annotation's runs, 0 for never
+  private long annotationDrop;
+  private boolean annotationDropped;
+
+  /**
+   * Makes free search with an annotation drop the annotation's runs when this many conflicts found
+   * no solution: from then on {@link Branching#ALTERNATE} takes turns of the literals and of
+   * activity branching only, as without an annotation. The runs of a fixed order that fails to
+   * reach a solution also hold back the other turns: on amaze2 (first_fail on the path successors,
+   * indomain_min) the literal runs of the rotation spent 417,000 conflicts in 300 s without a
+   * solution, while the same rotation without the annotation finds one after about 200,000
+   * conflicts in all.
+   *
+   * @param conflicts the conflicts without a solution, 0 for never
+   */
+  public void setAnnotationDrop(long conflicts) {
+    annotationDrop = conflicts;
+  }
+
+  /**
+   * Tells whether free search dropped the annotation's runs (see {@link #setAnnotationDrop}).
+   *
+   * @return true once they were dropped
+   */
+  public boolean annotationDropped() {
+    return annotationDropped;
   }
 
   /**
@@ -7764,7 +7862,20 @@ public final class LcgSolver implements ExternalPropagator {
     if (keepImprovingRun && improved) {
       return; // the run that improved the best solution goes on in the same way
     }
-    if (branching == Branching.ALTERNATE && annotation != null && freeSearch) {
+    if (annotationDrop > 0
+        && !annotationDropped
+        && best == null
+        && freeSearch
+        && annotation != null
+        && branching == Branching.ALTERNATE
+        && sat.conflicts >= annotationDrop) {
+      annotationDropped = true;
+    }
+    if (annotationDropped) {
+      // the literals and the activity in turn
+      annotationRun = false;
+      activityBranching = !activityBranching;
+    } else if (branching == Branching.ALTERNATE && annotation != null && freeSearch) {
       // the annotation, the literals and the activity in turn, with the activity completing the
       // annotation's runs
       runs++;
@@ -8623,6 +8734,16 @@ public final class LcgSolver implements ExternalPropagator {
 
   @Override
   public int[] externalClause() {
+    if (!missingValueLiterals.isEmpty()) {
+      for (long key : missingValueLiterals) {
+        int i = (int) (key >>> 32);
+        int v = (int) key;
+        if (root[i].contains(v)) {
+          eqVar(i, v);
+        }
+      }
+      missingValueLiterals.clear();
+    }
     if (structural.isEmpty()
         && sharedBound != null
         && proof == null
@@ -9054,6 +9175,9 @@ public final class LcgSolver implements ExternalPropagator {
         }
       }
     }
+    if (dropDominated && proof == null) {
+      dropDominated(inSolver, slack);
+    }
     int[] clause = new int[inSolver.size() + lits.size()];
     int size = 0;
     int distinct = nextStamp();
@@ -9110,6 +9234,128 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   // a new stamp for entryStamp and litStamp, clearing both when the stamps wrap around
+  /**
+   * Whether explanations drop the atoms another atom of the same explanation implies, {@code
+   * jacop.lcg.dropDominated} (default true): a weaker bound of a variable than its strongest cited
+   * bound of the same kind, and a removed value that a cited bound excludes. Explanations that
+   * exclude a range of values one value at a time cite the weakest bound removing each (see {@link
+   * AtomicTrail#excludedBefore}), so an element over a range of positions cited one index bound per
+   * position where the strongest alone implies the rest.
+   */
+  static final boolean DROP_DOMINATED =
+      !"false".equals(System.getProperty("jacop.lcg.dropDominated"));
+
+  private boolean dropDominated = DROP_DOMINATED;
+
+  /**
+   * Sets whether explanations drop the atoms another atom of the same explanation implies; the
+   * default is {@link #DROP_DOMINATED}.
+   *
+   * @param on true to drop them
+   */
+  public void setDropDominated(boolean on) {
+    dropDominated = on;
+  }
+
+  /** Statistics: atoms {@link #dropDominated} removed from explanations. */
+  public long dominatedAtoms;
+
+  // per variable id, for dropDominated: the strongest cited bounds and whether one was kept
+  private int[] dominanceStamp = new int[0];
+  private int[] strongestGe = new int[0];
+  private int[] strongestLe = new int[0];
+  private int[] keptBound = new int[0];
+  private int dominanceSeen;
+
+  /**
+   * Removes from an explanation the atoms another of its atoms implies: of the bounds of one kind
+   * on a variable only the strongest stays (once), and a value removal stays only when no cited
+   * bound excludes the value. The clause of the explanation is then a subset of the old one, so it
+   * stays implied and is stronger.
+   *
+   * @param list the entries of the explanation
+   * @param slackOf the slack of each entry by entry index, or null to read the list's own slacks
+   */
+  private void dropDominated(EntryList list, int[] slackOf) {
+    int n = list.size();
+    if (n < 2) {
+      return;
+    }
+    if (dominanceStamp.length < vars.length) {
+      dominanceStamp = new int[vars.length];
+      strongestGe = new int[vars.length];
+      strongestLe = new int[vars.length];
+      keptBound = new int[vars.length];
+      dominanceSeen = 0;
+    }
+    if (++dominanceSeen == Integer.MAX_VALUE) {
+      Arrays.fill(dominanceStamp, 0);
+      Arrays.fill(keptBound, 0);
+      dominanceSeen = 1;
+    }
+    int seen = dominanceSeen;
+    boolean several = false;
+    for (int k = 0; k < n; k++) {
+      int e = list.get(k);
+      int id = trail.id(trail.variable(e));
+      if (dominanceStamp[id] != seen) {
+        dominanceStamp[id] = seen;
+        strongestGe[id] = Integer.MIN_VALUE;
+        strongestLe[id] = Integer.MAX_VALUE;
+      } else {
+        several = true;
+      }
+      int kind = trail.kind(e);
+      if (kind == AtomicTrail.GE) {
+        strongestGe[id] = Math.max(strongestGe[id], boundOf(list, k, e, slackOf));
+      } else if (kind == AtomicTrail.LE) {
+        strongestLe[id] = Math.min(strongestLe[id], boundOf(list, k, e, slackOf));
+      }
+    }
+    if (!several) {
+      return;
+    }
+    int kept = 0;
+    for (int k = 0; k < n; k++) {
+      int e = list.get(k);
+      int id = trail.id(trail.variable(e));
+      int kind = trail.kind(e);
+      boolean keep;
+      if (kind == AtomicTrail.GE) {
+        // bit 1: a lower bound kept, bit 2: an upper bound kept, both at this stamp
+        keep = boundOf(list, k, e, slackOf) == strongestGe[id] && (keptBound[id] & 1) == 0;
+        if (keep) {
+          keptBound[id] |= 1;
+        }
+      } else if (kind == AtomicTrail.LE) {
+        keep = boundOf(list, k, e, slackOf) == strongestLe[id] && (keptBound[id] & 2) == 0;
+        if (keep) {
+          keptBound[id] |= 2;
+        }
+      } else {
+        int v = trail.value(e);
+        keep = v >= strongestGe[id] && v <= strongestLe[id];
+      }
+      if (keep) {
+        if (kept != k) {
+          list.move(k, kept);
+        }
+        kept++;
+      }
+    }
+    for (int k = 0; k < kept; k++) {
+      keptBound[trail.id(trail.variable(list.get(k)))] = 0;
+    }
+    dominatedAtoms += n - kept;
+    list.truncate(kept);
+  }
+
+  // the bound of a cited GE or LE entry, weakened by its slack
+  private int boundOf(EntryList list, int k, int e, int[] slackOf) {
+    int s = slackOf == null ? list.slack(k) : slackOf[e];
+    return trail.kind(e) == AtomicTrail.GE ? trail.value(e) - s : trail.value(e) + s;
+  }
+
   private int nextStamp() {
     if (++stamp == Integer.MAX_VALUE) {
       Arrays.fill(entryStamp, 0);
@@ -9170,10 +9416,16 @@ public final class LcgSolver implements ExternalPropagator {
     } finally {
       liftBefore = Integer.MAX_VALUE;
     }
+    if (dropDominated && proof == null) {
+      dropDominated(reason, null);
+    }
     int[] clause = new int[reason.size() + (extra == 0 ? 1 : 2)];
     clause[0] = lit;
     for (int k = 0; k < reason.size(); k++) {
-      clause[k + 1] = -atomLit(reason.get(k), reason.slack(k));
+      clause[k + 1] =
+          reason.hasExcludedValue(k)
+              ? -valueOutLit(reason.get(k), reason.excludedValue(k), sat.trailPosition(lit))
+              : -atomLit(reason.get(k), reason.slack(k));
     }
     if (extra != 0) {
       clause[clause.length - 1] = -extra;

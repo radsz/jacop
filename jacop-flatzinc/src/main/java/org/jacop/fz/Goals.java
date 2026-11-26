@@ -98,7 +98,10 @@ final class Goals implements MultiObjective.Subsolver<String> {
   private static final String HIERARCHY = "goal_hierarchy";
   private static final String PARETO_ANNOTATION = "pareto";
 
-  /** The prefix of the output variables the goals are copied into. */
+  /**
+   * The prefix of the output variables the goals are copied into, unless an identifier of the model
+   * holds it.
+   */
   static final String PREFIX = "X_JACOP_GOAL_";
 
   private static final String COMPLETE = "==========";
@@ -112,8 +115,6 @@ final class Goals implements MultiObjective.Subsolver<String> {
   private static final Pattern SOLVE = Pattern.compile("(?m)^\\s*solve\\b");
   private static final Pattern CONSTRAINT = Pattern.compile("(?m)^\\s*constraint\\b");
   private static final Pattern GOAL = Pattern.compile("(\\w+)\\s*\\(([^()]*)\\)");
-  private static final Pattern GOAL_VALUE =
-      Pattern.compile("^" + PREFIX + "(\\d+)_\\s*=\\s*(-?\\d+)\\s*;$");
   private static final Pattern DECIMAL = Pattern.compile("\\d\\.\\d");
   private static final Pattern IDENTIFIER = Pattern.compile("[A-Za-z][A-Za-z0-9_]*");
 
@@ -125,6 +126,11 @@ final class Goals implements MultiObjective.Subsolver<String> {
   private final String declarations;
   private final String constraints;
   private final String annotations;
+  // the prefix of the variables of the goals, which no identifier of the model contains: a model
+  // variable with the name of a goal variable was declared again, so that its constraints held
+  // for the goal, and it was left out of the output
+  private final String prefix;
+  private final Pattern goalValue;
 
   private final PrintStream out = System.out;
   private final Set<String> comments = new HashSet<>();
@@ -138,7 +144,8 @@ final class Goals implements MultiObjective.Subsolver<String> {
       List<Goal> goals,
       String declarations,
       String constraints,
-      String annotations) {
+      String annotations,
+      String prefix) {
     this.options = options;
     this.args = args;
     this.pareto = pareto;
@@ -146,6 +153,8 @@ final class Goals implements MultiObjective.Subsolver<String> {
     this.declarations = declarations;
     this.constraints = constraints;
     this.annotations = annotations;
+    this.prefix = prefix;
+    this.goalValue = Pattern.compile("^" + prefix + "(\\d+)_\\s*=\\s*(-?\\d+)\\s*;$");
   }
 
   /**
@@ -237,6 +246,10 @@ final class Goals implements MultiObjective.Subsolver<String> {
     String head = model.substring(0, start);
     Matcher c = CONSTRAINT.matcher(head);
     int split = c.find() ? c.start() : head.length();
+    String prefix = PREFIX;
+    while (model.contains(prefix)) {
+      prefix += "X_";
+    }
     return new Goals(
         options,
         args,
@@ -244,7 +257,8 @@ final class Goals implements MultiObjective.Subsolver<String> {
         goals,
         head.substring(0, split),
         head.substring(split),
-        annotations);
+        annotations,
+        prefix);
   }
 
   // the position of an annotation of the solve item, or -1
@@ -508,7 +522,7 @@ final class Goals implements MultiObjective.Subsolver<String> {
       StringBuilder clause = new StringBuilder();
       for (int i = 0; i < point.length; i++) {
         // some goal strictly better than the point
-        String b = PREFIX + "EX_" + j + "_" + i + "_";
+        String b = prefix + "EX_" + j + "_" + i + "_";
         vars.append("var bool: ").append(b).append(";\n");
         cons.append("constraint int_le_reif(");
         if (p.maximize()[i]) {
@@ -532,8 +546,8 @@ final class Goals implements MultiObjective.Subsolver<String> {
         + ";\n";
   }
 
-  private static String goal(int i) {
-    return PREFIX + i + "_";
+  private String goal(int i) {
+    return prefix + i + "_";
   }
 
   /** The arguments of a subproblem: those given, with -a and the time left. */
@@ -608,8 +622,8 @@ final class Goals implements MultiObjective.Subsolver<String> {
             && comments.add(s)) {
           print(l + "\n");
         }
-      } else if (s.startsWith(PREFIX)) {
-        Matcher m = GOAL_VALUE.matcher(s);
+      } else if (s.startsWith(prefix)) {
+        Matcher m = goalValue.matcher(s);
         if (m.matches()) {
           values[Integer.parseInt(m.group(1))] = Integer.parseInt(m.group(2));
         }

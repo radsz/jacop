@@ -1335,9 +1335,12 @@ public class Store {
 
     Var previousVar = variablesHashMap.put(v.id(), v);
 
-    if (ASSERTS_ENABLED && previousVar != null) {
-      throw new IllegalStateException(
-          String.valueOf("Two variables have the same id " + previousVar + " " + v));
+    if (previousVar != null && previousVar != v) {
+      // Two variables of the API may share a name. The earlier one stays in the map under a key of
+      // its own, since the map is also the list of the Boolean variables and of the variables
+      // whose constraints getConstraints() returns: without it, LCG, presolve and local search
+      // did not see the earlier variable and its constraints.
+      variablesHashMap.put(freshVariableId(v.id()), previousVar);
     }
 
     if (v.storeIndex != -1 && vars[v.storeIndex] == v) {
