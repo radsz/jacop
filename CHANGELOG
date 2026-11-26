@@ -9083,7 +9083,7 @@ Version 5.0 (unreleased)
    node without learning, at 600 s: city-5-05 proved in 44 s (223 s),
    city-5-06 in 133 s (320 s), city-5-08 proved 4,500 in 502 s (927,199
    unproved); city-8-06 at 1200 s 2,468,829 -> 2,224,509. cargo
-   (2013-2018), 13 sparse-diffn instances at 600 s: 2 -> 10 proved. Wide
+   (2013-2018), 10 sparse-diffn instances at 600 s: 0 -> 7 proved. Wide
    set fd, 202 instances at 600 s, before the hand-back: solved 138 -> 144,
    total time 0.936; the 18 on which LCG gave way or lost, with it: total
    8,255 -> 7,071 s. --free-config fixed-first=0 turns the
