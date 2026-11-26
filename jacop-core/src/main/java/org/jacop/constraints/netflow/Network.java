@@ -84,11 +84,15 @@ public class Network extends NetworkSimplex implements MutableNetwork {
    * may raise its level before a consistency (Store.raiseLevelBeforeConsistency), so changes of
    * level l are processed at level l + 1. The arcs then modified are recorded at l + 1, whose
    * removal restores them from the domains of level l, and they must be restored again when l is
-   * removed.
+   * removed, and at every level between. The variables queued at imposition and processed by a
+   * first call above it count as changes of the level above the imposition.
    */
   int lateLevel = Integer.MAX_VALUE;
 
-  /** Arcs modified for changes of a lower level, with the level whose removal restores them. */
+  /**
+   * Arcs modified for changes of a lower level, with the lowest level whose removal restores them;
+   * the removal of each level above it restores them too.
+   */
   private final List<ArcCompanion> lateArcs = new ArrayList<>();
 
   private final List<Integer> lateArcLevels = new ArrayList<>();
@@ -292,11 +296,14 @@ public class Network extends NetworkSimplex implements MutableNetwork {
       restore(companion);
     }
 
-    // arcs modified at a higher level for changes of this level
+    // arcs modified at a higher level for changes of this level or of a level between it and the
+    // higher one: they are restored from the domains below each such level as it goes
     for (int i = lateArcs.size() - 1; i >= 0; i--) {
       if (lateArcLevels.get(i) >= level) {
         lateArcLevels.remove(i);
         restore(lateArcs.remove(i));
+      } else {
+        restore(lateArcs.get(i));
       }
     }
   }

@@ -14080,4 +14080,68 @@ class SingleConstraintTest extends TestHelper {
       assertThat(countInOrder(store, all)).as("instance %d", t).isEqualTo(expected);
     }
   }
+
+  @Test
+  void networkFlowWhoseFirstCallWasUndoneRestoresItsArcsAtEveryLevel() {
+    // the variables queued by the imposition, processed by a first call at level 2, set the arcs
+    // there from the domains of level 2; removing level 2 restored them from the domains of level
+    // 1, and nothing restored them when level 1 went, so the search lost solutions
+    Random random = new Random(20261126);
+    for (int t = 0; t < 400; t++) {
+      Store store = new Store();
+      boolean varWeight = random.nextBoolean();
+      int nodes = 3 + random.nextInt(2);
+      int arcs = 3 + random.nextInt(3);
+      int[] from = new int[arcs];
+      int[] to = new int[arcs];
+      int[] weight = new int[arcs];
+      for (int k = 0; k < arcs; k++) {
+        from[k] = random.nextInt(nodes);
+        to[k] = (from[k] + 1 + random.nextInt(nodes - 1)) % nodes;
+        weight[k] = random.nextInt(5) - 1;
+      }
+      int[] balance = new int[nodes];
+      balance[0] = random.nextInt(3);
+      balance[1 + random.nextInt(nodes - 1)] -= balance[0];
+      IntVar[] x = new IntVar[arcs];
+      for (int k = 0; k < arcs; k++) {
+        x[k] = new IntVar(store, "f" + k, 0, 3);
+      }
+      IntVar w = new IntVar(store, "w", varWeight ? -1 : 0, varWeight ? 2 : 0);
+      IntVar cost = new IntVar(store, "cost", -4, 12);
+      NetworkBuilder net = new NetworkBuilder();
+      Node[] node = new Node[nodes];
+      for (int i = 0; i < nodes; i++) {
+        node[i] = net.addNode("n" + i, balance[i]);
+      }
+      for (int k = 0; k < arcs; k++) {
+        if (varWeight && k == 0) {
+          net.addArc(node[from[k]], node[to[k]], w, x[k]);
+        } else {
+          net.addArc(node[from[k]], node[to[k]], weight[k], x[k]);
+        }
+      }
+      net.setCostVariable(cost);
+      IntVar[] vars = Arrays.copyOf(x, arcs + 2);
+      vars[arcs] = w;
+      vars[arcs + 1] = cost;
+      int expected =
+          bruteForce(
+                  vars,
+                  s -> {
+                    int[] out = new int[nodes];
+                    long total = 0;
+                    for (int k = 0; k < arcs; k++) {
+                      out[from[k]] += s[k];
+                      out[to[k]] -= s[k];
+                      total += (long) (varWeight && k == 0 ? s[arcs] : weight[k]) * s[k];
+                    }
+                    return Arrays.equals(out, balance) && total == s[arcs + 1];
+                  })
+              .size();
+      store.impose(new NetworkFlow(net));
+      firstCallAboveTheRoot(store, vars, random);
+      assertThat(countInOrder(store, vars)).as("instance %d", t).isEqualTo(expected);
+    }
+  }
 }

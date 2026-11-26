@@ -466,8 +466,13 @@ public class NetworkFlow extends Constraint
     network.increaseLevel();
     try {
       disableQueueVariable = true;
-      // a level at or below the imposition is never removed while the constraint is there
-      network.lateLevel = queuedLevel > imposedAt ? queuedLevel : Integer.MAX_VALUE;
+      // a level at or below the imposition is never removed while the constraint is there; the
+      // variables queued by the imposition, processed at a higher level (a first call above it),
+      // take their domains of every level between
+      network.lateLevel =
+          queuedLevel < network.getStoreLevel() && imposedAt != Integer.MAX_VALUE
+              ? Math.max(queuedLevel, imposedAt + 1)
+              : Integer.MAX_VALUE;
       for (IntVar variable : queue) {
         VarHandler handler = map.get(variable);
         handler.processEvent(variable, network);
