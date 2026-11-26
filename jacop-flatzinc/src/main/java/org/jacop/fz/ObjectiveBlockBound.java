@@ -86,8 +86,9 @@ import org.jacop.lcg.LinearForm;
  * org.jacop.fz.blockBound.ms} (5000) milliseconds, and each block {@code
  * org.jacop.fz.blockBound.blockMs} (1000); after four blocks without a gain the others are left
  * out. The bounds are posted only when they raise the objective's lower bound by at least {@code
- * org.jacop.fz.blockBound.gain} (0.05) of the distance to its upper bound, since the extra
- * variables and the second objective equation cost time at every node.
+ * org.jacop.fz.blockBound.gain} (0.05) of the distance to its upper bound and the blocks whose
+ * least cost exceeds the sum of their terms' bounds hold at least half of the objective's terms,
+ * since the extra variables and the second objective equation cost time at every node.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -419,8 +420,10 @@ final class ObjectiveBlockBound {
       return new Outcome(blockVars.size(), 0, uncopied, 0, elapsed(start));
     }
     // the bound of cost = sign * objective that the blocks give, against the one it has: posted
-    // only
-    // when it closes enough of the objective's range to pay for the constraints it adds
+    // only when it closes enough of the objective's range to pay for the constraints it adds, and
+    // when the blocks it raises hold at least half of the terms; otherwise the terms outside them
+    // decide the objective's bound during search and the extra sums only cost time (chessboard4)
+    int raisedTerms = termsOf(pending);
     long termsLo = constant;
     for (Map.Entry<IntVar, Long> t : terms.entrySet()) {
       long w = t.getValue();
@@ -438,7 +441,7 @@ final class ObjectiveBlockBound {
               + " of range up to "
               + top);
     }
-    if (gain <= 0 || gain < MIN_GAIN * (top - current)) {
+    if (gain <= 0 || gain < MIN_GAIN * (top - current) || 2 * raisedTerms < terms.size()) {
       return new Outcome(blockVars.size(), 0, uncopied, 0, elapsed(start));
     }
     for (Pending b : pending) {
@@ -587,6 +590,15 @@ final class ObjectiveBlockBound {
       return solver.value(cost);
     }
     return lower[0];
+  }
+
+  // the objective terms of the blocks
+  private static int termsOf(List<Pending> pending) {
+    int n = 0;
+    for (Pending b : pending) {
+      n += b.xs.size();
+    }
+    return n;
   }
 
   private static long elapsed(long start) {
