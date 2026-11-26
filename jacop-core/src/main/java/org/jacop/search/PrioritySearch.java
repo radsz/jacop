@@ -205,6 +205,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     final boolean result = store.consistency();
     store.setLevel(store.level + 1);
     depth = store.level;
+    final int searchLevel = store.level;
 
     visited.clear();
     int subSearch = getSubSearch();
@@ -214,6 +215,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       try {
         search.get(2 * subSearch).labeling();
       } catch (SolutionsLimitReached _) {
+        removeLevelsAbove(searchLevel);
         if (collectStatistics) {
           getStatistics();
         }
@@ -246,6 +248,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     boolean result = store.consistency();
     store.setLevel(store.level + 1);
     depth = store.level;
+    final int searchLevel = store.level;
 
     visited.clear();
     int subSearch = getSubSearch();
@@ -255,6 +258,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       try {
         result = search.get(2 * subSearch).labeling();
       } catch (SolutionsLimitReached _) {
+        removeLevelsAbove(searchLevel);
         if (collectStatistics) {
           getStatistics();
         }
@@ -271,6 +275,19 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     depth--;
 
     return result;
+  }
+
+  /**
+   * Removes the levels that the searches below left when the solution limit stopped them where they
+   * found the last solution.
+   *
+   * @param level the level of this search, which stays
+   */
+  private void removeLevelsAbove(int level) {
+    while (store.level > level) {
+      store.removeLevel(store.level);
+      store.setLevel(store.level - 1);
+    }
   }
 
   /**

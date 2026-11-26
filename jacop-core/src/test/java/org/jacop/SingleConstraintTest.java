@@ -254,11 +254,13 @@ import org.jacop.search.IndomainMin;
 import org.jacop.search.IndomainRandom;
 import org.jacop.search.InputOrderSelect;
 import org.jacop.search.MultiObjective;
+import org.jacop.search.PrioritySearch;
 import org.jacop.search.RandomSelect;
 import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
+import org.jacop.search.SmallestDomain;
 import org.jacop.search.SplitSelect;
 import org.jacop.search.ls.LocalSearch;
 import org.jacop.search.restart.ConstantCalculator;
@@ -14511,5 +14513,34 @@ class SingleConstraintTest extends TestHelper {
         }
       }
     }
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void prioritySearchStoppedAtItsSolutionLimitLeavesTheStoreAtItsLevel() {
+    // the solution limit stopped the searches below where they found the solution, and the
+    // priority search removed only its own level, so the store stayed at the level of that leaf
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 2);
+    IntVar y = new IntVar(store, "y", 0, 2);
+    IntVar u = new IntVar(store, "u", 0, 1);
+    IntVar v = new IntVar(store, "v", 0, 1);
+    store.impose(new XneqY(x, y));
+    DepthFirstSearch<IntVar>[] searches = new DepthFirstSearch[2];
+    searches[0] = new DepthFirstSearch<>();
+    searches[0].setSelectChoicePoint(
+        new SimpleSelect<>(new IntVar[] {x, y}, null, new IndomainMax<>()));
+    searches[1] = new DepthFirstSearch<>();
+    searches[1].setSelectChoicePoint(
+        new SimpleSelect<>(new IntVar[] {u, v}, null, new IndomainMax<>()));
+    for (DepthFirstSearch<IntVar> search : searches) {
+      search.setPrintInfo(false);
+    }
+    PrioritySearch<IntVar> priority =
+        new PrioritySearch<>(new IntVar[] {x, u}, new SmallestDomain<>(), searches);
+    priority.setPrintInfo(false);
+    assertThat(priority.labeling(store)).isTrue();
+    assertThat(store.level).isZero();
+    assertThat(List.of(x.value(), y.value(), u.value(), v.value())).containsExactly(2, 1, 1, 1);
   }
 }
