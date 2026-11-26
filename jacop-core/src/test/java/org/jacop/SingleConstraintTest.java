@@ -13541,4 +13541,35 @@ class SingleConstraintTest extends TestHelper {
       }
     }
   }
+
+  @Test
+  void networkFlowFindsTheFlowsBesideAnArcOfLargeNegativeWeight() {
+    // 1 -> 2 -> 3 with weights a, b in 0..3 and 1 -> 3 with weight w; one unit from 1 to 3 at a
+    // cost in 0..30, so only the path through 2 is a solution: 16 of them. The artificial arcs of
+    // the network simplex cost 100000, less than the arc of weight -200000, and the optimum kept
+    // flow on them: the network was infeasible
+    for (int w : new int[] {-200_000, IntDomain.MIN_INT, IntDomain.MAX_INT}) {
+      Store store = new Store();
+      NetworkBuilder net = new NetworkBuilder();
+      Node[] node = {net.addNode("n1", 1), net.addNode("n2", 0), net.addNode("n3", -1)};
+      IntVar[] flow = new IntVar[3];
+      IntVar[] weight = new IntVar[2];
+      for (int i = 0; i < 3; i++) {
+        flow[i] = new IntVar(store, "f" + i, 0, 3);
+      }
+      for (int i = 0; i < 2; i++) {
+        weight[i] = new IntVar(store, "w" + i, 0, 3);
+      }
+      net.addArc(node[0], node[1], weight[0], flow[0]);
+      net.addArc(node[1], node[2], weight[1], flow[1]);
+      net.addArc(node[0], node[2], w, flow[2]);
+      IntVar cost = new IntVar(store, "cost", 0, 30);
+      net.setCostVariable(cost);
+      store.impose(new NetworkFlow(net));
+      assertThat(store.consistency()).as("w = %d", w).isTrue();
+      assertThat(noOfAllSolutions(store, flow, weight, new IntVar[] {cost}))
+          .as("w = %d", w)
+          .isEqualTo(16);
+    }
+  }
 }

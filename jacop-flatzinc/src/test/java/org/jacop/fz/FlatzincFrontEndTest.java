@@ -8789,4 +8789,22 @@ class FlatzincFrontEndTest {
       }
     }
   }
+
+  @Test
+  void networkFlowWithAnArcOfWeightMinIntIsSatisfiable() throws IOException {
+    // the artificial arcs of the network simplex cost 100000, less than the arc of weight
+    // MIN_INT, and the optimum kept flow on them: the network was found infeasible
+    String model =
+        "var 0..3: f1 :: output_var;\nvar 0..3: f2 :: output_var;\nvar 0..3: f3 :: output_var;\n"
+            + "var 0..3: w1 :: output_var;\nvar 0..3: w2 :: output_var;\n"
+            + "var 0..30: k :: output_var;\n"
+            + "constraint jacop_networkflow([1, 2, 2, 3, 1, 3], [f1, f2, f3], [w1, w2, -536870910],"
+            + " [1, 0, -1], k);\nsolve satisfy;\n";
+    for (String lcg : new String[] {"on", "off"}) {
+      String out = run(model, "-a", "--lcg", lcg)[0];
+      // f1 = f2 = 1, f3 = 0 and k = w1 + w2
+      assertEquals(16, out.split("----------", -1).length - 1, out);
+      assertTrue(out.endsWith("==========\n"), out);
+    }
+  }
 }

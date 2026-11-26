@@ -425,7 +425,7 @@ public class Pruning extends Network {
         continue;
       }
       boolean reverse = (key & 1) == 1;
-      int minimumReducedCost = Integer.MAX_VALUE;
+      long minimumReducedCost = Long.MAX_VALUE;
       for (Arc arc : arcs) {
         minimumReducedCost = Math.min(minimumReducedCost, arc.reducedCost());
       }
@@ -632,12 +632,12 @@ public class Pruning extends Network {
 
   private void analyzeArcLoop(Arc arc, Node source, Node sink, int[] state) {
     while (state[1] > 0) {
-      int unitCost = arc.reducedCost();
+      long unitCost = arc.reducedCost();
       if (ASSERTS_ENABLED && unitCost < 0) {
         throw new IllegalStateException("Assertion failed");
       }
       if (unitCost > 0) {
-        int maxCapacity = state[2] / unitCost;
+        int maxCapacity = (int) (state[2] / unitCost);
         if (state[1] > maxCapacity) {
           state[1] = maxCapacity;
           if (state[1] == 0) {
