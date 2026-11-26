@@ -143,6 +143,20 @@ public class Store {
 
   private int firstRunsSize;
 
+  /**
+   * Constraints whose first consistency call is owed: it was made at a level above their imposition
+   * and undone with that level, or it was still queued when such a level was removed. The next
+   * consistency call queues them again.
+   */
+  private Constraint[] undoneRuns = new Constraint[16];
+
+  private int undoneRunsSize;
+
+  /** Constraints imposed since the queue was last cleared, in the order of imposition. */
+  private Constraint[] imposedSinceRemoval = new Constraint[64];
+
+  private int imposedSinceRemovalSize;
+
   /** One-time work done so far, in the order of the levels at which it was done. */
   private InitOnce[] initOnce = new InitOnce[16];
 
@@ -836,6 +850,8 @@ public class Store {
    */
   public void clearChanged() {
 
+    oweQueuedFirstRuns(level);
+
     while (currentQueue < queueNo) {
       changed[currentQueue++].clear();
     }
@@ -1003,6 +1019,9 @@ public class Store {
    * @return true if some constraint waits for its consistency function.
    */
   public boolean hasPendingConstraints() {
+    if (undoneRunsSize > 0) {
+      return true;
+    }
     for (int i = currentQueue; i < queueNo; i++) {
       if (!changed[i].isEmpty()) {
         return true;
@@ -1033,6 +1052,10 @@ public class Store {
     if (raiseLevelBeforeConsistency) {
       raiseLevelBeforeConsistency = false;
       setLevel(level + 1);
+    }
+
+    if (undoneRunsSize > 0) {
+      queueUndoneRuns();
     }
 
     if (this.sparseSetSize > 0 && this.sparseSet == null) {
@@ -1600,13 +1623,32 @@ public class Store {
     // Remove level is called so we clear flag isLastConsistencyFailure.
     isLastConsistencyFailure = false;
 
+    // the constraints imposed at this level go with it
+    int kept = 0;
+    for (int i = 0; i < undoneRunsSize; i++) {
+      Constraint c = undoneRuns[i];
+      undoneRuns[i] = null;
+      if (c.imposedAt() < level) {
+        undoneRuns[kept++] = c;
+      }
+    }
+    undoneRunsSize = kept;
+
+    oweQueuedFirstRuns(level - 1);
+
     while (currentQueue < queueNo) {
       changed[currentQueue++].clear();
     }
 
     while (firstRunsSize > 0 && firstRuns[firstRunsSize - 1].firstRunAt() >= level) {
-      firstRuns[--firstRunsSize].setFirstRunAt(Constraint.RUN_UNDONE);
+      Constraint undone = firstRuns[--firstRunsSize];
+      undone.setFirstRunAt(Constraint.RUN_UNDONE);
       firstRuns[firstRunsSize] = null;
+      // imposed below this level, it stays imposed but its first call is lost with the level and
+      // nothing may wake it again (a constraint over fixed variables, or one that prunes once)
+      if (undone.imposedAt() < level) {
+        oweFirstRun(undone);
+      }
     }
 
     // One-time work done at this level is due again; listeners below can already see it.
@@ -1752,6 +1794,11 @@ public class Store {
   }
 
   private void rec(Constraint c) {
+    c.setImposedAt(level);
+    if (imposedSinceRemovalSize == imposedSinceRemoval.length) {
+      imposedSinceRemoval = Arrays.copyOf(imposedSinceRemoval, 2 * imposedSinceRemovalSize);
+    }
+    imposedSinceRemoval[imposedSinceRemovalSize++] = c;
     if (model != null) {
       model.add(c);
     }
@@ -1849,6 +1896,47 @@ public class Store {
       firstRuns = Arrays.copyOf(firstRuns, firstRunsSize * 2);
     }
     firstRuns[firstRunsSize++] = c;
+  }
+
+  /**
+   * Records the constraints imposed at or below a level and still queued for their first
+   * consistency call, as the queue is about to be cleared.
+   *
+   * @param maxLevel the highest level of imposition that stays.
+   */
+  private void oweQueuedFirstRuns(int maxLevel) {
+    for (int i = 0; i < imposedSinceRemovalSize; i++) {
+      Constraint c = imposedSinceRemoval[i];
+      imposedSinceRemoval[i] = null;
+      if (c.firstRunAt() == Constraint.NOT_RUN
+          && c.imposedAt() <= maxLevel
+          && c.queueMembership(this) != 0) {
+        oweFirstRun(c);
+      }
+    }
+    imposedSinceRemovalSize = 0;
+  }
+
+  private void oweFirstRun(Constraint c) {
+    if (undoneRunsSize == undoneRuns.length) {
+      undoneRuns = Arrays.copyOf(undoneRuns, 2 * undoneRunsSize);
+    }
+    undoneRuns[undoneRunsSize++] = c;
+  }
+
+  /**
+   * Queues the constraints whose first consistency call is owed and that are still imposed, so that
+   * they run again, as after their imposition.
+   */
+  private void queueUndoneRuns() {
+    for (int i = 0; i < undoneRunsSize; i++) {
+      Constraint c = undoneRuns[i];
+      undoneRuns[i] = null;
+      if (c.firstRunAt() < 0 && c.imposedAt() <= level && !c.isEntailed()) {
+        addChanged(c);
+      }
+    }
+    undoneRunsSize = 0;
   }
 
   /**

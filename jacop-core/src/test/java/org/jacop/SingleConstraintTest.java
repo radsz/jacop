@@ -257,6 +257,9 @@ import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SplitSelect;
 import org.jacop.search.ls.LocalSearch;
+import org.jacop.search.restart.ConstantCalculator;
+import org.jacop.search.restart.RestartHook;
+import org.jacop.search.restart.RestartSearch;
 import org.jacop.util.DominatorTree;
 import org.jacop.util.QueueForward;
 import org.jacop.util.fsm.Fsm;
@@ -13892,5 +13895,97 @@ class SingleConstraintTest extends TestHelper {
       store.impose(disjoint ? new Disjoint(rect, profile) : new Diff2(rect, profile));
       assertThat(countInOrder(store, x)).as("instance %d", q).isEqualTo((int) expected);
     }
+  }
+
+  /**
+   * Makes the first consistency call of the constraints imposed so far at level 2, after a random
+   * bound at levels 1 and 2, and removes both levels, as a search that raises a level before it
+   * propagates does.
+   */
+  private static void firstCallAboveTheRoot(Store store, IntVar[] vars, Random random) {
+    for (int level = 1; level <= 2; level++) {
+      store.setLevel(level);
+      IntVar x = vars[random.nextInt(vars.length)];
+      int v = x.min() + random.nextInt(x.max() - x.min() + 1);
+      if (random.nextBoolean()) {
+        x.domain.inMin(level, x, v);
+      } else {
+        x.domain.inMax(level, x, v);
+      }
+    }
+    store.consistency();
+    store.removeLevel(2);
+    store.setLevel(1);
+    store.removeLevel(1);
+    store.setLevel(0);
+  }
+
+  @Test
+  void aConstraintWhoseFirstCallWasUndoneRunsAgainThoughNothingWakesIt() {
+    // removing the level of a first call above the root left the constraints unqueued: In, which
+    // prunes once and is woken by no event, a constraint over variables fixed at imposition, and a
+    // constraint still queued behind a failure at that level never ran again, and the search
+    // accepted the values they rule out
+    Random random = new Random(20261126);
+    for (int t = 0; t < 300; t++) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", -3, 6);
+      IntVar y = new IntVar(store, "y", -3, 6);
+      int a = random.nextInt(2);
+      int b = random.nextInt(2);
+      IntVar f = new IntVar(store, "f", a, a);
+      IntVar g = new IntVar(store, "g", b, b);
+      IntervalDomain allowed = new IntervalDomain();
+      for (int v = -3; v <= 6; v++) {
+        if (random.nextInt(3) == 0) {
+          allowed.unionAdapt(v, v);
+        }
+      }
+      IntVar[] vars = {x, y, f, g};
+      int expected =
+          bruteForce(vars, s -> s[0] <= s[1] && allowed.contains(s[1]) && s[2] != s[3]).size();
+      store.impose(new XlteqY(x, y));
+      store.impose(new In(y, allowed));
+      store.impose(new XneqY(f, g));
+      firstCallAboveTheRoot(store, new IntVar[] {x, y}, random);
+      assertThat(countInOrder(store, vars)).as("instance %d", t).isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void restartSearchWithAHookKeepsThePruningOfAConstraintThatPrunesOnce() {
+    // each run of a restart search with a hook makes its first consistency call at a level of its
+    // own, removed when the run ends: In(x, {5, 7}) was undone with it and, woken by no event,
+    // never
+    // ran again, so the second run took x = 0 as a better solution
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    IntervalDomain allowed = new IntervalDomain(5, 5);
+    allowed.unionAdapt(7, 7);
+    store.impose(new In(x, allowed));
+    store.impose(new XplusYeqC(x, y, 9));
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    SelectChoicePoint<IntVar> select =
+        new SimpleSelect<>(new IntVar[] {y, x}, null, new IndomainMax<>());
+    RestartSearch<IntVar> restarts =
+        new RestartSearch<>(store, search, select, new ConstantCalculator(100), x);
+    restarts.setRestartHook(
+        new RestartHook() {
+          @Override
+          public void restart(Store s, int status) {}
+
+          @Override
+          public void solution() {}
+
+          @Override
+          public boolean completeMarked() {
+            return false;
+          }
+        });
+    restarts.setRestartsLimit(5);
+    assertThat(restarts.labeling()).isTrue();
+    assertThat(restarts.getIntCost()).isEqualTo(5);
   }
 }

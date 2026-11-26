@@ -174,6 +174,9 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   /** The store level of the first consistency call, or NOT_RUN or RUN_UNDONE. */
   private int firstRunAt = NOT_RUN;
 
+  /** The store level at which the store last imposed the constraint, or Integer.MAX_VALUE. */
+  private int imposedAt = Integer.MAX_VALUE;
+
   private long consistencyCalls;
 
   /** The store whose propagation queues {@link #queueMembership} refers to. */
@@ -508,6 +511,25 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    */
   public final void setFirstRunAt(int level) {
     firstRunAt = level;
+  }
+
+  /**
+   * Returns the store level at which the store last imposed the constraint, by {@link
+   * Store#impose(Constraint)} or one of its variants.
+   *
+   * @return the level, or Integer.MAX_VALUE if the store did not impose the constraint.
+   */
+  public final int imposedAt() {
+    return imposedAt;
+  }
+
+  /**
+   * Sets the store level at which the constraint is imposed; only the store calls it.
+   *
+   * @param level the level.
+   */
+  public final void setImposedAt(int level) {
+    imposedAt = level;
   }
 
   /**
