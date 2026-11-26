@@ -9248,4 +9248,23 @@ class FlatzincFrontEndTest {
     assertTrue(out.contains("mk = 6;"), out);
   }
 
+  @Test
+  void alldifferentCliquesReadNoSumOfMinValueWeightsAsADisequality() throws IOException {
+    // -2147483648 * (xi + xj) != 0 says xi + xj != 0; read as xi != xj, the clique of five
+    // replaced the rows by an all-different and kept 720 of the 2150 solutions
+    StringBuilder model = new StringBuilder();
+    for (int i = 0; i < 5; i++) {
+      model.append("var -2..3: x").append(i).append(" :: output_var;\n");
+    }
+    for (int i = 0; i < 5; i++) {
+      for (int j = i + 1; j < 5; j++) {
+        model.append(
+            "constraint int_lin_ne([-2147483648,-2147483648],[x" + i + ",x" + j + "],0);\n");
+      }
+    }
+    model.append("solve satisfy;\n");
+    String out = run(model.toString(), "-a", "--lcg", "off")[0];
+    assertEquals(2150, out.split("----------\n", -1).length - 1, out);
+  }
+
 }
