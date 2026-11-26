@@ -210,6 +210,7 @@ import org.jacop.constraints.geost.Dbox;
 import org.jacop.constraints.geost.ExternalConstraint;
 import org.jacop.constraints.geost.Geost;
 import org.jacop.constraints.geost.GeostObject;
+import org.jacop.constraints.geost.InArea;
 import org.jacop.constraints.geost.NonOverlapping;
 import org.jacop.constraints.geost.Shape;
 import org.jacop.constraints.graph.ArborescenceBound;
@@ -13396,6 +13397,91 @@ class SingleConstraintTest extends TestHelper {
       assertThat(search.getSolutionListener().solutionsNo())
           .as("instance %d", t)
           .isEqualTo(expected);
+    }
+  }
+
+  // 1-D geost over objects with x[i] in lo[i]..hi[i] and kinds 0..shapes.length - 1, each shape a
+  // list of {offset, length} boxes, optionally within the area [area[0], area[1]): the number of
+  // solutions found by search and, as the second element, by brute force in long arithmetic
+  private static long[] geostLineCounts(int[] lo, int[] hi, int[][][] shapeBoxes, int[] area) {
+    Store store = new Store();
+    List<Shape> shapes = new ArrayList<>();
+    for (int s = 0; s < shapeBoxes.length; s++) {
+      List<Dbox> boxes = new ArrayList<>();
+      for (int[] b : shapeBoxes[s]) {
+        boxes.add(new Dbox(new int[] {b[0]}, new int[] {b[1]}));
+      }
+      shapes.add(new Shape(s, boxes));
+    }
+    List<GeostObject> objects = new ArrayList<>();
+    IntVar[] vars = new IntVar[2 * lo.length];
+    for (int i = 0; i < lo.length; i++) {
+      vars[2 * i] = new IntVar(store, "x" + i, lo[i], hi[i]);
+      vars[2 * i + 1] = new IntVar(store, "k" + i, 0, shapeBoxes.length - 1);
+      objects.add(
+          new GeostObject(
+              i,
+              new IntVar[] {vars[2 * i]},
+              vars[2 * i + 1],
+              new IntVar(store, 0, 0),
+              new IntVar(store, 1, 1),
+              new IntVar(store, 1, 1)));
+    }
+    List<ExternalConstraint> constraints = new ArrayList<>();
+    constraints.add(new NonOverlapping(objects, new int[] {0, 1}));
+    if (area != null) {
+      constraints.add(
+          new InArea(new Dbox(new int[] {area[0]}, new int[] {area[1] - area[0]}), null));
+    }
+    // the reference is enumerated before the constraint prunes the domains
+    long expected =
+        bruteForce(
+                vars,
+                t -> {
+                  for (int i = 0; i < lo.length; i++) {
+                    for (int[] b : shapeBoxes[t[2 * i + 1]]) {
+                      long from = (long) t[2 * i] + b[0];
+                      if (area != null && (from < area[0] || from + b[1] > area[1])) {
+                        return false;
+                      }
+                      for (int j = i + 1; j < lo.length; j++) {
+                        for (int[] c : shapeBoxes[t[2 * j + 1]]) {
+                          long other = (long) t[2 * j] + c[0];
+                          if (from < other + c[1] && other < from + b[1]) {
+                            return false;
+                          }
+                        }
+                      }
+                    }
+                  }
+                  return true;
+                })
+            .size();
+    store.impose(new Geost(objects, constraints, shapes));
+    long found = 0;
+    if (store.consistency()) {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      search.getSolutionListener().searchAll(true);
+      search.getSolutionListener().recordSolutions(false);
+      if (search.labeling(store, new SimpleSelect<>(vars, null, new IndomainMin<>()))) {
+        found = search.getSolutionListener().solutionsNo();
+      }
+    }
+    return new long[] {found, expected};
+  }
+
+  @Test
+  void geostPlacesAnObjectAtTheEndsOfTheIntegerRange() {
+    // pruneMin and pruneMax answered IntDomain.MAX_INT and MIN_INT for "no feasible position",
+    // so an object whose only position was MAX_INT or MIN_INT had its shapes removed: FlatZinc
+    // geost with an origin at MIN_INT was unsatisfiable
+    int[][][] shapes = {{{0, 1}}, {{0, 2}}};
+    for (int end : new int[] {IntDomain.MIN_INT, IntDomain.MAX_INT}) {
+      int near = end < 0 ? end + 3 : end - 4;
+      long[] counts =
+          geostLineCounts(new int[] {end, near}, new int[] {end, near + 1}, shapes, null);
+      assertThat(counts[0]).as("end %d", end).isEqualTo(counts[1]).isEqualTo(8);
     }
   }
 }

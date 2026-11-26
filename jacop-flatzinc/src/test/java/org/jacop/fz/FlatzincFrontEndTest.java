@@ -8768,4 +8768,25 @@ class FlatzincFrontEndTest {
           out.contains("z = 34;\n----------\n=========="), String.join(" ", options) + ": " + out);
     }
   }
+
+  @Test
+  void geostPlacesObjectsAtTheEndsOfTheIntegerRange() throws IOException {
+    // an origin at MIN_INT, or a box ending at MAX_INT + 1, made the model unsatisfiable: Geost
+    // took the coordinate for its marker of "no feasible position"
+    for (String origin : new String[] {"-536870910, y1, x2, y2", "x1, y1, x2, 536870909"}) {
+      String model =
+          "var 0..1: x1 :: output_var;\nvar 0..1: y1 :: output_var;\n"
+              + "var 0..1: x2 :: output_var;\nvar 0..1: y2 :: output_var;\n"
+              + "var 1..2: k1 :: output_var;\nvar 1..2: k2 :: output_var;\n"
+              + "constraint jacop_geost(2, [1, 1, 2, 1], [0, 0, 0, 0], [{1}, {2}], ["
+              + origin
+              + "], [k1, k2]);\nsolve satisfy;\n";
+      for (String lcg : new String[] {"on", "off"}) {
+        String out = run(model, "-a", "--lcg", lcg)[0];
+        // the boxes never meet: every assignment of the 6 variables is a solution
+        assertEquals(64, out.split("----------", -1).length - 1, origin + " " + out);
+        assertTrue(out.endsWith("==========\n"), out);
+      }
+    }
+  }
 }
