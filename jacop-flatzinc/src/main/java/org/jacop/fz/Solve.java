@@ -485,7 +485,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (node != null && node.getId() == JJTMODELEND) {
         ASTSolveItem solveItem = (ASTSolveItem) node.jjtGetChild(0);
         if (opt.symmetry()) {
-          breakSymmetries(astTree, solveItem, opt);
+          options = opt;
+          untilTimeOut(() -> breakSymmetries(astTree, solveItem, opt));
         }
         search(solveItem, table, opt);
       }
@@ -832,6 +833,114 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     initProbe();
     dictionary = table;
     output = table;
+    // the steps at the root before the search stop at the time-out
+    untilTimeOut(() -> rootSteps(node, opt));
+
+    if (opt.debug()) {
+      failStatistics = new FailConstraintsStatistics(store);
+    }
+
+    store.setDecay(opt.getDecay());
+
+    initNumberConstraints = store.numberConstraints();
+
+    // Get runtime system
+    Runtime runtime = Runtime.getRuntime();
+    long modelMem = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024);
+
+    if (opt.debug()) {
+      printSearchModelDebugInfo(dictionary, modelMem);
+    }
+
+    solveKind = -1;
+
+    int count = node.jjtGetNumChildren();
+    if (count == 1) {
+      searchCountOne(node);
+    } else if (count == 2) {
+      searchCountTwo(opt, node);
+    } else if (count > 2) {
+      searchCountMany(node);
+    } else {
+      throw new IllegalArgumentException(
+          "%% Error: Not recognized structure of solve statement; compilation aborted");
+    }
+  }
+
+  /**
+   * The time-out of the run as given by {@link System#currentTimeMillis()}, for {@link
+   * Store#consistencyUntil(long)}.
+   *
+   * @return the deadline, or 0 when there is no time-out
+   */
+  private long timeOutDeadline() {
+    return options.getTimeOut() > 0
+        ? System.currentTimeMillis() + options.getRemainingTimeOut()
+        : 0;
+  }
+
+  /**
+   * Runs steps at the root, between the model's fixpoint and the search, with the store's
+   * propagation stopping at the time-out: a constraint they post or a value they fix can start a
+   * propagation that converges a step per pass (x = y and x &lt; y over floats move one ulp per
+   * pass) and runs for minutes. A failure at the time-out proves nothing, so the run then ends as a
+   * time-out, whatever the steps concluded from it.
+   *
+   * @param steps the steps, which throw FailException when the model fails
+   * @throws ModelTimeOut when the propagation of a step stopped at the time-out
+   */
+  private void untilTimeOut(Runnable steps) {
+    long deadline = timeOutDeadline();
+    if (deadline == 0 || store.getConsistencyDeadline() != 0) {
+      try {
+        steps.run();
+      } catch (FailException e) {
+        // a deadline set already, or the stop of a portfolio thread, cut the propagation
+        if (store.isConsistencyDeadlinePassed()) {
+          throw new ModelTimeOut();
+        }
+        throw e;
+      }
+      return;
+    }
+    // a millisecond after the time-out: a search of a step stops at the time-out first, and so
+    // knows it timed out
+    store.setConsistencyDeadline(deadline + 1);
+    boolean passed;
+    try {
+      steps.run();
+    } catch (FailException e) {
+      if (store.isConsistencyDeadlinePassed()) {
+        throw new ModelTimeOut();
+      }
+      throw e;
+    } finally {
+      passed = store.isConsistencyDeadlinePassed();
+      store.setConsistencyDeadline(0);
+    }
+    if (passed) {
+      throw new ModelTimeOut();
+    }
+  }
+
+  /**
+   * Propagates the store at the root, stopping at the time-out.
+   *
+   * @return false when the store fails
+   * @throws ModelTimeOut when the propagation stopped at the time-out
+   */
+  private boolean rootConsistency() {
+    if (store.consistencyUntil(timeOutDeadline())) {
+      return true;
+    }
+    if (store.isConsistencyCut()) {
+      throw new ModelTimeOut();
+    }
+    return false;
+  }
+
+  /** The steps of {@link #search} at the root, from the side components to the bounds. */
+  private void rootSteps(ASTSolveItem node, Options opt) {
     solveSideComponents(node);
     ObjectivePresolve objective = objectiveRule(node);
     // the last reader of the variable and constraint items
@@ -870,36 +979,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (DecompositionBound.on() && opt.proof() == null) {
       decompositionBound(node);
-    }
-
-    if (opt.debug()) {
-      failStatistics = new FailConstraintsStatistics(store);
-    }
-
-    store.setDecay(opt.getDecay());
-
-    initNumberConstraints = store.numberConstraints();
-
-    // Get runtime system
-    Runtime runtime = Runtime.getRuntime();
-    long modelMem = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024);
-
-    if (opt.debug()) {
-      printSearchModelDebugInfo(dictionary, modelMem);
-    }
-
-    solveKind = -1;
-
-    int count = node.jjtGetNumChildren();
-    if (count == 1) {
-      searchCountOne(node);
-    } else if (count == 2) {
-      searchCountTwo(opt, node);
-    } else if (count > 2) {
-      searchCountMany(node);
-    } else {
-      throw new IllegalArgumentException(
-          "%% Error: Not recognized structure of solve statement; compilation aborted");
     }
   }
 
@@ -2766,7 +2845,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           postCollectedClauses();
           // a clause false at the root fails here: a restart search would forget the failure of
           // its first run and search again
-          if (!store.consistency()) {
+          if (!rootConsistency()) {
             return false;
           }
         }
@@ -2833,7 +2912,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       store.clearChanged();
       return false;
     }
-    return store.consistency();
+    return rootConsistency();
   }
 
   /**

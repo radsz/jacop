@@ -8486,4 +8486,39 @@ class FlatzincFrontEndTest {
             + "constraint float_lt_reif(f, g, b);\n"
             + "constraint jacop_diffn_k(p, [a, l, m, 1, 1, 1], 3, false);\nsolve satisfy;\n");
   }
+
+  // x + 1 <= y and y <= x when a = 1: the bounds of x and y move by one per pass (the variables
+  // of a crawl, then its constraints)
+  private static String crawlVariables(String a) {
+    StringBuilder b = new StringBuilder();
+    for (String v : new String[] {"x", "y", "z"}) {
+      b.append("var 0..500000000: ").append(v).append(a).append(";\n");
+    }
+    for (String v : new String[] {"t", "u", "v"}) {
+      b.append("var bool: ").append(v).append(a).append(";\n");
+    }
+    return b.toString();
+  }
+
+  private static String crawlConstraints(String a) {
+    return ("constraint int_eq_reif(A, 1, tA);\nconstraint int_plus(xA, 1, zA);\n"
+            + "constraint int_le_reif(zA, yA, uA);\nconstraint int_le_reif(yA, xA, vA);\n"
+            + "constraint bool_clause([uA], [tA]);\nconstraint bool_clause([vA], [tA]);\n")
+        .replace("A", a);
+  }
+
+  @Test
+  void presolveStopsARootPropagationAtTheTimeOut() {
+    // presolve propagated the values it derived at the root without a deadline: one of a and b is
+    // 1, and its crawl ran for minutes in process
+    assertEndsAtTheTimeOut(
+        "var 0..1: a :: output_var;\nvar 0..1: b :: output_var;\n"
+            + crawlVariables("a")
+            + crawlVariables("b")
+            + crawlConstraints("a")
+            + crawlConstraints("b")
+            + "constraint int_ne(a, b);\nsolve satisfy;\n",
+        "--presolve",
+        "on");
+  }
 }
