@@ -8535,13 +8535,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             }
           });
     }
-    if (quickStartTakes(costVar)) {
+    if (quickStartLpProbe && quickStartTakes(costVar)) {
       // on a small model the probe is the quick start: it takes the quick start's work, and at
       // least its own time if that comes first
       probe
           .sat()
           .setDeadline(probe.sat().now() + Math.max(lpProbeMs, quickStartMillis()) * 1_000_000L);
-      probe.sat().setWorkLimit(QUICK_START_WORK);
+      probe.sat().setWorkLimit(quickStartWork);
       if (options.getStatistics()) {
         IO.println("%%%mzn-stat: quickStart=lp-probe");
       }
@@ -8585,30 +8585,35 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // much work of the SAT solver (propagated literals and the propagators' work) by a plain LCG
   // solver of its own, without the set-up of free search (local search, root probing, hints, the
   // core-guided phase); 0 is off. -Dorg.jacop.fz.quickStart=ms caps its time
-  private static final long QUICK_START_WORK =
-      Long.getLong("org.jacop.fz.quickStartWork", 2_000_000);
+  private final long quickStartWork = Long.getLong("org.jacop.fz.quickStartWork", 2_000_000);
 
-  private static final long QUICK_START_MS = Long.getLong("org.jacop.fz.quickStart", 1_000);
+  private final long quickStartMs = Long.getLong("org.jacop.fz.quickStart", 1_000);
 
   // -Dorg.jacop.fz.quickStartSize=n: the most variables and constraints of the store together for
   // the quick start
-  private static final int QUICK_START_SIZE =
-      Integer.getInteger("org.jacop.fz.quickStartSize", 20_000);
+  // -Dorg.jacop.fz.quickStartLpProbe=false: the probe before an expensive root LP keeps its own
+  // time on small models instead of the quick start's work
+  private final boolean quickStartLpProbe =
+      !"false".equals(System.getProperty("org.jacop.fz.quickStartLpProbe"));
 
-  // after a quick start that did not finish, the best cost it printed: free search does not print
-  // its solutions that are no better
-  private int quickStartPrinted = Integer.MAX_VALUE;
+  private final int quickStartSize = Integer.getInteger("org.jacop.fz.quickStartSize", 20_000);
 
-  // the time of the quick start: QUICK_START_MS, at most a twentieth of the time left
+  // while the quick start runs, its last solution, printed only when it finishes: solutions that
+  // free search knew of before its own search changed it (the best printed cost bounds local
+  // search, neighbourhoods and free search without learning); travelling-thief 2023 n20_k20 took
+  // 7.5-9 s instead of 5 s with them
+  private StringBuffer quickStartHeld;
+
+  // the time of the quick start: quickStartMs, at most a twentieth of the time left
   private long quickStartMillis() {
     return options.getTimeOut() > 0
-        ? Math.min(QUICK_START_MS, options.getRemainingTimeOut() / 20)
-        : QUICK_START_MS;
+        ? Math.min(quickStartMs, options.getRemainingTimeOut() / 20)
+        : quickStartMs;
   }
 
   private boolean quickStartTakes(Var costVar) {
-    return QUICK_START_WORK > 0
-        && QUICK_START_MS > 0
+    return quickStartWork > 0
+        && quickStartMs > 0
         && options.freeSearch()
         && !enumerating(costVar)
         && options.portfolioWorker() == null
@@ -8616,7 +8621,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         && dictionary.onRestart == null
         && freeFirstValues == null
         && (costVar == null || costVar instanceof IntVar)
-        && store.size() + store.numberConstraints() <= QUICK_START_SIZE;
+        && store.size() + store.numberConstraints() <= quickStartSize;
   }
 
   /**
@@ -8625,8 +8630,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * up its local search, root probing, hints and core-guided phase. That set-up took about half a
    * second on models that the plain solver finishes in a fifth of it (zephyrus and stochastic-vrp
    * of the MiniZinc Challenge 2019, 0.4 to 1.2 million of work). When it does not finish, the store
-   * is as before and free search runs as without it; it prints only solutions better than those of
-   * the quick start.
+   * is as before and free search runs as without it: the quick start's solutions are printed only
+   * when it finishes.
    *
    * @return the answer of the quick start, or UNKNOWN when it did not finish
    */
@@ -8653,15 +8658,40 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           });
     }
     quick.sat().setDeadline(quick.sat().now() + Math.max(1, millis) * 1_000_000L);
-    quick.sat().setWorkLimit(QUICK_START_WORK);
+    quick.sat().setWorkLimit(quickStartWork);
+    // what the solutions of a quick start that does not finish leave behind is undone
+    int solutions = numberSolutions;
+    boolean found = solutionFound;
+    int best = bestPrintedCost.get();
+    int last = lcgLastCost;
+    StringBuffer lastPrinted = lastSolution;
+    int improvements;
+    synchronized (lcgImprovements) {
+      improvements = lcgImprovements.size();
+    }
+    quickStartHeld = new StringBuffer();
     lcg = quick;
-    int answer;
+    int answer = CdclSolver.UNKNOWN;
+    boolean finished = false;
     try {
       answer = costVar == null ? quick.solve() : quick.minimize((IntVar) costVar);
+      finished = answer != CdclSolver.UNKNOWN || gapReached();
+    } catch (NumberSolutionsReached e) {
+      finished = true;
+      throw e;
     } finally {
       lcg = null;
+      StringBuffer held = quickStartHeld;
+      quickStartHeld = null;
+      if (finished && held.length() > 0 && options.getAll()) {
+        synchronized (answerLock) {
+          if (!answered) {
+            IO.print(held.toString());
+            appendSolutionToOutputFile(held.toString());
+          }
+        }
+      }
     }
-    boolean finished = answer != CdclSolver.UNKNOWN || gapReached();
     if (options.getStatistics()) {
       IO.print(
           "%%%mzn-stat: quickStart="
@@ -8670,6 +8700,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + quick.sat().conflicts
               + "\n%%%mzn-stat: quickStartWork="
               + quick.sat().work()
+              + "\n%%%mzn-stat: quickStartSolutions="
+              + (numberSolutions - solutions)
               + "\n%%%mzn-stat: quickStartTime="
               + (System.nanoTime() - start) / 1e9
               + "\n");
@@ -8681,8 +8713,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     quick.detach();
     store.removeLevel(level + 1);
     store.setLevel(level);
-    if (numberSolutions > 0 && costVar instanceof IntVar) {
-      quickStartPrinted = bestPrintedCost.get();
+    numberSolutions = solutions;
+    solutionFound = found;
+    bestPrintedCost.set(best);
+    lcgLastCost = last;
+    lastSolution = lastPrinted;
+    synchronized (lcgImprovements) {
+      while (lcgImprovements.size() > improvements) {
+        lcgImprovements.removeLast();
+      }
     }
     return CdclSolver.UNKNOWN;
   }
@@ -10715,12 +10754,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   @SuppressWarnings("unchecked")
   void printSolution() {
 
-    if (costVariable instanceof IntVar cost
-        && cost.singleton()
-        && cost.value() >= quickStartPrinted) {
-      // printed by the quick start already
-      return;
-    }
     StringBuffer printBuffer = new StringBuffer();
     numberSolutions++;
     solutionFound = true;
@@ -10776,7 +10809,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       worker.solution(printBuffer.toString(), cost, !minimize, sharedNames(), sharedValues());
     }
 
-    if (options.getAll()) {
+    if (quickStartHeld != null) {
+      // the quick start's solutions are printed only when it finishes (see quickStart)
+      quickStartHeld.setLength(0);
+      quickStartHeld.append(printBuffer);
+      lastSolution = printBuffer;
+    } else if (options.getAll()) {
       synchronized (answerLock) {
         if (!answered) {
           IO.print(printBuffer.toString());
