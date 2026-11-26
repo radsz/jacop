@@ -286,8 +286,11 @@ public final class ClausalCompiler {
     }
     ClausalCompiler c = new ClausalCompiler(support);
     try {
+      // the variables no product narrows first: NumberPartitioning-260 of XCSP 2022 spent 6 s
+      // narrowing 259 squares of 131-value factors before a factor was found too large
+      c.checkDomains(items, c.productResults(items));
       c.narrowProducts(items);
-      c.checkDomains(items);
+      c.checkDomains(items, Set.of());
       c.orderedVariables(items);
       if (!c.arithmetic) {
         throw new NotCompiled("0/1 variables only");
@@ -726,7 +729,19 @@ public final class ClausalCompiler {
     return new IntVar[0];
   }
 
-  private void checkDomains(List<ASTConstElem> items) {
+  // the results of the products, whose value sets narrowProducts narrows
+  private Set<IntVar> productResults(List<ASTConstElem> items) {
+    Set<IntVar> z = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+    for (ASTConstElem item : items) {
+      if ("int_times".equals(item.getName())) {
+        z.add(var(item, 2));
+      }
+    }
+    return z;
+  }
+
+  // every variable but those skipped has at most maxDomain values
+  private void checkDomains(List<ASTConstElem> items, Set<IntVar> skip) {
     for (ASTConstElem item : items) {
       for (int i = 0; i < item.jjtGetNumChildren(); i++) {
         SimpleNode child = (SimpleNode) item.jjtGetChild(i);
@@ -745,7 +760,7 @@ public final class ClausalCompiler {
           continue;
         }
         for (IntVar v : vs) {
-          if (v.singleton()) {
+          if (v.singleton() || skip.contains(v)) {
             continue;
           }
           int[] d = values(v);

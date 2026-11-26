@@ -361,6 +361,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   DepthFirstSearch<T>[] finalSearch;
   // labels the variables a search on output variables leaves out
   DepthFirstSearch<T> completionSearch;
+  // labels the integer and Boolean variables it leaves out, after completionSearch labelled the
+  // set variables
+  DepthFirstSearch<T> completionChild;
+  // splits the float variables it leaves out, below completionSearch or in its place
+  DepthFirstSearch<T> floatCompletion;
   // Values for search created from flatzinc
   DepthFirstSearch<T> flatzincDfs;
   SelectChoicePoint<T> flatzincVariableSelection;
@@ -1303,6 +1308,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + refutation.rows()
               + "\n%%%mzn-stat: lpRefutationCliques="
               + refutation.pairCliques
+              + "\n%%%mzn-stat: lpRefutationCardinalities="
+              + refutation.subsetCardinalities
               + "\n%%%mzn-stat: lpRefutation="
               + refutation.refutationOutcome()
               + "\n%%%mzn-stat: lpRefutationObjective="
@@ -2628,7 +2635,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     DepthFirstSearch<T> parentSearch = null;
     do {
       s.getSolutionListener().recordSolutions(false);
-      s.getSolutionListener().searchAll(s != completionSearch);
+      s.getSolutionListener()
+          .searchAll(s != completionSearch && s != completionChild && s != floatCompletion);
 
       if (parentSearch != null) {
         s.getSolutionListener().setParentSolutionListener(parentSearch.getSolutionListener());
@@ -3310,6 +3318,26 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
+   * Solves the root refutation of a satisfaction model now when nothing woke it at the root (no
+   * domain changed), before JaSAT alone solves a CNF of the model, which does not run it: hole-10
+   * of XCSP 2017 (the pigeon-hole as conflict tables) is refuted here in a few pivots, and
+   * SocialGolfers-08-04-11 of XCSP 2024 in half a second, while JaSAT does not finish either.
+   *
+   * @return false when the refutation proved the model unsatisfiable
+   */
+  private boolean refuteAtRoot() {
+    if (refutation != null && !refutation.solved()) {
+      try {
+        refutation.consistency(store);
+      } catch (FailException e) {
+        lcgStatus = CdclSolver.UNSAT;
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
    * Solves with lazy clause generation: JaSAT searches, the store's constraints propagate and
    * explain their prunings. Solutions are printed when found, with the domains fixed to them.
    */
@@ -3323,9 +3351,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         && options.proof() == null
         && !options.getAll()
         && options.getNumberSolutions() <= 1
-        && options.freeSearch()
-        && executeClausalSearch(clausal)) {
-      return numberSolutions > 0;
+        && options.freeSearch()) {
+      if (!refuteAtRoot()) {
+        return false;
+      }
+      if (executeClausalSearch(clausal)) {
+        return numberSolutions > 0;
+      }
     }
     if (PureClauseModel.enabled()
         && costVar == null
@@ -3343,17 +3375,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       if (refutation != null) {
         ignored.add(refutation);
-        if (!refutation.solved()) {
-          // nothing woke the refutation at the root (no domain changed), and JaSAT will not run it:
-          // solve it now (hole-10 of XCSP 2017, the pigeon-hole as conflict tables, is refuted
-          // here in a few pivots, while JaSAT does not finish)
-          try {
-            refutation.consistency(store);
-          } catch (FailException e) {
-            lcgStatus = CdclSolver.UNSAT;
-            return false;
-          }
-        }
+      }
+      if (!refuteAtRoot()) {
+        return false;
       }
       PureClauseModel cnf =
           PureClauseModel.of(store, sat.collectedClauses(), ignored, this::declaredVariables);
@@ -3584,11 +3608,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           Integer.parseInt(options.freeConfig("lcg-literal-runs", "1")),
           Integer.parseInt(options.freeConfig("lcg-literal-runs-solved", "6")));
       // no solution after 50,000 conflicts: the turns of the annotation give way to the literals
-      // and
-      // activity branching (CHANGELOG 507). amaze2 2012-07-04, 06-29 and 03-08 found no solution in
-      // 300 s on some seeds and are solved in 28 to 125 s; 28 instances where no solution comes
-      // early, 240 s, two seeds: solved 25 -> 29, total time 8,486 -> 7,416 s
-      lcg.setAnnotationDrop(Long.parseLong(options.freeConfig("lcg-annotation-drop", "50000")));
+      // and activity branching (CHANGELOG 510). amaze2 2012-07-04, 06-29 and 03-08 found no
+      // solution in 300 s on some seeds and are solved in 28 to 125 s; 28 instances where no
+      // solution comes early, 240 s, two seeds: solved 25 -> 29, total time 8,486 -> 7,416 s.
+      // Not for satisfaction under the default search of a model without an annotation (jacop
+      // #942), which none of the 28 was: the XCSP CSPs PegSolitaireTable-english-3-3-0 and
+      // SportsScheduling-dummy-14, solved in 20 and 71 s with its turns, were unsolved in 30 and
+      // 90 s without them
+      lcg.setAnnotationDrop(
+          annotatedSearch == null && costVar == null
+              ? 0
+              : Long.parseLong(options.freeConfig("lcg-annotation-drop", "50000")));
       if (!LcgSolver.CHAIN_LIMIT_SET) {
         // short bound-literal chains (CHANGELOG 311): multi-agent-graph-coverage proofs about 2x
         // faster, two paired 600 s rounds 6/0 and 4/2 families better/worse with one more proof;
@@ -5851,6 +5881,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     if (packing == null) {
+      return null;
+    }
+    // the root's pending propagation first, as in checkSchedule: a level removed with it still
+    // queued drops it, and a linear relaxation not solved yet then took its first solve, whose
+    // bounds its cuts take as the root's, at the objective fixed below or at a probe of LCG's root
+    if (!store.consistency()) {
       return null;
     }
     IntVar[] items = packing.binVariables();
@@ -9660,7 +9696,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (options.getStatistics()) {
       int[] stats = gatherSingleSearchStats();
-      printStatisticsOutput(stats[0], stats[1], stats[2], stats[3]);
+      // the searches below the first one count the solutions of their own and of each other
+      // (with a completion of hidden floats below that of hidden integers, 2 for one solution), so
+      // count the solutions that were reported instead
+      printStatisticsOutput(stats[0], stats[1], stats[2], numberSolutions);
     }
   }
 
@@ -9913,10 +9952,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
-   * Adds a search on the integer and Boolean variables that the search on output variables leaves
-   * out. Propagation alone does not guarantee that they can take values consistent with the output
-   * variables, so a solution is reported only once they do. One assignment is enough: the search
-   * stops at the first one, also when all solutions are requested.
+   * Adds a search on the set, integer and Boolean variables that the search on output variables
+   * leaves out. Propagation alone does not guarantee that they can take values consistent with the
+   * output variables, so a solution is reported only once they do. One assignment is enough: the
+   * search stops at the first one, also when all solutions are requested.
    */
   @SuppressWarnings("unchecked")
   private DepthFirstSearch<T> addCompletionSearch(DepthFirstSearch<T> lastSearch) {
@@ -9924,8 +9963,48 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     allVars.defaultVars();
     LinkedHashSet<IntVar> rest = new LinkedHashSet<>(Arrays.asList(allVars.getIntVars()));
     rest.addAll(Arrays.asList(allVars.getBoolVars()));
+    // the float variables whose constraints a reformulation replaced take any value, and those
+    // MiniZinc introduced are intermediate results that the others define
+    Set<Var> unused = new HashSet<>(dictionary.unusedVariables);
+    unused.addAll(dictionary.introducedFloatVariables());
+    FloatVar[] floats =
+        Arrays.stream(allVars.getFloatVars())
+            .filter(v -> !unused.contains(v))
+            .toArray(FloatVar[]::new);
+    floatCompletion = null;
+    completionChild = null;
+    // the sets whose constraints a reformulation replaced take any value
+    Set<Var> unusedSets = new HashSet<>(dictionary.unusedVariables);
+    SetVar[] sets =
+        Arrays.stream(allVars.getSetVars())
+            .filter(v -> !unusedSets.contains(v))
+            .toArray(SetVar[]::new);
+    DepthFirstSearch<T> first = null;
+    if (sets.length > 0) {
+      // the set variables first, then the others below this search
+      DepthFirstSearch<T> setCompletion = new DepthFirstSearch<>();
+      if (options.debug()) {
+        setCompletion.setConsistencyListener(failStatistics);
+      }
+      setCompletion.setSelectChoicePoint(
+          (SelectChoicePoint<T>) new SimpleSelect<>(sets, null, new IndomainSetMin<>()));
+      setCompletion.setPrintInfo(false);
+      lastSearch.setSolutionListener(new SimpleSolutionListener<>());
+      setCompletion.setSolutionListener(new CostListener<>());
+      lastSearch.addChildSearch(setCompletion);
+      setSearchTimeout(setCompletion);
+      if (rest.isEmpty()) {
+        completionSearch = setCompletion;
+        completionChild = null;
+        addFloatCompletion(setCompletion, floats);
+        return setCompletion;
+      }
+      first = setCompletion;
+      lastSearch = setCompletion;
+    }
     if (rest.isEmpty()) {
-      return null;
+      completionSearch = addFloatCompletion(lastSearch, floats);
+      return completionSearch;
     }
 
     DepthFirstSearch<T> completion = new DepthFirstSearch<>();
@@ -9944,8 +10023,94 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     completion.setSolutionListener(new CostListener<>());
     lastSearch.addChildSearch(completion);
     setSearchTimeout(completion);
-    completionSearch = completion;
+    addFloatCompletion(completion, floats);
+    if (first == null) {
+      completionSearch = completion;
+      return completion;
+    }
+    completionSearch = first;
+    completionChild = completion;
+    return first;
+  }
+
+  /**
+   * Adds below lastSearch a search that splits the float variables the search on output variables
+   * leaves out, which propagation alone does not show to have values consistent with the rest (x =
+   * y and x != y over 0..1 holds no solution but propagates). It stops at the first solution.
+   *
+   * @return the search, or null when there are no such variables
+   */
+  @SuppressWarnings("unchecked")
+  private DepthFirstSearch<T> addFloatCompletion(
+      DepthFirstSearch<T> lastSearch, FloatVar[] floats) {
+    if (floats.length == 0) {
+      return null;
+    }
+    // under a float objective the split only shows that a solution exists and is undone:
+    // splitting a variable the cost depends on narrowed the cost below the box the search found,
+    // so each completed solution improved on the last by a few floats (ex2_1_1 with its squares
+    // plain variables: 1001 solutions and no proof in 30 s; with the check, the optimum in 61 s,
+    // since it refutes most boxes of x that the search accepts, and 22 s without any completion)
+    DepthFirstSearch<T> completion =
+        costVariable instanceof FloatVar
+            ? new FloatExtensionCheck(floats)
+            : new DepthFirstSearch<>();
+    if (options.debug()) {
+      completion.setConsistencyListener(failStatistics);
+    }
+    completion.setSelectChoicePoint(
+        costVariable instanceof FloatVar
+            ? (SelectChoicePoint<T>) new SimpleSelect<>(new IntVar[0], null, new IndomainMin<>())
+            : (SelectChoicePoint<T>) new SplitSelectFloat<>(store, floats, null));
+    completion.setPrintInfo(false);
+    lastSearch.setSolutionListener(new SimpleSolutionListener<>());
+    completion.setSolutionListener(new CostListener<>());
+    lastSearch.addChildSearch(completion);
+    setSearchTimeout(completion);
+    floatCompletion = completion;
     return completion;
+  }
+
+  /**
+   * A search over no variables that reports the solution of the searches above it once a split of
+   * the given float variables, at a level of its own and undone after it, shows that they have
+   * values consistent with it. The store and so the cost keep the box of the searches above.
+   */
+  private final class FloatExtensionCheck extends DepthFirstSearch<T> {
+    private final FloatVar[] floats;
+
+    FloatExtensionCheck(FloatVar[] floats) {
+      this.floats = floats;
+    }
+
+    @Override
+    public boolean labeling() {
+      Store s = this.store;
+      int level = s.level;
+      DepthFirstSearch<Var> check = new DepthFirstSearch<>();
+      check.setPrintInfo(false);
+      check.setAssignSolution(false);
+      SimpleSolutionListener<Var> listener = new SimpleSolutionListener<>();
+      listener.searchAll(false);
+      check.setSolutionListener(listener);
+      int to = options.getRemainingTimeOut();
+      if (to > 0) {
+        check.setTimeOutMilliseconds(to);
+      }
+      boolean extended;
+      s.setLevel(level + 1);
+      try {
+        extended = check.labeling(s, new SplitSelectFloat<>(s, floats, null));
+      } finally {
+        s.removeLevel(level + 1);
+        s.setLevel(level);
+      }
+      if (check.timeOutOccured) {
+        timeOutOccured = true;
+        return false;
+      }
+      return extended && super.labeling();
+    }
   }
 
   private boolean shouldUseDefaultSearchVars(

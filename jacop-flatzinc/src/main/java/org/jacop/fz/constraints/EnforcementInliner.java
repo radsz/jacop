@@ -259,6 +259,10 @@ public class EnforcementInliner implements ParserTreeConstants {
    * @param fncs the constraint functions that post the changed clauses.
    */
   public void detect(SimpleNode astTree, ConstraintFncs fncs) {
+    // only the control of a half-reified constraint is eliminated: a model without one is not read
+    if (!support.hasConstraint(astTree, name -> name.endsWith("_imp"))) {
+      return;
+    }
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {

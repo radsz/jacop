@@ -78,6 +78,8 @@ import org.jacop.fz.SimpleNode;
  */
 public final class BinPackingCostBound {
 
+  private static final Set<String> GATE_KINDS = Set.of("jacop_bin_packing");
+
   /**
    * It tells if the bounds are posted.
    *
@@ -123,6 +125,10 @@ public final class BinPackingCostBound {
    * @return the number of sums posted
    */
   public int detect(SimpleNode astTree) {
+    // the bounds are of bin packings: a model without them is not read
+    if (!support.hasConstraint(astTree, GATE_KINDS)) {
+      return 0;
+    }
     support.forEachConstraint(
         astTree,
         item -> {
@@ -276,14 +282,16 @@ public final class BinPackingCostBound {
     }
   }
 
-  // g(v) for v = 0 .. load.max(), NONE where the load cannot be v
+  // g(v) for v = 0 .. load.max(), NONE where the load cannot be v: also where the function is
+  // undefined (TimeIndexedBound.NONE, Long.MIN_VALUE, which as a cost would wrap the sums)
   private static long[] table(IntVar load, TimeIndexedBound.LoadFunction f) {
     int max = Math.max(0, load.max());
     long[] g = new long[max + 1];
     for (int v = 0; v <= max; v++) {
       long i = v - f.offset();
-      g[v] =
+      long value =
           load.domain.contains(v) && i >= 0 && i < f.values().length ? f.values()[(int) i] : NONE;
+      g[v] = value == TimeIndexedBound.NONE ? NONE : value;
     }
     return g;
   }
@@ -382,6 +390,9 @@ public final class BinPackingCostBound {
         long total = 0;
         for (int p = 0; p < cost.length; p++) {
           if (cost[p] != null) {
+            if (cost[p][load[p]] >= NONE) {
+              return; // a load the bin cannot take
+            }
             total += cost[p][load[p]];
           }
         }

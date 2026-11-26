@@ -138,6 +138,10 @@ public class VariablesParameters implements ParserTreeConstants {
       highFloatInterval = MAX_FLOAT;
       dictionary.noteNarrowedFloatDomain();
     }
+    if (lowFloatInterval > highFloatInterval) {
+      // the whole domain is beyond JaCoP's float range: no value of it remains
+      throw Store.failException;
+    }
   }
 
   /**

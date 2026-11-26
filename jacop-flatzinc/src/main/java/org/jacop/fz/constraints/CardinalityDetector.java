@@ -78,6 +78,8 @@ import org.jacop.fz.SimpleNode;
  */
 public class CardinalityDetector implements ParserTreeConstants {
 
+  private static final Set<String> GATE_KINDS = Set.of("int_eq_reif");
+
   // fewest literals a linear constraint must have to be read as a count
   static final int MIN_COUNT_SIZE = 2;
 
@@ -169,6 +171,10 @@ public class CardinalityDetector implements ParserTreeConstants {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
+    // the counted literals are int_eq_reif constraints: a model without them is not read
+    if (!support.hasConstraint(astTree, GATE_KINDS)) {
+      return;
+    }
     support.forEachConstraint(astTree, this::collect);
     if (literals.isEmpty()) {
       return;

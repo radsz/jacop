@@ -55,7 +55,11 @@ public class FloatCostVariableHandler implements CostVariableHandler {
   @Override
   public double getCostValue(Var v) {
     if (v instanceof FloatVar floatVar) {
-      return floatVar.dom().max();
+      // a singleton is an interval up to the precision wide, printed as its middle: the next
+      // solution must cost less than that middle, or its middle, printed, may be no better (a
+      // bound one float below the maximum takes one float off the same box)
+      FloatDomain d = floatVar.dom();
+      return d.singleton() ? d.min() / 2 + d.max() / 2 : d.max();
     }
     throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
   }
