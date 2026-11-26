@@ -100,21 +100,36 @@ public class AinB extends PrimitiveConstraint implements Copyable<AinB>, Element
       throw Store.failException;
     }
 
-    a.domain.inLub(store.level, a, b.domain.lub());
+    // a cardinality that reaches the size of a glb or a lub fixes the set, which prunes the other
+    // set again (the store does not re-queue a constraint for its own changes)
+    long open;
+    do {
+      open = openness(a) + openness(b);
 
-    b.domain.inGlb(store.level, b, a.domain.glb());
+      a.domain.inLub(store.level, a, b.domain.lub());
 
-    if (strict) {
-      a.domain.inCardinality(store.level, a, Integer.MIN_VALUE, b.domain.card().max() - 1);
-    } else {
-      a.domain.inCardinality(store.level, a, Integer.MIN_VALUE, b.domain.card().max());
-    }
+      b.domain.inGlb(store.level, b, a.domain.glb());
 
-    if (strict) {
-      b.domain.inCardinality(store.level, b, a.domain.card().min() + 1, Integer.MAX_VALUE);
-    } else {
-      b.domain.inCardinality(store.level, b, a.domain.card().min(), Integer.MAX_VALUE);
-    }
+      if (strict) {
+        a.domain.inCardinality(store.level, a, Integer.MIN_VALUE, b.domain.card().max() - 1);
+      } else {
+        a.domain.inCardinality(store.level, a, Integer.MIN_VALUE, b.domain.card().max());
+      }
+
+      if (strict) {
+        b.domain.inCardinality(store.level, b, a.domain.card().min() + 1, Integer.MAX_VALUE);
+      } else {
+        b.domain.inCardinality(store.level, b, a.domain.card().min(), Integer.MAX_VALUE);
+      }
+    } while (openness(a) + openness(b) != open);
+  }
+
+  /** A measure of the undecided part of a set domain that every pruning decreases. */
+  static long openness(SetVar s) {
+    return (long) s.domain.lub().getSize()
+        - s.domain.glb().getSize()
+        + s.domain.card().max()
+        - s.domain.card().min();
   }
 
   @Override
