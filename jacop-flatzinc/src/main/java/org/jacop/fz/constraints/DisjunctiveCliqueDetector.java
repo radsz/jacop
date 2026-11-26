@@ -310,10 +310,11 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
     }
   }
 
-  // a*x + b*y <= c (or = c) with b = -a: a difference constraint between x and y
+  // a*x + b*y <= c (or = c) with b = -a: a difference constraint between x and y; -a[1] in long,
+  // since [MIN_VALUE, MIN_VALUE] weighs x + y
   private void linear(ASTConstElem node, IntVar literal, boolean equation) {
     int[] a = support.getIntArray(child(node, 0));
-    if (a == null || a.length != 2 || a[0] != -a[1] || a[0] == 0) {
+    if (a == null || a.length != 2 || a[0] != -(long) a[1] || a[0] == 0) {
       return;
     }
     IntVar[] x = support.getVarArray(child(node, 1));

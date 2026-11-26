@@ -9051,4 +9051,32 @@ class FlatzincFrontEndTest {
       System.clearProperty("org.jacop.fz.agreementCount");
     }
   }
+
+  @Test
+  void disjunctiveCliquesReadNoSumOfMinValueWeightsAsAPrecedence() throws IOException {
+    // b -> -2147483648 * (s_i + s_j) <= 2147483647 says s_i + s_j >= 0, true over 0..1, but
+    // a[0] != -a[1] failed for these weights in int arithmetic, so the detector read s_j >= s_i +
+    // 1 and posted a unary resource of three unit tasks in two time points: no solution was left
+    StringBuilder model = new StringBuilder();
+    for (int i = 0; i < 3; i++) {
+      model.append("var 0..1: s").append(i).append(" :: output_var;\n");
+    }
+    for (int b = 0; b < 6; b++) {
+      model.append("var bool: b").append(b).append(";\n");
+    }
+    int b = 0;
+    for (int i = 0; i < 3; i++) {
+      for (int j = i + 1; j < 3; j++) {
+        model.append("constraint int_lin_le_imp([-2147483648,-2147483648],[s" + i + ",s" + j);
+        model.append("],2147483647,b").append(b).append(");\n");
+        model.append("constraint int_lin_le_imp([-2147483648,-2147483648],[s" + j + ",s" + i);
+        model.append("],2147483647,b").append(b + 1).append(");\n");
+        model.append("constraint bool_clause([b" + b + ",b" + (b + 1) + "],[]);\n");
+        b += 2;
+      }
+    }
+    model.append("solve satisfy;\n");
+    String out = run(model.toString(), "-a", "--lcg", "off")[0];
+    assertEquals(8, out.split("----------\n", -1).length - 1, out);
+  }
 }
