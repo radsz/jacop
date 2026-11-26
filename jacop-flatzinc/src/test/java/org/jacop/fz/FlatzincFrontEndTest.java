@@ -9156,4 +9156,19 @@ class FlatzincFrontEndTest {
     assertEquals(15, out.split("----------\n", -1).length - 1, out);
   }
 
+  @Test
+  void increasingSumReadsNoSumOfMinValueWeightsAsAnOrder() throws IOException {
+    // -2147483648 * (x1 + x0) <= 0 says x0 + x1 >= 0; read as x0 <= x1, the redundant
+    // IncreasingSum of x0 + x1 = s kept 9 of the 15 solutions
+    String model =
+        "var -2..2: x0 :: output_var;\n"
+            + "var -2..2: x1 :: output_var;\n"
+            + "var -4..4: s :: output_var;\n"
+            + "constraint int_lin_le([MIN,MIN],[x1,x0],0);\n"
+            + "constraint int_lin_eq([1,1,-1],[x0,x1,s],0);\n"
+            + "solve satisfy;\n";
+    String out = run(model.replace("MIN", "-2147483648"), "-a", "--lcg", "off")[0];
+    assertEquals(15, out.split("----------\n", -1).length - 1, out);
+  }
+
 }
