@@ -9563,6 +9563,25 @@ Version 5.0 (unreleased)
    -Dorg.jacop.fz.diffnPairs=0 the pairs (diffnPairsDensity sets the
    density). -s prints fixedFirst=decided, lcg, cp or cp-lcg.
 
+527. Lazy clause generation records the atoms of a domain change from what
+   the domain reports of it instead of comparing a shadow copy of the
+   domain's runs with the new domain (option B of the LCG cost per
+   conflict study, osolpro #685). IntervalDomain, SmallDenseDomain and
+   LazyBitSetDomain tell the DomainChangeRecorder whether a narrowing moved
+   only the bounds (changingBounds), removed one value (removingValue) or
+   an interval (removingInterval); AtomicTrail then writes the bound atoms
+   from the old bounds and the != atoms of the values inside the new
+   bounds that it has not yet recorded, and keeps no runs, so a backtrack
+   restores only the bounds and the size. The atoms are the same as
+   before, so the search is the same. In a JFR profile under --lcg the
+   shadow share falls from 7.0 to 3.2 % (tower), 4.5 to 2.2 %
+   (ghoulomb) and 5.1 to 4.1 % (valve-network). Wide-quick (62
+   instances) at 240 s with -f: total 2,858 -> 2,779 s and 2,834 ->
+   2,658 s in two rounds, 52 -> 53 solved; default search 4,540 ->
+   4,534 s. -Djacop.lcg.directChanges=false restores the shadow diff;
+   -Djacop.lcg.checkDirect=true keeps the shadows and throws when the
+   two recordings disagree on any change (testing only).
+
 Version 4.11
 =============
 
