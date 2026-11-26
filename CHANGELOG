@@ -9189,7 +9189,17 @@ Version 5.0 (unreleased)
    and Cepek, Constraints 2005). MiniZinc Challenge 2014 stochastic-fjsp
    fjsp-a1-s3 under fd: 452 after 600 s -> optimum 207 proved in 15 s.
 
-510. LCG free search (-f) of an optimisation model that is fast enough for
+510. The FlatZinc front end removes int_ne and int_lin_ne constraints that
+   the declared domains already satisfy (disjoint domains, a fixed side
+   outside the other domain, a constant outside the range of the sum)
+   before the detectors run, and IntensionTableDetector looks output
+   variables up in a set. gfd-schedule n180f7d50m30k18 drops 15,040 of
+   its 15,041 disequalities and its set-up takes 3.7 s instead of 4.4 s;
+   on the 20 gfd-schedule Challenge instances and 2 cryptanalysis ones
+   free search totals -19 % at 600 s, fixed search the same. -Dorg.jacop.fz.entailedDisequalities=false
+   keeps them.
+
+511. LCG free search (-f) of an optimisation model that is fast enough for
    the speed check (lcg-slow-rate) now also gives way to free search
    without learning at that check when learning cuts its tree little: its
    conflicts jump back fewer than 1.3 levels with an LBD of at least 0.35
