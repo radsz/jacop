@@ -1869,7 +1869,7 @@ class GlobalConstraints implements ParserTreeConstants {
         ub[i] = counters[i].max();
       }
       support.pose(new CountValuesBounds(x, lb, ub, values));
-    } else {
+    } else if (!support.poseCountValuesSplit(x, counters, values)) {
       support.pose(new CountValues(x, counters, values));
     }
   }

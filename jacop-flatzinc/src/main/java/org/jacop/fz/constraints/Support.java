@@ -53,6 +53,7 @@ import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
+import org.jacop.constraints.CountValues;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.ImpliesNot;
@@ -1839,6 +1840,64 @@ public class Support implements ParserTreeConstants {
     // dom/wdeg weighs the counted variables when the sum of the blocks fails
     sum.setWeightedVariables(list.toArray(new IntVar[0]));
     pose(sum);
+  }
+
+  /**
+   * Poses CountValues over a list, or under lazy clause generation, for a list longer than
+   * lcg-split (20) variables, CountValues over blocks of about sqrt(n) variables and, for each
+   * value, a sum of the block counters equal to its counter, as {@link #poseCount} does for one
+   * value. A constraint whose block counters would outnumber its variables stays whole, and so does
+   * every one with --free-config lcg-split-count-values=0.
+   *
+   * @param list the counted variables
+   * @param counters the counter of each value
+   * @param values the counted values
+   * @return whether the constraint was split
+   */
+  boolean poseCountValuesSplit(IntVar[] list, IntVar[] counters, int[] values) {
+    int limit = options.lcg() ? Integer.parseInt(options.freeConfig("lcg-split", "20")) : 0;
+    int n = list.length;
+    if (limit <= 1
+        || n <= limit
+        || "0".equals(options.freeConfig("lcg-split-count-values", "1"))
+        || "0".equals(options.freeConfig("lcg-split-count", "1"))) {
+      return false;
+    }
+    int size = Math.min((int) Math.ceil(Math.sqrt(n)), limit);
+    // a counter per block and value: more of them than counted variables (many values, as in
+    // warehouse assignments) costs more than the shorter reasons give back
+    if ((long) Math.ceilDiv(n, size) * values.length > n) {
+      return false;
+    }
+    List<List<IntVar>> blockCounters = new ArrayList<>();
+    int from = 0;
+    while (from < n) {
+      int to = n - (from + size) == 1 ? n : Math.min(n, from + size);
+      IntVar[] block = Arrays.copyOfRange(list, from, to);
+      IntVar[] bc = new IntVar[values.length];
+      for (int k = 0; k < values.length; k++) {
+        bc[k] = new IntVar(store, 0, block.length);
+        dictionary.addSplitCount(bc[k]);
+      }
+      Constraint blockCount = new CountValues(block, bc, values);
+      propagateUntilTimeOut(() -> store.imposeWithConsistency(blockCount));
+      blockCounters.add(List.of(bc));
+      from = to;
+    }
+    for (int k = 0; k < values.length; k++) {
+      IntVar[] top = new IntVar[blockCounters.size() + 1];
+      int[] w = new int[top.length];
+      for (int b = 0; b < blockCounters.size(); b++) {
+        top[b] = blockCounters.get(b).get(k);
+        w[b] = 1;
+      }
+      top[blockCounters.size()] = counters[k];
+      w[blockCounters.size()] = -1;
+      LinearInt sum = new LinearInt(top, w, "==", 0);
+      sum.setWeightedVariables(list);
+      pose(sum);
+    }
+    return true;
   }
 
   void pose(Constraint c) throws FailException {

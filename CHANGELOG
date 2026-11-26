@@ -9431,6 +9431,22 @@ Version 5.0 (unreleased)
    without the 8 league instances, whose times swing both ways between
    rounds; gametes, arithmetic-target and pq_n7 faster in both rounds.
 
+522. Lazy clause generation: CountValues over more than lcg-split (20)
+   variables is split the same way, into CountValues over the blocks
+   with a counter per block and value, and for each value a sum of its
+   block counters, unless the block counters would outnumber the
+   variables (warehouse assignments with 66 facilities over 1,936
+   tokens, 6,402 counters, got worse objectives). -s counts the block
+   counters in lcgSplitCounts; --free-config lcg-split-count-values=0
+   keeps CountValues whole (lcg-split-count=0 keeps both whole). MZNC
+   2022 generalized-peacable-queens n9_q5: CountValues reasons 69 -> 8.9
+   atoms, -f proved in 90-180 s (time-out at 240 s); n8_q3 175-213 s ->
+   74-76 s. 240 s, the 10 MZNC 2022-2023 instances it splits
+   (generalized-peacable-queens, chessboard): -f total 2,069 -> 1,921 s
+   and 2,136 -> 1,917 s in two rounds, proved 3 -> 4 and 2 -> 3,
+   chessboard n39_2 452 -> 622 and 466 -> 634 (maximised); default
+   2,043 -> 1,892 s, proved 2 -> 3.
+
 Version 4.11
 =============
 
