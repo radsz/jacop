@@ -7767,4 +7767,55 @@ class FlatzincFrontEndTest {
           out.contains("obj = 3;\n----------\n=========="), String.join(" ", options) + ": " + out);
     }
   }
+
+  @Test
+  void binPackingCostBoundSkipsLoadsWhereTheCostIsUndefined() throws IOException {
+    // y = T[load - 1] is undefined for loads 0 and 1, which LoadFunctionDetector marks with
+    // Long.MIN_VALUE; the enumeration took that as a cost, its sums wrapped, it cut the packing of
+    // cost -6 and posted the sum of the costs >= -4, so every search reported the optimum 0
+    StringBuilder model = new StringBuilder();
+    model
+        .append("var 1..3: b0 :: output_var;\n")
+        .append("var {1,3}: b1 :: output_var;\n")
+        .append("var 1..1: b2 :: output_var;\n")
+        .append("var 1..3: b3 :: output_var;\n")
+        .append("var 1..3: b4 :: output_var;\n");
+    for (int p = 0; p < 3; p++) {
+      model
+          .append("var 0..13: l")
+          .append(p)
+          .append(" :: output_var;\n")
+          .append("var -5..20: d")
+          .append(p)
+          .append(";\n")
+          .append("var -10..20: y")
+          .append(p)
+          .append(" :: output_var;\n");
+    }
+    model
+        .append("var -100..100: obj :: output_var;\n")
+        .append("constraint jacop_bin_packing([b0,b1,b2,b3,b4],[l0,l1,l2],[3,2,2,3,3],1);\n");
+    for (int p = 0; p < 3; p++) {
+      model
+          .append("constraint int_lin_eq([1,-1],[l")
+          .append(p)
+          .append(",d")
+          .append(p)
+          .append("],1);\n")
+          .append("constraint array_int_element(d")
+          .append(p)
+          .append(",[6,-2,9,7,4,-2,-4,3,0,8,-3,-4],y")
+          .append(p)
+          .append(");\n");
+    }
+    model
+        .append("constraint int_lin_eq([1,1,1,-1],[y0,y1,y2,obj],0);\n")
+        .append("solve minimize obj;\n");
+    for (String[] options : new String[][] {{"--lcg", "on"}, {"--lcg", "off"}, {"-f"}}) {
+      String out = run(model.toString(), options)[0];
+      assertTrue(
+          out.contains("obj = -6;\n----------\n=========="),
+          String.join(" ", options) + ": " + out);
+    }
+  }
 }
