@@ -9270,6 +9270,55 @@ Version 5.0 (unreleased)
    changes, 600 s: default one more solved (GCM_0006), total time 0.949;
    -f the same solved, total time 0.968.
 
+515. Lazy clause generation: the reasons of the value precedence
+   constraint (SeqPrecedeChain, which index-value symmetry breaking posts
+   for interchangeable values) cite "x != v" for a value v removed from x
+   in place of the bound atom that removed it ([x <= 11] for 12). The
+   bound atom is true only in the branch that tightened the bound, so the
+   learnt clauses did not carry over. The literal [x = v] is cited when it
+   exists and was false before the propagated literal; a missing one is
+   made at the next learnt clause, never during conflict analysis. The
+   rest stays as it was. MiniZinc Challenge 2015 open_stacks with
+   default search: wbp_20_20_1 52 -> 4 s, wbo_10_20_1 16 -> 6 s,
+   wbop_15_30_1 23 -> 17 s; the 38 open_stacks (2009/2011/2015) and wide
+   set instances that post a value precedence, 600 s: default search
+   proved 32 -> 33 (2011 problem_10_20_1 in 382 s), total time -5.9 %;
+   -f the same (+0.1 %). -s prints the cited literals as
+   lcgValueLiterals; -Djacop.lcg.valueLiterals=false cites the bounds
+   again.
+
+516. Free search on models that order their own rows and columns with
+   lex-leader constraints (MiniZinc Challenge opd): each lex_lesseq(X, Y)
+   of the model whose swap of X and Y, with the variables the model
+   defines from them (the products of two rows), maps every other
+   constraint, the domains and the objective onto themselves is left to
+   the canonicalizer of local search, as the symmetry breaking JaCoP
+   posts is: local search moves freely and a solution is moved onto the
+   symmetric one the lex-leader constraints accept. The row and column
+   lex-leader constraints of a 0/1 matrix together admit a doubly
+   lexical order of any matrix (A. Lubiw, Doubly lexical orderings of
+   matrices, SIAM J. Comput. 16(5), 1987), which sorting rows and
+   columns in turn reaches. The check runs only when local search
+   starts, takes at most 10 s and a twentieth of the time left, and
+   either keeps all of the model's lex-leader constraints or none.
+   With -f and no ls, such a model gets local search for half of the
+   time left, until it stalls (--free-config ls-lex=0 turns that off;
+   -Dorg.jacop.fz.symmetryModelLexLs=false turns the check off). Under
+   --lcg, local search replaces the block sums of a long sum split for
+   lazy clause generation by their definitions (Builder.substituted), so
+   a move changes the whole sum at once; before, the model of
+   flener_et_al_15_350_100 had 2,400 rows instead of 120 and every moved
+   solution broke a block sum. Variables the canonicalizer does not
+   move take the values propagation gives them. -s prints lsModelLex.
+   -f, 240 s, the 17 instances whose model has lex-leader constraints
+   (12 of the wide set, 5 of opd 2015): proved 10 -> 13, total 1,899 ->
+   1,075 s, no objective worse; opd 2015 flener_et_al_10_350_100 28 ->
+   22, its lower bound, in 15 s (Chuffed 25 at 240 s), small_bibd_11_22_10
+   and 13_26_06 proved in 8 s, opd 2017 flener_et_al_15_350_100 32 -> 25
+   (best known 24). The 14 other wide set instances whose local search
+   changes (split sums under -f): proved 9 -> 10, total 1,376 -> 1,277 s,
+   no objective worse.
+
 Version 4.11
 =============
 

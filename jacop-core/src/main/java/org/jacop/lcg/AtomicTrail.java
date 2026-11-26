@@ -1399,6 +1399,31 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   }
 
   /**
+   * As {@link #excludedBefore}, but a bound entry that removed the value is added with {@link
+   * EntryList#addExcludedValue}, so that the solver may cite {@code x != v} in its place: for a
+   * reason that needs only the value out, such as "v is in no earlier variable" of value
+   * precedence, a clause with {@code x != v} also covers the branches where x takes another value.
+   *
+   * @param x the variable
+   * @param v the value
+   * @param position the trail position (an entry index, or {@link #size()} for now)
+   * @param out where the entry is added
+   * @return true when v was not in the domain
+   */
+  public boolean excludedValueBefore(IntVar x, int v, int position, EntryList out) {
+    int mark = out.size();
+    if (!excludedBefore(x, v, position, out)) {
+      return false;
+    }
+    if (out.size() > mark && kind[out.get(mark)] != NE) {
+      int e = out.get(mark);
+      out.truncate(mark);
+      out.addExcludedValue(e, v);
+    }
+    return true;
+  }
+
+  /**
    * Returns the weakest bound a bound entry implies together with the holes of its variable
    * recorded before it: the entry's value moved back over the removed values next to it, down to
    * (not onto) the bound before it. A propagator that computed a bound and moved the domain past
