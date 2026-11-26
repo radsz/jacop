@@ -4453,6 +4453,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         }
       }
     }
+    // and the set variables, which no clause covers either, to their least sets
+    DefaultSearchVars declared = new DefaultSearchVars(dictionary);
+    declared.defaultVars();
+    for (SetVar s : declared.getSetVars()) {
+      if (!s.singleton()) {
+        s.domain.inValue(store.level, s, s.dom().glb());
+        if (!diveConsistency()) {
+          return false;
+        }
+      }
+    }
     return true;
   }
 

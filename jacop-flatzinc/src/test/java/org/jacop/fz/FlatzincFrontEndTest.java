@@ -9403,4 +9403,20 @@ class FlatzincFrontEndTest {
       assertTrue(out.contains("obj = 78;\n----------\n=========="), level + ": " + out);
     }
   }
+
+  @Test
+  void clausalModelFixesAnOutputSetVariableOfNoConstraint() throws IOException {
+    // a satisfaction model of clauses over small domains is solved by JaSAT on its CNF; the
+    // variables the clauses do not cover were fixed only when they were integers, so the set s0
+    // of no constraint was printed with its bounds, {{}..{0..2}}[card={0..3}], instead of a value
+    String model =
+        "var set of 0..2: s0 :: output_var;\n"
+            + "var 1..3: x1 :: output_var;\n"
+            + "var bool: b;\n"
+            + "constraint int_eq_reif(x1,2,b);\n"
+            + "constraint bool_eq(b,true);\n"
+            + "solve satisfy;\n";
+    String out = run(model, "--lcg", "on")[0];
+    assertTrue(out.contains("s0 = {};\nx1 = 2;\n----------"), out);
+  }
 }
