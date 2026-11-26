@@ -235,6 +235,7 @@ import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.Restriction;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
+import org.jacop.core.AffineView;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -14785,6 +14786,34 @@ class SingleConstraintTest extends TestHelper {
       search.getSolutionListener().searchAll(true);
       search.labeling(store, new SimpleSelect<>(x, null, new IndomainRandom<>(run)));
       assertThat(found).as(instance).isEqualTo(expected);
+    }
+  }
+
+  // Values reads its difference graph once more at its first call below the root, from the root
+  // domains: the root domain of a view of y = 2*w was read from the view's domain, which holds the
+  // current values of w, so a decision w = 2 linked p and q of q = p + y for good and lost the six
+  // solutions with w = 0 and p = q.
+  @Test
+  void valuesReadsTheRootDomainOfAViewThroughItsBase() {
+    for (boolean view : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar w = new IntVar(store, "w", 0, 2);
+      IntVar y = view ? new AffineView(store, "y", w, 2, 0) : new IntVar(store, "y", 0, 4);
+      if (!view) {
+        store.impose(new XmulCeqZ(w, 2, y));
+      }
+      IntVar p = new IntVar(store, "p", 0, 5);
+      IntVar q = new IntVar(store, "q", 0, 9);
+      IntVar n = new IntVar(store, "n", 1, 2);
+      store.impose(new XplusYeqZ(p, y, q));
+      store.impose(new Values(new IntVar[] {p, q}, n));
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      search.getSolutionListener().searchAll(true);
+      search.getSolutionListener().recordSolutions(false);
+      search.labeling(
+          store, new SimpleSelect<>(new IntVar[] {w, p, q, n}, null, new IndomainMax<>()));
+      assertThat(search.getSolutionListener().solutionsNo()).as("view " + view).isEqualTo(18);
     }
   }
 }
