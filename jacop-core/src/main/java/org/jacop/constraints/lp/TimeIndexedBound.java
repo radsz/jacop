@@ -416,7 +416,7 @@ public final class TimeIndexedBound extends Constraint
     this.vars = vs.toArray(new IntVar[0]);
     this.bestBound = maximize ? Long.MAX_VALUE : Long.MIN_VALUE;
     this.queueIndex = 4;
-    setScope(objective);
+    setScope(vars);
   }
 
   private void add(IntVar v, List<IntVar> vs) {

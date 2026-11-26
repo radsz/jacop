@@ -14,6 +14,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
+import org.jacop.lcg.ExplanationChecker;
 import org.jacop.lcg.LinearForm;
 import org.junit.jupiter.api.Test;
 
@@ -281,8 +282,8 @@ class TimeIndexedBoundTest {
     TimeIndexedBound bound = TimeIndexedBound.of(store, c, false, rows, false, true, functions);
     store.setLevel(store.level + 1);
     store.impose(bound);
-    // restarts that change other root bounds (the bound wakes on the objective only, so it is
-    // called here) solve again; the solves do not improve the bound and
+    // restarts that change other root bounds (called here directly) solve again; the solves
+    // do not improve the bound and
     // back off, so the probe below the bound reuses the solve that assumed no objective limit
     IntVar z = (IntVar) store.findVariable("z0");
     for (int k = 0; k < 8; k++) {
@@ -423,6 +424,30 @@ class TimeIndexedBoundTest {
       }
     }
     assertThat(cited).isTrue();
+    trail.detach();
+  }
+
+  // the reason of a failure cites the bound l0 >= 5 the solve used; the checker of explanations
+  // copies the constraint over its scope, which must hold l0 (before: only the objective, so every
+  // reason that cited a bound of another variable was reported as a wrong explanation)
+  @Test
+  void failureReasonChecksOverTheScope() {
+    Store store = new Store();
+    List<LinearForm> rows = new ArrayList<>();
+    List<TimeIndexedBound.LoadFunction> functions = new ArrayList<>();
+    IntVar c = binPackingModel(store, new int[] {2, 2, 2}, 2, 0, 100, rows, functions);
+    AtomicTrail trail = new AtomicTrail(store);
+    TimeIndexedBound bound = TimeIndexedBound.of(store, c, false, rows, false, true, functions);
+    IntVar l0 = (IntVar) store.findVariable("l0");
+    assertThat(bound.arguments()).contains(c, l0);
+    store.setLevel(store.level + 1);
+    store.impose(bound);
+    l0.domain.inMin(store.level, l0, 5);
+    c.domain.inMax(store.level, c, 30);
+    assertThatThrownBy(() -> bound.consistency(store)).isInstanceOf(FailException.class);
+    EntryList out = new EntryList();
+    assertThat(bound.explainFailure(trail, out)).isTrue();
+    assertThat(new ExplanationChecker(trail).checkFailure(bound, out)).isNull();
     trail.detach();
   }
 }
