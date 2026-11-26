@@ -84,6 +84,13 @@ public class DisjunctiveListsDifferDetector implements ParserTreeConstants {
   /** The fewest lists a clique must have to be posted. */
   static final int MIN_LISTS = 3;
 
+  /** The clauses whose literals may state that lists differ. */
+  private static final Set<String> CLAUSE_KINDS = Set.of("bool_clause");
+
+  /** The reified disequalities that define the literals of a clause. */
+  private static final Set<String> REIFIED_KINDS =
+      Set.of("int_ne_imp", "int_ne_reif", "int_lin_ne_imp", "int_lin_ne_reif");
+
   /** The most lists in one group whose clique is searched. */
   static final int MAX_LISTS = 20_000;
 
@@ -166,6 +173,11 @@ public class DisjunctiveListsDifferDetector implements ParserTreeConstants {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
+    // a pair of lists needs a clause and the reified disequalities of its literals
+    if (!support.hasConstraint(astTree, CLAUSE_KINDS)
+        || !support.hasConstraint(astTree, REIFIED_KINDS)) {
+      return;
+    }
     long start = System.nanoTime();
     support.forEachConstraint(astTree, this::collect);
     if (clauses.isEmpty()) {
