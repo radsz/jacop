@@ -697,6 +697,16 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
       return;
     }
     int full = (1 << classes) - 1;
+    countWithin(start, classes, full);
+    for (int set = 1; set < full; set++) {
+      if (Integer.bitCount(set) >= 2) {
+        boundSet(store, start, set, full);
+      }
+    }
+  }
+
+  /** Fills within: per set of classes, the undecided variables whose classes all lie in it. */
+  private void countWithin(int start, int classes, int full) {
     if (within == null) {
       within = new int[full + 1];
     }
@@ -704,55 +714,68 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
     for (int j = start; j < n; j++) {
       within[classesOf(list[j].domain)]++;
     }
+    // sums over subsets (zeta transform), one class at a time
     for (int b = 0; b < classes; b++) {
+      int bit = 1 << b;
       for (int set = 0; set <= full; set++) {
-        if ((set & (1 << b)) != 0) {
-          within[set] += within[set ^ (1 << b)];
+        if ((set & bit) != 0) {
+          within[set] += within[set ^ bit];
         }
       }
     }
-    int undecided = n - start;
-    for (int set = 1; set < full; set++) {
-      if (Integer.bitCount(set) < 2) {
-        continue;
+  }
+
+  /** Bounds the counters of one set of classes and prunes the variables of a set at a bound. */
+  private void boundSet(Store store, int start, int set, int full) {
+    int classes = values.length + 1;
+    int fixed = 0;
+    int minSum = 0;
+    int maxSum = 0;
+    for (int i = 0; i < classes; i++) {
+      if ((set & (1 << i)) != 0) {
+        fixed += i < values.length ? numberEq[i] : restEq;
+        minSum += getExtendedCounterMin(i);
+        maxSum += getExtendedCounterMax(i);
       }
-      int fixed = 0;
-      int minSum = 0;
-      int maxSum = 0;
-      for (int i = 0; i < classes; i++) {
-        if ((set & (1 << i)) != 0) {
-          fixed += i < values.length ? numberEq[i] : restEq;
-          minSum += getExtendedCounterMin(i);
-          maxSum += getExtendedCounterMax(i);
-        }
+    }
+    int lo = fixed + within[set];
+    int hi = fixed + (n - start) - within[full ^ set];
+    if (minSum > hi || maxSum < lo) {
+      throw Store.failException;
+    }
+    for (int i = 0; i < classes; i++) {
+      if ((set & (1 << i)) != 0) {
+        boundCounter(store, i, lo, hi, minSum, maxSum);
       }
-      int lo = fixed + within[set];
-      int hi = fixed + undecided - within[full ^ set];
-      if (minSum > hi || maxSum < lo) {
-        throw Store.failException;
+    }
+    if (lo < hi && maxSum == lo) {
+      // the set holds only the variables that can take nothing else
+      restrictStraddling(store, start, set, set);
+    } else if (lo < hi && minSum == hi) {
+      // the set holds every variable that may take it
+      restrictStraddling(store, start, set, full ^ set);
+    }
+  }
+
+  /** Removes the given classes from the variables that may take classes in and out of a set. */
+  private void restrictStraddling(Store store, int start, int set, int remove) {
+    for (int j = start; j < n; j++) {
+      IntVar v = list[j];
+      int mask = classesOf(v.domain);
+      if ((mask & set) != 0 && (mask & ~set) != 0) {
+        restrict(store, v, mask & remove);
       }
-      for (int i = 0; i < classes; i++) {
-        if ((set & (1 << i)) != 0) {
-          int min = getExtendedCounterMin(i);
-          int max = getExtendedCounterMax(i);
-          int newMin = Math.max(min, lo - (maxSum - max));
-          int newMax = Math.min(max, hi - (minSum - min));
-          if (newMin != min || newMax != max) {
-            updateExtendedCounter(store, i, newMin, newMax);
-          }
-        }
-      }
-      if (lo < hi && (maxSum == lo || minSum == hi)) {
-        // the set holds exactly its sure variables, or every variable that may take it
-        int keep = maxSum == lo ? full ^ set : set;
-        for (int j = start; j < n; j++) {
-          IntVar v = list[j];
-          int mask = classesOf(v.domain);
-          if ((mask & set) != 0 && (mask & ~set) != 0) {
-            restrict(store, v, mask & ~keep);
-          }
-        }
-      }
+    }
+  }
+
+  /** Gives counter i of a set the bounds the other counters of the set leave. */
+  private void boundCounter(Store store, int i, int lo, int hi, int minSum, int maxSum) {
+    int min = getExtendedCounterMin(i);
+    int max = getExtendedCounterMax(i);
+    int newMin = Math.max(min, lo - (maxSum - max));
+    int newMax = Math.min(max, hi - (minSum - min));
+    if (newMin != min || newMax != max) {
+      updateExtendedCounter(store, i, newMin, newMax);
     }
   }
 
