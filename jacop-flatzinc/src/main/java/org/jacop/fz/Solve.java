@@ -89,6 +89,7 @@ import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.lp.FeasibilityPump;
 import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.constraints.lp.TimeIndexedBound;
+import org.jacop.core.AffineView;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -10876,7 +10877,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * clauses kept for the LCG solver, and that are not the objective; or none when no variable
    * outside them is left for the completion search, which then cannot fail. With allVariables the
    * given variables are all the variables of the search, and none are returned when none of them is
-   * touched.
+   * touched. A view of another variable (presolve's affine substitution) is touched through that
+   * variable: the completion fixes it.
    */
   private Set<Var> untouchedOutputs(
       IntVar[] ints, BooleanVar[] bools, SetVar[] sets, FloatVar[] floats, boolean allVariables) {
@@ -10911,6 +10913,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     for (Var v : outputs) {
       if (!v.singleton()
           && v != costVariable
+          && !(v instanceof AffineView)
           && v.dom().sizeConstraints() == 0
           && !clauseVars.contains(v)) {
         untouched.add(v);

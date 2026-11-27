@@ -9912,4 +9912,22 @@ class FlatzincFrontEndTest {
     String out = run(model, "--lcg", "off", "-t", "3000")[0];
     assertTrue(out.contains("=====UNSATISFIABLE====="), out);
   }
+
+  @Test
+  void allSolutionsUnderPresolveEnumerateAnOutputThatIsAView() throws IOException {
+    // presolve substitutes x = 2 - y, so the output x is a view of the hidden y that no constraint
+    // touches directly; it was labelled below the completion search, which fixes y and stops at
+    // its first solution, so b = 1 (y <= 1) printed x = 2 only and x = 1 was lost
+    String model =
+        "var 0..2: x :: output_var;\n"
+            + "var 0..2: y;\n"
+            + "var bool: b;\n"
+            + "constraint int_lin_eq([1,1],[x,y],2);\n"
+            + "constraint int_le_reif(y,1,b);\n"
+            + "solve :: bool_search([b],input_order,indomain_max,complete) satisfy;\n";
+    String out = run(model, "-a", "--presolve", "on", "--lcg", "off")[0];
+    for (int v = 0; v <= 2; v++) {
+      assertTrue(out.contains("x = " + v + ";\n"), out);
+    }
+  }
 }
