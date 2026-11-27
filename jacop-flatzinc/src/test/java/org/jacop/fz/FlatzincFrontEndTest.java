@@ -2302,7 +2302,7 @@ class FlatzincFrontEndTest {
     // printed ========== as if all 13! circuits had been enumerated.
     String model =
         """
-        array [1..14] of var 1..14: x;
+        array [1..14] of var 1..14: x :: output_array([1..14]);
         constraint jacop_circuit(x);
         solve :: int_search(x,input_order,indomain_min,complete) satisfy;
         """;
@@ -2721,8 +2721,8 @@ class FlatzincFrontEndTest {
     // summed them: 4 solutions were reported as solutions=22.
     String model =
         """
-        array [1..2] of var 1..2: x;
-        array [1..2] of var bool: b;
+        array [1..2] of var 1..2: x :: output_array([1..2]);
+        array [1..2] of var bool: b :: output_array([1..2]);
         constraint int_ne(x[1],x[2]);
         constraint bool_xor(b[1],b[2],true);
         solve :: seq_search([int_search(x,input_order,indomain_min,complete),bool_search(b,input_order,indomain_min,complete)]) satisfy;
@@ -10563,5 +10563,139 @@ class FlatzincFrontEndTest {
     } finally {
       System.clearProperty("org.jacop.fz.intensionTable");
     }
+  }
+
+  // x and y are printed, hs is not: the annotation decides hs between them, and every value of hs
+  // completes the same assignments of y
+  private static final String HIDDEN_BETWEEN_OUTPUTS =
+      """
+      var 1..2: x :: output_var;
+      var 1..3: y :: output_var;
+      var 0..2: hs;
+      constraint int_lt(x,y);
+      solve :: int_search([x,hs], input_order, indomain_min, complete) satisfy;
+      """;
+
+  private static final String HIDDEN_BETWEEN_OUTPUTS_ALL =
+      "x = 1;\ny = 2;\n----------\nx = 1;\ny = 3;\n----------\nx = 2;\ny = 3;\n----------\n"
+          + "==========\n";
+
+  @Test
+  void allSolutionsPrintEachOutputOnceWhenTheAnnotationDecidesHiddenVariables() throws IOException {
+    // depth-first search printed x = 1, y = 2 and x = 1, y = 3 once for each value of hs: 9 lines
+    // for 3 assignments, where LCG enumeration printed 3
+    String[] out = run(HIDDEN_BETWEEN_OUTPUTS, "-a", "-s");
+    assertTrue(out[0].startsWith(HIDDEN_BETWEEN_OUTPUTS_ALL), out[0]);
+    assertTrue(out[0].contains("%%%mzn-stat: solutions=3\n"), out[0]);
+    assertEquals(HIDDEN_BETWEEN_OUTPUTS_ALL, run(HIDDEN_BETWEEN_OUTPUTS, "-a", "--lcg", "on")[0]);
+    assertEquals(HIDDEN_BETWEEN_OUTPUTS_ALL, run(HIDDEN_BETWEEN_OUTPUTS, "-a", "-f")[0]);
+    // hs decided first: every assignment comes back once per value of hs
+    String first = HIDDEN_BETWEEN_OUTPUTS.replace("[x,hs]", "[hs,x]");
+    assertEquals(HIDDEN_BETWEEN_OUTPUTS_ALL, run(first, "-a")[0]);
+    // no output: one solution
+    String none = HIDDEN_BETWEEN_OUTPUTS.replace(" :: output_var", "");
+    assertEquals("----------\n==========\n", run(none, "-a")[0]);
+  }
+
+  @Test
+  void severalSolutionsAreDistinctWhenTheAnnotationDecidesHiddenVariables() throws IOException {
+    // y is not printed: -n 3 printed x = 0 three times, once for each value of y
+    String model =
+        """
+        var 0..2: x :: output_var;
+        var 0..2: y;
+        constraint int_lin_le([1,1],[x,y],3);
+        solve :: int_search([x,y], input_order, indomain_min, complete) satisfy;
+        """;
+    String three = "x = 0;\n----------\nx = 1;\n----------\nx = 2;\n----------\n";
+    assertEquals(three, run(model, "-n", "3")[0]);
+    // more asked for than there are: all of them, and the search is complete
+    assertEquals(three + "==========\n", run(model, "-n", "5")[0]);
+    assertEquals(three + "==========\n", run(model, "-n", "5", "--lcg", "on")[0]);
+  }
+
+  @Test
+  void presolvedSearchPrintsEachOutputOnceWhenTheAnnotationDecidesHiddenVariables()
+      throws IOException {
+    // presolve searches copies of the variables, as the default engine does under --presolve on
+    String model =
+        """
+        var 1..2: x :: output_var;
+        var 1..3: y :: output_var;
+        var 0..2: hs;
+        var 0..2: g;
+        constraint int_lt(x,y);
+        constraint int_le(hs,g);
+        constraint int_lin_le([1,1],[x,g],3);
+        solve :: int_search([hs,x], input_order, indomain_min, complete) satisfy;
+        """;
+    String all = HIDDEN_BETWEEN_OUTPUTS_ALL;
+    assertEquals(all, run(model, "-a", "--presolve", "on")[0]);
+    assertEquals(all, run(model, "-a", "--presolve", "off")[0]);
+    assertEquals(
+        "x = 1;\ny = 2;\n----------\nx = 1;\ny = 3;\n----------\n",
+        run(model, "-n", "2", "--presolve", "on")[0]);
+  }
+
+  @Test
+  void allSolutionsOfASearchWithARestartAnnotationPrintEachOutputOnce() throws IOException {
+    // the restart annotation in the sequence does not restart a search for all solutions
+    String model =
+        HIDDEN_BETWEEN_OUTPUTS.replace(
+            ":: int_search([x,hs], input_order, indomain_min, complete)",
+            ":: seq_search([int_search([x,hs], input_order, indomain_min, complete),"
+                + " restart_luby(10)])");
+    assertEquals(HIDDEN_BETWEEN_OUTPUTS_ALL, run(model, "-a")[0]);
+    // free search runs the annotation's restarts and enumerates each output once
+    String restarts = HIDDEN_BETWEEN_OUTPUTS.replace("complete)", "complete) :: restart_luby(10)");
+    assertEquals(HIDDEN_BETWEEN_OUTPUTS_ALL, run(restarts, "-a", "-f")[0]);
+  }
+
+  @Test
+  void onlyAnAnnotationOverHiddenVariablesKeepsTheOutputsPrinted() throws IOException {
+    // an annotation over printed variables: nothing is kept, and the statistics have no keys
+    String printed = HIDDEN_BETWEEN_OUTPUTS.replace("[x,hs]", "[x,y]");
+    String[] out = run(printed, "-a", "--search-statistics");
+    assertTrue(out[0].contains(HIDDEN_BETWEEN_OUTPUTS_ALL), out[0]);
+    assertFalse(out[0].contains("peakOutputKeys"), out[0]);
+    // nor over a hidden variable that printed variables define (defines_var)
+    String defined =
+        """
+        var 1..2: x :: output_var;
+        var 1..3: y :: output_var;
+        var 2..5: d;
+        constraint int_lt(x,y);
+        constraint int_lin_eq([1,-1,-1],[d,x,y],0) :: defines_var(d);
+        solve :: int_search([d,x,y], input_order, indomain_min, complete) satisfy;
+        """;
+    out = run(defined, "-a", "--search-statistics");
+    assertEquals(
+        HIDDEN_BETWEEN_OUTPUTS_ALL,
+        out[0]
+            .lines()
+            .filter(line -> !line.startsWith("%") && !line.isEmpty())
+            .collect(Collectors.joining("\n", "", "\n")),
+        out[0]);
+    assertFalse(out[0].contains("peakOutputKeys"), out[0]);
+    // hidden variables decided once the outputs are fixed: their other values are not searched,
+    // and no key is kept
+    String last =
+        """
+        var 0..2: x :: output_var;
+        var 0..2: y;
+        var 0..3: z;
+        constraint int_lin_le([1,1,1],[x,y,z],4);
+        solve :: int_search([x,y,z], input_order, indomain_min, complete) satisfy;
+        """;
+    out = run(last, "-a", "--search-statistics");
+    assertTrue(
+        out[0].contains("x = 0;\n----------\nx = 1;\n----------\nx = 2;\n----------\n=========="),
+        out[0]);
+    assertTrue(out[0].contains("%%%mzn-stat: peakOutputKeys=0\n"), out[0]);
+    assertTrue(out[0].contains("%%%mzn-stat: repeatedOutputs=0\n"), out[0]);
+    // a hidden variable decided first: the keys of the solutions below it are kept
+    out = run(HIDDEN_BETWEEN_OUTPUTS.replace("[x,hs]", "[hs,x]"), "-a", "--search-statistics");
+    assertTrue(out[0].contains("%%%mzn-stat: peakOutputKeys=3\n"), out[0]);
+    assertTrue(out[0].contains("%%%mzn-stat: repeatedOutputs=6\n"), out[0]);
   }
 }

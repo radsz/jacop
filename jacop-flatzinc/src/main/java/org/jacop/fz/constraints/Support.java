@@ -793,6 +793,9 @@ public class Support implements ParserTreeConstants {
             dictionary.addHalfDefinedVar(v);
           } else {
             dictionary.addDefinedVar(v);
+            if (options != null && options.getAll()) {
+              dictionary.addDefinition(v, argumentVariables(constraintWithAnnotations, v));
+            }
           }
         }
       } else if ("priority".equals(ann.getAnnId())) {
@@ -801,6 +804,28 @@ public class Support implements ParserTreeConstants {
 
         constraintPriority = getAnnInt(expr);
       }
+    }
+  }
+
+  // the variables of the arguments of a constraint but the given one
+  private Var[] argumentVariables(SimpleNode constraintWithAnnotations, Var defined) {
+    List<Var> vars = new ArrayList<>();
+    collectVariables((SimpleNode) constraintWithAnnotations.jjtGetChild(0), vars);
+    vars.removeIf(x -> x == defined);
+    return vars.toArray(new Var[0]);
+  }
+
+  private void collectVariables(SimpleNode node, List<Var> vars) {
+    if (node instanceof ASTScalarFlatExpr e && (e.getType() == 2 || e.getType() == 3)) {
+      Var[] named = dictionary.namedVariables(e.getIdent());
+      if (e.getType() == 3 && e.getInt() >= 0 && e.getInt() < named.length) {
+        vars.add(named[e.getInt()]);
+      } else {
+        vars.addAll(Arrays.asList(named));
+      }
+    }
+    for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+      collectVariables((SimpleNode) node.jjtGetChild(i), vars);
     }
   }
 
