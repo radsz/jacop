@@ -4176,7 +4176,7 @@ class FlatzincFrontEndTest {
       assertEquals("obj = " + best, lastObjective(out[0]), out[0]);
       assertEquals("==========", lastObjective(out), out[0]);
     }
-    // one selection per if-then-else, each bounding its x to {0, a}
+    // one selection per if-then-else, each keeping its x at 0 or a
     String all = debug[0] + debug[1];
     assertEquals(n, all.lines().filter(l -> l.contains("ConditionalSelect")).count(), all);
     assertTrue(all.contains("x0::{0.." + a[0] + "}") || all.contains("x0::{0, " + a[0] + "}"), all);
