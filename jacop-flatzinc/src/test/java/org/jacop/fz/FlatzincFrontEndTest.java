@@ -10502,4 +10502,43 @@ class FlatzincFrontEndTest {
     assertTrue(out.contains("----------"), out);
     assertFalse(out.contains("=========="), out);
   }
+
+  @Test
+  void setUnionTakesNoReifiedLiteralThatATabulatedGroupDropped() throws IOException {
+    // b <-> x = 0 belongs to a group with a modulo that the intension table detection replaced by
+    // a table over x and y, leaving b without constraints; the set union detection still took b
+    // for the literal [x = 0] of the singleton {x}, so 0 in U no longer forced x = 0
+    StringBuilder model = new StringBuilder();
+    model.append("var 0..1: x :: output_var;\nvar 1..3: y :: output_var;\n");
+    model.append("var 0..3: m;\nvar bool: b;\nvar bool: b2;\n");
+    for (int i = 2; i <= 8; i++) {
+      model.append("var 2..9: e").append(i).append(";\n");
+    }
+    for (int i = 1; i <= 8; i++) {
+      model.append("var set of 0..9: S").append(i).append(";\n");
+    }
+    for (int i = 1; i <= 6; i++) {
+      model.append("var set of 0..9: T").append(i).append(";\n");
+    }
+    model.append("var set of 0..9: U :: output_var;\n");
+    model.append("constraint int_mod(y, 2, m);\nconstraint int_eq_reif(m, 0, b2);\n");
+    model.append("constraint int_eq_reif(x, 0, b);\nconstraint bool_clause([b, b2], []);\n");
+    for (int i = 1; i <= 8; i++) {
+      model.append("constraint set_card(S").append(i).append(", 1);\n");
+      model.append("constraint set_in(").append(i == 1 ? "x" : "e" + i);
+      model.append(", S").append(i).append(");\n");
+    }
+    String previous = "S1";
+    for (int i = 2; i <= 8; i++) {
+      String union = i == 8 ? "U" : "T" + (i - 1);
+      model.append("constraint set_union(").append(previous).append(", S").append(i);
+      model.append(", ").append(union).append(");\n");
+      previous = union;
+    }
+    model.append("constraint set_in(0, U);\nsolve satisfy;\n");
+    for (String lcg : new String[] {"off", "on"}) {
+      String out = run(model.toString(), "--lcg", lcg)[0];
+      assertTrue(out.contains("x = 0;\n"), out);
+    }
+  }
 }

@@ -33,6 +33,7 @@ package org.jacop.fz.constraints;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -2026,6 +2027,19 @@ public class Support implements ParserTreeConstants {
       z.domain.in(store.level, z, values);
     }
     pose(new XmulCeqZ(x, c, z));
+  }
+
+  /**
+   * Forgets the reified pairs x = v whose Boolean has no constraint left, because a detector
+   * replaced the constraints that defined it (an internal variable of a tabulated group). A
+   * detector that reads the reified literal of x = v would otherwise take a free variable for it.
+   *
+   * @param dropped the variables the detectors left without constraints
+   */
+  public void forgetDroppedReifications(Collection<? extends Var> dropped) {
+    if (!dropped.isEmpty() && !reif.cs.isEmpty()) {
+      reif.forget(new HashSet<>(dropped));
+    }
   }
 
   /**

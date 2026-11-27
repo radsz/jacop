@@ -515,6 +515,8 @@ public class Constraints implements ParserTreeConstants {
         }
       }
 
+      // the reified literals of variables the detectors above dropped stand for nothing
+      support.forgetDroppedReifications(dictionary.unusedVariables);
       // the membership clauses replace set unions, which --proof encodes as they are
       if (SetUnionDetector.enabled() && options.proof() == null) {
         SetUnionDetector unions = new SetUnionDetector(support);
@@ -550,6 +552,7 @@ public class Constraints implements ParserTreeConstants {
         }
       }
 
+      support.forgetDroppedReifications(dictionary.unusedVariables);
       // a product of two functions of one index variable as a sum over the index's value literals
       if (IndexFunctionDetector.enabled() && options.proof() == null) {
         Set<SimpleNode> products =
@@ -590,6 +593,7 @@ public class Constraints implements ParserTreeConstants {
 
       // half-reified sums at their least value become implications on their terms, before the
       // sums are factored; --proof encodes the rows as given
+      support.forgetDroppedReifications(dictionary.unusedVariables);
       Set<SimpleNode> zeroSumNodes = Set.of();
       if (ZeroSumDetector.enabled() && options.proof() == null) {
         ZeroSumDetector zeroSums =
@@ -658,6 +662,7 @@ public class Constraints implements ParserTreeConstants {
         support.alldiffChannels.addAll(tabled);
       }
 
+      support.forgetDroppedReifications(dictionary.unusedVariables);
       int n = astTree.jjtGetNumChildren();
 
       for (int i = 0; i < n; i++) {

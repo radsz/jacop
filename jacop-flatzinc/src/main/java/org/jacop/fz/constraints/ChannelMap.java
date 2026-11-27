@@ -33,12 +33,14 @@ package org.jacop.fz.constraints;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.jacop.constraints.XeqY;
 import org.jacop.core.IntVar;
+import org.jacop.core.Var;
 
 /**
  * It collects all int_eq_(reif|imp) constraint to create Channel(Reif|Imply) constraints, if
@@ -77,6 +79,31 @@ class ChannelMap {
     cs = new LinkedHashMap<>();
     collected = new HashSet<>();
     byBoolean = new HashMap<>();
+  }
+
+  /**
+   * Forgets the pairs x = v whose Boolean a detector dropped with the constraints that defined it,
+   * so that no detector takes it for the literal [x = v]. The other Booleans collected for such a
+   * pair are no longer handled by a channel: their constraints are posted on their own.
+   *
+   * @param dropped the variables without constraints
+   */
+  void forget(Set<? extends Var> dropped) {
+    for (Iterator<Map.Entry<IntVar, Map<Integer, IntVar>>> it = cs.entrySet().iterator();
+        it.hasNext(); ) {
+      Map.Entry<IntVar, Map<Integer, IntVar>> e = it.next();
+      IntVar x = e.getKey();
+      Map<Integer, IntVar> values = e.getValue();
+      if (values.values().stream().noneMatch(dropped::contains)) {
+        continue;
+      }
+      values.entrySet().removeIf(vb -> dropped.contains(vb.getValue()));
+      Set<Integer> kept = values.keySet();
+      collected.removeIf(entry -> entry.x() == x && !kept.contains(entry.v()));
+      if (values.isEmpty()) {
+        it.remove();
+      }
+    }
   }
 
   public void add(IntVar x, int v, IntVar b) {
