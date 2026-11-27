@@ -306,4 +306,30 @@ class CyclicDistanceFlatzincTest {
     }
     return buffer.toString(StandardCharsets.UTF_8);
   }
+
+  /**
+   * The difference e = k - y is also the definition of the index k of an element, which the linear
+   * index element detection replaced by a table over y, e and the element's value, dropping k: the
+   * detection substituted the replaced definition, k - y + 7 * q = f over the free k, and the
+   * distance m lost its link to y (24 solutions instead of 9).
+   */
+  @Test
+  void aDefinitionThatAnEarlierDetectorReplacedIsNotSubstituted() throws IOException {
+    String model =
+        "var 1..3: k;\n"
+            + "var 0..2: y :: output_var;\n"
+            + "var -2..3: e;\n"
+            + "var 0..3: a;\n"
+            + "var 4..7: b;\n"
+            + "var 0..3: m :: output_var;\n"
+            + "var 0..5: v :: output_var;\n"
+            + "constraint int_lin_eq([1,-1,-1],[k,y,e],0);\n"
+            + "constraint array_int_element(k,[5,0,3],v);\n"
+            + "constraint int_abs(e,a);\n"
+            + "constraint int_lin_eq([-1,-1],[a,b],-7);\n"
+            + "constraint int_min(a,b,m);\n"
+            + "solve satisfy;\n";
+    assertEquals(9, solutions(run(model, false, "-a")));
+    assertEquals(9, solutions(run(model, true, "-a")));
+  }
 }

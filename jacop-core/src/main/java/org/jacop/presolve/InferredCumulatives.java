@@ -528,6 +528,10 @@ public final class InferredCumulatives {
   }
 
   private void offer(int[] c, int maxCovers, PriorityQueue<Cover> best, Set<Key> keys) {
+    if (maxCovers <= 0) {
+      // none kept
+      return;
+    }
     double bound = coverBound(c);
     if (best.size() >= maxCovers && bound <= best.peek().bound) {
       return;

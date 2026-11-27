@@ -75,13 +75,19 @@ public class MinOfSumsDetector implements ParserTreeConstants {
 
   private int merged;
 
+  // the constraints earlier detectors replaced: they count as uses but are not parts, since what
+  // replaced them may still read their variables (a table over a sum that also defines an index)
+  private final Set<SimpleNode> skipped;
+
   /**
    * It creates a detector reading variables through the given support.
    *
    * @param support the support of the FlatZinc front end.
+   * @param skipped constraint nodes that earlier detectors replaced; they are not posted.
    */
-  public MinOfSumsDetector(Support support) {
+  public MinOfSumsDetector(Support support, Set<SimpleNode> skipped) {
     this.support = support;
+    this.skipped = skipped;
   }
 
   /**
@@ -188,6 +194,9 @@ public class MinOfSumsDetector implements ParserTreeConstants {
   private void collect(ASTConstElem node) {
     for (int i = 0; i < node.jjtGetNumChildren(); i++) {
       count((SimpleNode) node.jjtGetChild(i));
+    }
+    if (skipped.contains(node)) {
+      return;
     }
     switch (node.getName()) {
       case "int_lin_eq" -> sum(node);

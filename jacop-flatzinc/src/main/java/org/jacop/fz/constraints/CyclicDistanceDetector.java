@@ -110,13 +110,20 @@ public class CyclicDistanceDetector implements ParserTreeConstants {
 
   private int replacedDistances;
 
+  // the constraints earlier detectors replaced: they count as uses but are not parts, since what
+  // replaced them may still read their variables or have dropped one (the index of an element
+  // defined by the same equation as a difference)
+  private final Set<SimpleNode> skipped;
+
   /**
    * It creates a detector posting through the given support.
    *
    * @param support the support of the FlatZinc front end.
+   * @param skipped constraint nodes that earlier detectors replaced; they are not posted.
    */
-  public CyclicDistanceDetector(Support support) {
+  public CyclicDistanceDetector(Support support, Set<SimpleNode> skipped) {
     this.support = support;
+    this.skipped = skipped;
   }
 
   /**
@@ -316,6 +323,9 @@ public class CyclicDistanceDetector implements ParserTreeConstants {
   private void collect(ASTConstElem node) {
     for (int i = 0; i < node.jjtGetNumChildren(); i++) {
       PartialCopyDetector.countVariables(support, (SimpleNode) node.jjtGetChild(i), occurrences);
+    }
+    if (skipped.contains(node)) {
+      return;
     }
     switch (node.getName()) {
       case "int_abs" -> absolute(node);

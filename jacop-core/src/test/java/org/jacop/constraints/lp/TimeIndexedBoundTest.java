@@ -14,6 +14,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
+import org.jacop.lcg.ExplanationChecker;
 import org.jacop.lcg.LinearForm;
 import org.junit.jupiter.api.Test;
 
@@ -281,8 +282,8 @@ class TimeIndexedBoundTest {
     TimeIndexedBound bound = TimeIndexedBound.of(store, c, false, rows, false, true, functions);
     store.setLevel(store.level + 1);
     store.impose(bound);
-    // restarts that change other root bounds (the bound wakes on the objective only, so it is
-    // called here) solve again; the solves do not improve the bound and
+    // restarts that change other root bounds (called here directly) solve again; the solves
+    // do not improve the bound and
     // back off, so the probe below the bound reuses the solve that assumed no objective limit
     IntVar z = (IntVar) store.findVariable("z0");
     for (int k = 0; k < 8; k++) {
@@ -373,5 +374,80 @@ class TimeIndexedBoundTest {
       }
     }
     assertThat(raised).isPositive();
+  }
+
+  // a solve with l0 >= 5 proves c >= 36, then one with every item in bin 2 proves 36 too; back
+  // with l0 >= 5 and the items free, the first solve gives c >= 36, and its reason must cite l0 >=
+  // 5 (before: the reason came from the later solve, whose root bounds do not hold there, so it
+  // cited nothing and claimed c >= 36 outright, while the optimum without l0 >= 5 is 20)
+  @Test
+  void boundIsExplainedByASolveWhoseRootBoundsHold() {
+    Store store = new Store();
+    List<LinearForm> rows = new ArrayList<>();
+    List<TimeIndexedBound.LoadFunction> functions = new ArrayList<>();
+    IntVar c = binPackingModel(store, new int[] {2, 2, 2}, 2, 0, 100, rows, functions);
+    AtomicTrail trail = new AtomicTrail(store);
+    TimeIndexedBound bound = TimeIndexedBound.of(store, c, false, rows, false, true, functions);
+    IntVar l0 = (IntVar) store.findVariable("l0");
+    store.setLevel(store.level + 1);
+    store.impose(bound);
+    store.setLevel(store.level + 1);
+    l0.domain.inMin(store.level, l0, 5);
+    bound.consistency(store);
+    assertThat(c.min()).isEqualTo(36);
+    store.removeLevel(store.level);
+    store.setLevel(store.level - 1);
+    store.setLevel(store.level + 1);
+    for (int i = 0; i < 3; i++) {
+      IntVar b = (IntVar) store.findVariable("b" + i);
+      b.domain.in(store.level, b, 2, 2);
+    }
+    bound.consistency(store);
+    assertThat(c.min()).isEqualTo(36);
+    store.removeLevel(store.level);
+    store.setLevel(store.level - 1);
+    store.setLevel(store.level + 1);
+    l0.domain.inMin(store.level, l0, 5);
+    bound.consistency(store);
+    assertThat(c.min()).isEqualTo(36);
+    int entry = trail.size() - 1;
+    assertThat(trail.variable(entry)).isEqualTo(c);
+    EntryList out = new EntryList();
+    assertThat(bound.explain(trail, entry, out)).isTrue();
+    boolean cited = false;
+    for (int k = 0; k < out.size(); k++) {
+      int e = out.get(k);
+      if (trail.variable(e) == l0) {
+        assertThat(trail.kind(e)).isEqualTo(AtomicTrail.GE);
+        assertThat(trail.value(e)).isGreaterThanOrEqualTo(5);
+        cited = true;
+      }
+    }
+    assertThat(cited).isTrue();
+    trail.detach();
+  }
+
+  // the reason of a failure cites the bound l0 >= 5 the solve used; the checker of explanations
+  // copies the constraint over its scope, which must hold l0 (before: only the objective, so every
+  // reason that cited a bound of another variable was reported as a wrong explanation)
+  @Test
+  void failureReasonChecksOverTheScope() {
+    Store store = new Store();
+    List<LinearForm> rows = new ArrayList<>();
+    List<TimeIndexedBound.LoadFunction> functions = new ArrayList<>();
+    IntVar c = binPackingModel(store, new int[] {2, 2, 2}, 2, 0, 100, rows, functions);
+    AtomicTrail trail = new AtomicTrail(store);
+    TimeIndexedBound bound = TimeIndexedBound.of(store, c, false, rows, false, true, functions);
+    IntVar l0 = (IntVar) store.findVariable("l0");
+    assertThat(bound.arguments()).contains(c, l0);
+    store.setLevel(store.level + 1);
+    store.impose(bound);
+    l0.domain.inMin(store.level, l0, 5);
+    c.domain.inMax(store.level, c, 30);
+    assertThatThrownBy(() -> bound.consistency(store)).isInstanceOf(FailException.class);
+    EntryList out = new EntryList();
+    assertThat(bound.explainFailure(trail, out)).isTrue();
+    assertThat(new ExplanationChecker(trail).checkFailure(bound, out)).isNull();
+    trail.detach();
   }
 }
