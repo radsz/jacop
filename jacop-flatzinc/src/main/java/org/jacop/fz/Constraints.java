@@ -528,7 +528,7 @@ public class Constraints implements ParserTreeConstants {
       }
 
       if (MinOfSumsDetector.enabled()) {
-        MinOfSumsDetector minOfSums = new MinOfSumsDetector(support);
+        MinOfSumsDetector minOfSums = new MinOfSumsDetector(support, replaced);
         Set<SimpleNode> merged = minOfSums.detect(astTree);
         if (!merged.isEmpty()) {
           replaced = new HashSet<>(replaced);

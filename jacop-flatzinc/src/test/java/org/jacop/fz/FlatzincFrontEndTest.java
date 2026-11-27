@@ -9605,4 +9605,29 @@ class FlatzincFrontEndTest {
       assertTrue(out.contains("s = " + v + ";\n"), out);
     }
   }
+
+  @Test
+  void minOfSumsTakesNoSumThatTheLinearIndexElementDetectionReplaced() throws IOException {
+    // z = x + k also defines the index k = z - x of an element, which the linear index element
+    // detection replaced by a table over x, z and v, dropping k; the merge of sums into minimums
+    // then took the replaced z = x + k as its part, posted min(x + k, w) over the free k and
+    // dropped z: v = 5 and x = 0 force k = 1, z = 1 and m = 1, but m = 2 was reported
+    String model =
+        "var 0..2: x :: output_var;\n"
+            + "var 1..3: k;\n"
+            + "var 1..5: z;\n"
+            + "var 0..5: v :: output_var;\n"
+            + "var 0..9: w :: output_var;\n"
+            + "var 0..9: m :: output_var;\n"
+            + "constraint array_int_element(k,[5,0,3],v);\n"
+            + "constraint int_lin_eq([1,1,-1],[x,k,z],0);\n"
+            + "constraint int_min(z,w,m);\n"
+            + "constraint int_eq(v,5);\n"
+            + "constraint int_eq(x,0);\n"
+            + "constraint int_ne(m,1);\n"
+            + "constraint int_eq(w,9);\n"
+            + "solve satisfy;\n";
+    String out = run(model, "--lcg", "off")[0];
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+  }
 }
