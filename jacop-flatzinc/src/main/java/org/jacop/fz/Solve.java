@@ -8097,9 +8097,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     if (best == Long.MAX_VALUE && !stopped[0] && jasat) {
       // no assignment of the hard clauses by the patience: JaSAT looks for one in the rest of the
-      // budget, and the search goes on from it until it finds nothing better in the last half of
-      // its time since (hanoi5 of the PB competition 2016: the search reached no assignment of its
-      // 13,383 hard clauses in 7 to 15 s, JaSAT finds one of the optimal cost in 0.7 s)
+      // budget, and the search goes on from it for at least 200 ms, until it finds nothing better
+      // in the last half of all its time (hanoi5 of the PB competition 2016: the search reached no
+      // assignment of its 13,383 hard clauses in 7 to 15 s, JaSAT finds one of the optimal cost in
+      // 0.7 s)
       long sat = System.currentTimeMillis();
       boolean[] start = deadline <= sat ? null : model.hardModel(deadline - sat);
       long from = System.currentTimeMillis();
@@ -8110,7 +8111,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         improvedAt = from;
         while (!stopped[0]) {
           long now = System.currentTimeMillis();
-          if (now > deadline || now - from > 200 && now - improvedAt > (now - from) / 2) {
+          if (now > deadline || now - from > 200 && now - improvedAt > (now - started) / 2) {
             break;
           }
           long found = ls.run(100_000, () -> stopped[0] || System.currentTimeMillis() > deadline);
