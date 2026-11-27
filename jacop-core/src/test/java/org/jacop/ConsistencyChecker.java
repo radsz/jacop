@@ -89,18 +89,21 @@ import org.jacop.constraints.MultiInterDistance;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.PrecedenceCost;
+import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Sort;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.WeightedCompletion;
 import org.jacop.constraints.XdivYeqZ;
+import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqZ;
+import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZImplied;
@@ -2892,7 +2895,62 @@ class ConsistencyChecker {
         new Case("TspKOpt", Level.NONE, ConsistencyChecker::tspKOpt),
         // a bound from a relaxation, with the cumulative and the rows posted on their own: the
         // check is that it never removes a solution
-        new Case("TimeIndexedBound", Level.NONE, ConsistencyChecker::timeIndexedBound));
+        new Case("TimeIndexedBound", Level.NONE, ConsistencyChecker::timeIndexedBound),
+        // the implications with a negated control of an eliminated control (Support.negateControl);
+        // ImpliesNot reaches what its nested constraint reaches (a linear: bounds of the intervals)
+        new Case("ImpliesNot", Level.NONE, ConsistencyChecker::impliesNot),
+        new Case(
+            "XplusClteqZImpliedNot",
+            Level.DOMAIN,
+            (s, r) -> {
+              int c = r.nextInt(7) - 3;
+              IntVar b = r.nextBoolean() ? aBool(s, "b") : aVar(s, "b", 0, 1, r);
+              IntVar x = aVar(s, "x", -4, 4, r);
+              IntVar z = aVar(s, "z", -4, 4, r);
+              return new Model(
+                  new org.jacop.constraints.XplusClteqZImpliedNot(b, x, c, z),
+                  t -> t[0] == 1 || t[1] + c <= t[2],
+                  new IntVar[] {b, x, z});
+            }));
+  }
+
+  /** b = 0 =&gt; c for the constraints the front end nests: x = c, x != c, x = y and a linear. */
+  private static Model impliesNot(Store store, Random random) {
+    IntVar b = random.nextBoolean() ? aBool(store, "b") : aVar(store, "b", 0, 1, random);
+    int kind = random.nextInt(4);
+    int n = kind == 3 ? 2 + random.nextInt(2) : kind == 2 ? 2 : 1;
+    IntVar[] x = vars(store, "x", n, -2, 3, random);
+    int c = random.nextInt(5) - 2;
+    int[] w = weights(random, n, 3);
+    String rel = RELATIONS[random.nextInt(RELATIONS.length)];
+    PrimitiveConstraint nested =
+        switch (kind) {
+          case 0 -> new XeqC(x[0], c);
+          case 1 -> new XneqC(x[0], c);
+          case 2 -> new XeqY(x[0], x[1]);
+          default -> new LinearInt(x, w, rel, c);
+        };
+    Predicate<int[]> holds =
+        t -> {
+          switch (kind) {
+            case 0:
+              return t[1] == c;
+            case 1:
+              return t[1] != c;
+            case 2:
+              return t[1] == t[2];
+            default:
+              long sum = 0;
+              for (int i = 0; i < n; i++) {
+                sum += (long) w[i] * t[i + 1];
+              }
+              return holds(rel, sum, c);
+          }
+        };
+    return new Model(
+        new org.jacop.constraints.ImpliesNot(b, nested),
+        t -> t[0] == 1 || holds.test(t),
+        concat(new IntVar[] {b}, x));
   }
 
   /**
