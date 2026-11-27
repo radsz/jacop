@@ -38,6 +38,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -165,21 +166,32 @@ class MznlibGlobalsTest {
     assertEquals(Set.of("1", "2", "3", "4", "5"), values, solutions.toString());
   }
 
+  /**
+   * Prints every solution of the model with -a and returns them. The run must end with exit status
+   * 0 and with ==========, the line that says the enumeration is complete, and print no solution
+   * twice.
+   */
   private static Set<String> solveAll(String fzn) {
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     PrintStream originalOut = System.out;
+    int status;
     try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8)) {
       System.setOut(capture);
-      new Fz2jacop().callMain(new String[] {"-a", fzn});
+      status = new Fz2jacop().callMain(new String[] {"-a", fzn});
     } finally {
       System.setOut(originalOut);
     }
     String result = buffer.toString(StandardCharsets.UTF_8);
-    Set<String> solutions = new TreeSet<>();
-    Arrays.stream(result.split(SEPARATOR))
-        .map(String::strip)
-        .filter(s -> !s.isEmpty() && !s.startsWith("=========="))
-        .forEach(solutions::add);
+    assertEquals(0, status, fzn + ":\n" + result);
+    List<String> printed =
+        Arrays.stream(result.split(SEPARATOR))
+            .map(String::strip)
+            .filter(s -> !s.isEmpty() && !s.startsWith("=========="))
+            .toList();
+    assertTrue(
+        result.strip().endsWith("=========="), fzn + " is not enumerated completely:\n" + result);
+    Set<String> solutions = new TreeSet<>(printed);
+    assertEquals(printed.size(), solutions.size(), fzn + " prints a solution twice:\n" + result);
     return solutions;
   }
 }
