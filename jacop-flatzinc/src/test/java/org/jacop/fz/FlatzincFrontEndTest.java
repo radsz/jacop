@@ -80,6 +80,7 @@ import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.fz.constraints.AlldifferentDetector;
 import org.jacop.fz.constraints.CommonSubexpressions;
+import org.jacop.fz.constraints.LinearOverlapDetector;
 import org.jacop.fz.constraints.PartialCopyDetector;
 import org.jacop.fz.constraints.Support;
 import org.junit.jupiter.api.Test;
@@ -10378,5 +10379,40 @@ class FlatzincFrontEndTest {
         };
     String out = assertTimeoutPreemptively(Duration.ofSeconds(60), () -> runInThisJvm(opt, fzn));
     assertTrue(out.contains("----------"), out);
+  }
+
+  @Test
+  void linearOverlapDetectorStopsAtTheTimeOut() throws IOException, ParseException {
+    // the factoring of common sub-sums stops at its work limit, about 10 s, and did not look at
+    // the time-out: two rows of 100,000 common terms ran 9 s past -t 1000
+    int n = 5000;
+    StringBuilder model = new StringBuilder();
+    StringJoiner vars = new StringJoiner(",");
+    StringJoiner a = new StringJoiner(",");
+    StringJoiner b = new StringJoiner(",");
+    for (int i = 0; i < n; i++) {
+      model.append("var 0..3: x").append(i).append(";\n");
+      vars.add("x" + i);
+      a.add(Integer.toString(1 + i % 7));
+      b.add(Integer.toString(2 + i % 5));
+    }
+    model.append("constraint int_lin_le([%s],[%s],%d);\n".formatted(a, vars, 3 * n));
+    model.append("constraint int_lin_le([%s],[%s],%d);\n".formatted(b, vars, 4 * n));
+    model.append("solve satisfy;\n");
+    Path fzn = tmp.resolve("overlap.fzn");
+    Files.writeString(fzn, model.toString(), StandardCharsets.UTF_8);
+    CheckCountingOptions opt =
+        new CheckCountingOptions(new String[] {"-t", "60000", fzn.toString()});
+    try (java.io.FileInputStream input = new java.io.FileInputStream(fzn.toFile())) {
+      Parser parser = new Parser(input);
+      parser.setOptions(opt);
+      parser.cc.setOptions(opt);
+      SimpleNode tree = parsedItems(parser);
+      opt.armed = true;
+      // the scans of the two constraints pass, the factoring of the rows does not
+      opt.passAfter = 4;
+      LinearOverlapDetector detector = new LinearOverlapDetector(parser.cc.support);
+      assertThrows(ModelTimeOut.class, () -> detector.detect(tree));
+    }
   }
 }
