@@ -10744,4 +10744,25 @@ class FlatzincFrontEndTest {
       assertTrue(out.contains("z = 2;\n----------\n=========="), out);
     }
   }
+
+  @Test
+  void searchOverEveryVariablePrintsTheFixedOutputOnce() throws IOException {
+    // no annotation and x fixed at the root: the search of the default variables decided g and h,
+    // and -a printed x = 1 once for each of their six assignments
+    String model =
+        """
+        var 1..2: x :: output_var;
+        var 1..3: h;
+        var 1..3: g;
+        constraint int_le(x,1);
+        constraint int_le(g,h);
+        solve satisfy;
+        """;
+    String once = "x = 1;\n----------\n==========\n";
+    assertEquals(once, run(model, "-a", "--default-search", "input", "--lcg", "off")[0]);
+    assertEquals(once, run(model, "-n", "3", "-cs", "--lcg", "off")[0]);
+    // without output, the empty assignment once
+    String none = model.replace(" :: output_var", "");
+    assertEquals("----------\n==========\n", run(none, "-n", "3", "-cs", "--lcg", "off")[0]);
+  }
 }

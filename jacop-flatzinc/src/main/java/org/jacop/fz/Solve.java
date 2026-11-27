@@ -63,6 +63,7 @@ import java.util.function.Consumer;
 import java.util.function.DoubleUnaryOperator;
 import java.util.function.IntFunction;
 import java.util.function.LongSupplier;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.SolutionHint;
 import org.jacop.api.VarMap;
@@ -10704,12 +10705,33 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (shouldUseDefaultSearchVars(
         intSearchVariables, boolSearchVariables, setSearchVariables, floatSearchVariables)) {
+      // no output to label and no annotation: the search of every variable decides the variables
+      // that are not printed too
+      boolean noOutputToLabel =
+          outputVarsOnly
+              && label == null
+              && !options.freeSearch()
+              && noSearchVariables(
+                  intSearchVariables,
+                  boolSearchVariables,
+                  setSearchVariables,
+                  floatSearchVariables);
       outputVarsOnly = false;
       searchVars.defaultVars();
       intSearchVariables = searchVars.getIntVars();
       setSearchVariables = searchVars.getSetVars();
       boolSearchVariables = searchVars.getBoolVars();
       floatSearchVariables = searchVars.getFloatVars();
+      if (noOutputToLabel) {
+        setUpDistinctOutputs(
+            Stream.of(
+                    intSearchVariables,
+                    boolSearchVariables,
+                    setSearchVariables,
+                    floatSearchVariables)
+                .flatMap(Arrays::stream)
+                .toList());
+      }
     }
 
     if (opt.debug()) {
@@ -10943,7 +10965,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       Set<Var> last = Collections.newSetFromMap(new IdentityHashMap<>());
       last.addAll(untouched);
       // an untouched output that the annotation decides is not labelled last
-      removeAnnotated(si, last);
+      if (si != null) {
+        removeAnnotated(si, last);
+      }
       untouchedLast = last;
     }
 
@@ -10977,6 +11001,30 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return;
     }
     distinctOutputs = new DistinctOutputs<>(printed.toArray(new Var[0]));
+  }
+
+  /**
+   * Under -a and -n N of a satisfaction model without annotation, sets up {@link #distinctOutputs}
+   * when the given variables, which the search labels instead of the outputs, hold one whose value
+   * the output does not fix.
+   *
+   * @param searched the variables of the search
+   */
+  private void setUpDistinctOutputs(List<Var> searched) {
+    if (distinctOutputs != null || costVariable != null || !options.getAll()) {
+      return;
+    }
+    List<Var> printed = printedVariables();
+    Map<Var, Boolean> determined = new IdentityHashMap<>();
+    for (Var v : searchedPrinted(printed)) {
+      determined.put(v, true);
+    }
+    for (Var v : searched) {
+      if (!determined(v, determined)) {
+        distinctOutputs = new DistinctOutputs<>(printed.toArray(new Var[0]));
+        return;
+      }
+    }
   }
 
   // the variables of the searched store that hold the printed values (with presolve the copies)
