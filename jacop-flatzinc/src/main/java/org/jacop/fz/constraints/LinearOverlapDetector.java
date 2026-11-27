@@ -424,7 +424,10 @@ public class LinearOverlapDetector implements ParserTreeConstants {
       if (other == null || x.singleton() || occurrences.get(x) == null) {
         continue;
       }
-      work++;
+      if ((work++ & 1023) == 0) {
+        // the work limit takes about 10 s: two rows of 100,000 common terms ran 9 s past -t 1000
+        support.checkTimeOut();
+      }
       long p = other;
       long q = a.get(x);
       long g = gcd(Math.abs(p), Math.abs(q));

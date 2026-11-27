@@ -867,6 +867,15 @@ public final class FreeSearch {
       store.removeLevel(f.level);
       store.setLevel(f.level - 1);
     }
+    // decisions outside the projection below projected ones (variables that no constraint
+    // touches, branched on last): their other values would only repeat the solutions that the
+    // projected decisions above them give, so they are not retried
+    for (int i = 0; i < stackSize; i++) {
+      Frame f = stack.get(i);
+      if (!f.projected) {
+        f.right = true;
+      }
+    }
   }
 
   /** Removes all decisions, back to the root level. */
@@ -1495,7 +1504,10 @@ public final class FreeSearch {
      * With {@link #allSolutions(boolean)}, reports solutions that differ in the given variables
      * only, once each: after a solution the search does not try other values of the other
      * variables. The branching must fix the given variables before the others, for example with a
-     * {@link org.jacop.search.SequenceSelect} whose first selection is on them.
+     * {@link org.jacop.search.SequenceSelect} whose first selection is on them, except for given
+     * variables that take any value whatever the others are (no constraint touches them): those may
+     * come last, and after a solution the decisions on the other variables above them are not
+     * retried.
      *
      * @param vars the variables that tell solutions apart.
      * @return this builder.

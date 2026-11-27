@@ -90,7 +90,8 @@ import org.junit.jupiter.params.provider.MethodSource;
  */
 class GlobalPresolveTest {
 
-  private static final int TRIALS = 300;
+  /** Random instances per case; the min profile runs fewer. */
+  private static final int TRIALS = Integer.getInteger("globalPresolve.trials", 300);
 
   /** A random instance: variable domains and the constraint over the variables. */
   private record Instance(int[][] domains, BiFunction<Random, IntVar[], Constraint> constraint) {}

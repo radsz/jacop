@@ -104,18 +104,26 @@ class LcgStatisticsFlatzincTest {
 
   @Test
   void peakDepthAndRestartsUnderLcgFreeSearch() throws IOException {
-    String out = solve(knapsack(""), "--lcg", "-f", "-s");
+    // lcgRestarts is printed with -s -v only; without the root LP the knapsack takes a search
+    // that restarts
+    String out = solve(knapsack(""), "--lcg", "-f", "-s", "-v", "--lp", "off");
     assertTrue(out.contains("=========="), out);
     long depth = stat(out, "peakDepth");
     assertTrue(depth > 0, out);
     assertTrue(depth <= stat(out, "nodes"), out);
+    assertTrue(stat(out, "restarts") > 0, out);
     assertEquals(stat(out, "lcgRestarts"), stat(out, "restarts"), out);
   }
 
   private static long stat(String out, String name) {
+    // the last one: with -v, phases before the search print statistics of the same names
     Matcher m = Pattern.compile("%%%mzn-stat: " + name + "=(\\d+)").matcher(out);
     assertTrue(m.find(), name + " missing in\n" + out);
-    return Long.parseLong(m.group(1));
+    String last = m.group(1);
+    while (m.find()) {
+      last = m.group(1);
+    }
+    return Long.parseLong(last);
   }
 
   private String solve(String model, String... options) throws IOException {

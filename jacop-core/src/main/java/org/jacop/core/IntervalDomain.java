@@ -1278,7 +1278,8 @@ public class IntervalDomain extends IntDomain {
     IntervalDomain temp = new IntervalDomain(size);
 
     if (size == 0) {
-      return this;
+      // a new empty domain, as for no common value: the caller may change the result in place
+      return temp;
     }
 
     int pointer1 = 0;
@@ -3587,6 +3588,11 @@ public class IntervalDomain extends IntDomain {
     if (ASSERTS_ENABLED && min > max) {
       throw new IllegalStateException(
           String.valueOf("Min value greater than max value " + min + " > " + max));
+    }
+
+    if (size == 0) {
+      // an empty domain stays empty (bounds[0] does not exist)
+      return NONE;
     }
 
     if (max < bounds[0]) {

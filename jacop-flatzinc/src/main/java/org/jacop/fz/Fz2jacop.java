@@ -95,6 +95,12 @@ public class Fz2jacop {
     // indomain_random, on_restart) repeat from run to run
     Store.setSeed(0);
 
+    if (args.length == 0) {
+      // as Options does on the command line, without exiting the JVM
+      IO.println("fz2jacop: no model file specified");
+      IO.println("fz2jacop: use --help for more information.");
+      return 1;
+    }
     Options opt;
     try {
       opt = new Options(args);
@@ -154,7 +160,12 @@ public class Fz2jacop {
     // the model file is closed when solving ends, also after an error (an open file cannot be
     // deleted on Windows)
     int status = 1;
-    try (FileInputStream file = opt.getFile()) {
+    // a model file that is not found ends this run, not the JVM (callMain)
+    FileInputStream model = opt.openFile();
+    if (model == null) {
+      return 1;
+    }
+    try (FileInputStream file = model) {
       status = solve(opt, file, null);
     } catch (IOException e) {
       log.error("Failed to close {}", opt.getFileName(), e);
@@ -305,11 +316,26 @@ public class Fz2jacop {
     } catch (ArrayIndexOutOfBoundsException e) {
       print(opt, () -> handleArrayIndexOutOfBoundsException(e));
     } catch (OutOfMemoryError _) {
-      print(opt, () -> IO.println("%% Out of memory error; consider option -Xmx... for JVM"));
-    } catch (StackOverflowError _) {
+      // as a stack overflow: the run ended before it was complete, and the unwound search has
+      // left the memory its last allocation lacked
       print(
           opt,
-          () -> IO.println("%% Stack overflow exception error; consider option -Xss... for JVM"));
+          () ->
+              printKeptOrUnknown(
+                  opt, parser, "%% Out of memory error; consider option -Xmx... for JVM"));
+      status = 0;
+    } catch (StackOverflowError _) {
+      // a search too deep for the JVM's stack (one recursion per refuted value of a large
+      // domain) ended before it was complete: as at a time-out, the best solution kept so far is
+      // printed, or UNKNOWN when none was printed
+      print(
+          opt,
+          () ->
+              printKeptOrUnknown(
+                  opt,
+                  parser,
+                  "%% Stack overflow exception error; consider option -Xss... for JVM"));
+      status = 0;
     } catch (TrivialSolution _) {
       Runtime.getRuntime().removeShutdownHook(t);
       status = 0;
@@ -332,6 +358,22 @@ public class Fz2jacop {
       print(opt, () -> printStatisticsTime(parser));
     }
     return status;
+  }
+
+  // the end of a run cut short by an error: the message, then the best solution kept so far, or
+  // UNKNOWN when none was printed; nothing more once the answer is out (an error while it was
+  // printed, or the shutdown hook of -s)
+  private static void printKeptOrUnknown(Options opt, Parser parser, String message) {
+    IO.println(message);
+    parser.solver.printAnswer(
+        () -> {
+          StringBuffer kept = parser.solver.lastSolution;
+          if (!opt.getAll() && kept != null) {
+            parser.solver.helperSolutionPrinter(kept.toString());
+          } else if (parser.solver.numberSolutions == 0) {
+            IO.println("=====UNKNOWN=====");
+          }
+        });
   }
 
   // prints what the run prints at its end; a thread of a portfolio that has returned prints nothing
