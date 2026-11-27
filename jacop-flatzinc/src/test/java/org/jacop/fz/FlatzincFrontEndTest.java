@@ -9459,4 +9459,33 @@ class FlatzincFrontEndTest {
     String out = run(model.toString(), "--lcg", "off")[0];
     assertTrue(out.contains("=====UNSATISFIABLE====="), out);
   }
+
+  @Test
+  void countStepCostBoundCountsTheNegativeCostsOfTheCountsLeft() throws IOException {
+    // the least cost of the step costs of the counts of [v0, v1, v2] was searched by branch and
+    // bound cut at the cost of the counts chosen so far, which the later steps can lower with a
+    // negative cost: the bound was found as -1 instead of -3, obj >= -2, while v0 = 2 gives -4
+    String model =
+        "var {1,2,3,9}: v0;\n"
+            + "var 1..2: v1 :: output_var;\n"
+            + "var 1..1: v2;\n"
+            + "var 0..3: v3;\n"
+            + "var bool: v4;\n"
+            + "var -1..1: v5 :: output_var;\n"
+            + "var 0..3: v6 :: output_var;\n"
+            + "var bool: v7;\n"
+            + "var -2..1: v8;\n"
+            + "var -6..5: obj :: output_var;\n"
+            + "constraint jacop_count([v0,v1,v2],2,v3);\n"
+            + "constraint int_le_reif(v3,0,v4);\n"
+            + "constraint jacop_if_then_else_int([v4,true],[1,-1],v5);\n"
+            + "constraint jacop_count([v0,v1,v2],1,v6);\n"
+            + "constraint int_le_reif(v6,2,v7);\n"
+            + "constraint jacop_if_then_else_int([v7,true],[-2,1],v8);\n"
+            + "constraint int_lin_eq([1,1,-1],[v5,v8,obj],1);\n"
+            + "constraint int_lin_le([2,1],[v2,v1],3);\n"
+            + "solve minimize obj;\n";
+    String out = run(model, "--lcg", "off")[0];
+    assertTrue(out.contains("obj = -4;\n----------\n=========="), out);
+  }
 }
