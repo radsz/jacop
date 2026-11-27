@@ -728,41 +728,58 @@ final class Presolve {
     if (lo[j] == Double.NEGATIVE_INFINITY && hi[j] == Double.POSITIVE_INFINITY) {
       return false;
     }
-    double min = 0;
-    double max = 0;
-    boolean minInf = false;
-    boolean maxInf = false;
-    double size = 0;
-    int[] ci = cIdx[j];
-    double[] cv = cVal[j];
     ops += cLen[j];
-    for (int e = 0; e < cLen[j] && !(minInf && maxInf); e++) {
-      int i = ci[e];
-      double a = cv[e];
-      if (!rowAlive[i] || a == 0) {
-        continue;
-      }
-      double l = a > 0 ? yLo[i] : yHi[i];
-      double h = a > 0 ? yHi[i] : yLo[i];
-      if (Double.isInfinite(l)) {
-        minInf = true;
-      } else {
-        min += a * l;
-        size += Math.abs(a * l);
-      }
-      if (Double.isInfinite(h)) {
-        maxInf = true;
-      } else {
-        max += a * h;
-        size += Math.abs(a * h);
+    activity(cIdx[j], cVal[j], cLen[j], rowAlive, yLo, yHi);
+    rangeMin = actMin;
+    rangeMax = actMax;
+    rangeMinInf = actMinInf > 0;
+    rangeMaxInf = actMaxInf > 0;
+    rangeSize = actSize;
+    return !(rangeMinInf && rangeMaxInf);
+  }
+
+  // the activity of a linear form over bounds, set by activity(...)
+  private double actMin;
+  private double actMax;
+  private int actMinInf;
+  private int actMaxInf;
+  private double actSize;
+
+  // sets the least and the most activity of the form with the given entries over the bounds of
+  // the live positions, finite parts with the number of infinite terms, and the sum of the
+  // magnitudes of the finite terms
+  private void activity(
+      int[] index, double[] coef, int length, boolean[] alive, double[] lower, double[] upper) {
+    double least = 0;
+    double most = 0;
+    int leastInf = 0;
+    int mostInf = 0;
+    double total = 0;
+    for (int e = 0; e < length; e++) {
+      int k = index[e];
+      double c = coef[e];
+      if (c != 0 && alive[k]) {
+        double low = c > 0 ? lower[k] : upper[k];
+        double high = c > 0 ? upper[k] : lower[k];
+        if (Double.isInfinite(low)) {
+          leastInf++;
+        } else {
+          least += c * low;
+          total += Math.abs(c * low);
+        }
+        if (Double.isInfinite(high)) {
+          mostInf++;
+        } else {
+          most += c * high;
+          total += Math.abs(c * high);
+        }
       }
     }
-    rangeMin = min;
-    rangeMax = max;
-    rangeMinInf = minInf;
-    rangeMaxInf = maxInf;
-    rangeSize = size;
-    return !(minInf && maxInf);
+    actMin = least;
+    actMax = most;
+    actMinInf = leastInf;
+    actMaxInf = mostInf;
+    actSize = total;
   }
 
   // whether column j has no upper bound, or one the rows imply
@@ -811,36 +828,16 @@ final class Presolve {
 
   // the bounds row i implies, as implyBounds(i)
   private void impliedFree(int i) {
-    int[] idx = rIdx[i];
-    double[] val = rVal[i];
+    int[] cols = rIdx[i];
+    double[] coefs = rVal[i];
     int len = rLen[i];
     ops += 2L * len;
-    double min = 0;
-    double max = 0;
-    int minInf = 0;
-    int maxInf = 0;
-    double size = 0;
-    for (int e = 0; e < len; e++) {
-      int j = idx[e];
-      double a = val[e];
-      if (!colAlive[j] || a == 0) {
-        continue;
-      }
-      double l = a > 0 ? lo[j] : hi[j];
-      double h = a > 0 ? hi[j] : lo[j];
-      if (Double.isInfinite(l)) {
-        minInf++;
-      } else {
-        min += a * l;
-        size += Math.abs(a * l);
-      }
-      if (Double.isInfinite(h)) {
-        maxInf++;
-      } else {
-        max += a * h;
-        size += Math.abs(a * h);
-      }
-    }
+    activity(cols, coefs, len, colAlive, lo, hi);
+    double min = actMin;
+    double max = actMax;
+    int minInf = actMinInf;
+    int maxInf = actMaxInf;
+    double size = actSize;
     boolean useHi = rowHi[i] != Double.POSITIVE_INFINITY && minInf <= 1;
     boolean useLo = rowLo[i] != Double.NEGATIVE_INFINITY && maxInf <= 1;
     if (!useHi && !useLo) {
@@ -853,26 +850,26 @@ final class Presolve {
                 + Math.abs(rowLo[i] == Double.NEGATIVE_INFINITY ? 0 : rowLo[i])
                 + Math.abs(rowHi[i] == Double.POSITIVE_INFINITY ? 0 : rowHi[i]));
     for (int e = 0; e < len; e++) {
-      int j = idx[e];
-      double a = val[e];
-      if (!colAlive[j] || a == 0 || Math.abs(a) < SMALL_ENTRY) {
+      int j = cols[e];
+      double a = coefs[e];
+      if (a == 0 || !colAlive[j] || Math.abs(a) < SMALL_ENTRY) {
         continue;
       }
-      double l = a > 0 ? lo[j] : hi[j];
-      double h = a > 0 ? hi[j] : lo[j];
+      double atMin = a > 0 ? lo[j] : hi[j];
+      double atMax = a > 0 ? hi[j] : lo[j];
       // the implied bounds without the rounding allowance, which a column singleton may reach
-      // within the margin; a column with more entries must be beyond it with the allowance
-      double up = Double.NaN;
-      double down = Double.NaN;
-      if (useHi && (minInf == 0 || Double.isInfinite(l))) {
-        up = (rowHi[i] - (Double.isInfinite(l) ? min : min - a * l)) / a;
-      }
-      if (useLo && (maxInf == 0 || Double.isInfinite(h))) {
-        down = (rowLo[i] - (Double.isInfinite(h) ? max : max - a * h)) / a;
-      }
-      // the upper bound of x_j comes from the upper side of the row for a > 0
-      double newHi = a > 0 ? up : down;
-      double newLo = a > 0 ? down : up;
+      // within the margin; a column with more entries must be beyond it with the allowance; the
+      // upper bound of x_j comes from the upper side of the row for a > 0
+      double fromHi =
+          useHi && (minInf == 0 || Double.isInfinite(atMin))
+              ? (rowHi[i] - (Double.isInfinite(atMin) ? min : min - a * atMin)) / a
+              : Double.NaN;
+      double fromLo =
+          useLo && (maxInf == 0 || Double.isInfinite(atMax))
+              ? (rowLo[i] - (Double.isInfinite(atMax) ? max : max - a * atMax)) / a
+              : Double.NaN;
+      double newHi = a > 0 ? fromHi : fromLo;
+      double newLo = a > 0 ? fromLo : fromHi;
       int hiSide = a > 0 ? 1 : -1;
       boolean singleton = colCount[j] == 1;
       double allowance = singleton ? 0 : slack / Math.abs(a);
@@ -980,36 +977,16 @@ final class Presolve {
   // tightens the dual bounds by the sign of the reduced cost of column j: y a_j <= c_j without an
   // upper bound, y a_j >= c_j without a lower bound; whether a bound moved
   private boolean propagateDual(int j) {
-    int[] ci = cIdx[j];
-    double[] cv = cVal[j];
+    int[] rows = cIdx[j];
+    double[] coefs = cVal[j];
     int len = cLen[j];
     ops += 2L * len;
-    double min = 0;
-    double max = 0;
-    int minInf = 0;
-    int maxInf = 0;
-    double size = 0;
-    for (int e = 0; e < len; e++) {
-      int i = ci[e];
-      double a = cv[e];
-      if (!rowAlive[i] || a == 0) {
-        continue;
-      }
-      double l = a > 0 ? yLo[i] : yHi[i];
-      double h = a > 0 ? yHi[i] : yLo[i];
-      if (Double.isInfinite(l)) {
-        minInf++;
-      } else {
-        min += a * l;
-        size += Math.abs(a * l);
-      }
-      if (Double.isInfinite(h)) {
-        maxInf++;
-      } else {
-        max += a * h;
-        size += Math.abs(a * h);
-      }
-    }
+    activity(rows, coefs, len, rowAlive, yLo, yHi);
+    double min = actMin;
+    double max = actMax;
+    int minInf = actMinInf;
+    int maxInf = actMaxInf;
+    double size = actSize;
     double c = wtrue[j];
     boolean useHi = noHi(j) && minInf <= 1;
     boolean useLo = noLo(j) && maxInf <= 1;
@@ -1019,24 +996,24 @@ final class Presolve {
     double slack = SAME * (1 + size + Math.abs(c));
     boolean moved = false;
     for (int e = 0; e < len; e++) {
-      int i = ci[e];
-      double a = cv[e];
-      if (!rowAlive[i] || a == 0 || Math.abs(a) < SMALL_ENTRY) {
+      int i = rows[e];
+      double a = coefs[e];
+      if (a == 0 || !rowAlive[i] || Math.abs(a) < SMALL_ENTRY) {
         continue;
       }
-      double l = a > 0 ? yLo[i] : yHi[i];
-      double h = a > 0 ? yHi[i] : yLo[i];
+      double atMin = a > 0 ? yLo[i] : yHi[i];
+      double atMax = a > 0 ? yHi[i] : yLo[i];
       // a y_i <= c - (the least of the rest), a y_i >= c - (the most of the rest)
-      double up = Double.NaN;
-      double down = Double.NaN;
-      if (useHi && (minInf == 0 || Double.isInfinite(l))) {
-        up = (c - (Double.isInfinite(l) ? min : min - a * l) + slack) / a;
-      }
-      if (useLo && (maxInf == 0 || Double.isInfinite(h))) {
-        down = (c - (Double.isInfinite(h) ? max : max - a * h) - slack) / a;
-      }
-      double newHi = a > 0 ? up : down;
-      double newLo = a > 0 ? down : up;
+      double fromHi =
+          useHi && (minInf == 0 || Double.isInfinite(atMin))
+              ? (c - (Double.isInfinite(atMin) ? min : min - a * atMin) + slack) / a
+              : Double.NaN;
+      double fromLo =
+          useLo && (maxInf == 0 || Double.isInfinite(atMax))
+              ? (c - (Double.isInfinite(atMax) ? max : max - a * atMax) - slack) / a
+              : Double.NaN;
+      double newHi = a > 0 ? fromHi : fromLo;
+      double newLo = a > 0 ? fromLo : fromHi;
       if (!Double.isNaN(newHi)
           && Math.abs(newHi) < DUAL_HUGE
           && newHi < yHi[i] - DUAL_STEP * (1 + Math.abs(newHi))) {
