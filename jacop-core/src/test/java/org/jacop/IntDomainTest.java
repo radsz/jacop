@@ -1148,4 +1148,16 @@ class IntDomainTest {
     byBounds.unionAdapt(1, 1);
     assertThat(empty.isEmpty()).isTrue();
   }
+
+  @Test
+  void smallDenseUnionAdaptOfMoreThan64ValuesIsRejectedAsDocumented() {
+    // a run of more than 64 values read SEQ_ARRAY out of its bounds before the span check
+    assertThatThrownBy(() -> new SmallDenseDomain().unionAdapt(-3, 100))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new SmallDenseDomain(1, 3).unionAdapt(-3, 100))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> SmallDenseDomain.emptyDomain.union(-3, 100))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThat(SmallDenseDomain.emptyDomain.isEmpty()).isTrue();
+  }
 }

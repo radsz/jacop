@@ -2067,6 +2067,12 @@ public class SmallDenseDomain extends IntDomain {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
 
+    if (max - min > 63) {
+      // SEQ_ARRAY holds the runs of at most 64 values
+      throw new IllegalArgumentException(
+          "The resulting domain can not be handled properly by " + this.getClass());
+    }
+
     long result = SEQ_ARRAY[max - min] << (63 - (max - min));
 
     if (isEmpty()) {
