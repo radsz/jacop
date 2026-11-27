@@ -9706,6 +9706,40 @@ Version 5.0 (unreleased)
    -Dorg.jacop.fz.coveringDominance=false and -Dorg.jacop.lp.foldFixed=0
    turn them off.
 
+536. Pseudo-Boolean models of clauses go to JaSAT whole. A linear constraint
+   over 0/1 variables that is at most two clauses per unfixed variable over
+   its own variables (as lazy clause generation already takes it,
+   jacop.lcg.clauseShaped) and a lex-leader constraint of symmetry breaking
+   over 0/1 variables now count as clauses, so a model of them alone is a
+   CNF that JaSAT solves with its preprocessing. A lex-leader constraint
+   x <=lex y becomes the clauses of F. A. Aloul, I. L. Markov and K. A.
+   Sakallah, "Efficient symmetry breaking for Boolean satisfiability",
+   IJCAI 2003, with one new variable per position for the equal prefix.
+   -s prints pureClauseShaped and pureClauseLexPairs. 3col-left3reg-l090
+   (Pseudo-Boolean Competition 2016: x + y <= 1 on each edge and colour,
+   one colour per vertex): JaSAT eliminates 6,988 of 7,089 variables and
+   refutes it in 8 s, before 35 s under lazy clause generation. 600 s, the
+   9 instances where it fires: total default 2,124 -> 1,553 s, -f 1,404 ->
+   741 s (battleship 271 -> 4 s, heule-nol unknown -> 28-326 s).
+
+537. The MaxSAT local search of free search takes the linear constraints
+   that are clauses (see 536) as hard clauses; before, it left out every
+   linear row over cost variables alone as implied by the objective, and
+   on hanoi5 (Pseudo-Boolean Competition 2016, 1,931 rows x + y <= 1
+   over the 3,862 cost variables) it searched without them, reached cost
+   1,810, below the optimum 1,931, and the store rejected its
+   assignments. When the search reaches no assignment of the hard clauses
+   by its patience, JaSAT looks for one in the rest of its budget, and the
+   local search goes on from it for at most half the time it searched
+   before (the restart from a SAT model of SATLike-c, Z. Lei, Z. Lyu,
+   S. Cai, X. Zhang, J. Yin, Z. Wu and Y. Zhang, MaxSAT Evaluation 2021).
+   hanoi5: an assignment of the optimal cost in 0.7 s. -s prints
+   maxsatSatTime; --free-config maxsat-sat=0 turns the JaSAT step off.
+   600 s, the 47 instances of the MaxSAT Evaluation 2024 and the PB
+   Competition 2016 where it changes the local search: total -f 7,436 ->
+   7,390 s, default 8,445 -> 8,281 s, 37 and 35 proved in both; the
+   first solution comes earlier on 16 instances and later on 5 with -f.
+
 Version 4.11
 =============
 
