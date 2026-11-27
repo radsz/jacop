@@ -393,7 +393,13 @@ public class Knapsack extends Constraint
       positionOfAlreadyUpdated = 0;
     }
 
-    tree.criticalLeaf.positionInTheTree = positionOfCriticalItem.value();
+    // The critical item and the optimal profit of the relaxation may come from a consistency at the
+    // removed level (one that failed, for instance), so the next consistency computes them again.
+    int criticalPosition = positionOfCriticalItem.value();
+    if (criticalPosition < leaves.length) {
+      tree.criticalLeaf = leaves[criticalPosition];
+    }
+    needCriticalUpdate = true;
   }
 
   /**

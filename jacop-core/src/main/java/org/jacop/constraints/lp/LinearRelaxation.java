@@ -281,7 +281,7 @@ public class LinearRelaxation extends Constraint
 
   // the most pivots of the first solve, which has the root budget instead of the pivot limit: a
   // root LP that stops at the limit gives neither a bound nor cuts; not final, so that tests can
-  // make a root solve stop at it
+  // make a root solve stop at it; a root solve takes 5 pivots at least
   static int rootPivots = Integer.getInteger("org.jacop.lp.rootPivots", 20_000);
 
   // the tableau entries earned by each call of consistency, up to WORK; a solve spends the entries
@@ -3950,7 +3950,7 @@ public class LinearRelaxation extends Constraint
     }
     int limit =
         calls == 1 || restarting
-            ? (int) Math.clamp(ROOT_WORK / size, 5, rootPivots)
+            ? (int) Math.clamp(ROOT_WORK / size, 5, Math.max(5, rootPivots))
             : (int) Math.clamp(WORK / size, 5, pivotLimit);
     if (refutation) {
       limit = Math.min(limit, clauseRefutation ? CLAUSE_REFUTATION_PIVOTS : REFUTATION_PIVOTS);
@@ -4201,7 +4201,7 @@ public class LinearRelaxation extends Constraint
       for (int j = 0; j < lp.columns(); j++) {
         setBounds(without, j);
       }
-      int st = rootSolve(without, rootPivots, rootWork());
+      int st = rootSolve(without, Math.max(5, rootPivots), rootWork());
       LpSources.Stat stat = sources.of(e.getKey());
       if (st == LpSolver.OPTIMAL) {
         double v = without.value(0);
@@ -4997,7 +4997,7 @@ public class LinearRelaxation extends Constraint
   // pivots of its root solve, since a round stopped at the limit is dropped and the refutation
   // then fails (php-exit: 4,454 pivots in all)
   private int roundPivots(long size) {
-    int pivots = Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, rootPivots);
+    int pivots = Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, Math.max(5, rootPivots));
     return pseudoObjective ? Math.max(pivots, REFUTATION_PIVOTS) : pivots;
   }
 
@@ -5083,7 +5083,7 @@ public class LinearRelaxation extends Constraint
         lp.setBounds(0, sentMin[0], sentMax[0]);
       }
       long size = Math.max(1, lp.pivotWork());
-      int status = rootSolvePool(Math.clamp(ROOT_WORK / size, 5, rootPivots));
+      int status = rootSolvePool(Math.clamp(ROOT_WORK / size, 5, Math.max(5, rootPivots)));
       if (status != LpSolver.OPTIMAL) {
         return status;
       }
@@ -5335,7 +5335,7 @@ public class LinearRelaxation extends Constraint
       setBounds(s, j);
     }
     long size = Math.max(1, s.pivotWork());
-    int status = rootSolve(s, Math.clamp(ROOT_WORK / size, 5, rootPivots), rootWork());
+    int status = rootSolve(s, Math.clamp(ROOT_WORK / size, 5, Math.max(5, rootPivots)), rootWork());
     double before = lp.value(0);
     if (status != LpSolver.OPTIMAL
         || Math.abs(s.value(0) - before) > 1e-6 * (1 + Math.abs(before))) {
@@ -7101,7 +7101,7 @@ public class LinearRelaxation extends Constraint
       setBounds(full, j);
     }
     long size = Math.max(1, full.pivotWork());
-    int pivots = Math.clamp(ROOT_WORK / size, 5, rootPivots);
+    int pivots = Math.clamp(ROOT_WORK / size, 5, Math.max(5, rootPivots));
     boolean keep;
     // the pivots and nanoseconds of the solve at the bounds of the start of the search, which cap
     // the solve at the current bounds after it (Long.MAX_VALUE without it)

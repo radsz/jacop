@@ -47,6 +47,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
@@ -395,5 +396,44 @@ class LinearOverlapFlatzincTest {
     }
     assertTrue(out.contains("==========") || out.contains("UNSATISFIABLE"), out + "\n" + model);
     return last;
+  }
+
+  // a sub-sum of one term only renames it: with minSize 1 (or 0) the factoring replaced x by a new
+  // variable, then that one by another, until the time-out, and the model was never searched
+  @Test
+  void subSumsOfOneTermAreNotFactored() throws IOException, InterruptedException {
+    Path fzn = tmp.resolve("one.fzn");
+    Files.writeString(
+        fzn,
+        """
+        var 0..5: x :: output_var;
+        var 0..5: y :: output_var;
+        var 0..5: w :: output_var;
+        constraint int_lin_le([1,2],[x,y],7);
+        constraint int_lin_le([1,3],[x,w],8);
+        solve satisfy;
+        """);
+    for (String size : new String[] {"1", "0"}) {
+      Path java = Path.of(System.getProperty("java.home"), "bin", "java");
+      ProcessBuilder pb =
+          new ProcessBuilder(
+              java.toString(),
+              "-Dorg.jacop.fz.linearOverlap.minSize=" + size,
+              "-cp",
+              System.getProperty("java.class.path"),
+              "org.jacop.fz.Fz2jacop",
+              "-t",
+              "3000",
+              fzn.toString());
+      pb.redirectErrorStream(true);
+      Process p = pb.start();
+      String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+      boolean ended = p.waitFor(60, TimeUnit.SECONDS);
+      if (!ended) {
+        p.destroyForcibly();
+      }
+      assertTrue(ended, out);
+      assertTrue(out.contains("----------") && !out.contains("TIME-OUT"), size + ": " + out);
+    }
   }
 }

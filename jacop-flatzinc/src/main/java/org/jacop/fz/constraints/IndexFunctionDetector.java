@@ -32,6 +32,7 @@ package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -46,6 +47,7 @@ import org.jacop.constraints.Reified;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
 import org.jacop.fz.ASTConstElem;
 import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.FzConsole;
@@ -107,6 +109,13 @@ public class IndexFunctionDetector implements ParserTreeConstants {
   private static final String INT_PLUS = "int_plus";
 
   private final Support support;
+
+  // the constraints earlier detectors replaced: their variables count as used, but those that read
+  // a variable an earlier detector dropped define nothing (the elements of an index that the linear
+  // index element detection replaced by a table over the inputs of the index, dropping the index)
+  private final Set<SimpleNode> skipped;
+
+  private final Set<Var> dropped = Collections.newSetFromMap(new IdentityHashMap<>());
 
   private final Set<SimpleNode> replaced = new HashSet<>();
 
@@ -194,9 +203,14 @@ public class IndexFunctionDetector implements ParserTreeConstants {
    * It creates a detector posting through the given support.
    *
    * @param support the support of the FlatZinc front end.
+   * @param skipped constraint nodes that earlier detectors replaced; they are not posted.
+   * @param dropped the variables that earlier detectors took out of the model.
    */
-  public IndexFunctionDetector(Support support) {
+  public IndexFunctionDetector(
+      Support support, Set<SimpleNode> skipped, Collection<? extends Var> dropped) {
     this.support = support;
+    this.skipped = skipped;
+    this.dropped.addAll(dropped);
   }
 
   /**
@@ -297,6 +311,7 @@ public class IndexFunctionDetector implements ParserTreeConstants {
           || c == null
           || occurrences.getOrDefault(b, 0) != 2
           || support.dictionary.isOutput(b)
+          || support.dictionary.isDeclaredEqual(b)
           || replaced.contains(c.node())) {
         return;
       }
@@ -660,6 +675,9 @@ public class IndexFunctionDetector implements ParserTreeConstants {
     for (int i = 0; i < node.jjtGetNumChildren(); i++) {
       PartialCopyDetector.countVariables(support, (SimpleNode) node.jjtGetChild(i), occurrences);
     }
+    if (skipped.contains(node) && readsDropped(node)) {
+      return;
+    }
     String name = node.getName();
     switch (name) {
       case "bool_clause" -> {
@@ -714,6 +732,22 @@ public class IndexFunctionDetector implements ParserTreeConstants {
         // not a function step
       }
     }
+  }
+
+  private boolean readsDropped(ASTConstElem node) {
+    if (dropped.isEmpty()) {
+      return false;
+    }
+    Map<IntVar, Integer> read = new IdentityHashMap<>();
+    for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+      PartialCopyDetector.countVariables(support, (SimpleNode) node.jjtGetChild(i), read);
+    }
+    for (IntVar v : read.keySet()) {
+      if (dropped.contains(v)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private void define(IntVar x, String op, IntVar... args) {

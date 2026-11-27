@@ -338,6 +338,15 @@ public class Network extends NetworkSimplex implements MutableNetwork {
 
     companion.restore(this);
 
+    // a late arc restored from a domain narrowed at a level the network has not processed yet
+    // may move its flow out of the bounds; the simplex repairs the balances of its nodes
+    if (arc.head.deltaBalance != 0) {
+      infeasibleNodes.add(arc.head);
+    }
+    if (arc.tail().deltaBalance != 0) {
+      infeasibleNodes.add(arc.tail());
+    }
+
     if (SHOW_CHANGES) {
       log.debug("After restore: {}", companion.arc);
     }

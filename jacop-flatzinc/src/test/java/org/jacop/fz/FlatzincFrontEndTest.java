@@ -8498,7 +8498,7 @@ class FlatzincFrontEndTest {
           + "constraint int_eq_reif(a, 1, b);\nconstraint float_eq_reif(f, g, b);\n"
           + "constraint float_lt_reif(f, g, b);\n";
 
-  // the run ends within a few seconds of -t 1000, and as a time-out
+  // the run ends within a few seconds of -t 1000, and without a proof
   private void assertEndsAtTheTimeOut(String model, String... options) {
     String[] args = Arrays.copyOf(options, options.length + 2);
     args[options.length] = "-t";
@@ -8513,7 +8513,9 @@ class FlatzincFrontEndTest {
               assertTrue(millis < 10_000, millis + " ms");
               return o;
             });
-    assertTrue(out.contains("=====UNKNOWN=====\n"), out);
+    // a propagation cut at the time-out proves nothing, so the search may still reach a solution
+    // of another branch before it reads the clock: no answer or a solution, never a proof
+    assertTrue(out.contains("=====UNKNOWN=====\n") || out.contains("----------\n"), out);
     assertFalse(out.contains("=====UNSATISFIABLE====="), out);
     assertFalse(out.contains("=========="), out);
   }
@@ -9463,5 +9465,319 @@ class FlatzincFrontEndTest {
       String out = run(model, "--presolve", "on", "--lcg", "off", "--presolve-level", level)[0];
       assertTrue(out.contains("obj = 78;\n----------\n=========="), level + ": " + out);
     }
+  }
+
+  @Test
+  void clausalModelFixesAnOutputSetVariableOfNoConstraint() throws IOException {
+    // a satisfaction model of clauses over small domains is solved by JaSAT on its CNF; the
+    // variables the clauses do not cover were fixed only when they were integers, so the set s0
+    // of no constraint was printed with its bounds, {{}..{0..2}}[card={0..3}], instead of a value
+    String model =
+        "var set of 0..2: s0 :: output_var;\n"
+            + "var 1..3: x1 :: output_var;\n"
+            + "var bool: b;\n"
+            + "constraint int_eq_reif(x1,2,b);\n"
+            + "constraint bool_eq(b,true);\n"
+            + "solve satisfy;\n";
+    String out = run(model, "--lcg", "on")[0];
+    assertTrue(out.contains("s0 = {};\nx1 = 2;\n----------"), out);
+  }
+
+  @Test
+  void dualReductionsKeepTheLinksOfAnObjectiveOfCollectedClauses() throws IOException {
+    // under LCG the clause b0 = true is kept for the SAT solver, not in the store, so b0 is exempt
+    // from the dual reductions; the alias al = b0 was still taken for the definition of the
+    // objective, al was fixed to 0 for minimize b0, and the model was reported unsatisfiable
+    String model =
+        "var bool: b0 :: output_var;\n"
+            + "var bool: al :: output_var = b0;\n"
+            + "constraint bool_eq(b0,true);\n"
+            + "solve minimize b0;\n";
+    String out = run(model, "--lcg", "on", "--presolve", "on")[0];
+    assertTrue(out.contains("b0 = true;\nal = true;\n----------\n=========="), out);
+  }
+
+  @Test
+  void linearIndexElementKeepsAnIndexThatAnAllDifferentOfDisequalitiesReads() throws IOException {
+    // z_i = x_i + 3 y_i is read by its element and by int_ne disequalities that the all-different
+    // detection replaced by an alldiff over the z_i; the linear index element detection read only
+    // the constraints not replaced, so it turned each z_i and its element into a table over x_i,
+    // y_i and v_i and left the alldiff over free variables: the pairs (x_i, y_i) give z_i in
+    // {4, 5} only, so five distinct z_i cannot exist, but a solution was reported
+    StringBuilder model =
+        new StringBuilder("array [1..12] of int: A = [10,11,12,13,14,15,16,17,18,19,20,21];\n");
+    for (int i = 1; i <= 5; i++) {
+      model.append("var 1..6: x" + i + " :: output_var;\nvar 0..1: y" + i + " :: output_var;\n");
+      model.append("var 1..12: z" + i + ";\nvar 0..30: v" + i + ";\n");
+    }
+    for (int i = 1; i <= 5; i++) {
+      model.append("constraint int_lin_eq([1,3,-1],[x" + i + ",y" + i + ",z" + i + "],0);\n");
+      model.append("constraint array_int_element(z" + i + ",A,v" + i + ");\n");
+      model.append("constraint jacop_table_int([x" + i + ",y" + i + "],[1,1,4,0,2,1,5,0]);\n");
+      for (int j = 1; j < i; j++) {
+        model.append("constraint int_ne(z" + j + ",z" + i + ");\n");
+      }
+    }
+    model.append("solve satisfy;\n");
+    String out = run(model.toString(), "--lcg", "off")[0];
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+  }
+
+  @Test
+  void countStepCostBoundCountsTheNegativeCostsOfTheCountsLeft() throws IOException {
+    // the least cost of the step costs of the counts of [v0, v1, v2] was searched by branch and
+    // bound cut at the cost of the counts chosen so far, which the later steps can lower with a
+    // negative cost: the bound was found as -1 instead of -3, obj >= -2, while v0 = 2 gives -4
+    String model =
+        "var {1,2,3,9}: v0;\n"
+            + "var 1..2: v1 :: output_var;\n"
+            + "var 1..1: v2;\n"
+            + "var 0..3: v3;\n"
+            + "var bool: v4;\n"
+            + "var -1..1: v5 :: output_var;\n"
+            + "var 0..3: v6 :: output_var;\n"
+            + "var bool: v7;\n"
+            + "var -2..1: v8;\n"
+            + "var -6..5: obj :: output_var;\n"
+            + "constraint jacop_count([v0,v1,v2],2,v3);\n"
+            + "constraint int_le_reif(v3,0,v4);\n"
+            + "constraint jacop_if_then_else_int([v4,true],[1,-1],v5);\n"
+            + "constraint jacop_count([v0,v1,v2],1,v6);\n"
+            + "constraint int_le_reif(v6,2,v7);\n"
+            + "constraint jacop_if_then_else_int([v7,true],[-2,1],v8);\n"
+            + "constraint int_lin_eq([1,1,-1],[v5,v8,obj],1);\n"
+            + "constraint int_lin_le([2,1],[v2,v1],3);\n"
+            + "solve minimize obj;\n";
+    String out = run(model, "--lcg", "off")[0];
+    assertTrue(out.contains("obj = -4;\n----------\n=========="), out);
+  }
+
+  void untouchedOutputVariablesAreLabelledBelowTheCompletionSearch() throws IOException {
+    // the completion search of the hidden b0, b2 was a child of the search of the output float uf,
+    // which no constraint touches: for b1 = false the completion fails, and the bisection of uf was
+    // re-explored down to its precision for each failure (no end, UNKNOWN under -t); an untouched
+    // integer of a large domain ran out of time the same way, and under -a every solution was
+    // reported once per assignment of the completion when the free variables were below it
+    String hidden =
+        "var bool: b0;\n" + "var bool: b1;\n" + "var bool: b2;\n" + "var bool: b4 :: output_var;\n";
+    String tail =
+        "constraint bool_eq_reif(b1,b2,b2);\n"
+            + "constraint array_bool_and([b0],false);\n"
+            + "solve :: bool_search([b1], first_fail, indomain_min, complete) satisfy;\n";
+    String floats = hidden + "var 0.0..2.5: uf :: output_var;\n" + tail;
+    for (String lcg : new String[] {"on", "off"}) {
+      String out = run(floats, "--lcg", lcg, "-t", "5000")[0];
+      assertTrue(out.contains("b4 = false;\nuf = 4.547473508864641E-12;\n----------\n"), out);
+    }
+    String ints = hidden + "var 1..400000000: ui :: output_var;\n" + tail;
+    String out = run(ints, "--lcg", "off", "-t", "5000")[0];
+    assertTrue(out.contains("b4 = false;\nui = 1;\n----------\n"), out);
+    String few =
+        "var bool: b0;\n"
+            + "var bool: b1;\n"
+            + "var bool: b2;\n"
+            + "var 1..2: ui :: output_var;\n"
+            + "var 1..2: uj :: output_var;\n"
+            + "constraint bool_eq_reif(b1,b2,b2);\n"
+            + "constraint array_bool_and([b0],false);\n"
+            + "solve :: seq_search([bool_search([b1], input_order, indomain_min, complete),"
+            + " int_search([ui], input_order, indomain_min, complete)]) satisfy;\n";
+    out = run(few, "-a", "--lcg", "off", "-t", "5000")[0];
+    assertTrue(
+        out.contains(
+            "ui = 1;\nuj = 1;\n----------\nui = 1;\nuj = 2;\n----------\nui = 2;\nuj = 1;\n"
+                + "----------\nui = 2;\nuj = 2;\n----------\n==========\n"),
+        out);
+    // without a search annotation of its own (restart_none only) the first search of the slots is
+    // the main search, so the free variables come after the completion there too
+    String restart =
+        "var bool: b0 :: output_var;\n"
+            + "var -1..0: x1 :: output_var;\n"
+            + "var bool: b4;\n"
+            + "var bool: b5;\n"
+            + "constraint int_le_reif(x1,-1,b4);\n"
+            + "constraint bool_or(b4,b5,true);\n"
+            + "solve :: restart_none satisfy;\n";
+    out = run(restart, "-a", "--lcg", "off")[0];
+    assertTrue(
+        out.contains(
+            "b0 = false;\nx1 = -1;\n----------\nb0 = true;\nx1 = -1;\n----------\nb0 = false;\n"
+                + "x1 = 0;\n----------\nb0 = true;\nx1 = 0;\n----------\n==========\n"),
+        out);
+  }
+
+  @Test
+  void diffnPairsUnderLcgTakeNegativeLengthsAsDiffnDoes() throws IOException {
+    // under LCG fixed search a strict diffn of few sparse rectangles became the pairwise
+    // disjunctions, which let a rectangle of length -1 lie apart, while Diffn (without LCG) removes
+    // negative lengths: the pairs gave solutions and Diffn none
+    String model =
+        "var 1..3: y0 :: output_var;\n"
+            + "var -1..1: dy0 :: output_var;\n"
+            + "var 0..1: y1 :: output_var;\n"
+            + "var 1..3: dy1 :: output_var;\n"
+            + "constraint jacop_diff2_strict([2,0], [y0,y1], [0,-1], [dy0,dy1]);\n"
+            + "solve :: int_search([y0,dy0,dy1,y1], input_order, indomain_min, complete)"
+            + " satisfy;\n";
+    String off = run(model, "--lcg", "off", "-a")[0];
+    String on = run(model, "--lcg", "on", "-a")[0];
+    assertTrue(off.contains("=====UNSATISFIABLE====="), off);
+    assertTrue(on.contains("=====UNSATISFIABLE====="), on);
+  }
+
+  @Test
+  void indexFunctionsReadNoElementThatTheLinearIndexElementDetectionReplaced() throws IOException {
+    // k = p + d is read only by its definition and two elements, which the linear index element
+    // detection replaced by a table over p, d, a and b, dropping k; the index function detection
+    // then read the replaced elements as functions of k and rewrote p = a * b as a sum over the
+    // values of k, now free: b = -2 forces k = 1, a = -1 and p = 2, but p = -3 was reported
+    String model =
+        "var 1..3: k;\n"
+            + "var -1..3: a;\n"
+            + "var -2..3: b :: output_var;\n"
+            + "var -6..9: p :: output_var;\n"
+            + "var -8..9: d :: output_var;\n"
+            + "constraint array_int_element(k,[-1,3,-1],a);\n"
+            + "constraint array_int_element(k,[-2,1,3],b);\n"
+            + "constraint int_times(a,b,p);\n"
+            + "constraint int_lin_eq([1,-1,-1],[k,p,d],0);\n"
+            + "constraint int_eq(b,-2);\n"
+            + "constraint int_ne(p,2);\n"
+            + "solve satisfy;\n";
+    String out = run(model, "--lcg", "off")[0];
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+  }
+
+  @Test
+  void zeroSumKeepsAnOutputSumWhenAllSolutionsAreSearched() throws IOException {
+    // s = x + y is used otherwise only by b -> s <= 0, so the zero-sum detection dropped the sum
+    // and gave the output s its value from x and y when printing; all solutions are told apart by
+    // the printed variables, of which s was then none, so -a printed s = 0 only
+    String model =
+        "var 0..2: x;\n"
+            + "var 0..1: y;\n"
+            + "var 0..3: s :: output_var;\n"
+            + "var bool: b;\n"
+            + "var bool: c;\n"
+            + "constraint int_lin_eq([1,1,-1],[x,y,s],0);\n"
+            + "constraint int_le_imp(s,0,b);\n"
+            + "constraint bool_clause([b,c],[]);\n"
+            + "solve satisfy;\n";
+    String out = run(model, "-a")[0];
+    for (int v = 0; v <= 3; v++) {
+      assertTrue(out.contains("s = " + v + ";\n"), out);
+    }
+  }
+
+  @Test
+  void minOfSumsTakesNoSumThatTheLinearIndexElementDetectionReplaced() throws IOException {
+    // z = x + k also defines the index k = z - x of an element, which the linear index element
+    // detection replaced by a table over x, z and v, dropping k; the merge of sums into minimums
+    // then took the replaced z = x + k as its part, posted min(x + k, w) over the free k and
+    // dropped z: v = 5 and x = 0 force k = 1, z = 1 and m = 1, but m = 2 was reported
+    String model =
+        "var 0..2: x :: output_var;\n"
+            + "var 1..3: k;\n"
+            + "var 1..5: z;\n"
+            + "var 0..5: v :: output_var;\n"
+            + "var 0..9: w :: output_var;\n"
+            + "var 0..9: m :: output_var;\n"
+            + "constraint array_int_element(k,[5,0,3],v);\n"
+            + "constraint int_lin_eq([1,1,-1],[x,k,z],0);\n"
+            + "constraint int_min(z,w,m);\n"
+            + "constraint int_eq(v,5);\n"
+            + "constraint int_eq(x,0);\n"
+            + "constraint int_ne(m,1);\n"
+            + "constraint int_eq(w,9);\n"
+            + "solve satisfy;\n";
+    String out = run(model, "--lcg", "off")[0];
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+  }
+
+  @Test
+  void disjunctiveListsDifferKeepsABooleanThatADeclarationEquates() throws IOException {
+    // b1 = (x1 != x2) occurs only in its definition and one clause of lists that differ, but the
+    // output o is declared equal to it; the clauses became an AllDifferentLists and b1 was dropped
+    // with its definition, so o was printed false where x1 < x2 forces it true (UNSAT under LCG)
+    String model =
+        "var 1..2: x1 :: output_var;\n"
+            + "var 1..2: y1 :: output_var;\n"
+            + "var 1..2: x2 :: output_var;\n"
+            + "var 1..2: y2 :: output_var;\n"
+            + "var 1..2: x3 :: output_var;\n"
+            + "var 1..2: y3 :: output_var;\n"
+            + "var bool: b1;\n"
+            + "var bool: b2;\n"
+            + "var bool: b3;\n"
+            + "var bool: b4;\n"
+            + "var bool: b5;\n"
+            + "var bool: b6;\n"
+            + "var bool: o :: output_var = b1;\n"
+            + "constraint int_ne_reif(x1,x2,b1);\n"
+            + "constraint int_ne_reif(y1,y2,b2);\n"
+            + "constraint bool_clause([b1,b2],[]);\n"
+            + "constraint int_ne_reif(x1,x3,b3);\n"
+            + "constraint int_ne_reif(y1,y3,b4);\n"
+            + "constraint bool_clause([b3,b4],[]);\n"
+            + "constraint int_ne_reif(x2,x3,b5);\n"
+            + "constraint int_ne_reif(y2,y3,b6);\n"
+            + "constraint bool_clause([b5,b6],[]);\n"
+            + "constraint int_lt(x1,x2);\n"
+            + "solve satisfy;\n";
+    for (String[] options : new String[][] {{"--lcg", "off"}, {"--lcg", "on"}}) {
+      String out = run(model, options)[0];
+      assertTrue(out.contains("o = true;\n"), out);
+    }
+  }
+
+  @Test
+  void partialCopiesKeepACopyWhoseDefaultLiteralADeclarationEquates() throws IOException {
+    // z2 = b ? x : 2 is a copy of z1, so it became an alias of z1 and its three constraints were
+    // skipped, which left c2 free; but o2 is declared equal to c2, and not b forces c2 while x <= 1
+    // excludes b /\ c2, so o2 = not b: -a printed four solutions instead of two
+    String model =
+        "var -2..1: x;\n"
+            + "var bool: b :: output_var;\n"
+            + "var -2..2: z1;\n"
+            + "var -2..2: z2;\n"
+            + "var bool: c1;\n"
+            + "var bool: c2;\n"
+            + "var bool: o1 :: output_var = c1;\n"
+            + "var bool: o2 :: output_var = c2;\n"
+            + "constraint int_eq_imp(z1,x,b);\n"
+            + "constraint int_eq_imp(z1,2,c1);\n"
+            + "constraint bool_clause([c1,b],[]);\n"
+            + "constraint int_eq_imp(z2,x,b);\n"
+            + "constraint int_eq_imp(z2,2,c2);\n"
+            + "constraint bool_clause([c2,b],[]);\n"
+            + "solve satisfy;\n";
+    String out = run(model, "-a")[0];
+    assertEquals(2, out.split("----------", -1).length - 1, out);
+    assertTrue(out.contains("b = false;\no1 = true;\no2 = true;\n"), out);
+    assertTrue(out.contains("b = true;\no1 = false;\no2 = false;\n"), out);
+  }
+
+  @Test
+  void indexFunctionClausesKeepALiteralThatADeclarationEquates() throws IOException {
+    // q -> i - y <= -1 cannot hold (i >= 0 > y + 1), so the clause p \/ q forces p and q is
+    // false; the clause was unfolded over the values of k and its comparisons were not posted,
+    // which left q free although the output o is declared equal to it: -a printed o = true too
+    String model =
+        "var 1..3: k :: output_var;\n"
+            + "var bool: e;\n"
+            + "var 0..1: i;\n"
+            + "var -2..-1: y;\n"
+            + "var bool: p;\n"
+            + "var bool: q;\n"
+            + "var bool: o :: output_var = q;\n"
+            + "constraint int_eq_reif(k,1,e);\n"
+            + "constraint bool2int(e,i);\n"
+            + "constraint int_le_imp(i,0,p);\n"
+            + "constraint int_lin_le_imp([1,-1],[i,y],-1,q);\n"
+            + "constraint bool_clause([p,q],[]);\n"
+            + "solve satisfy;\n";
+    String out = run(model, "-a")[0];
+    assertEquals(2, out.split("----------", -1).length - 1, out);
+    assertFalse(out.contains("o = true;"), out);
   }
 }
