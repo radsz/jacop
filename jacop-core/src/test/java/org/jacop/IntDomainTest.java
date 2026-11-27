@@ -1137,4 +1137,15 @@ class IntDomainTest {
     assertThat(IntervalDomain.emptyDomain.intersectAdapt(0, 0)).isEqualTo(IntDomain.NONE);
     assertThat(IntervalDomain.emptyDomain.isEmpty()).isTrue();
   }
+
+  @Test
+  void intersectOfAnEmptyIntervalDomainIsANewDomain() {
+    // an empty receiver returned itself, so changing the result changed the receiver
+    IntervalDomain empty = new IntervalDomain();
+    IntDomain byBounds = empty.intersect(1, 2);
+    assertThat(byBounds).isNotSameAs(empty);
+    assertThat(byBounds.isEmpty()).isTrue();
+    byBounds.unionAdapt(1, 1);
+    assertThat(empty.isEmpty()).isTrue();
+  }
 }
