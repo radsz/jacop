@@ -10245,11 +10245,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  // the finest precision of the float searches made; a sequence of float searches of different
+  // precisions proves the optimum to the finest (as free search does, keepAnnotationPrecision):
+  // after a run the precision in force is the one of the outermost float search, and
+  // seq_search([float_search 0.05, float_search 1e-6]) ended 4 % above the optimum
+  private double floatSearchPrecision = Double.POSITIVE_INFINITY;
+
   // the precision of the optimum: relative to its magnitude, as the gaps of Ibex and SCIP
   // the precision is read at each use: the search sets the precision of its annotation when it
   // starts
-  private static double gap(double best) {
-    return FloatDomain.precision() * Math.max(1, Math.abs(best));
+  private double gap(double best) {
+    return Math.min(FloatDomain.precision(), floatSearchPrecision) * Math.max(1, Math.abs(best));
   }
 
   private static final boolean FLOAT_BISECT_START =
@@ -11718,6 +11724,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       label.setInitializeListener(new PrecisionSetting(options.getPrecision()));
     } else {
       label.setInitializeListener(new PrecisionSetting(si.precision));
+    }
+    double precision = options.precision() ? options.getPrecision() : si.precision;
+    if (precision > 0) {
+      floatSearchPrecision = Math.min(floatSearchPrecision, precision);
     }
     label.setExitListener(new PrecisionRestore(label));
     attachFloatCid(label, si.vars());

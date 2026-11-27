@@ -9978,4 +9978,23 @@ class FlatzincFrontEndTest {
     assertTrue(out.contains("obj = -5.08333"), out);
     assertTrue(out.contains("=========="), out);
   }
+
+  @Test
+  void floatOptimumOfASequenceIsProvedToItsFinestPrecision() throws IOException {
+    // the bisection of the cost proved the optimum to the precision in force after a run, the one
+    // of the outermost float search (0.05): "==========" with obj = -4.878 against the optimum
+    // -5.0833 at f0 = -5/6, although the second float search splits f0 to 1e-6
+    String model =
+        "var -1.0..0.0: f0 :: output_var;\n"
+            + "var -10.0..10.0: a0;\n"
+            + "var -1000.0..1000.0: obj :: output_var;\n"
+            + "constraint float_times(f0, f0, a0);\n"
+            + "constraint float_lin_eq([5.0,3.0,-1.0], [f0,a0,obj], 3.0);\n"
+            + "solve :: seq_search([float_search([f0], 0.05, input_order, indomain_reverse_split,"
+            + " complete), float_search([f0], 1e-06, smallest, indomain_reverse_split, complete)])"
+            + " minimize obj;\n";
+    String out = run(model, "--lcg", "off")[0];
+    assertTrue(out.contains("obj = -5.0833"), out);
+    assertTrue(out.contains("=========="), out);
+  }
 }
