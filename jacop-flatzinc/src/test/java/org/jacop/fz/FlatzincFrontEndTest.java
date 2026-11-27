@@ -2423,6 +2423,44 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void fixedTasteUnderProofKeepsLcg() throws IOException {
+    // 24 queens in the annotation's order. Under --proof the fixed-search taste stopped LCG after
+    // 1 ms, its search returned and closed the proof, and LCG went on after a taste it did not keep
+    // (ratio 10^6): the next proof step threw "Stream closed". Under --proof LCG keeps the search.
+    int n = 24;
+    StringBuilder fzn = new StringBuilder();
+    StringBuilder q = new StringBuilder();
+    for (int i = 0; i < n; i++) {
+      fzn.append("var 1..").append(n).append(": q").append(i).append(":: output_var;\n");
+      q.append(i == 0 ? "" : ",").append('q').append(i);
+    }
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        fzn.append("constraint int_ne(q").append(i).append(",q").append(j).append(");\n");
+        fzn.append("constraint int_lin_ne([1,-1],[q").append(i).append(",q").append(j);
+        fzn.append("],").append(j - i).append(");\n");
+        fzn.append("constraint int_lin_ne([1,-1],[q").append(i).append(",q").append(j);
+        fzn.append("],").append(i - j).append(");\n");
+      }
+    }
+    fzn.append("solve :: int_search([").append(q).append("],input_order,indomain_min,complete)");
+    fzn.append(" satisfy;\n");
+    String prefix = tmp.resolve("taste").toString();
+    String out =
+        run(
+            fzn.toString(),
+            "--proof",
+            prefix,
+            "-t",
+            "60000",
+            "--free-config",
+            "lcg-fixed-at=0.00001,lcg-fixed-ratio=1000000,lcg-fixed-share=0.001")[0];
+    assertTrue(out.contains("----------"), out);
+    String proof = Files.readString(Path.of(prefix + ".pbp"), StandardCharsets.UTF_8);
+    assertTrue(proof.contains("conclusion SAT"), proof);
+  }
+
+  @Test
   void selfCountingUnderProofIsProved() throws IOException {
     // A magic sequence of length 4: x[i] counts the value i in x, as in nmseq. The cardinality
     // detector's GCC had counters among its counted variables, which the OPB model left out, so
