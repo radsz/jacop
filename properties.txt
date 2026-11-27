@@ -737,6 +737,13 @@ unless stated otherwise):
   otherwise); default false.
 - org.jacop.fz.dominance: Lee-Zhong dominance nogoods at presolve: unset
   gives on for fixed search and off under -f, true or false overrides.
+- org.jacop.fz.coveringDominance: column dominance of covering models at
+  presolve, for an objective under lazy clause generation: a 0/1 column
+  in the objective and positively in clauses only is fixed to 0 when
+  another such column of no higher cost is in all its clauses; default
+  true.
+- org.jacop.fz.coveringDominance.min: the fewest dominated columns for
+  which the rule fixes them; default 100.
 - jacop.dominance.budget, jacop.dominance.time: the work budget (steps)
   and the time (ms) of the dominance rule; default 50000000 and 1000.
 - jacop.dominance.domain, jacop.dominance.nogoods: the most values of a
@@ -1210,6 +1217,9 @@ Rows and encodings:
   default 20000 and 2000.
 - org.jacop.lp.pairCliques: conflicts of pairs of 0/1 literals merged
   into clique rows; default true.
+- org.jacop.lp.foldFixed: when at least this many distinct columns of
+  the rows are fixed at the root, the relaxation takes them as constants
+  and leaves out the rows of constants; default 1000, 0 turns it off.
 - org.jacop.lp.subsetCardinalities: in the root refutations, the
   clauses over every subset of m literals of a set of n literals (the
   binomial encoding of at least n - m + 1 true) are merged into that
