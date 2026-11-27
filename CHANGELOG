@@ -9588,6 +9588,54 @@ Version 5.0 (unreleased)
    node (111 of 35,753 nodes missed it). The 25 FlatZinc test models with
    count_values: same search or same results, total time 202 -> 201 s.
 
+524. The JaLP presolve finds dominated columns over propagated dual bounds
+   (E. D. Andersen and K. D. Andersen, "Presolving in linear
+   programming", Mathematical Programming 71 (1995) 221-245, section 3.5;
+   the implied dual row bounds of HiGHS). Before, only a column singleton
+   without an upper or lower bound bounded the dual of its row. Now every
+   column without one gives a linear inequality over the duals whose
+   activity bounds tighten them, in rounds. A column bound that its rows
+   imply also counts as absent (the bound of a column singleton within
+   the row's limit, of other columns beyond a margin), when it is implied
+   only from bounds that stay. The dominated columns are found over the
+   true costs, and weakly dominated ones (reduced cost possibly 0) are
+   fixed too when no dual bound came from them. The pass limit of the
+   presolve counts only the passes in which the rows and columns change,
+   so that rules found one at a time no longer keep the later ones out
+   (scrs8: 258 aggregations had never run). Over the 687 LPs of the LP
+   bench, 73 presolve smaller and 1 larger: woodw 5,344 -> 4,066 columns
+   (HiGHS 4,083), irp 19,370 -> 19,013 (HiGHS 19,035). At 120 s, 0 wrong
+   answers, 649 instead of 648 solved and a total of 6,866 -> 6,747 s
+   (satellites2-40 from the time limit to 23 s).
+   -Dorg.jacop.jalp.presolveDualBounds=false,
+   -Dorg.jacop.jalp.presolveImpliedFree=false and
+   -Dorg.jacop.jalp.presolveWeakDominated=false turn the parts off.
+
+525. The JaLP presolve fixes a parallel column of another cost when its
+   twin can take up any move of it without a bound (HiGHS
+   detectParallelRowsAndCols): with column k lambda times column j,
+   x_j + lambda t and x_k - t keep every row, so the cheaper direction
+   drives one of them to its bound. Before, parallel columns were merged
+   only when their costs had the ratio of their entries. sgpf5y6:
+   58,528 -> 40,841 columns (HiGHS 39,029). With entry 524, the excess of
+   JaLP's presolved sizes over HiGHS's on the LP bench falls from 211,938
+   to 162,586 rows and columns, and the presolve changes the root LP of
+   15 of the 88 wide-set runs that reach JaLP; at 240 s, two rounds
+   against develop: fixed search 0.997 and 0.998 of the total time, -f
+   1.005 and 0.982, the same instances solved.
+   -Dorg.jacop.jalp.presolveParallelDominated=false turns it off.
+
+526. The JaLP presolve can remove dependent equations (Andersen and
+   Andersen 1995, section 3.6; HiGHS removeDependentEquations): the
+   equations with their right-hand sides are factorized as the columns of
+   a matrix, and one left without a pivot is a combination of the others
+   with the same right-hand side. eq_eq20 20 -> 7 rows, qap10 1,820 ->
+   1,547 (HiGHS 1,548), nug08-3rd 19,728 -> 18,261 (HiGHS 18,268). It is
+   off by default: on the 147 LPs of the LP bench where it removes rows,
+   the simplex took 7.6 % longer at 120 s (2,085 -> 2,244 s; dano3 44k ->
+   72k pivots after one row went, pds-100 lost).
+   -Dorg.jacop.jalp.presolveDependent=true turns it on.
+
 Version 4.11
 =============
 
