@@ -81,6 +81,9 @@ public final class CountStepCostBound {
   /** At most this many maximum flow checks over the whole model. */
   static final int MAX_CHECKS = 50_000;
 
+  /** The constraints that state a step cost. */
+  private static final Set<String> STEP_KINDS = Set.of("jacop_if_then_else_int");
+
   /** At most this many counted values with a cost in one array. */
   static final int MAX_COUNTS = 16;
 
@@ -151,7 +154,8 @@ public final class CountStepCostBound {
    * @return the bound posted on the counted terms, 0 if none.
    */
   public long detect(SimpleNode astTree, Set<SimpleNode> skipped, IntVar objective) {
-    if (objective == null) {
+    // a step cost is read from an if-then-else: without one the pass finds nothing
+    if (objective == null || !support.hasConstraint(astTree, STEP_KINDS)) {
       return 0;
     }
     List<ASTConstElem> all = FzItems.constraints(astTree, skipped);

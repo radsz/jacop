@@ -21,11 +21,13 @@ class ColumnRowsTest {
 
   private final boolean saved = LinearRelaxation.columnRowsOn;
   private final boolean savedTail = LinearRelaxation.CLAUSE_ROWS;
+  private final int savedTrialRows = LinearRelaxation.trialRows;
 
   @AfterEach
   void restore() {
     LinearRelaxation.columnRowsOn = saved;
     LinearRelaxation.CLAUSE_ROWS = savedTail;
+    LinearRelaxation.trialRows = savedTrialRows;
   }
 
   // a path of n legs from 0 to k on a line, each leg of length max - min of its two ends, and
@@ -33,6 +35,8 @@ class ColumnRowsTest {
   private static double rootBound(int n, int k, boolean columnRows) {
     LinearRelaxation.columnRowsOn = columnRows;
     LinearRelaxation.CLAUSE_ROWS = columnRows;
+    // only the share is tried, as when the candidates are over trialRows
+    LinearRelaxation.trialRows = 0;
     Store store = new Store();
     IntVar[] x = new IntVar[n + 1];
     for (int i = 0; i <= n; i++) {

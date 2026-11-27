@@ -33,6 +33,7 @@ package org.jacop.jasat.lcg;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -40,6 +41,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.function.BiFunction;
@@ -431,6 +433,29 @@ class VeriPbProofTest {
     RupChecker checker = new RupChecker();
     assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
     assertThat(checker.conclusion).isEqualTo("BOUNDS -12 -12");
+  }
+
+  // a table of many tuples on a wide domain: writing it scanned the whole domain for every cell
+  // and took minutes, so a run with --proof spent its time limit before the search
+  @Test
+  void wideTableIsWrittenWithoutScanningTheDomainPerCell() {
+    Store store = new Store();
+    int n = 30000;
+    int[][] tuples = new int[n][];
+    for (int t = 0; t < n; t++) {
+      tuples[t] = new int[] {t + 1, n - t, (t + 1) % 7};
+    }
+    IntVar x = new IntVar(store, "x", 1, n);
+    IntVar z = new IntVar(store, "z", 1, n);
+    IntVar y = new IntVar(store, "y", 0, 6);
+    store.impose(new HybridTable(new IntVar[] {x, z, y}, tuples));
+    LcgSolver lcg = withProof(store);
+    assertTimeoutPreemptively(
+        Duration.ofSeconds(10), () -> assertThat(lcg.minimize(x)).isEqualTo(CdclSolver.SAT));
+    assertThat(lcg.value(x)).isEqualTo(1);
+    // the encoding itself is checked by tableOptimumIsProved; the model of this one is too big for
+    // a quick check by RupChecker
+    assertThat(proof.toString(StandardCharsets.US_ASCII)).contains("conclusion BOUNDS 1 1");
   }
 
   @Test
