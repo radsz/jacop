@@ -53,6 +53,7 @@ import org.jacop.constraints.LinearForms;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.table.HybridTable;
+import org.jacop.core.AffineView;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -758,6 +759,18 @@ public final class DominanceNogoods {
       i = vars.size();
       index.put(v, i);
       vars.add((IntVar) v);
+      if (v instanceof AffineView view && !view.base().singleton()) {
+        // a view moves with its base: the row view - a * base = b ties them, as the equality the
+        // presolve substituted did
+        int base = id(view.base());
+        Row row = new Row();
+        row.origin = "AffineView";
+        row.relation = EQ;
+        row.constant = view.offset();
+        row.linVars = new int[] {i, base};
+        row.linWeights = new long[] {1, -(long) view.factor()};
+        rows.add(row);
+      }
     }
     return i;
   }

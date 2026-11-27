@@ -222,7 +222,24 @@ final class FznModel {
 
   /** A fresh parameter name. */
   String paramName(String prefix) {
-    return prefix + "_XCSP_" + introduced++ + "_";
+    return reserve(prefix + "_XCSP_" + introduced++ + "_");
+  }
+
+  /**
+   * The given name, with underscores appended until no variable of the model and no other reserved
+   * name has it: an XCSP3 identifier may be a name the translation generates, such as T_XCSP_0_ or
+   * XCSP_ARRAY_0_.
+   *
+   * @param name the name wanted
+   * @return the name reserved
+   */
+  String reserve(String name) {
+    String n = name;
+    while (names.containsKey(n)) {
+      n = n + "_";
+    }
+    names.put(n, null);
+    return n;
   }
 
   /** Writes a parameter declaration line (it must end with ';'). */
