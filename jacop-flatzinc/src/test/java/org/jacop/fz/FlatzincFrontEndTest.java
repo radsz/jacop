@@ -10083,4 +10083,23 @@ class FlatzincFrontEndTest {
       assertTrue(out.contains("n = 0;\nc = false;\n"), out);
     }
   }
+
+  @Test
+  void optionalCumulativeTakesALimitThatMayBeNegative() throws IOException {
+    // cumulative over optional tasks with var -1..1: b: without lazy clause generation the
+    // CumulativeOptional constructor rejected the limit ("Resource limit must be >= 0"), while
+    // jacop_cumulative reads a negative limit as max(b, 0), which holds while no task runs
+    String model =
+        "var 0..2: s :: output_var;\n"
+            + "var bool: o :: output_var;\n"
+            + "var -1..1: b :: output_var;\n"
+            + "constraint jacop_cumulative_optional([s],[1],[1],b,[o]);\n"
+            + "solve satisfy;\n";
+    for (String[] options : new String[][] {{"-a", "--lcg", "off"}, {"-a", "--lcg", "on"}}) {
+      String out = run(model, options)[0];
+      assertFalse(out.contains("Error"), out);
+      assertEquals(12, out.split("----------", -1).length - 1, out);
+      assertFalse(out.contains("o = true;\nb = 0;"), out);
+    }
+  }
 }
