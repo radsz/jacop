@@ -238,6 +238,7 @@ setup to run configuration. -->
                                 <xorfuzz.trials>75</xorfuzz.trials>
                                 <symmetry.trials>150</symmetry.trials>
                                 <freesearch.every>3</freesearch.every>
+                                <defaults.instances>400</defaults.instances>
                             </systemPropertyVariables>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -499,6 +500,7 @@ setup to run configuration. -->
                                 <include>**/GoalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
+                                <include>**/MinizincDefaultSettingsTest.java</include>
                                 <include>**/MinizincPortfolioTest.java</include>
                                 <include>**/PortfolioSettingsTest.java</include>
                                 <include>**/PortfolioOneParseTest.java</include>
@@ -577,6 +579,7 @@ setup to run configuration. -->
                                 <xorfuzz.trials>75</xorfuzz.trials>
                                 <symmetry.trials>150</symmetry.trials>
                                 <freesearch.every>3</freesearch.every>
+                                <defaults.instances>1000</defaults.instances>
                             </systemPropertyVariables>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -844,6 +847,7 @@ setup to run configuration. -->
                                 <include>**/GoalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
+                                <include>**/MinizincDefaultSettingsTest.java</include>
                                 <include>**/MinizincPortfolioTest.java</include>
                                 <include>**/PortfolioSettingsTest.java</include>
                                 <include>**/PortfolioOneParseTest.java</include>
@@ -1162,6 +1166,7 @@ setup to run configuration. -->
                                 <include>**/GoalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
+                                <include>**/MinizincDefaultSettingsTest.java</include>
                                 <include>**/MinizincPortfolioTest.java</include>
                                 <include>**/PortfolioSettingsTest.java</include>
                                 <include>**/PortfolioOneParseTest.java</include>
@@ -1448,6 +1453,7 @@ setup to run configuration. -->
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
+                                <include>**/MinizincDefaultSettingsTest.java</include>
                                 <include>**/MinizincPortfolioTest.java</include>
                                 <include>**/PortfolioSettingsTest.java</include>
                                 <include>**/PortfolioOneParseTest.java</include>
