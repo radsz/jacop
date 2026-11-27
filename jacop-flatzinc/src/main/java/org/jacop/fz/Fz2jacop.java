@@ -95,6 +95,12 @@ public class Fz2jacop {
     // indomain_random, on_restart) repeat from run to run
     Store.setSeed(0);
 
+    if (args.length == 0) {
+      // as Options does on the command line, without exiting the JVM
+      IO.println("fz2jacop: no model file specified");
+      IO.println("fz2jacop: use --help for more information.");
+      return 1;
+    }
     Options opt;
     try {
       opt = new Options(args);
@@ -154,7 +160,12 @@ public class Fz2jacop {
     // the model file is closed when solving ends, also after an error (an open file cannot be
     // deleted on Windows)
     int status = 1;
-    try (FileInputStream file = opt.getFile()) {
+    // a model file that is not found ends this run, not the JVM (callMain)
+    FileInputStream model = opt.openFile();
+    if (model == null) {
+      return 1;
+    }
+    try (FileInputStream file = model) {
       status = solve(opt, file, null);
     } catch (IOException e) {
       log.error("Failed to close {}", opt.getFileName(), e);

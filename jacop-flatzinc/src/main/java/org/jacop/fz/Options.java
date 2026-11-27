@@ -992,11 +992,24 @@ public class Options {
    * @return file containing flatzinc description.
    */
   public FileInputStream getFile() {
+    if (openFile() == null) {
+      System.exit(1);
+    }
+
+    return file;
+  }
+
+  /**
+   * Opens the file containing the flatzinc description, or reports that it is not found.
+   *
+   * @return the file, or null when it is not found
+   */
+  FileInputStream openFile() {
     try {
       file = new FileInputStream(fileName);
     } catch (FileNotFoundException _) {
       IO.println("% Flatzinc2JaCoP Parser Version 1.0:  File " + fileName + " not found.");
-      System.exit(1);
+      return null;
     }
 
     return file;

@@ -10029,4 +10029,32 @@ class FlatzincFrontEndTest {
     assertTrue(out.contains("k = 8;"), out);
     assertTrue(out.contains("=========="), out);
   }
+
+  @Test
+  void callMainReturnsAtAMissingModelFile() throws IOException {
+    // callMain promises to solve without exiting the JVM, but a model file that was not found, or
+    // no argument at all, ran System.exit(1): a Java program solving several models in turn ended
+    // there, and so did the test run
+    Path missing = tmp.resolve("no-such-model.fzn");
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+    int missingStatus;
+    int emptyStatus;
+    try (PrintStream capture = new PrintStream(out, true, StandardCharsets.UTF_8)) {
+      System.setOut(capture);
+      missingStatus = new Fz2jacop().callMain(new String[] {missing.toString()});
+      emptyStatus = new Fz2jacop().callMain(new String[0]);
+    } finally {
+      System.setOut(originalOut);
+    }
+    String printed = out.toString(StandardCharsets.UTF_8);
+    assertEquals(1, missingStatus, printed);
+    assertEquals(1, emptyStatus, printed);
+    assertTrue(printed.contains("File " + missing + " not found."), printed);
+    assertTrue(printed.contains("fz2jacop: no model file specified"), printed);
+    // the next model is solved as in a fresh JVM
+    assertTrue(
+        run("var 1..3: x :: output_var;\nconstraint int_eq(x, 2);\nsolve satisfy;\n")[0].contains(
+            "x = 2;"));
+  }
 }
