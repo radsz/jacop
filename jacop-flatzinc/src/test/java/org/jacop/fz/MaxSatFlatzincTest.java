@@ -195,6 +195,93 @@ class MaxSatFlatzincTest {
         fired > 20, "the local search runs on the MaxSAT models: " + fired + ", unsat " + unsat);
   }
 
+  // a model whose cost is the number of true x_v, with x_a + x_b <= 1 on disjoint pairs of cost
+  // terms and random hard clauses that mostly ask for true literals, as hanoi5 of the PB
+  // competition 2016; the local search must take the pairs as hard clauses
+  private static Model pairModel(Random random) {
+    int n = 8 + 2 * random.nextInt(4);
+    List<int[]> hard = new ArrayList<>();
+    StringBuilder fzn = new StringBuilder();
+    StringBuilder is = new StringBuilder();
+    StringBuilder ws = new StringBuilder();
+    for (int v = 0; v < n; v++) {
+      fzn.append("var bool: x_").append(v).append(":: output_var;\n");
+      fzn.append("var 0..1: i_").append(v).append(";\n");
+    }
+    fzn.append("var 0..1000: z:: output_var;\n");
+    for (int v = 0; v < n; v++) {
+      fzn.append("constraint bool2int(x_").append(v).append(",i_").append(v).append(");\n");
+      is.append(",i_").append(v);
+      ws.append(",1");
+    }
+    for (int v = 0; v + 1 < n; v += 2) {
+      hard.add(new int[] {2 * v + 1, 2 * (v + 1) + 1});
+      fzn.append("constraint int_lin_le([1,1],[i_").append(v).append(",i_").append(v + 1);
+      fzn.append("],1);\n");
+    }
+    int clauses = n / 2 + random.nextInt(n);
+    for (int i = 0; i < clauses; i++) {
+      int[] c = clause(random, n, 3);
+      for (int j = 0; j < c.length; j++) {
+        c[j] &= random.nextInt(4) == 0 ? ~0 : ~1;
+      }
+      hard.add(c);
+      fzn.append("constraint bool_clause([").append(lits(c, 0, null)).append("],[");
+      fzn.append(lits(c, 1, null)).append("]);\n");
+    }
+    fzn.append("constraint int_lin_eq([-1").append(ws).append("],[z").append(is);
+    fzn.append("],0):: defines_var(z);\n");
+    fzn.append("solve minimize z;\n");
+    List<int[]> soft = new ArrayList<>();
+    int[] w = new int[n];
+    for (int v = 0; v < n; v++) {
+      soft.add(new int[] {2 * v + 1});
+      w[v] = 1;
+    }
+    int opt = Integer.MAX_VALUE;
+    for (int a = 0; a < (1 << n); a++) {
+      boolean ok = true;
+      for (int[] c : hard) {
+        ok &= satisfied(c, a);
+      }
+      if (ok) {
+        opt = Math.min(opt, Integer.bitCount(a));
+      }
+    }
+    return new Model(fzn.toString(), n, hard, soft, w, opt);
+  }
+
+  @Test
+  void localSearchTakesClauseShapedRowsAsHard() throws IOException {
+    Random random = new Random(23);
+    int fired = 0;
+    for (int trial = 0; trial < 24; trial++) {
+      Model model = pairModel(random);
+      if (model.opt() == Integer.MAX_VALUE) {
+        continue;
+      }
+      // with no patience, an assignment the local search did not reach at once comes from JaSAT
+      String[][] modes = {
+        {"--lcg", "on", "-f", "--search-statistics"},
+        {"--lcg", "on", "-f", "--search-statistics", "--free-config", "maxsat-patience=0"}
+      };
+      for (String[] mode : modes) {
+        String out = run(model.fzn(), mode);
+        String tag = "trial " + trial + " " + Arrays.toString(mode) + "\n" + model.fzn() + out;
+        assertTrue(out.contains("=========="), tag);
+        assertEquals(model.opt(), lastCost(out), tag);
+        checkSolutions(model, out, tag);
+        Matcher best = Pattern.compile("maxsatBest=(\\d+)").matcher(out);
+        if (best.find()) {
+          // blind to the pairs, the search reported costs below the optimum
+          assertTrue(Integer.parseInt(best.group(1)) >= model.opt(), tag);
+          fired++;
+        }
+      }
+    }
+    assertTrue(fired > 20, "the local search found assignments: " + fired);
+  }
+
   private static int lastCost(String out) {
     Matcher m = Pattern.compile("(?m)^z = (\\d+);").matcher(out);
     int cost = -1;

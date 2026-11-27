@@ -400,7 +400,7 @@ final class PureClauseModel {
   // 3-colouring formulas (3col-left3reg: x + y <= 1 on each edge and colour, exactly one colour per
   // vertex), is a CNF: JaSAT eliminates 6,988 of its 7,089 variables and refutes it in 4 s, where
   // lazy clause generation took 31 s
-  private static List<IntVar[][]> clausesOf(Constraint c) {
+  static List<IntVar[][]> clausesOf(Constraint c) {
     if (CLAUSE_SHAPED <= 0) {
       return null;
     }
