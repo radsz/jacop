@@ -9632,4 +9632,40 @@ class FlatzincFrontEndTest {
     String out = run(model, "--lcg", "off")[0];
     assertTrue(out.contains("=====UNSATISFIABLE====="), out);
   }
+
+  @Test
+  void disjunctiveListsDifferKeepsABooleanThatADeclarationEquates() throws IOException {
+    // b1 = (x1 != x2) occurs only in its definition and one clause of lists that differ, but the
+    // output o is declared equal to it; the clauses became an AllDifferentLists and b1 was dropped
+    // with its definition, so o was printed false where x1 < x2 forces it true (UNSAT under LCG)
+    String model =
+        "var 1..2: x1 :: output_var;\n"
+            + "var 1..2: y1 :: output_var;\n"
+            + "var 1..2: x2 :: output_var;\n"
+            + "var 1..2: y2 :: output_var;\n"
+            + "var 1..2: x3 :: output_var;\n"
+            + "var 1..2: y3 :: output_var;\n"
+            + "var bool: b1;\n"
+            + "var bool: b2;\n"
+            + "var bool: b3;\n"
+            + "var bool: b4;\n"
+            + "var bool: b5;\n"
+            + "var bool: b6;\n"
+            + "var bool: o :: output_var = b1;\n"
+            + "constraint int_ne_reif(x1,x2,b1);\n"
+            + "constraint int_ne_reif(y1,y2,b2);\n"
+            + "constraint bool_clause([b1,b2],[]);\n"
+            + "constraint int_ne_reif(x1,x3,b3);\n"
+            + "constraint int_ne_reif(y1,y3,b4);\n"
+            + "constraint bool_clause([b3,b4],[]);\n"
+            + "constraint int_ne_reif(x2,x3,b5);\n"
+            + "constraint int_ne_reif(y2,y3,b6);\n"
+            + "constraint bool_clause([b5,b6],[]);\n"
+            + "constraint int_lt(x1,x2);\n"
+            + "solve satisfy;\n";
+    for (String[] options : new String[][] {{"--lcg", "off"}, {"--lcg", "on"}}) {
+      String out = run(model, options)[0];
+      assertTrue(out.contains("o = true;\n"), out);
+    }
+  }
 }

@@ -67,7 +67,7 @@ import org.jacop.fz.SimpleNode;
  * time until the rest all differ pairwise (a greedy clique), and that clique, if it has at least
  * {@link #MIN_LISTS} lists, gets one {@link AllDifferentLists}; the disjunctions inside it are not
  * posted, the others are. A clause qualifies only when each of its Booleans occurs in no other
- * constraint, the solve item and the output.
+ * constraint, the solve item, the output and no declaration of a variable equal to it.
  *
  * <p>Propagation: {@link AllDifferentLists} removes the last free value of a list that would make
  * it equal to a fixed list, as the clauses do by unit propagation (F. Boussemart, C. Lecoutre, G.
@@ -283,7 +283,8 @@ public class DisjunctiveListsDifferDetector implements ParserTreeConstants {
           || !seen.add(b[t])
           || occurrences.getOrDefault(b[t], 0) != 2
           || pinned.contains(b[t])
-          || support.dictionary.isOutput(b[t])) {
+          || support.dictionary.isOutput(b[t])
+          || support.dictionary.isDeclaredEqual(b[t])) {
         return;
       }
       x[t] = d.x();
