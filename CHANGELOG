@@ -9548,9 +9548,11 @@ Version 5.0 (unreleased)
    that level and pinned the clause to one prefix of the search, so every
    later first decision refuted the same subtrees again. MZNC 2015
    open_stacks problem_20_20_1 (fixed search): 90,000 -> 39,000 nodes,
-   30 -> 18 s. 240 s, open stacks and precedence set (38, fixed search):
-   total 1,940 -> 1,706 s, 2 more decided (wbo_30_30_1 240 -> 29 s);
-   wide-quick total 0.998 (default search) and 0.973 (-f).
+   30 -> 18 s. 600 s, open stacks and precedence set (fixed search):
+   total 4,318 -> 3,468 s, one more decided (wbo_30_30_1 600 -> 30 s,
+   problem_10_20_1 476 -> 220 s); wide-quick total 1.004 (default search;
+   lot-sizing pigment20a 85 -> 140 s, 21 % more nodes) and 0.883 (-f, one
+   more decided: celar graph11 600 -> 82 s).
    -Djacop.lcg.shrink=true restores shrinking.
 
 Version 4.11
