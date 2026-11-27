@@ -10712,14 +10712,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             setSearchVariables,
             floatSearchVariables,
             !outputVarsOnly);
+    // Without annotation and with all unfixed output variables untouched, the first search would
+    // be the completion, which no caller expects: an integer search with no variable stands above
+    // it instead, so the completion is still decided before the untouched variables.
+    boolean emptyFirst = false;
     if (label == null
         && untouched.size()
             == intSearchVariables.length
                 + boolSearchVariables.length
                 + setSearchVariables.length
                 + floatSearchVariables.length) {
-      // the first search would be the completion, which no caller expects
-      untouched = Set.of();
+      if (outputVarsOnly) {
+        emptyFirst = true;
+      } else {
+        untouched = Set.of();
+      }
     }
     if (!untouched.isEmpty()) {
       Set<Var> free = untouched;
@@ -10783,7 +10790,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       intAndSetSearch[0] = setSearch;
     }
 
-    if (intSearchVariables.length != 0) {
+    if (intSearchVariables.length != 0 || emptyFirst) {
       // add search containing int variables to be sure that they get a value
       SelectChoicePoint<IntVar> intSelect;
       if (options.freeSearch() || options.complementarySearch()) {

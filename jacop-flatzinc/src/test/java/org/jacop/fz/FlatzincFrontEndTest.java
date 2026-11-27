@@ -10224,4 +10224,27 @@ class FlatzincFrontEndTest {
     assertEquals(7206, new HashSet<>(solutions.subList(0, 7206)).size());
     assertTrue(out.endsWith("==========\n"), out.substring(Math.max(0, out.length() - 200)));
   }
+
+  @Test
+  void allSolutionsOfARestartSearchWithoutAnnotationDecideTheConstraintsFirst() throws IOException {
+    // a restart annotation without a search, -a and every unfixed output untouched: the outputs
+    // were labelled above the completion, and the restarts searched the huge u0 and the float u1
+    // again for each failure of the hidden p0..p3, which cannot all differ
+    String model =
+        "var bool: b0;\nvar 1..3: p0;\nvar 1..3: p1;\nvar 1..3: p2;\nvar 1..3: p3;\n"
+            + "var 1..400000000: u0 :: output_var;\nvar 0.0..2.5: u1 :: output_var;\n"
+            + "constraint int_ne(p0,p1);\nconstraint int_ne(p0,p2);\nconstraint int_ne(p0,p3);\n"
+            + "constraint int_ne(p1,p2);\nconstraint int_ne(p1,p3);\nconstraint int_ne(p2,p3);\n"
+            + "constraint int_ne_reif(p1,3,b0);\n"
+            + "constraint jacop_table_int([p0,b0],[2,0,2,1,2,0,3,1]);\n"
+            + "solve :: restart_constant(31) minimize p1;\n";
+    for (String all : new String[] {"-a", "-n"}) {
+      String[] args =
+          all.equals("-a")
+              ? new String[] {"-a", "--lcg", "off", "-t", "3000"}
+              : new String[] {"-n", "2", "--lcg", "off", "-t", "3000"};
+      String out = run(model, args)[0];
+      assertTrue(out.contains("=====UNSATISFIABLE====="), all + ": " + out);
+    }
+  }
 }
