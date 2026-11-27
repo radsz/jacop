@@ -213,6 +213,8 @@ setup to run configuration. -->
                                 <cumulative.presolve.trials>100</cumulative.presolve.trials>
                                 <pairCover.trials>60</pairCover.trials>
                                 <lcg.fuzz.runs>300</lcg.fuzz.runs>
+                                <setlcg.fuzz.runs>60</setlcg.fuzz.runs>
+                                <setlcg.fuzz.dives>5000</setlcg.fuzz.dives>
                                 <enforcementInlining.trials>100</enforcementInlining.trials>
                                 <cse.trials>100</cse.trials>
                                 <affine.trials>100</affine.trials>
@@ -280,6 +282,7 @@ setup to run configuration. -->
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/SetLcgFuzzTest.java</include>
                                 <include>**/ConvexAllocationLcgTest.java</include>
                                 <include>**/ConvexAllocationFlatzincTest.java</include>
                                 <include>**/ProbTest.java</include>
@@ -601,6 +604,7 @@ setup to run configuration. -->
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/SetLcgFuzzTest.java</include>
                                 <include>**/ConvexAllocationLcgTest.java</include>
                                 <include>**/ConvexAllocationFlatzincTest.java</include>
                                 <include>**/ProbTest.java</include>
@@ -917,6 +921,7 @@ setup to run configuration. -->
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/SetLcgFuzzTest.java</include>
                                 <include>**/ConvexAllocationLcgTest.java</include>
                                 <include>**/ConvexAllocationFlatzincTest.java</include>
                                 <include>**/ProbTest.java</include>
