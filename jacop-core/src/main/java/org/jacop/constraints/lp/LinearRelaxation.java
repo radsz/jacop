@@ -611,6 +611,14 @@ public class LinearRelaxation extends Constraint
   private static final double PROBATION_SHARE =
       Double.parseDouble(System.getProperty("org.jacop.lp.probationShare", "0.6"));
   private static final int PROBATION_START = 16;
+
+  // the bounds per solve that the solves of the optimisation probation must prune for the extra
+  // rows to stay whatever their share of the time (org.jacop.lp.probationPrunings, 0 for none)
+  private static final double PROBATION_PRUNINGS =
+      Double.parseDouble(System.getProperty("org.jacop.lp.probationPrunings", "0.2"));
+
+  // the prunings before the extra rows were added
+  private long extraPrunings;
   private long probationSolveNanos;
 
   /** Statistics: the share of the search time the solves of the optimisation probation took. */
@@ -4023,7 +4031,10 @@ public class LinearRelaxation extends Constraint
       probationShare =
           (double) (solveNanos - probationSolveNanos)
               / Math.max(1, System.nanoTime() - probationStart);
-      if (beforeExtra != null && probationShare >= PROBATION_SHARE && !failingWithExtra()) {
+      if (beforeExtra != null
+          && probationShare >= PROBATION_SHARE
+          && !failingWithExtra()
+          && !pruningWithExtra()) {
         dropExtraRows();
       }
     }
@@ -7001,6 +7012,7 @@ public class LinearRelaxation extends Constraint
       extraLimits = limits;
       extraCall = calls;
       extraFailures = failures;
+      extraPrunings = prunings;
       droppedPivots += lp.pivots();
       lp = full;
       allRowsInSimplex(m + k);
@@ -7451,6 +7463,23 @@ public class LinearRelaxation extends Constraint
       identityRows = false;
       pooledExtra = pooled.size();
     }
+  }
+
+  // whether the solves since the extra rows were added pruned at least PROBATION_PRUNINGS bounds
+  // per solve: rows that tighten bounds pay for their solves though they seldom fail a node
+  // themselves. On the MiniZinc Challenge 2014 train instance.14 under -f, 138 extra rows fail 4
+  // of the 256 solves of the probation and prune 134 to 278 bounds (the solves of the probation
+  // depend on the phase of the search they fall in), and their solves took 50 to 67 % of the time,
+  // measured by the clock, on both sides of PROBATION_SHARE: kept, the LP prunes about 100,000
+  // bounds and the optimum is proved in 25 to 40 s; dropped, it prunes 900 and the proof takes 110
+  // to 130 s. sdn-chain d28n600-6 (7 % of the solves fail, 7 s with the rows and 200 s without)
+  // prunes 2 to 2.6 bounds a solve; multiple-constant-multiplication XU07_28, kept for its
+  // failures, under 0.01
+  private boolean pruningWithExtra() {
+    long solves = calls - extraCall;
+    return PROBATION_PRUNINGS > 0
+        && solves > 0
+        && prunings - extraPrunings >= PROBATION_PRUNINGS * solves;
   }
 
   // whether at least FAIL_RATE of the solves since the extra rows were added failed the node
