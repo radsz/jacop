@@ -225,4 +225,14 @@ class FloatDomainOperationsTest {
     }
     return domain;
   }
+
+  @Test
+  void intersectAdaptOfAnEmptyFloatDomainLeavesItEmpty() {
+    // the first interval of an empty domain was read (ArrayIndexOutOfBoundsException)
+    for (FloatIntervalDomain empty :
+        new FloatIntervalDomain[] {new FloatIntervalDomain(), FloatIntervalDomain.emptyDomain}) {
+      assertThat(empty.intersectAdapt(1, 2)).isEqualTo(FloatDomain.NONE);
+      assertThat(empty.isEmpty()).isTrue();
+    }
+  }
 }

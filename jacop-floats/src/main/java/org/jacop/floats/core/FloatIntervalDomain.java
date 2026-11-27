@@ -3225,6 +3225,11 @@ public class FloatIntervalDomain extends FloatDomain {
           String.valueOf("Min value greater than max value " + min + " > " + max));
     }
 
+    if (size == 0) {
+      // an empty domain stays empty (intervals[0] does not exist)
+      return NONE;
+    }
+
     if (max < intervals[0].min()) {
       size = 0;
       return IntDomain.GROUND;
