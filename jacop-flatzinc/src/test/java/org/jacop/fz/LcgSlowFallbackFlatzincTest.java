@@ -279,6 +279,24 @@ class LcgSlowFallbackFlatzincTest {
   }
 
   @Test
+  void slowLcgGoingDeepBetweenConflictsIsKept() {
+    // cable_tree_wiring A073 (MiniZinc Challenge 2020): 809 conflicts, 477,188 decisions, 7
+    // solutions and 23,956 learnt literals in 57.0 s at the check of a 600 s run
+    assertTrue(new Solve.DeepDescents(100, 50, 200).holds(809, 477_188, 7, 23_956, 57.0));
+    // warehouse olil4 (2026): 111 decisions per conflict, but learnt clauses of 10,539 literals
+    assertFalse(new Solve.DeepDescents(100, 50, 200).holds(1_416, 157_320, 23, 14_924_176, 59.5));
+    // rect-euler EU_combined (2026), which gains from the hand-over: 76 decisions per conflict
+    assertFalse(new Solve.DeepDescents(100, 50, 200).holds(5_343, 406_301, 10, 160_290, 23.8));
+    // unit-commitment L12 (2023): deep descents that end in solutions, not conflicts
+    assertFalse(new Solve.DeepDescents(100, 50, 200).holds(126, 3_982_469, 1_074, 3_780, 23.8));
+    // celar graph11 (2013): 405 decisions per conflict, but 127 conflicts/s
+    assertFalse(new Solve.DeepDescents(100, 50, 200).holds(3_026, 1_226_000, 168, 90_780, 23.8));
+    // no conflict yet; 0 turns the rule off
+    assertFalse(new Solve.DeepDescents(100, 50, 200).holds(0, 100_000, 0, 0, 23.1));
+    assertFalse(new Solve.DeepDescents(0, 50, 200).holds(809, 477_188, 7, 23_956, 57.0));
+  }
+
+  @Test
   void theWindowSeesSolutionsFoundBeforeTheFirstCheck() {
     long s = 1_000_000_000L;
     int noCost = Integer.MAX_VALUE;

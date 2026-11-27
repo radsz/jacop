@@ -9683,7 +9683,20 @@ Version 5.0 (unreleased)
    simp-nonunif-100_100.10 set-up 29.1 -> 26.0 s (median of 3); wide-quick
    at 240 s total 1.006 (noise), PB5 at 600 s total 0.986.
 
-536. Fixed search on an optimisation model that has no solution yet
+536. Under -f, lazy clause generation that is slow at the speed check (10 % of
+   the time limit) but goes deep between its conflicts is kept instead of
+   giving way to search without learning: with a solution, at least 100
+   decisions per conflict, more conflicts than solutions, under 50
+   conflicts/s and learnt clauses of at most 200 literals on average.
+   cable_tree_wiring A073 (MiniZinc Challenge 2020): optimum proved in 3 of
+   3 seeds at 600 s (before 2 of 3, the third ended at 296M);
+   rcpsp-wet-diverse j60 proved in one seed (before never). On the wide set
+   (240 instances, -f, 600 s) the rule fires only on warehouse olil4 without
+   the clause length limit and on none with it. free-config lcg-slow-depth
+   (0 = off), lcg-slow-depth-rate and lcg-slow-depth-length; -s prints
+   lcgSlowDeep.
+
+537. Fixed search on an optimisation model that has no solution yet
    tastes the annotation's search without learning, as fixed
    satisfaction does (entry 492), also with -a: lazy clause generation
    stops at lcg-fixed-at of the time limit, the search without learning
@@ -9696,7 +9709,7 @@ Version 5.0 (unreleased)
    88 s. On the 13 wide-set optimisation instances without a solution
    after 55 s of fixed search, 600 s: total 7,276 -> 6,763 s, none worse.
 
-537. Covering models: column dominance at presolve (CoveringDominance). A 0/1
+538. Covering models: column dominance at presolve (CoveringDominance). A 0/1
    variable with a cost of at least 0 in a minimized objective that occurs
    only in the objective and positively in clauses is fixed to 0 when
    another such variable of no higher cost is in all its clauses (the column
