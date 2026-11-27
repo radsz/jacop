@@ -195,7 +195,8 @@ final class DistinctOutputs<T extends Var> implements DecisionListener<T> {
     }
     peakKeys =
         Math.max(
-            peakKeys, (packed == null ? 0 : packed.size()) + (texts == null ? 0 : texts.size()));
+            peakKeys,
+            (long) (packed == null ? 0 : packed.size()) + (texts == null ? 0 : texts.size()));
     return first;
   }
 
@@ -352,7 +353,7 @@ final class DistinctOutputs<T extends Var> implements DecisionListener<T> {
         slot = (slot + 1) & mask;
       }
       if ((long) (size + 1) * width > pool.length) {
-        pool = Arrays.copyOf(pool, (int) Math.min(Integer.MAX_VALUE - 8, 2L * pool.length));
+        pool = Arrays.copyOf(pool, (int) Math.min(Integer.MAX_VALUE - 8L, 2L * pool.length));
       }
       System.arraycopy(key, 0, pool, size * width, width);
       table[slot] = ++size;
