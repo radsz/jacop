@@ -10538,7 +10538,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   @SuppressWarnings("unchecked")
   DepthFirstSearch<T>[] setSubSearchForAll(DepthFirstSearch<T> label, Options opt) {
 
-    DepthFirstSearch<T>[] intAndSetSearch = new DepthFirstSearch[5];
+    DepthFirstSearch<T>[] intAndSetSearch = new DepthFirstSearch[9];
 
     DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
 
@@ -10565,7 +10565,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // every output variable is fixed already (root probing of presolve fixes them): labelling
       // every variable instead would report the one output solution again for each assignment of
       // the other variables, so they are only completed once
-      intAndSetSearch[4] = addCompletionSearch(label);
+      intAndSetSearch[4] = addCompletionSearch(label, Set.of());
       if (intAndSetSearch[4] != null) {
         return intAndSetSearch;
       }
@@ -10583,6 +10583,42 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (opt.debug()) {
       IO.println(searchVars);
+    }
+
+    boolean noOutputSearch =
+        noSearchVariables(
+            intSearchVariables, boolSearchVariables, setSearchVariables, floatSearchVariables);
+    // The output variables that no constraint touches are labelled below the completion search:
+    // above it, every failure of the completion re-enumerated their values (the bisection of an
+    // untouched float down to its precision for each failure).
+    Set<Var> untouched =
+        outputVarsOnly
+            ? untouchedOutputs(
+                intSearchVariables, boolSearchVariables, setSearchVariables, floatSearchVariables)
+            : Set.of();
+    if (label == null
+        && untouched.size()
+            == intSearchVariables.length
+                + boolSearchVariables.length
+                + setSearchVariables.length
+                + floatSearchVariables.length) {
+      // the first search would be the completion, which no caller expects
+      untouched = Set.of();
+    }
+    if (!untouched.isEmpty()) {
+      Set<Var> free = untouched;
+      intSearchVariables =
+          Arrays.stream(intSearchVariables).filter(v -> !free.contains(v)).toArray(IntVar[]::new);
+      boolSearchVariables =
+          Arrays.stream(boolSearchVariables)
+              .filter(v -> !free.contains(v))
+              .toArray(BooleanVar[]::new);
+      setSearchVariables =
+          Arrays.stream(setSearchVariables).filter(v -> !free.contains(v)).toArray(SetVar[]::new);
+      floatSearchVariables =
+          Arrays.stream(floatSearchVariables)
+              .filter(v -> !free.contains(v))
+              .toArray(FloatVar[]::new);
     }
 
     DepthFirstSearch<T> lastSearch = label;
@@ -10746,16 +10782,125 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       intAndSetSearch[3] = floatSearch;
     }
 
-    if (outputVarsOnly && lastSearch != label) {
-      intAndSetSearch[4] = addCompletionSearch(lastSearch);
+    if (outputVarsOnly && (lastSearch != label || !untouched.isEmpty())) {
+      intAndSetSearch[4] = addCompletionSearch(lastSearch, untouched);
     }
 
-    if (noSearchVariables(
-        intSearchVariables, boolSearchVariables, setSearchVariables, floatSearchVariables)) {
+    if (!untouched.isEmpty()) {
+      DepthFirstSearch<T> parent =
+          intAndSetSearch[4] == null
+              ? lastSearch
+              : floatCompletion != null
+                  ? floatCompletion
+                  : completionChild != null ? completionChild : completionSearch;
+      addUntouchedSearches(parent, intAndSetSearch[4] != null, untouched, intAndSetSearch);
+    }
+
+    if (noOutputSearch) {
       handleTrivialSolution();
     }
 
     return intAndSetSearch;
+  }
+
+  /**
+   * Returns the given output variables that no constraint touches, in the store or among the
+   * clauses kept for the LCG solver, and that are not the objective; or none when no variable
+   * outside them is left for the completion search, which then cannot fail.
+   */
+  private Set<Var> untouchedOutputs(
+      IntVar[] ints, BooleanVar[] bools, SetVar[] sets, FloatVar[] floats) {
+    Set<Var> clauseVars = new HashSet<>();
+    for (IntVar[][] clause : sat.collectedClauses()) {
+      clauseVars.addAll(Arrays.asList(clause[0]));
+      clauseVars.addAll(Arrays.asList(clause[1]));
+    }
+    Set<Var> outputs = new HashSet<>();
+    Collections.addAll(outputs, ints);
+    Collections.addAll(outputs, bools);
+    Collections.addAll(outputs, sets);
+    Collections.addAll(outputs, floats);
+    // the variables the completion search labels
+    DefaultSearchVars allVars = new DefaultSearchVars(dictionary);
+    allVars.defaultVars();
+    List<Var> rest = new ArrayList<>(Arrays.asList(allVars.getIntVars()));
+    rest.addAll(Arrays.asList(allVars.getBoolVars()));
+    rest.addAll(Arrays.asList(allVars.getSetVars()));
+    rest.addAll(Arrays.asList(allVars.getFloatVars()));
+    boolean hidden = false;
+    for (Var v : rest) {
+      hidden |=
+          !v.singleton()
+              && !outputs.contains(v)
+              && (v.dom().sizeConstraints() > 0 || clauseVars.contains(v));
+    }
+    if (!hidden) {
+      return Set.of();
+    }
+    Set<Var> untouched = new LinkedHashSet<>();
+    for (Var v : outputs) {
+      if (!v.singleton()
+          && v != costVariable
+          && v.dom().sizeConstraints() == 0
+          && !clauseVars.contains(v)) {
+        untouched.add(v);
+      }
+    }
+    return untouched;
+  }
+
+  /**
+   * Labels the untouched output variables below parent, which then reports no solution itself:
+   * sets, integers, Booleans and floats in that order, each with the value order of the output
+   * search, so the first solution is the same. The searches go to the slots of searches after that
+   * of the completion.
+   */
+  @SuppressWarnings("unchecked")
+  private void addUntouchedSearches(
+      DepthFirstSearch<T> parent,
+      boolean belowCompletion,
+      Set<Var> untouched,
+      DepthFirstSearch<T>[] searches) {
+    List<SelectChoicePoint<T>> selects = new ArrayList<>();
+    SetVar[] sets = untouched.stream().filter(SetVar.class::isInstance).toArray(SetVar[]::new);
+    IntVar[] ints =
+        untouched.stream()
+            .filter(v -> v instanceof IntVar && !(v instanceof BooleanVar))
+            .toArray(IntVar[]::new);
+    BooleanVar[] bools =
+        untouched.stream().filter(BooleanVar.class::isInstance).toArray(BooleanVar[]::new);
+    FloatVar[] floats =
+        untouched.stream().filter(FloatVar.class::isInstance).toArray(FloatVar[]::new);
+    if (sets.length > 0) {
+      selects.add((SelectChoicePoint<T>) new SimpleSelect<>(sets, null, new IndomainSetMin<>()));
+    }
+    if (ints.length > 0) {
+      selects.add((SelectChoicePoint<T>) new SplitSelect<>(ints, null, new IndomainMiddle<>()));
+    }
+    if (bools.length > 0) {
+      selects.add((SelectChoicePoint<T>) new SimpleSelect<>(bools, null, new IndomainMin<>()));
+    }
+    if (floats.length > 0) {
+      selects.add((SelectChoicePoint<T>) new SplitSelectFloat<>(store, floats, null));
+    }
+    // after the slot of the completion search: the first search in the slots is the main one
+    int slot = 5;
+    boolean first = belowCompletion;
+    for (SelectChoicePoint<T> select : selects) {
+      DepthFirstSearch<T> search = first ? new ExtensionSearch() : new DepthFirstSearch<>();
+      first = false;
+      if (options.debug()) {
+        search.setConsistencyListener(failStatistics);
+      }
+      search.setSelectChoicePoint(select);
+      search.setPrintInfo(false);
+      parent.setSolutionListener(new SimpleSolutionListener<>());
+      search.setSolutionListener(new CostListener<>());
+      parent.addChildSearch(search);
+      setSearchTimeout(search);
+      searches[slot++] = search;
+      parent = search;
+    }
   }
 
   /**
@@ -10765,15 +10910,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * search stops at the first one, also when all solutions are requested.
    */
   @SuppressWarnings("unchecked")
-  private DepthFirstSearch<T> addCompletionSearch(DepthFirstSearch<T> lastSearch) {
+  private DepthFirstSearch<T> addCompletionSearch(
+      DepthFirstSearch<T> lastSearch, Set<Var> untouched) {
     DefaultSearchVars allVars = new DefaultSearchVars(dictionary);
     allVars.defaultVars();
     LinkedHashSet<IntVar> rest = new LinkedHashSet<>(Arrays.asList(allVars.getIntVars()));
     rest.addAll(Arrays.asList(allVars.getBoolVars()));
+    // the untouched output variables are labelled below
+    rest.removeAll(untouched);
     // the float variables whose constraints a reformulation replaced take any value, and those
     // MiniZinc introduced are intermediate results that the others define
     Set<Var> unused = new HashSet<>(dictionary.unusedVariables);
     unused.addAll(dictionary.introducedFloatVariables());
+    unused.addAll(untouched);
     FloatVar[] floats =
         Arrays.stream(allVars.getFloatVars())
             .filter(v -> !unused.contains(v))
@@ -10782,6 +10931,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     completionChild = null;
     // the sets whose constraints a reformulation replaced take any value
     Set<Var> unusedSets = new HashSet<>(dictionary.unusedVariables);
+    unusedSets.addAll(untouched);
     SetVar[] sets =
         Arrays.stream(allVars.getSetVars())
             .filter(v -> !unusedSets.contains(v))
@@ -10876,6 +11026,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     setSearchTimeout(completion);
     floatCompletion = completion;
     return completion;
+  }
+
+  /**
+   * The first search below the completion search, which stops at its first solution: it tells it
+   * that a solution exists also when it enumerated all solutions below it, for all solutions, and
+   * so returns false. The completion would otherwise look for another assignment of its variables
+   * and report the same solutions again.
+   */
+  private final class ExtensionSearch extends DepthFirstSearch<T> {
+    @Override
+    public boolean labeling() {
+      int before = getSolutionListener().solutionsNo();
+      boolean found = super.labeling();
+      return found || !timeOutOccured && getSolutionListener().solutionsNo() > before;
+    }
   }
 
   /**
