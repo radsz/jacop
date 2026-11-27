@@ -10790,4 +10790,23 @@ class FlatzincFrontEndTest {
       assertFalse(out[0].contains("peakOutputKeys"), out[0]);
     }
   }
+
+  @Test
+  void valuePrecedenceComesFirstInTheLexLeaderOrderOfTheAnnotation() throws IOException {
+    // swapping the values 1 and 2 also swaps the counts c1, c2 and d1, d2; the annotation ranks
+    // the counts first, and the lex-leader constraint of the exchange of (x1, c) with (w1, d) in
+    // that order wanted x1 = 2 while the precedence chain over x1, w1 wanted x1 = 1: UNSAT
+    String model =
+        "var 1..2: x1 :: output_var;\nvar 1..2: w1 :: output_var;\n"
+            + "var 0..1: c1;\nvar 0..1: c2;\nvar 0..1: d1;\nvar 0..1: d2;\n"
+            + "constraint jacop_gcc([x1], [c1, c2], 1);\n"
+            + "constraint jacop_gcc([w1], [d1, d2], 1);\n"
+            + "constraint int_ne(x1, w1);\n"
+            + "solve :: int_search([c1, d1, c2, d2, x1, w1], input_order, indomain_min, complete)"
+            + " satisfy;\n";
+    for (String lcg : new String[] {"on", "off"}) {
+      String out = run(model, "--symmetry", "on", "--lcg", lcg)[0];
+      assertTrue(out.contains("----------"), out);
+    }
+  }
 }

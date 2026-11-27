@@ -854,6 +854,15 @@ final class SymmetryBreaking implements ParserTreeConstants {
     // uses them, then the elements of the other set variables
     List<Integer> rankedVertices = new ArrayList<>();
     boolean[] isRanked = new boolean[n];
+    if (modelLex == null) {
+      // the variables of the precedence chains come first, before the other variables of the
+      // annotation: a value permutation also moves the variables that use the values as numbers
+      // (the counts of a gcc), and only with the chains' variables first does it make the
+      // lexicographically smallest solution of an orbit smaller when it breaks a chain
+      for (IntVar v : values.first()) {
+        rankVertex(graph.varVertices.get(v), rankedVertices, isRanked);
+      }
+    }
     for (Var v : order) {
       if (v instanceof IntVar iv) {
         rankVertex(graph.varVertices.get(iv), rankedVertices, isRanked);
