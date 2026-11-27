@@ -2168,11 +2168,18 @@ public final class LocalSearch {
       return out;
     }
     Map<Constraint, LinearForm> forms = new IdentityHashMap<>();
+    // the extra constraints are a list (the clauses of the SAT solver): a set of them, or the test
+    // of each constraint costs a pass over the list (MiniZinc Challenge 2026 atp-stage2
+    // instance9-stage2, 64,000 clauses: 12 s before local search started)
+    Set<Constraint> extraSet = Collections.newSetFromMap(new IdentityHashMap<>());
+    if (extra != null) {
+      extraSet.addAll(extra);
+    }
     for (Constraint c : constraints) {
       if (c instanceof LinearRelaxation
           || skipImplied && store.isImplied(c)
           || symmetry.contains(c)
-          || extra != null && extra.contains(c)) {
+          || extraSet.contains(c)) {
         continue;
       }
       LinearForm f = LinearForms.of(c);

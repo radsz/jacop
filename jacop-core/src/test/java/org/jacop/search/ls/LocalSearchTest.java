@@ -146,6 +146,46 @@ class LocalSearchTest {
    * 260 MB of rcpsp-wet-diverse j60_19_6 (MiniZinc Challenge 2019) under -f for the rest of the
    * run, since the caller keeps the search for its solution and statistics.
    */
+  /**
+   * The extra constraints, a list of the SAT solver's clauses, are not searched once for each
+   * constraint of the store while substituted variables are replaced: on MiniZinc Challenge 2026
+   * atp-stage2 instance9-stage2 (64,000 clauses) building local search took 12 s.
+   */
+  @Test
+  void extraConstraintsAreNotSearchedPerConstraint() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+    }
+    IntVar y = new IntVar(store, "y", 0, 2);
+    store.impose(new LinearInt(new IntVar[] {x[0], x[1], y}, new int[] {1, 1, -1}, "==", 0));
+    store.impose(new LinearInt(new IntVar[] {y, x[2]}, new int[] {1, 1}, ">=", 2));
+    assertTrue(store.consistency());
+    int[] searches = {0};
+    List<Constraint> clauses =
+        new ArrayList<>() {
+          @Override
+          public boolean contains(Object o) {
+            searches[0]++;
+            return super.contains(o);
+          }
+        };
+    clauses.add(new BoolClause(new IntVar[] {x[2], x[3]}, new IntVar[0]));
+    LocalSearch ls =
+        LocalSearch.builder(store)
+            .order(x)
+            .substituted(List.of(y))
+            .extraConstraints(clauses)
+            .timeLimit(LIMIT)
+            .seed(1)
+            .build();
+    assertEquals(LocalSearch.Status.SATISFIED, ls.solve());
+    assertEquals(0, searches[0]);
+    int[] v = ls.getSolution(x);
+    assertTrue(v[0] + v[1] + v[2] >= 2 && v[2] + v[3] >= 1, Arrays.toString(v));
+  }
+
   @Test
   void dropsItsModelWhenItReturns() throws Exception {
     Store store = new Store();
