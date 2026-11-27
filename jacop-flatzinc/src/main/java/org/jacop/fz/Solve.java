@@ -231,6 +231,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // the symmetry breaking that ran, or null: its constraints, which the model does not imply, may
   // differ between portfolio threads, so learnt clauses go only to threads that posted the same
   private SymmetryBreaking symmetry;
+  // the variables covering dominance fixed to 0: like symmetry breaking it keeps only some optima,
+  // so a thread whose symmetry search ran out of time and posted nothing does not share clauses
+  // learnt under it with threads that posted lex-leader constraints
+  private int coveringFixed;
   Options options;
   int initNumberConstraints;
   Timer timer;
@@ -796,6 +800,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (o == null) {
       return;
     }
+    coveringFixed = o.fixed();
     boolean ok = store.consistency();
     if (options.searchStatistics() && o.fixed() > 0) {
       IO.println(
@@ -7453,7 +7458,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         names.putIfAbsent(x, name);
       }
     }
-    String added = symmetry == null ? "" : symmetry.added(names::get);
+    String added = sharedModel(names);
     if (added == null) {
       return;
     }
@@ -7465,6 +7470,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         && !lcg.setSharedTree(worker.sharedTree(), added, modelVariableNames()::get)) {
       FzConsole.printlnErr("%% portfolio: this thread cannot join the split search");
     }
+  }
+
+  /**
+   * What this thread adds to the model of the portfolio, as {@link SymmetryBreaking#added} names
+   * it, followed by the covering dominance fixings, or null when a constraint has a variable with
+   * no name.
+   */
+  private String sharedModel(Map<IntVar, String> names) {
+    String added = symmetry == null ? "" : symmetry.added(names::get);
+    if (added != null && coveringFixed > 0) {
+      added += "covering" + coveringFixed + ";";
+    }
+    return added;
   }
 
   // the probes of dichotomic bound search (lcg-bisect), when it ran
@@ -9742,7 +9760,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return null;
     }
     Map<IntVar, String> names = modelVariableNames();
-    String added = symmetry == null ? "" : symmetry.added(names::get);
+    String added = sharedModel(names);
     org.jacop.jasat.lcg.SharedTree tree = worker.dfsTree();
     if (added == null || !tree.join(added)) {
       FzConsole.printlnErr("%% portfolio: this thread cannot join the split search");

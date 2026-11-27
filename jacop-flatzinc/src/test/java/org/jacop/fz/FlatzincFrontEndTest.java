@@ -10916,4 +10916,42 @@ class FlatzincFrontEndTest {
       assertTrue(out.contains("x1 = 2;\nw1 = 1;\n----------"), out);
     }
   }
+
+  @Test
+  void portfolioThreadWithoutSymmetryBreakingKeepsItsCoveringClausesToItself() throws IOException {
+    // set covering with identical and dominated columns: the lcg-lits thread's symmetry search
+    // runs out of time and posts nothing, and covering dominance fixes columns the other thread's
+    // lex-leader constraints keep; the clauses learnt under those fixings counted as clauses of the
+    // shared model and the given thread proved 16 or 17 optimal (3 of 8 runs), the optimum is 14
+    String model;
+    try (java.io.InputStream in =
+        FlatzincFrontEndTest.class.getResourceAsStream("covering-portfolio.fzn")) {
+      model = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+    }
+    java.util.function.LongSupplier clock = SymmetryBreaking.clock;
+    String min = System.getProperty("org.jacop.fz.coveringDominance.min");
+    try {
+      System.setProperty("org.jacop.fz.coveringDominance.min", "1");
+      // in the lcg-lits thread each reading of the clock is 1000 s after the one before
+      java.util.concurrent.atomic.AtomicLong late = new java.util.concurrent.atomic.AtomicLong();
+      SymmetryBreaking.clock =
+          () ->
+              "jacop-portfolio-lcg-lits".equals(Thread.currentThread().getName())
+                  ? late.getAndAdd(1_000_000_000_000L)
+                  : System.nanoTime();
+      for (int k = 0; k < 8; k++) {
+        String out = run(model, "-p", "2", "--symmetry", "on", "--lcg", "on", "-t", "60000")[0];
+        if (out.contains("==========")) {
+          assertTrue(out.contains("obj = 14;\n"), out);
+        }
+      }
+    } finally {
+      SymmetryBreaking.clock = clock;
+      if (min == null) {
+        System.clearProperty("org.jacop.fz.coveringDominance.min");
+      } else {
+        System.setProperty("org.jacop.fz.coveringDominance.min", min);
+      }
+    }
+  }
 }
