@@ -5206,7 +5206,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               weak,
               solutionFound));
     }
-    return weak;
+    return weak && !boundNearlyClosed(bestPrintedCost.get());
   }
 
   // whether the first check of an optimisation search's learning was printed
@@ -5726,6 +5726,46 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     return boundClosesGap(before, after, gain, cost);
+  }
+
+  /**
+   * Whether LCG raised the bound on the objective, since its speed check started, by nearly all of
+   * the gap to the best cost (lcg-opt-closed, 0.95; above 1 turns it off). A fast LCG whose
+   * learning cuts the tree little then keeps the search: its core-guided phase is close to the
+   * proof, which search without learning does not make. With -f, MiniZinc Challenge 2025 hitori
+   * h14-1 gave way at the check (bound 578 of 1468 to 572 closed, 99 %) and was not proved in 600 s
+   * on 3 seeds, and is proved in 110 to 128 s with LCG kept; FBDk07 (77 %), hitori h20-2 (94 %) and
+   * the 2017 community-detection instances (no raise) still give way.
+   *
+   * @param cost the best cost printed
+   * @return true if the bound closed at least the share of the gap
+   */
+  private boolean boundNearlyClosed(long cost) {
+    double share = Double.parseDouble(options.freeConfig("lcg-opt-closed", "0.95"));
+    long bound = lcgStartBound;
+    synchronized (lcgBounds) {
+      if (!lcgBounds.isEmpty()) {
+        bound = lcgBounds.peekLast()[1];
+      }
+    }
+    return closesShare(lcgStartBound, bound, cost, share);
+  }
+
+  /**
+   * Whether the bound {@code bound}, raised from {@code start}, closed at least the share {@code
+   * share} of the gap from {@code start} to the best cost {@code cost}.
+   *
+   * @param start the bound when the search started
+   * @param bound the bound now
+   * @param cost the best cost ({@code Integer.MAX_VALUE} when there is none)
+   * @param share the share of the gap
+   * @return true if the bound closed that share of the gap
+   */
+  static boolean closesShare(long start, long bound, long cost, double share) {
+    return cost != Integer.MAX_VALUE
+        && cost > start
+        && bound > start
+        && bound - start >= share * (cost - start);
   }
 
   /**
@@ -9169,12 +9209,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private IntVar[][] definedLast(IntVar[] vars, boolean allDefined) {
     Set<Var> defined = Collections.newSetFromMap(new IdentityHashMap<>());
-    defined.addAll(dictionary.definedVariables);
-    // b of a half-reified b -> c (int_lin_ne_imp and the other *_imp) is named defined, but c does
-    // not fix it: on XCSP 2023 WordDesign1 (words 0..3, Hamming distance at least 4 by the sum of
-    // b -> x[i] != y[i]) every b is such a variable, and branching on the 1,200 letters alone
-    // found no solution of words-065/075/085 in 600 s, where dom/wdeg over the b took 23-32 s
-    dictionary.halfDefinedVariables.forEach(defined::remove);
+    defined.addAll(dictionary.definedLastVariables());
     List<IntVar> first = new ArrayList<>();
     List<IntVar> last = new ArrayList<>();
     for (IntVar x : vars) {
