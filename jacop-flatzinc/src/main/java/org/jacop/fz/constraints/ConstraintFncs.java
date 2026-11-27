@@ -666,6 +666,16 @@ public final class ConstraintFncs {
     if (count < 2 || count > most) {
       return false;
     }
+    // Diffn takes the lengths as non-negative (it removes negative values when imposed), while
+    // the pairs would let a rectangle of negative length lie apart: Diffn keeps its meaning (the
+    // library routes negative lengths to its own decomposition, never to jacop_diff2_strict)
+    for (IntVar[] ls : length) {
+      for (IntVar l : ls) {
+        if (l.min() < 0) {
+          return false;
+        }
+      }
+    }
     double density = diffnDensity(origin, length);
     if (support.options.debug()) {
       System.out.println("% diffn: " + count + " rectangles, density " + density);

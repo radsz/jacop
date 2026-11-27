@@ -9488,4 +9488,77 @@ class FlatzincFrontEndTest {
     String out = run(model, "--lcg", "off")[0];
     assertTrue(out.contains("obj = -4;\n----------\n=========="), out);
   }
+
+  void untouchedOutputVariablesAreLabelledBelowTheCompletionSearch() throws IOException {
+    // the completion search of the hidden b0, b2 was a child of the search of the output float uf,
+    // which no constraint touches: for b1 = false the completion fails, and the bisection of uf was
+    // re-explored down to its precision for each failure (no end, UNKNOWN under -t); an untouched
+    // integer of a large domain ran out of time the same way, and under -a every solution was
+    // reported once per assignment of the completion when the free variables were below it
+    String hidden =
+        "var bool: b0;\n" + "var bool: b1;\n" + "var bool: b2;\n" + "var bool: b4 :: output_var;\n";
+    String tail =
+        "constraint bool_eq_reif(b1,b2,b2);\n"
+            + "constraint array_bool_and([b0],false);\n"
+            + "solve :: bool_search([b1], first_fail, indomain_min, complete) satisfy;\n";
+    String floats = hidden + "var 0.0..2.5: uf :: output_var;\n" + tail;
+    for (String lcg : new String[] {"on", "off"}) {
+      String out = run(floats, "--lcg", lcg, "-t", "5000")[0];
+      assertTrue(out.contains("b4 = false;\nuf = 4.547473508864641E-12;\n----------\n"), out);
+    }
+    String ints = hidden + "var 1..400000000: ui :: output_var;\n" + tail;
+    String out = run(ints, "--lcg", "off", "-t", "5000")[0];
+    assertTrue(out.contains("b4 = false;\nui = 1;\n----------\n"), out);
+    String few =
+        "var bool: b0;\n"
+            + "var bool: b1;\n"
+            + "var bool: b2;\n"
+            + "var 1..2: ui :: output_var;\n"
+            + "var 1..2: uj :: output_var;\n"
+            + "constraint bool_eq_reif(b1,b2,b2);\n"
+            + "constraint array_bool_and([b0],false);\n"
+            + "solve :: seq_search([bool_search([b1], input_order, indomain_min, complete),"
+            + " int_search([ui], input_order, indomain_min, complete)]) satisfy;\n";
+    out = run(few, "-a", "--lcg", "off", "-t", "5000")[0];
+    assertTrue(
+        out.contains(
+            "ui = 1;\nuj = 1;\n----------\nui = 1;\nuj = 2;\n----------\nui = 2;\nuj = 1;\n"
+                + "----------\nui = 2;\nuj = 2;\n----------\n==========\n"),
+        out);
+    // without a search annotation of its own (restart_none only) the first search of the slots is
+    // the main search, so the free variables come after the completion there too
+    String restart =
+        "var bool: b0 :: output_var;\n"
+            + "var -1..0: x1 :: output_var;\n"
+            + "var bool: b4;\n"
+            + "var bool: b5;\n"
+            + "constraint int_le_reif(x1,-1,b4);\n"
+            + "constraint bool_or(b4,b5,true);\n"
+            + "solve :: restart_none satisfy;\n";
+    out = run(restart, "-a", "--lcg", "off")[0];
+    assertTrue(
+        out.contains(
+            "b0 = false;\nx1 = -1;\n----------\nb0 = true;\nx1 = -1;\n----------\nb0 = false;\n"
+                + "x1 = 0;\n----------\nb0 = true;\nx1 = 0;\n----------\n==========\n"),
+        out);
+  }
+
+  @Test
+  void diffnPairsUnderLcgTakeNegativeLengthsAsDiffnDoes() throws IOException {
+    // under LCG fixed search a strict diffn of few sparse rectangles became the pairwise
+    // disjunctions, which let a rectangle of length -1 lie apart, while Diffn (without LCG) removes
+    // negative lengths: the pairs gave solutions and Diffn none
+    String model =
+        "var 1..3: y0 :: output_var;\n"
+            + "var -1..1: dy0 :: output_var;\n"
+            + "var 0..1: y1 :: output_var;\n"
+            + "var 1..3: dy1 :: output_var;\n"
+            + "constraint jacop_diff2_strict([2,0], [y0,y1], [0,-1], [dy0,dy1]);\n"
+            + "solve :: int_search([y0,dy0,dy1,y1], input_order, indomain_min, complete)"
+            + " satisfy;\n";
+    String off = run(model, "--lcg", "off", "-a")[0];
+    String on = run(model, "--lcg", "on", "-a")[0];
+    assertTrue(off.contains("=====UNSATISFIABLE====="), off);
+    assertTrue(on.contains("=====UNSATISFIABLE====="), on);
+  }
 }
