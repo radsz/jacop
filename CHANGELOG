@@ -9732,7 +9732,19 @@ Version 5.0 (unreleased)
    -Dorg.jacop.fz.coveringDominance=false and -Dorg.jacop.lp.foldFixed=0
    turn them off.
 
-539. JaLP no longer calls an LP infeasible from a dual ray that only
+539. Binpacking explanations under lazy clause generation are shorter.
+   An item kept out of several bins at once because one bin cannot reach
+   its smallest load without it is explained by that bin's reason once,
+   not once per removed bin; and an explanation through the loads a bin
+   can take leaves out the excluded items too heavy to fit under the
+   load's maximum, citing that maximum instead. steelmillslab 2019
+   bench_19_6 with LCG (fixed search, no CP slice): 801 -> 46 atoms per
+   Binpacking reason, 11,400 -> 8,700 conflicts, 16.4 -> 11.4 s. The 7
+   wide-set instances with Binpacking, 240 s, two rounds: totals 1.006
+   (default), 1.002 (-f), 1.008 (LCG forced); gbac UD3 -f best 312/334 ->
+   198/211. wide-quick 240 s -f: 2,835 -> 2,801 s, 53 = 53 proved.
+
+540. JaLP no longer calls an LP infeasible from a dual ray that only
    rounding makes look like a proof. The bound proof of a dual row now
    sums the ray over every column, the basic columns of the other rows
    too; before, it took them as zero, which holds only for an exact ray.
@@ -9744,7 +9756,7 @@ Version 5.0 (unreleased)
    the same pivots on every LP solved by both, 649 instead of 648 solved
    (supportcase10 114 s, at the limit) and a total of 6,705 -> 6,695 s.
 
-540. Lazy clause generation no longer shrinks learnt clauses to one
+541. Lazy clause generation no longer shrinks learnt clauses to one
    literal per lower decision level (all-UIP shrinking, M. Fleury and
    A. Biere, "Efficient all-UIP learned clause minimization", SAT 2021;
    it stays on in the pure SAT solver). Under LCG the literals of a lower
