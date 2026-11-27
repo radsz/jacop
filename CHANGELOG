@@ -9607,7 +9607,25 @@ Version 5.0 (unreleased)
    node (111 of 35,753 nodes missed it). The 25 FlatZinc test models with
    count_values: same search or same results, total time 202 -> 201 s.
 
-528. FlatZinc parsing and set-up of big models are faster, with the same
+531. The linear relaxation of an objective tries all linearized rows of the
+   model's constraints (big-M rows of reifications and implications, the
+   sides of min and max, ...) up to 8,000 of them
+   (-Dorg.jacop.lp.trialRows), not only a share of twice the linear rows
+   plus 100, and keeps the extra rows in search, where three pivot limits
+   used to drop them, when they raise the root bound over the domain of
+   the objective at least as much as the rows before them and at least
+   double it (-Dorg.jacop.lp.raiseKeeps=false turns that off). As in
+   CP-SAT's linearization level 2, which adds the linear relaxation of
+   every linearizable constraint (L. Perron, F. Didier and S. Gay, "The
+   CP-SAT-LP solver", CP 2023, LIPIcs 280). MiniZinc Challenge 2017
+   routing-flexible GCM_0005: root bound 10,509 -> 46,529 (optimum
+   76,514; CP-SAT 11 s, 214 s with linearization_level:0); at 600 s with
+   default search GCM_0005 and GCM_0006 are proved in 215 and 292 s
+   (before not proved), GCM_0007 314 -> 263 s. wide-quick at 240 s: total
+   time 0.997 (default search) and 1.008 (-f) before the doubling rule,
+   the same instances solved.
+
+532. FlatZinc parsing and set-up of big models are faster, with the same
    parse tree. The hot syntactic lookaheads of the FlatZinc grammar
    (array literal, set literal, array access, packed integer element) are
    token-kind checks instead of lookahead scans, and three detector passes

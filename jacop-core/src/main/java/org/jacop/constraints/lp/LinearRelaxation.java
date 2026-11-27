@@ -569,8 +569,11 @@ public class LinearRelaxation extends Constraint
   private static final int EXTRA_SPARSE_ROWS = 1;
 
   // whether the extra rows carry the bound of the relaxation: without them it does not cut the
-  // domain of the objective
+  // domain of the objective, or they at least double the bound it gives
   private boolean extraCarry;
+  // whether the extra rows carry the bound because without them it does not cut the domain of the
+  // objective (bindsBound): only those move to the sparse simplex
+  private boolean extraBinds;
   // the call at which the extra rows were added
   private long extraCall;
   // the failures of the relaxation before the extra rows were added
@@ -1744,6 +1747,7 @@ public class LinearRelaxation extends Constraint
                 + first
                 + (bySparse && leading.isEmpty() ? encoded : 0)
             : Long.MAX_VALUE;
+    share = trialShare(share, candidates.size(), objective);
     List<LinearForm> tail = CLAUSE_ROWS ? new ArrayList<>() : null;
     if (!fitsSimplex(localForms, candidates, simplex, auto, share, own, further, tail)
         && objective != null) {
@@ -2533,6 +2537,29 @@ public class LinearRelaxation extends Constraint
   // the dense simplex is chosen for relaxations below this many rows, the sparse one from it on,
   // when the dense one is asked for; -1 keeps the dense one whatever the size
   private static final int SPARSE_ROWS = Integer.getInteger("org.jacop.lp.sparseRows", 100);
+
+  // the most candidate rows of an objective's relaxation that are all tried at the first solve,
+  // whatever the share of the given rows (org.jacop.lp.trialRows), as CP-SAT's linearization level
+  // 2 relaxes every linearizable constraint (L. Perron, F. Didier and S. Gay, "The CP-SAT-LP
+  // solver", CP 2023); package-private for the tests
+  static int trialRows = Integer.getInteger("org.jacop.lp.trialRows", 8_000);
+
+  // whether extra rows that raise the root bound at least as much as the given rows stay in search
+  private static final boolean RAISE_KEEPS =
+      !FALSE.equals(System.getProperty("org.jacop.lp.raiseKeeps"));
+
+  // the share of an objective's relaxation: up to trialRows candidates are all tried. The
+  // linearized rows of a model of few linear rows are many, and a share of them alone raised
+  // nothing (routing-flexible GCM_0005 of the Challenge 2017: 490 of 6,726 rows tried, root bound
+  // 10,509; all of them 46,529, optimum 76,514, and fixed search proves it in 116 s instead of
+  // 603 s)
+  private static long trialShare(long share, int candidates, IntVar objective) {
+    if (objective == null) {
+      return share;
+    }
+    long trial = Math.min(candidates, trialRows);
+    return trial > share ? trial : share;
+  }
 
   // the most clause rows of tables over all tables; more give none
   private static final int MAX_TABLE_CLAUSES =
@@ -5324,13 +5351,13 @@ public class LinearRelaxation extends Constraint
    * thousands of columns gets only tens of them, so that nearly every solve stops at its limit
    * (scpa1 of the OR-Library set covering, 300 clauses over 3,000 columns: 311 x 3,312 entries, 19
    * pivots a call, 32 of 33 solves at the limit). The sparse simplex costs its nonzeros per pivot,
-   * a seventh of the tableau there. Only for extra rows that carry the bound (extraCarry), as in
+   * a seventh of the tableau there. Only for extra rows that give the bound (extraBinds), as in
    * sparseTrial. {@code -Dorg.jacop.lp.extraSparse=false} turns the move off.
    */
   private void moveExtraToSparse() {
     if (!EXTRA_SPARSE
         || simplex != Simplex.DENSE
-        || !extraCarry
+        || !extraBinds
         || WORK / Math.max(1, lp.pivotWork()) >= EXTRA_SPARSE_PIVOTS) {
       return;
     }
@@ -6900,10 +6927,16 @@ public class LinearRelaxation extends Constraint
     return status;
   }
 
-  // whether the extra rows kept carry the bound: the relaxation without them is optimal at a bound
+  // whether the extra rows kept carry the bound: they give it or raise it at least twofold
+  private boolean carriesBound(int status, double before, int given, int keptStatus) {
+    extraBinds = bindsBound(status, before, given, keptStatus);
+    return extraBinds || raisesBound(status, before, keptStatus);
+  }
+
+  // whether the extra rows kept give the bound: the relaxation without them is optimal at a bound
   // that does not cut the domain of the objective, and with them it is infeasible or cuts it
   // (set covering: the objective row alone is bounded by 0, the clauses make it 246.8 on scpa1)
-  private boolean carriesBound(int status, double before, int given, int keptStatus) {
+  private boolean bindsBound(int status, double before, int given, int keptStatus) {
     if (!baseBoundsNothing(status, before, given)) {
       return false;
     }
@@ -6914,6 +6947,27 @@ public class LinearRelaxation extends Constraint
     double with = lp.value(0);
     return keptStatus == LpSolver.OPTIMAL
         && (maximize ? integerBound(with) < domain : integerBound(with) > domain);
+  }
+
+  // whether the extra rows kept raise the root bound over the domain of the objective at least as
+  // much as the rows before them and at least double it: they are the relaxation then, and pivot
+  // limits in search do not drop them (GCM_0005: 10,509 -> 46,529 over the domain bound 10,509;
+  // dropped after three limits, the optimum took 290 s more)
+  private boolean raisesBound(int status, double before, int keptStatus) {
+    if (!RAISE_KEEPS
+        || objective == null
+        || status != LpSolver.OPTIMAL
+        || keptStatus != LpSolver.OPTIMAL
+        || Double.isNaN(before)) {
+      return false;
+    }
+    double domain = maximize ? objective.max() : objective.min();
+    double with = lp.value(0);
+    double base = maximize ? domain - before : before - domain;
+    double gain = maximize ? before - with : with - before;
+    // a bound raised from 0 is no evidence that the rows pay their cost in search (mapping
+    // mesh_star_mpeg: 0 -> 87.6 of 515, kept rows 1.5-3x slower with -f)
+    return gain >= Math.max(1, Math.max(base, Math.abs(before)));
   }
 
   // whether the relaxation without the extra rows is at most the row of the objective
@@ -7758,6 +7812,7 @@ public class LinearRelaxation extends Constraint
     c.keepExtra = !keptExtraForms.isEmpty();
     c.keepEncodings = keepEncodings;
     c.extraCarry = extraCarry;
+    c.extraBinds = extraBinds;
     c.searchProbation = searchProbation;
     c.refutation = refutation;
     for (CapacityCuts cc : capacity) {
