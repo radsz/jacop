@@ -11137,4 +11137,58 @@ class FlatzincFrontEndTest {
                 + "solve maximize x;\n")[0]
             .endsWith("x = 10;\n----------\n==========\n"));
   }
+
+  @Test
+  void aFactorThatMattersOnlyThroughAProductWithANonNegativeFactorKeepsTheOptimum()
+      throws IOException {
+    // shortest_path1: c is declared var int, at least 0, and occurs only as a factor of f * c = p
+    // with f >= 0; the optimum was printed without ==========
+    String head =
+        "var int: c;\nvar int: p;\nvar int: z :: output_var;\n"
+            + "constraint int_le(0,c);\nconstraint int_times(f,c,p);\n";
+    // int_ne keeps z <= 1 consistent for the bounds of the rows, so only the rule proves z = 2
+    String rest =
+        "constraint int_ne(g,1);\nconstraint int_lin_eq([1,1,-1],[p,g,z],0);\nsolve minimize z;\n";
+    List<String> positives =
+        List.of(
+            "var 0..1: f;\nvar 1..5: g;\n" + head + rest,
+            "var int: f;\nvar 1..5: g;\n"
+                + head
+                + "constraint int_le(0,f);\nconstraint int_le(f,1);\n"
+                + rest);
+    for (String model : positives) {
+      for (String presolve : List.of("off", "on")) {
+        assertTrue(
+            run(model, "--presolve", presolve)[0].endsWith("z = 2;\n----------\n==========\n"),
+            model);
+      }
+    }
+    // near misses whose true optimum lies beyond the clamp: no optimality claim
+    List<String> nearMisses =
+        List.of(
+            // the other factor may be negative
+            "var -1..1: f;\n"
+                + head
+                + "constraint int_lin_eq([1,-1],[p,z],0);\nsolve minimize z;\n",
+            // c occurs elsewhere
+            "var 0..1: f;\nvar int: m;\n"
+                + head
+                + "constraint int_max(c,f,m);\nconstraint int_lin_eq([1,-1,-1],[p,m,z],0);\nsolve minimize z;\n",
+            // maximisation
+            "var 0..1: f;\n" + head + "constraint int_lin_eq([1,-1],[p,z],0);\nsolve maximize z;\n",
+            // negative coefficient of the product in the objective
+            "var 0..1: f;\n"
+                + head
+                + "constraint int_lin_eq([-1,-1],[p,z],0);\nsolve minimize z;\n",
+            // the product is forced beyond the clamp by another constraint
+            "var 0..1: f;\nvar 0..1000000: q :: output_var;\n"
+                + head
+                + "constraint int_lin_le([-1,1],[p,q],-536870000);\n"
+                + "constraint int_lin_eq([1,-2,-1],[p,q,z],0);\nsolve minimize z;\n");
+    for (String model : nearMisses) {
+      for (String presolve : List.of("off", "on")) {
+        assertFalse(run(model, "--presolve", presolve)[0].contains("=========="), model);
+      }
+    }
+  }
 }

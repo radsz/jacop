@@ -727,11 +727,68 @@ public final class ClampedBounds {
       }
     }
     for (int id : moved) {
-      if (!movable(id, objectiveId, lo, hi, moved)) {
+      if (!movable(id, objectiveId, lo, hi, moved) && !freeFactor(id, objectiveId, lo, hi)) {
         return false;
       }
     }
     return true;
+  }
+
+  /**
+   * A narrowed variable c cut on its high side that matters only through a product p = f * c with f
+   * >= 0, while p stays within the range: in a solution with c beyond the range, f >= 1 would give
+   * c <= f * c = p <= MAX_INT, so f = 0 and p = 0 whatever c is, and c can take its least value
+   * instead. Rules: c is not the objective, is cut on its high side only (lo[c] within the range),
+   * occurs in no constraint but that int_times (with f and p other variables) and rows over c and
+   * fixed variables (which its least value satisfies), f has lo[f] >= 0 and stays within the range,
+   * and p stays within the range.
+   */
+  private boolean freeFactor(int c, Integer objectiveId, long[] lo, long[] hi) {
+    if (objectiveId != null && objectiveId == c || otherOccurrences.get(c)[0] != 1) {
+      return false;
+    }
+    if (lo[c] < IntDomain.MIN_INT || lo[c] > IntDomain.MAX_INT || hi[c] <= IntDomain.MAX_INT) {
+      return false;
+    }
+    for (int r : rowsOf.get(c)) {
+      long[] a = coefficients.get(r);
+      int[] x = rowVars.get(r);
+      long sum = 0;
+      for (int i = 0; i < x.length; i++) {
+        if (x[i] != c && lo[x[i]] != hi[x[i]]) {
+          return false; // a row over c and a variable that is not fixed
+        }
+        // c takes its least value, the other variables are fixed
+        sum = add(sum, multiply(a[i], lo[x[i]]));
+      }
+      long b = rhs.get(r)[0];
+      if (equal.get(r) ? sum != b : sum > b) {
+        return false; // the least value of c does not satisfy the row
+      }
+    }
+    long[] product = null;
+    for (long[] f : functions) {
+      for (int i = 1; i < f.length && f[0] != ELEMENT_CONST; i++) {
+        if (f[i] == c) {
+          if (product != null || f[0] != TIMES || i == 1) {
+            return false; // c in another function, or the result of one
+          }
+          product = f;
+        }
+      }
+    }
+    if (product == null) {
+      return false;
+    }
+    int p = (int) product[1];
+    int factor = (int) (product[2] == c ? product[3] : product[2]);
+    if (product[2] == product[3] || p == factor || p == c) {
+      return false;
+    }
+    return lo[factor] >= 0
+        && hi[factor] <= IntDomain.MAX_INT
+        && lo[p] >= IntDomain.MIN_INT
+        && hi[p] <= IntDomain.MAX_INT;
   }
 
   // whether the rows and functions keep every narrowed variable within JaCoP's range, whatever
