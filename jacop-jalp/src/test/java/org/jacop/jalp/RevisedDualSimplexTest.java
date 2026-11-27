@@ -33,6 +33,7 @@ package org.jacop.jalp;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.offset;
 
+import java.util.Arrays;
 import java.util.Random;
 import org.junit.jupiter.api.Test;
 
@@ -339,6 +340,35 @@ class RevisedDualSimplexTest {
       default -> throw new AssertionError(what + " stopped at the limit");
     }
     return status;
+  }
+
+  @Test
+  void noCombinationOfTheRowsProvesAFeasibleProblemInfeasible() {
+    // any multiplier of the rows is a Farkas candidate, so none may prove a feasible problem
+    // infeasible: the proof left out the basic columns of the other rows, which are zero only for
+    // an exact row of the basis inverse (cont4: a nearly singular basis gave a rho of 1e32 whose
+    // basic entries reached 1.2e32, and its feasible presolved LP was called infeasible)
+    int[][] cols = {{0, 1, 2}, {0, 3}, {1, 2, 3}};
+    double[][] vals = {{1, 1, 1}, {1, -1}, {2, 1, 1}};
+    double[] rowLo = {1, 0, 1};
+    double[] rowHi = {2, 0, 3};
+    double[] cost = {1, 2, -1, 1};
+    RevisedDualSimplex lp = new RevisedDualSimplex(cols, vals, rowLo, rowHi, cost, false);
+    lp.setPresolve(false);
+    for (int j = 0; j < 4; j++) {
+      lp.setBounds(j, 0, 2);
+    }
+    assertThat(lp.solve(Integer.MAX_VALUE)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+    Random rnd = new Random(41);
+    double[] y = new double[3];
+    for (int trial = 0; trial < 2000; trial++) {
+      for (int i = 0; i < 3; i++) {
+        y[i] = rnd.nextInt(3) == 0 ? 0 : rnd.nextDouble() * 2 - 1;
+      }
+      for (int r = 0; r < 3; r++) {
+        assertThat(lp.proofHolds(r, y)).as("rho %s row %d", Arrays.toString(y), r).isFalse();
+      }
+    }
   }
 
   @Test

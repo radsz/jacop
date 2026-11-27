@@ -9732,7 +9732,19 @@ Version 5.0 (unreleased)
    -Dorg.jacop.fz.coveringDominance=false and -Dorg.jacop.lp.foldFixed=0
    turn them off.
 
-536. Lazy clause generation no longer shrinks learnt clauses to one
+539. JaLP no longer calls an LP infeasible from a dual ray that only
+   rounding makes look like a proof. The bound proof of a dual row now
+   sums the ray over every column, the basic columns of the other rows
+   too; before, it took them as zero, which holds only for an exact ray.
+   On mittelmann cont4 the presolved LP got a ray with entries near 1e32
+   whose basic columns summed to 1e32 instead of 0: the reduced solve was
+   called INFEASIBLE after 15,045 pivots and the whole LP was re-solved
+   until the time limit (HiGHS interior point finds the reduced LP
+   feasible). Over the 687 LPs of the LP bench at 120 s, 0 wrong answers,
+   the same pivots on every LP solved by both, 649 instead of 648 solved
+   (supportcase10 114 s, at the limit) and a total of 6,705 -> 6,695 s.
+
+540. Lazy clause generation no longer shrinks learnt clauses to one
    literal per lower decision level (all-UIP shrinking, M. Fleury and
    A. Biere, "Efficient all-UIP learned clause minimization", SAT 2021;
    it stays on in the pure SAT solver). Under LCG the literals of a lower
