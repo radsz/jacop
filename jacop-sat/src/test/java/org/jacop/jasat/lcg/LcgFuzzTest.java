@@ -55,6 +55,7 @@ import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.And;
 import org.jacop.constraints.AndBool;
 import org.jacop.constraints.AndBoolSimple;
+import org.jacop.constraints.AndBoolVector;
 import org.jacop.constraints.ArcTimes;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.ArgMaxMonotone;
@@ -62,6 +63,7 @@ import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
+import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.CardinalityMatrix;
 import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelOrder;
@@ -70,6 +72,7 @@ import org.jacop.constraints.Circuit;
 import org.jacop.constraints.CircuitCost;
 import org.jacop.constraints.Conditional;
 import org.jacop.constraints.ConditionalSelect;
+import org.jacop.constraints.ConjunctionSum;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ConvexAllocation;
 import org.jacop.constraints.ConvexCost;
@@ -80,20 +83,27 @@ import org.jacop.constraints.CountValues;
 import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.CountVar;
 import org.jacop.constraints.DecomposedConstraint;
+import org.jacop.constraints.Decreasing;
 import org.jacop.constraints.Deviation;
 import org.jacop.constraints.DifferenceCycles;
 import org.jacop.constraints.Distance;
+import org.jacop.constraints.ElementBool;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.Eq;
+import org.jacop.constraints.EqBool;
+import org.jacop.constraints.ExactCover;
 import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.GlobalCardinality;
 import org.jacop.constraints.IfThen;
+import org.jacop.constraints.IfThenBool;
 import org.jacop.constraints.IfThenElse;
+import org.jacop.constraints.IfThenElseBool;
 import org.jacop.constraints.Implies;
+import org.jacop.constraints.ImpliesNot;
 import org.jacop.constraints.In;
 import org.jacop.constraints.Increasing;
 import org.jacop.constraints.IncreasingNValue;
@@ -107,6 +117,7 @@ import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Max;
+import org.jacop.constraints.MaxCliqueBound;
 import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
@@ -118,6 +129,8 @@ import org.jacop.constraints.Not;
 import org.jacop.constraints.Or;
 import org.jacop.constraints.OrBool;
 import org.jacop.constraints.OrBoolSimple;
+import org.jacop.constraints.OrBoolVector;
+import org.jacop.constraints.OrBoolWatched;
 import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.PrecedenceCost;
 import org.jacop.constraints.PrimitiveConstraint;
@@ -126,6 +139,7 @@ import org.jacop.constraints.Routes;
 import org.jacop.constraints.Same;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
+import org.jacop.constraints.SequenceMdd;
 import org.jacop.constraints.Sort;
 import org.jacop.constraints.Span;
 import org.jacop.constraints.Spread;
@@ -138,6 +152,8 @@ import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.SymmetricAlldifferent;
 import org.jacop.constraints.SymmetricGCC;
+import org.jacop.constraints.TableCover;
+import org.jacop.constraints.TspKOpt;
 import org.jacop.constraints.UnaryEarlinessTardiness;
 import org.jacop.constraints.UsedBy;
 import org.jacop.constraints.ValuePrecede;
@@ -157,20 +173,26 @@ import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulCeqZ;
+import org.jacop.constraints.XmulYeqC;
 import org.jacop.constraints.XmulYeqZ;
+import org.jacop.constraints.XmulYeqZSaturated;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
 import org.jacop.constraints.XorBool;
+import org.jacop.constraints.XorSystem;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusClteqZImplied;
+import org.jacop.constraints.XplusClteqZImpliedNot;
 import org.jacop.constraints.XplusCneqZ;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYgtC;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
+import org.jacop.constraints.cfn.CostNetwork;
+import org.jacop.constraints.cfn.CostNetworkBound;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeOptional;
@@ -192,9 +214,15 @@ import org.jacop.constraints.geost.InArea;
 import org.jacop.constraints.geost.NonOverlapping;
 import org.jacop.constraints.geost.Shape;
 import org.jacop.constraints.graph.ColouredSpanningTreeBound;
+import org.jacop.constraints.graph.Dag;
+import org.jacop.constraints.graph.Forest;
+import org.jacop.constraints.graph.Path;
+import org.jacop.constraints.graph.Reachable;
 import org.jacop.constraints.graph.SpanningTreeBound;
+import org.jacop.constraints.graph.Tree;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.knapsack.KnapsackDP;
+import org.jacop.constraints.lp.TimeIndexedBound;
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.NetworkFlow;
 import org.jacop.constraints.netflow.simplex.Node;
@@ -204,9 +232,11 @@ import org.jacop.constraints.regular.MultiCostRegular;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.BinaryBitTable;
 import org.jacop.constraints.table.HybridTable;
+import org.jacop.constraints.table.NegativeTable;
 import org.jacop.constraints.table.Restriction;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
+import org.jacop.constraints.table.TableReified;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -215,6 +245,7 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.jasat.cdcl.CdclSolver;
+import org.jacop.lcg.LinearForm;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMax;
 import org.jacop.search.IndomainMiddle;
@@ -314,6 +345,20 @@ class LcgFuzzTest {
     IntVar[] b;
     IntVar objective;
 
+    // the objective a bound constraint is posted on, which the model then minimizes
+    IntVar boundObjective;
+
+    // whether a model already has a global of many auxiliary variables (a bound on an objective,
+    // a timed circuit): with two, the reference search often runs out of time
+    boolean heavy;
+
+    private void heavy() {
+      if (heavy) {
+        throw new IllegalArgumentException("one heavy global per model");
+      }
+      heavy = true;
+    }
+
     final Random holes;
 
     final Random repeats;
@@ -359,6 +404,9 @@ class LcgFuzzTest {
       }
       if (rnd.nextBoolean()) {
         objective = rnd.nextBoolean() ? x[rnd.nextInt(n)] : sumObjective();
+      }
+      if (boundObjective != null) {
+        objective = boundObjective;
       }
       for (IntVar v : groundLater) {
         int value = valueOf(v);
@@ -629,9 +677,9 @@ class LcgFuzzTest {
       return new ArgMaxMonotone(q, f, first, intVar("i", 0, n + 1), -1);
     }
 
-    private Constraint recentGlobal() {
+    private Object recentGlobal() {
       IntVar[] p = pick(x, 3);
-      int which = RECENT != null ? RECENT[rnd.nextInt(RECENT.length)] : rnd.nextInt(44);
+      int which = RECENT != null ? RECENT[rnd.nextInt(RECENT.length)] : rnd.nextInt(56);
       return switch (which) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
@@ -781,7 +829,455 @@ class LcgFuzzTest {
                 new IntVar[] {intVar("my", -1, 3), rnd.nextBoolean() ? null : intVar("mz", 0, 2)},
                 intVar("mm", -2, 7));
         case 43 -> arcTimes();
+        case 44 -> graph();
+        case 45 -> xorSystem();
+        case 46 -> exactCover();
+        case 47 -> new Decreasing(pick(x, 2 + rnd.nextInt(2)), rnd.nextBoolean());
+        case 48 -> conjunctionSum();
+        case 49 -> maxCliqueBound();
+        case 50 -> costNetworkBound();
+        case 51 -> timeIndexedBound();
+        case 52 -> tspKOpt();
+        case 53 -> sequenceMdd();
+        case 54 -> tableCover();
+        case 55 -> mulSaturated();
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
+      };
+    }
+
+    // a 0/1 variable of the model or a new one, for the graphs and covers of the globals below
+    private IntVar[] bools(String name, int k) {
+      IntVar[] y = new IntVar[k];
+      for (int i = 0; i < k; i++) {
+        y[i] = rnd.nextInt(4) == 0 ? bool() : intVar(name + i, 0, 1);
+      }
+      return y;
+    }
+
+    // a dag, forest, reachability, tree or path of 3 to 5 nodes over node and edge Booleans, as
+    // the front end posts the graph built-ins
+    private Object graph() {
+      int n = 3 + rnd.nextInt(3);
+      int m = n - 1 + rnd.nextInt(4);
+      int[] from = new int[m];
+      int[] to = new int[m];
+      for (int e = 0; e < m; e++) {
+        from[e] = rnd.nextInt(n);
+        to[e] = rnd.nextInt(10) == 0 ? from[e] : (from[e] + 1 + rnd.nextInt(n - 1)) % n;
+      }
+      IntVar[] ns = chain("gn", n, 0, 1);
+      IntVar[] es = bools("ge", m);
+      boolean directed = rnd.nextBoolean();
+      if (rnd.nextBoolean()) {
+        // enough edges that the graph property decides the model
+        post(new SumBool(es, ">=", constant(1 + rnd.nextInt(m))));
+      }
+      return switch (rnd.nextInt(5)) {
+        case 0 -> new Dag(from, to, ns, es);
+        case 1 -> new Forest(ns, es, from, to);
+        case 2 -> new Reachable(from, to, intVar("gr", 0, n - 1), ns, es, directed);
+        case 3 -> new Tree(from, to, intVar("gt", 0, n - 1), ns, es, directed);
+        default ->
+            new Path(from, to, intVar("gs", 0, n - 1), intVar("ge", 0, n - 1), ns, es, directed);
+      };
+    }
+
+    // one to three parity rows over the Booleans and new 0/1 variables (XorSystemDetector)
+    private XorSystem xorSystem() {
+      IntVar[] pool = Arrays.copyOf(b, b.length + 2);
+      pool[b.length] = intVar("xs", 0, 1);
+      pool[b.length + 1] = intVar("xs", 0, 1);
+      int rows = 1 + rnd.nextInt(3);
+      IntVar[][] r = new IntVar[rows][];
+      int[] parity = new int[rows];
+      for (int i = 0; i < rows; i++) {
+        r[i] = pick(pool, 1 + rnd.nextInt(4));
+        parity[i] = rnd.nextInt(2);
+      }
+      return new XorSystem(r, parity);
+    }
+
+    // options covering 2 to 4 elements exactly once, alone or beside the rows of the cover
+    // (ExactCoverDetector keeps the rows)
+    private ExactCover exactCover() {
+      int n = 2 + rnd.nextInt(3);
+      int k = 2 + rnd.nextInt(5);
+      int[][] sets = new int[k][];
+      for (int o = 0; o < k; o++) {
+        sets[o] = rnd.ints(0, n).distinct().limit(1 + rnd.nextInt(n)).sorted().toArray();
+      }
+      IntVar[] options = bools("eo", k);
+      ExactCover cover = new ExactCover(options, sets, n);
+      if (rnd.nextBoolean()) {
+        for (int e = 0; e < n; e++) {
+          List<IntVar> row = new ArrayList<>();
+          for (int o = 0; o < k; o++) {
+            if (Arrays.binarySearch(sets[o], e) >= 0) {
+              row.add(options[o]);
+            }
+          }
+          int[] w = new int[row.size()];
+          Arrays.fill(w, 1);
+          post(new LinearInt(row.toArray(IntVar[]::new), w, "==", 1));
+        }
+      }
+      return cover;
+    }
+
+    // a minimized weighted sum of indicators of conjunctions of value literals, posted with its
+    // definition and the bound on it (ConjunctionSumDetector)
+    private ConjunctionSum conjunctionSum() {
+      heavy();
+      int terms = 2 + rnd.nextInt(4);
+      IntVar[][] termVars = new IntVar[terms][];
+      int[][] termValues = new int[terms][];
+      boolean[][] termEq = new boolean[terms][];
+      int[] weights = new int[terms];
+      IntVar[] indicators = new IntVar[terms + 1];
+      int[] w = new int[terms + 1];
+      for (int t = 0; t < terms; t++) {
+        termVars[t] = pick(x, 1 + rnd.nextInt(2));
+        termValues[t] = new int[termVars[t].length];
+        termEq[t] = new boolean[termVars[t].length];
+        PrimitiveConstraint conjunction = null;
+        for (int l = 0; l < termVars[t].length; l++) {
+          termValues[t][l] = value() + 1;
+          termEq[t][l] = rnd.nextInt(3) > 0;
+          PrimitiveConstraint literal =
+              termEq[t][l]
+                  ? new XeqC(termVars[t][l], termValues[t][l])
+                  : new XneqC(termVars[t][l], termValues[t][l]);
+          conjunction = conjunction == null ? literal : new And(conjunction, literal);
+        }
+        weights[t] = 1 + rnd.nextInt(3);
+        indicators[t] = intVar("ci", 0, 1);
+        w[t] = weights[t];
+        post(new Reified(conjunction, indicators[t]));
+      }
+      IntVar sum = intVar("cs", 0, 12);
+      indicators[terms] = sum;
+      w[terms] = -1;
+      ConjunctionSum bound = new ConjunctionSum(termVars, termValues, termEq, weights, sum);
+      post(new LinearInt(indicators, w, "==", 0));
+      boundObjective = sum;
+      return bound;
+    }
+
+    // a maximized sum of 0/1 variables in conflict, as minus a minimized one, with the conflicts
+    // and the sum posted (MaxCliqueDetector)
+    private MaxCliqueBound maxCliqueBound() {
+      heavy();
+      int n = 3 + rnd.nextInt(4);
+      IntVar[] v = bools("mc", n);
+      int[][] conflicts = new int[n][];
+      for (int i = 0; i < n; i++) {
+        List<Integer> js = new ArrayList<>();
+        for (int j = i + 1; j < n; j++) {
+          if (rnd.nextBoolean()) {
+            js.add(j);
+          }
+        }
+        conflicts[i] = js.stream().mapToInt(Integer::intValue).toArray();
+      }
+      IntVar sum = intVar("ms", 0, n);
+      MaxCliqueBound bound = new MaxCliqueBound(v, conflicts, sum);
+      for (int i = 0; i < n; i++) {
+        for (int j : conflicts[i]) {
+          post(
+              rnd.nextBoolean()
+                  ? new BoolClause(new IntVar[0], new IntVar[] {v[i], v[j]})
+                  : new LinearInt(new IntVar[] {v[i], v[j]}, new int[] {1, 1}, "<=", 1));
+        }
+      }
+      IntVar[] terms = Arrays.copyOf(v, n + 1);
+      terms[n] = sum;
+      int[] w = new int[n + 1];
+      Arrays.fill(w, 1);
+      w[n] = -1;
+      post(new LinearInt(terms, w, "==", 0));
+      IntVar minus = intVar("mo", -n, 0);
+      post(new XplusYeqC(sum, minus, 0));
+      boundObjective = minus;
+      return bound;
+    }
+
+    // a cost function network over 2 to 4 variables of the model: unary and binary costs as
+    // tables onto cost variables, hard costs left out of the tables, their sum minimized
+    // (CostNetworkDetector)
+    private CostNetworkBound costNetworkBound() {
+      heavy();
+      IntVar[] v = pick(x, 2 + rnd.nextInt(3));
+      int n = v.length;
+      int[][] values = new int[n][];
+      for (int i = 0; i < n; i++) {
+        values[i] = new int[v[i].getSize()];
+        int k = 0;
+        for (ValueEnumeration e = v[i].dom().valueEnumeration(); e.hasMoreElements(); ) {
+          values[i][k++] = e.nextElement();
+        }
+      }
+      long hard = CostNetwork.HARD;
+      int constant = rnd.nextInt(3);
+      CostNetwork network = new CostNetwork(values);
+      network.addConstant(constant);
+      List<IntVar> costs = new ArrayList<>();
+      List<Constraint> tables = new ArrayList<>();
+      for (int i = 0; i < n; i++) {
+        List<int[]> tuples = new ArrayList<>();
+        for (int a = 0; a < values[i].length; a++) {
+          long c = rnd.nextInt(12) == 0 ? hard : rnd.nextInt(4);
+          network.addUnary(i, a, c);
+          if (c != hard) {
+            tuples.add(new int[] {values[i][a], (int) c});
+          }
+        }
+        IntVar u = intVar("cu", 0, 3);
+        costs.add(u);
+        tables.add(new Table(new IntVar[] {v[i], u}, tuples.toArray(int[][]::new)));
+        for (int j = i + 1; j < n; j++) {
+          if (rnd.nextInt(3) == 0) {
+            continue;
+          }
+          long[] f = new long[values[i].length * values[j].length];
+          List<int[]> pairs = new ArrayList<>();
+          for (int k = 0; k < f.length; k++) {
+            f[k] = rnd.nextInt(10) == 0 ? hard : rnd.nextInt(4);
+            if (f[k] != hard) {
+              pairs.add(
+                  new int[] {
+                    values[i][k / values[j].length], values[j][k % values[j].length], (int) f[k]
+                  });
+            }
+          }
+          network.addBinary(i, j, f);
+          IntVar c = intVar("cb", 0, 3);
+          costs.add(c);
+          tables.add(new Table(new IntVar[] {v[i], v[j], c}, pairs.toArray(int[][]::new)));
+        }
+      }
+      IntVar z = intVar("cz", 0, 40);
+      CostNetworkBound bound = new CostNetworkBound(z, false, v, network);
+      tables.forEach(this::post);
+      costs.add(z);
+      int[] w = new int[costs.size()];
+      Arrays.fill(w, 1);
+      w[w.length - 1] = -1;
+      post(new LinearInt(costs.toArray(IntVar[]::new), w, "==", -constant));
+      boundObjective = z;
+      return bound;
+    }
+
+    // two or three tasks on a cumulative resource before a minimized makespan, with the
+    // time-indexed bound over the rows of the precedences (Solve with org.jacop.lp.timeIndexed)
+    private Constraint timeIndexedBound() {
+      heavy();
+      int n = 3 + rnd.nextInt(2);
+      int horizon = 7;
+      int cap = 1 + rnd.nextInt(3);
+      IntVar c = intVar("tm", 1, horizon);
+      IntVar[] s = new IntVar[n];
+      IntVar[] dv = new IntVar[n];
+      IntVar[] uv = new IntVar[n];
+      List<LinearForm> rows = new ArrayList<>();
+      for (int j = 0; j < n; j++) {
+        int dur = 1 + rnd.nextInt(3);
+        s[j] = intVar("ts", 0, horizon - dur);
+        dv[j] = constant(dur);
+        uv[j] = constant(1 + rnd.nextInt(cap));
+        rows.add(new LinearForm(new IntVar[] {s[j], c}, new long[] {1, -1}, -dur, LinearForm.LE));
+        post(new XplusClteqZ(s[j], dur, c));
+      }
+      post(new Cumulative(s, dv, uv, constant(cap)));
+      boundObjective = c;
+      TimeIndexedBound bound = TimeIndexedBound.of(store, c, false, rows);
+      return bound != null ? bound : new XlteqC(c, horizon);
+    }
+
+    // a symmetric travelling salesman tour of 4 or 5 nodes, its minimized length posted with
+    // elements, and the k-opt dominance (GiantTourDetector with org.jacop.fz.tspKOpt)
+    private TspKOpt tspKOpt() {
+      heavy();
+      int n = 4 + rnd.nextInt(2);
+      long[][] d = new long[n][n];
+      for (int v = 0; v < n; v++) {
+        d[v][v] = 100;
+        for (int w = v + 1; w < n; w++) {
+          d[v][w] = 1 + rnd.nextInt(9);
+          d[w][v] = d[v][w];
+        }
+      }
+      IntVar[] succ = chain("tk", n, 0, n - 1);
+      // an arc a hole removes is missing both ways, longer than any tour, as GiantTourDetector
+      // makes it: the rule holds only when nothing but the lengths constrains the tour
+      for (int v = 0; v < n; v++) {
+        for (int w = 0; w < n; w++) {
+          if (!succ[v].domain.contains(w)) {
+            d[v][w] = 100;
+            d[w][v] = 100;
+          }
+        }
+      }
+      post(new Circuit(succ, 0));
+      IntVar[] arcs = new IntVar[n + 1];
+      int[] w = new int[n + 1];
+      for (int v = 0; v < n; v++) {
+        // without holes: a length the tour cannot take would constrain it
+        arcs[v] = new IntVar(store, "tl" + vars.size(), 1, 100);
+        vars.add(arcs[v]);
+        w[v] = 1;
+        post(
+            new ElementInteger(
+                succ[v], Arrays.stream(d[v]).mapToInt(l -> (int) l).toArray(), arcs[v], -1));
+      }
+      IntVar length = new IntVar(store, "tt" + vars.size(), 0, 9 * n);
+      vars.add(length);
+      arcs[n] = length;
+      w[n] = -1;
+      post(new LinearInt(arcs, w, "==", 0));
+      boundObjective = length;
+      return rnd.nextBoolean() ? new TspKOpt(succ, 0, d) : new TspKOpt(succ, 0, d, length);
+    }
+
+    // a circuit of 3 or 4 nodes from the depot with arrival and departure times, the times posted
+    // as conditional precedences, and the diagram over them (SequenceMddDetector)
+    private SequenceMdd sequenceMdd() {
+      heavy();
+      int n = 3 + rnd.nextInt(2);
+      boolean pred = rnd.nextBoolean();
+      IntVar[] arcs = chain("sa", n, 0, n - 1);
+      IntVar[] in = chain("si", n, 0, 5);
+      IntVar[] out = chain("so", n, 0, 5);
+      int none = SequenceMdd.NONE;
+      int[][] travel = new int[n][n];
+      for (int[] row : travel) {
+        for (int j = 0; j < n; j++) {
+          row[j] = rnd.nextInt(5) == 0 ? none : rnd.nextInt(3);
+        }
+      }
+      int[] delta = new int[n];
+      for (int j = 0; j < n; j++) {
+        delta[j] = rnd.nextInt(5) == 0 ? none : rnd.nextInt(2);
+      }
+      SequenceMdd mdd =
+          new SequenceMdd(arcs, pred, 0, in, out, travel, delta, 0, 1 + rnd.nextInt(3));
+      post(new Circuit(arcs, 0));
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+          if (i != j && travel[i][j] != none) {
+            post(
+                new IfThen(
+                    pred ? new XeqC(arcs[j], i) : new XeqC(arcs[i], j),
+                    new XplusClteqZ(out[i], travel[i][j], in[j])));
+          }
+        }
+      }
+      for (int j = 1; j < n; j++) {
+        if (delta[j] != none) {
+          post(new XplusClteqZ(in[j], delta[j], out[j]));
+        }
+      }
+      return mdd;
+    }
+
+    // groups of variables, all different, each in a table, and the cover of their values; exact
+    // when the variables take every value (TableCoverDetector)
+    private TableCover tableCover() {
+      int groups = 2 + rnd.nextInt(2);
+      int[] size = new int[groups];
+      int total = 0;
+      for (int i = 0; i < groups; i++) {
+        size[i] = 1 + rnd.nextInt(2);
+        total += size[i];
+      }
+      boolean exact = rnd.nextBoolean();
+      int values = exact ? total : total + 1 + rnd.nextInt(2);
+      IntVar[][] g = new IntVar[groups][];
+      int[][][] tuples = new int[groups][][];
+      List<IntVar> all = new ArrayList<>();
+      for (int i = 0; i < groups; i++) {
+        g[i] = chain("tc", size[i], 0, values - 1);
+        all.addAll(List.of(g[i]));
+        tuples[i] = new int[1 + rnd.nextInt(5)][size[i]];
+        for (int[] tuple : tuples[i]) {
+          for (int l = 0; l < size[i]; l++) {
+            tuple[l] = rnd.nextInt(values);
+          }
+        }
+      }
+      TableCover cover = new TableCover(g, tuples, exact);
+      post(new Alldifferent(all.toArray(IntVar[]::new)));
+      for (int i = 0; i < groups; i++) {
+        post(new Table(g[i], tuples[i]));
+      }
+      return cover;
+    }
+
+    // a product that saturates at the ends of the integer range, small or near the ends
+    private XmulYeqZSaturated mulSaturated() {
+      if (rnd.nextBoolean()) {
+        return new XmulYeqZSaturated(one(), one(), rnd.nextBoolean() ? one() : intVar("mz", -6, 9));
+      }
+      boolean negative = rnd.nextBoolean();
+      int base = (IntDomain.MAX_INT - 6) / 3 + rnd.nextInt(3);
+      IntVar f = negative ? intVar("mf", -5, -2) : intVar("mf", 2, 5);
+      IntVar g = intVar("mg", base, base + 3);
+      IntVar z =
+          negative
+              ? intVar("mp", IntDomain.MIN_INT, IntDomain.MIN_INT + 12)
+              : intVar("mp", IntDomain.MAX_INT - 12, IntDomain.MAX_INT);
+      return new XmulYeqZSaturated(f, g, z);
+    }
+
+    // the implications with a negated control the front end posts for an eliminated control
+    // (Support.negateControl), alone or nested
+    private PrimitiveConstraint negatedImplication() {
+      IntVar[] p = pick(x, 2);
+      PrimitiveConstraint c =
+          rnd.nextBoolean()
+              ? new ImpliesNot(bool(), primitive(1))
+              : new XplusClteqZImpliedNot(bool(), p[0], value(), p[1]);
+      return switch (rnd.nextInt(4)) {
+        case 0 -> new Not(c);
+        case 1 -> new Reified(c, bool());
+        default -> c;
+      };
+    }
+
+    // a BooleanVar of the model or a new one
+    private BooleanVar booleanVar() {
+      IntVar v = bool();
+      if (v instanceof BooleanVar bv) {
+        return bv;
+      }
+      BooleanVar fresh = new BooleanVar(store, "bv" + vars.size());
+      vars.add(fresh);
+      return fresh;
+    }
+
+    // the Boolean and small table constraints the front end posts for the Boolean built-ins
+    private Constraint booleanVector() {
+      IntVar[] p = pick(x, 2);
+      return switch (rnd.nextInt(10)) {
+        case 0 -> new BoolClause(pick(b, rnd.nextInt(3)), pick(b, 1 + rnd.nextInt(2)));
+        case 1 -> new AndBoolVector(pick(b, 2 + rnd.nextInt(2)), bool());
+        case 2 -> new OrBoolVector(pick(b, 2 + rnd.nextInt(2)), bool());
+        case 3 -> new EqBool(pick(b, 2 + rnd.nextInt(2)), bool());
+        case 4 -> new IfThenBool(bool(), bool(), bool());
+        case 5 -> new IfThenElseBool(booleanVar(), booleanVar(), booleanVar());
+        case 6 -> new XmulYeqC(p[0], p[1], value() * 2);
+        case 7 -> new OrBoolWatched(pick(b, 2 + rnd.nextInt(2)), bool(), rnd.nextBoolean());
+        case 8 ->
+            new ElementBool(
+                one(),
+                new int[] {rnd.nextInt(2), rnd.nextInt(2), rnd.nextInt(2), 1, 0},
+                bool(),
+                -2);
+        default -> {
+          int[][] tuples = {{value(), value()}, {value(), value()}, {value(), value()}};
+          yield rnd.nextBoolean()
+              ? new NegativeTable(p, tuples)
+              : new TableReified(p, tuples, bool(), rnd.nextBoolean());
+        }
       };
     }
 
@@ -1082,7 +1578,7 @@ class LcgFuzzTest {
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
       int kind =
-          FOCUS != null && rnd.nextInt(4) > 0 ? FOCUS[rnd.nextInt(FOCUS.length)] : rnd.nextInt(84);
+          FOCUS != null && rnd.nextInt(4) > 0 ? FOCUS[rnd.nextInt(FOCUS.length)] : rnd.nextInt(86);
       return switch (kind) {
         case 0 -> primitive(1);
         case 1 ->
@@ -1308,6 +1804,8 @@ class LcgFuzzTest {
               s, ed, eh, limit, s, new IntVar[] {end, end, end}, new int[] {2, 2, 2});
         }
         case 78, 79 -> recentGlobal();
+        case 84 -> negatedImplication();
+        case 85 -> booleanVector();
         case 63 -> {
           if (rnd.nextInt(3) == 0) {
             // a longer equality, propagated by sumsets

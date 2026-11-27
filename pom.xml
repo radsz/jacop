@@ -213,6 +213,8 @@ setup to run configuration. -->
                                 <cumulative.presolve.trials>100</cumulative.presolve.trials>
                                 <pairCover.trials>60</pairCover.trials>
                                 <lcg.fuzz.runs>300</lcg.fuzz.runs>
+                                <setlcg.fuzz.runs>60</setlcg.fuzz.runs>
+                                <setlcg.fuzz.dives>5000</setlcg.fuzz.dives>
                                 <enforcementInlining.trials>100</enforcementInlining.trials>
                                 <cse.trials>100</cse.trials>
                                 <affine.trials>100</affine.trials>
@@ -230,6 +232,8 @@ setup to run configuration. -->
                                 <floats.fuzz.trials>100</floats.fuzz.trials>
                                 <floats.fuzz.opt.trials>3</floats.fuzz.opt.trials>
                                 <float.builtins.trials>200</float.builtins.trials>
+                                <satpresolve.trials>500</satpresolve.trials>
+                                <globalPresolve.trials>100</globalPresolve.trials>
                             </systemPropertyVariables>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -278,6 +282,7 @@ setup to run configuration. -->
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/SetLcgFuzzTest.java</include>
                                 <include>**/ConvexAllocationLcgTest.java</include>
                                 <include>**/ConvexAllocationFlatzincTest.java</include>
                                 <include>**/ProbTest.java</include>
@@ -495,6 +500,29 @@ setup to run configuration. -->
                                 <include>**/PortfolioSplitTest.java</include>
                                 <!-- a few upTo30sec instances for built-ins no upTo5sec instance uses -->
                                 <include>**/MinizincBasedUpTo30SecondsSampleTest.java</include>
+                                <include>**/ConstraintStatusKnownAtImposition.java</include>
+                                <include>**/DomainInMethodsTest.java</include>
+                                <include>**/SmallDenseDomainTest.java</include>
+                                <include>**/MinOfSumsTest.java</include>
+                                <include>**/DagTest.java</include>
+                                <include>**/DualAggregateCutsTest.java</include>
+                                <include>**/ReificationCleanupTest.java</include>
+                                <include>**/ClauseValuesFlatzincTest.java</include>
+                                <include>**/LcgStatisticsFlatzincTest.java</include>
+                                <include>**/NativeMetadataTest.java</include>
+                                <include>**/PartialCopyFlatzincTest.java</include>
+                                <include>**/StatisticsOptionFlatzincTest.java</include>
+                                <include>**/ZeroOneParityTest.java</include>
+                                <include>**/QueueForwardTest.java</include>
+                                <include>**/PiecewiseLinearTest.java</include>
+                                <include>**/ComplementSymmetryTest.java</include>
+                                <include>**/GateExtractorTest.java</include>
+                                <include>**/MinOfSumsLcgTest.java</include>
+                                <include>**/PresolveTest.java</include>
+                                <include>**/VariableEliminationTest.java</include>
+                                <include>**/SatPresolveTest.java</include>
+                                <include>**/TablingTest.java</include>
+                                <include>**/GlobalPresolveTest.java</include>
                             </includes>
                             <excludes>
                                 <exclude>**/MinizincBasedUpTo30SecondsTest.java</exclude>
@@ -576,6 +604,7 @@ setup to run configuration. -->
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/SetLcgFuzzTest.java</include>
                                 <include>**/ConvexAllocationLcgTest.java</include>
                                 <include>**/ConvexAllocationFlatzincTest.java</include>
                                 <include>**/ProbTest.java</include>
@@ -798,6 +827,24 @@ setup to run configuration. -->
                                 <include>**/PortfolioOneParseTest.java</include>
                                 <include>**/PortfolioSplitTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
+                                <include>**/ConstraintStatusKnownAtImposition.java</include>
+                                <include>**/DomainInMethodsTest.java</include>
+                                <include>**/SmallDenseDomainTest.java</include>
+                                <include>**/MinOfSumsTest.java</include>
+                                <include>**/DagTest.java</include>
+                                <include>**/DualAggregateCutsTest.java</include>
+                                <include>**/ReificationCleanupTest.java</include>
+                                <include>**/ClauseValuesFlatzincTest.java</include>
+                                <include>**/LcgStatisticsFlatzincTest.java</include>
+                                <include>**/NativeMetadataTest.java</include>
+                                <include>**/PartialCopyFlatzincTest.java</include>
+                                <include>**/StatisticsOptionFlatzincTest.java</include>
+                                <include>**/ZeroOneParityTest.java</include>
+                                <include>**/QueueForwardTest.java</include>
+                                <include>**/PiecewiseLinearTest.java</include>
+                                <include>**/ComplementSymmetryTest.java</include>
+                                <include>**/GateExtractorTest.java</include>
+                                <include>**/MinOfSumsLcgTest.java</include>
                             </includes>
                             <excludes>
                                 <exclude>**/MinizincBasedUpTo1MinutesTest.java</exclude>
@@ -874,6 +921,7 @@ setup to run configuration. -->
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/SetLcgFuzzTest.java</include>
                                 <include>**/ConvexAllocationLcgTest.java</include>
                                 <include>**/ConvexAllocationFlatzincTest.java</include>
                                 <include>**/ProbTest.java</include>
@@ -1098,6 +1146,24 @@ setup to run configuration. -->
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
                                 <include>**/MinizincBasedUpTo1MinutesTest.java</include>
                                 <include>**/MinizincBasedUpTo5MinutesTest.java</include>
+                                <include>**/ConstraintStatusKnownAtImposition.java</include>
+                                <include>**/DomainInMethodsTest.java</include>
+                                <include>**/SmallDenseDomainTest.java</include>
+                                <include>**/MinOfSumsTest.java</include>
+                                <include>**/DagTest.java</include>
+                                <include>**/DualAggregateCutsTest.java</include>
+                                <include>**/ReificationCleanupTest.java</include>
+                                <include>**/ClauseValuesFlatzincTest.java</include>
+                                <include>**/LcgStatisticsFlatzincTest.java</include>
+                                <include>**/NativeMetadataTest.java</include>
+                                <include>**/PartialCopyFlatzincTest.java</include>
+                                <include>**/StatisticsOptionFlatzincTest.java</include>
+                                <include>**/ZeroOneParityTest.java</include>
+                                <include>**/QueueForwardTest.java</include>
+                                <include>**/PiecewiseLinearTest.java</include>
+                                <include>**/ComplementSymmetryTest.java</include>
+                                <include>**/GateExtractorTest.java</include>
+                                <include>**/MinOfSumsLcgTest.java</include>
                             </includes>
                             <excludes>
                                 <exclude>**/MinizincBasedUpTo10MinutesTest.java</exclude>

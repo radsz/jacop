@@ -2208,10 +2208,21 @@ public final class RevisedDualSimplex {
   /**
    * Whether rho, the row r of the basis inverse, proves the problem infeasible by itself: the
    * combination {@code rho (A x - s)} is zero for every solution, so it is one when the range of
-   * the combination over the true bounds of the nonbasic columns and of the basic column of row r
-   * excludes zero. The other basic columns are zero in it, and so are the entries below 1e-11 of
-   * the largest, up to round-off. A proof that passes needs no fresh factorization.
+   * the combination over the true bounds of every column excludes zero. The entries below 1e-11 of
+   * the largest are round-off. The other basic columns are taken too: they are zero in it only for
+   * an exact rho, and the rho of a nearly singular basis is not (cont4: rho of 1e32 with basic
+   * entries up to 1.2e32 proved its feasible presolved LP infeasible). A proof that passes needs no
+   * fresh factorization.
    */
+  // proofHolds(r) with y as rho, for tests
+  boolean proofHolds(int r, double[] y) {
+    if (rho.length < m) {
+      rho = new double[m];
+    }
+    System.arraycopy(y, 0, rho, 0, m);
+    return proofHolds(r);
+  }
+
   private boolean proofHolds(int r) {
     if (proofAlpha.length < n + m) {
       proofAlpha = new double[n + m];
@@ -2219,16 +2230,14 @@ public final class RevisedDualSimplex {
     double largest = 0;
     for (int j = 0; j < n + m; j++) {
       double a = 0;
-      if (row[j] < 0 || row[j] == r) {
-        if (j < n) {
-          int[] ci = colIdx[j];
-          double[] cv = colVal[j];
-          for (int e = 0; e < colLen[j]; e++) {
-            a += rho[ci[e]] * cv[e];
-          }
-        } else {
-          a = -rho[j - n];
+      if (j < n) {
+        int[] ci = colIdx[j];
+        double[] cv = colVal[j];
+        for (int e = 0; e < colLen[j]; e++) {
+          a += rho[ci[e]] * cv[e];
         }
+      } else {
+        a = -rho[j - n];
       }
       proofAlpha[j] = a;
       largest = Math.max(largest, Math.abs(a));

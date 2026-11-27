@@ -12,9 +12,8 @@ predicate jacop_among_var(array[int] of var int: x, array[int] of var int: v, va
 %-----------------------------------------------------------------------------%
 predicate among_var_reif(var int: n, array[int] of var int: x, array[int] of var int: v, var bool: b) =
 	  let { 
-          int: l = min(index_set(x)),
-          int: u = max(index_set(x)),
-	  int: mm = u - l + 1, 
+	  % length(x), not max - min + 1: min(index_set(x)) is undefined for an empty x
+	  int: mm = length(x), 
 	  var 0..mm: ni
 	  }
 	  in

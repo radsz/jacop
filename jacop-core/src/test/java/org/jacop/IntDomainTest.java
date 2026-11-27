@@ -1125,4 +1125,39 @@ class IntDomainTest {
 
     return domain;
   }
+
+  @Test
+  void intersectAdaptOfAnEmptyIntervalDomainLeavesItEmpty() {
+    // the bounds of an empty domain were read at index -1 (ArrayIndexOutOfBoundsException)
+    for (IntervalDomain empty :
+        new IntervalDomain[] {new IntervalDomain(), new IntervalDomain(0)}) {
+      assertThat(empty.intersectAdapt(1, 2)).isEqualTo(IntDomain.NONE);
+      assertThat(empty.isEmpty()).isTrue();
+    }
+    assertThat(IntervalDomain.emptyDomain.intersectAdapt(0, 0)).isEqualTo(IntDomain.NONE);
+    assertThat(IntervalDomain.emptyDomain.isEmpty()).isTrue();
+  }
+
+  @Test
+  void intersectOfAnEmptyIntervalDomainIsANewDomain() {
+    // an empty receiver returned itself, so changing the result changed the receiver
+    IntervalDomain empty = new IntervalDomain();
+    IntDomain byBounds = empty.intersect(1, 2);
+    assertThat(byBounds).isNotSameAs(empty);
+    assertThat(byBounds.isEmpty()).isTrue();
+    byBounds.unionAdapt(1, 1);
+    assertThat(empty.isEmpty()).isTrue();
+  }
+
+  @Test
+  void smallDenseUnionAdaptOfMoreThan64ValuesIsRejectedAsDocumented() {
+    // a run of more than 64 values read SEQ_ARRAY out of its bounds before the span check
+    assertThatThrownBy(() -> new SmallDenseDomain().unionAdapt(-3, 100))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new SmallDenseDomain(1, 3).unionAdapt(-3, 100))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> SmallDenseDomain.emptyDomain.union(-3, 100))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThat(SmallDenseDomain.emptyDomain.isEmpty()).isTrue();
+  }
 }

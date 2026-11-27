@@ -354,18 +354,7 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] d = sdr[1];
     IntVar[] r = sdr[2];
 
-    if (b.min() < 0) {
-      // a running task uses at least 1, so a negative limit holds only while no task runs, as the
-      // limit max(b, 0) does; the propagators take no negative limit
-      IntVar zero = support.dictionary.getConstant(0);
-      if (b.max() <= 0) {
-        b = zero;
-      } else {
-        IntVar limit = new IntVar(support.store, 0, b.max());
-        support.pose(new Max(new IntVar[] {b, zero}, limit));
-        b = limit;
-      }
-    }
+    b = nonNegativeLimit(b);
 
     if (cumulativeResourceSumWithinCapacity(r, b)) {
       return;
@@ -415,6 +404,24 @@ class GlobalConstraints implements ParserTreeConstants {
     } else {
       poseCumulativeBasicWithImplied(s, d, r, b);
     }
+  }
+
+  /**
+   * Returns the limit max(b, 0) for a limit b that may be negative: a running task uses at least 1,
+   * so a negative limit holds only while no task runs, as the limit max(b, 0) does; the propagators
+   * take no negative limit.
+   */
+  private IntVar nonNegativeLimit(IntVar b) {
+    if (b.min() >= 0) {
+      return b;
+    }
+    IntVar zero = support.dictionary.getConstant(0);
+    if (b.max() <= 0) {
+      return zero;
+    }
+    IntVar limit = new IntVar(support.store, 0, b.max());
+    support.pose(new Max(new IntVar[] {b, zero}, limit));
+    return limit;
   }
 
   /**
@@ -4755,7 +4762,8 @@ class GlobalConstraints implements ParserTreeConstants {
       poseCumulative(str, dur, use, b);
       return;
     }
-    CumulativeOptional c = configureCumulative(new CumulativeOptional(str, dur, res, b, opt));
+    CumulativeOptional c =
+        configureCumulative(new CumulativeOptional(str, dur, res, nonNegativeLimit(b), opt));
     String p = System.getProperty("fz_cumulative_optional_overload");
     if (p != null) {
       c.doOptionalOverload(Boolean.parseBoolean(p));
