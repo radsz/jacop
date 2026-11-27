@@ -7939,4 +7939,42 @@ class LcgSolverTest {
         .hasMessageContaining("reason clause")
         .hasMessageContaining("[x = 5]");
   }
+
+  // a solver of the shared tree took a cube on a variable it had fixed at the root, which another
+  // solver (whose side component the time budget left open) split on: "a cube on a variable this
+  // solver does not have" ended its thread; the atom is now read from the root domain
+  @Test
+  void cubeOnAVariableFixedAtTheRootIsDecidedByItsRootValue() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 2, 2);
+    IntVar y = new IntVar(store, "y", 0, 3);
+    IntVar z = new IntVar(store, "z", 0, 3);
+    store.impose(new XneqY(y, z));
+    store.impose(new XplusYeqZ(x, y, z));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setAnnotation(new SimpleSelect<>(new IntVar[] {y, z}, null, new IndomainMin<>()), false);
+    SharedClauses pool = new SharedClauses();
+    SharedTree tree = new SharedTree();
+    java.util.Map<IntVar, String> names = new java.util.IdentityHashMap<>();
+    names.put(x, "x");
+    names.put(y, "y");
+    names.put(z, "z");
+    // the other solver: it takes the root cube and gives away x = 3 and then x != 3 with y >= 1
+    assertThat(tree.join("")).isTrue();
+    int[] root = tree.take(() -> false);
+    int id = pool.id("x");
+    tree.split(SharedTree.extend(root, id, SharedClauses.EQ, 3));
+    tree.split(
+        SharedTree.extend(
+            SharedTree.extend(root, id, SharedClauses.EQ + SharedClauses.NEGATED, 3),
+            pool.id("y"),
+            SharedClauses.GE,
+            1));
+    tree.closed(root);
+    solver.setSharedClauses(pool, "", names::get, 8, 2);
+    assertThat(solver.setSharedTree(tree, "", names::get)).isTrue();
+    // x = 3 is false here: that cube is closed; the other one has y = 1, z = 3
+    assertThat(solver.solve()).isEqualTo(CdclSolver.SAT);
+    assertThat(tree.closedCubes()).isEqualTo(3);
+  }
 }

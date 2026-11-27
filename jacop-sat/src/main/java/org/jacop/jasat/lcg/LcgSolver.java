@@ -8474,7 +8474,9 @@ public final class LcgSolver implements ExternalPropagator {
       int top = -1;
       for (int i = 0; i < vars.length; i++) {
         treeId[i] = sharedId[i];
-        if (treeId[i] < 0 && vars[i] != null && !root[i].singleton()) {
+        // a variable fixed at the root here is named too: another solver of the tree may not have
+        // it fixed (a side component its time budget left open) and split on it
+        if (treeId[i] < 0 && vars[i] != null) {
           String n = name.apply(vars[i]);
           if (n != null) {
             treeId[i] = this.shared.id(n);
