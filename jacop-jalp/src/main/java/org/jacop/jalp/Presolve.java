@@ -131,7 +131,7 @@ final class Presolve {
 
   // whether the bounds of the duals are propagated over the reduced costs of every column without
   // an upper or a lower bound, not only of the column singletons, before the dominated columns are
-  // looked for (org.jacop.jalp.presolveDualBounds)
+  // looked for; set by the property org.jacop.jalp.presolveDualBounds
   private static final boolean DUAL_BOUNDS_RULE =
       Boolean.parseBoolean(System.getProperty("org.jacop.jalp.presolveDualBounds", "true"));
 
@@ -161,9 +161,9 @@ final class Presolve {
   // the columns of each end of a hash that a parallel column is tried against for domination
   private static final int PARALLEL_DOMINATED_TRIES = 4;
 
-  // whether equations that the other equations imply are removed
-  // (org.jacop.jalp.presolveDependent);
-  // off: on the 147 LPs of the LP bench where it removes rows (HiGHS: the same on qap10, nug08-3rd,
+  // whether equations that the other equations imply are removed, set by the property
+  // org.jacop.jalp.presolveDependent; off: on the 147 LPs of the LP bench where it removes rows
+  // (HiGHS: the same on qap10, nug08-3rd,
   // dano3) the simplex took 7.6 % longer in all (2,085 -> 2,244 s at 120 s, dano3 44k -> 72k pivots
   // from one row, pds-100 lost)
   static final boolean DEPENDENT_RULE =
@@ -459,7 +459,8 @@ final class Presolve {
     // rules after them removes a row or a column when it changes the problem, and one that took a
     // pass of the limit left the rules after it out (scrs8: dominated columns found one at a time
     // in the last passes kept 258 aggregations out)
-    for (int pass = 0; changed && pass < MAX_PASSES; ) {
+    int pass = 0;
+    while (changed && pass < MAX_PASSES) {
       changed = false;
       for (int i = 0; i < m; i++) {
         if (rowAlive[i]) {
@@ -860,13 +861,15 @@ final class Presolve {
       // the implied bounds without the rounding allowance, which a column singleton may reach
       // within the margin; a column with more entries must be beyond it with the allowance; the
       // upper bound of x_j comes from the upper side of the row for a > 0
+      double restMin = Double.isInfinite(atMin) ? min : min - a * atMin;
+      double restMax = Double.isInfinite(atMax) ? max : max - a * atMax;
       double fromHi =
           useHi && (minInf == 0 || Double.isInfinite(atMin))
-              ? (rowHi[i] - (Double.isInfinite(atMin) ? min : min - a * atMin)) / a
+              ? (rowHi[i] - restMin) / a
               : Double.NaN;
       double fromLo =
           useLo && (maxInf == 0 || Double.isInfinite(atMax))
-              ? (rowLo[i] - (Double.isInfinite(atMax) ? max : max - a * atMax)) / a
+              ? (rowLo[i] - restMax) / a
               : Double.NaN;
       double newHi = a > 0 ? fromHi : fromLo;
       double newLo = a > 0 ? fromLo : fromHi;
@@ -901,15 +904,14 @@ final class Presolve {
     // the side takes the least activity of the others for the upper side, the most for the lower
     // side; the bounds of x_j among those removed are not the others'
     boolean ownLoInMin = a > 0;
-    int own;
     if (side > 0) {
-      own = (ownLoInMin ? freeLo[j] : freeHi[j]) ? 1 : 0;
-      if (freeMinSides[i] - own > 0) {
+      boolean ownFree = ownLoInMin ? freeLo[j] : freeHi[j];
+      if (freeMinSides[i] - (ownFree ? 1 : 0) > 0) {
         return false;
       }
     } else {
-      own = (ownLoInMin ? freeHi[j] : freeLo[j]) ? 1 : 0;
-      if (freeMaxSides[i] - own > 0) {
+      boolean ownFree = ownLoInMin ? freeHi[j] : freeLo[j];
+      if (freeMaxSides[i] - (ownFree ? 1 : 0) > 0) {
         return false;
       }
     }
@@ -1004,13 +1006,15 @@ final class Presolve {
       double atMin = a > 0 ? yLo[i] : yHi[i];
       double atMax = a > 0 ? yHi[i] : yLo[i];
       // a y_i <= c - (the least of the rest), a y_i >= c - (the most of the rest)
+      double restMin = Double.isInfinite(atMin) ? min : min - a * atMin;
+      double restMax = Double.isInfinite(atMax) ? max : max - a * atMax;
       double fromHi =
           useHi && (minInf == 0 || Double.isInfinite(atMin))
-              ? (c - (Double.isInfinite(atMin) ? min : min - a * atMin) + slack) / a
+              ? (c - restMin + slack) / a
               : Double.NaN;
       double fromLo =
           useLo && (maxInf == 0 || Double.isInfinite(atMax))
-              ? (c - (Double.isInfinite(atMax) ? max : max - a * atMax) - slack) / a
+              ? (c - restMax - slack) / a
               : Double.NaN;
       double newHi = a > 0 ? fromHi : fromLo;
       double newLo = a > 0 ? fromLo : fromHi;
@@ -2372,11 +2376,9 @@ final class Presolve {
       if (!merged && byCost != null && PARALLEL_DOMINATED_RULE) {
         // a parallel column of another cost: the cheapest and the dearest of the hash are tried
         int fixed = dominatedParallel(k, byCost, keptRows, keptVals, rows, vals, len);
-        if (fixed == k) {
-          found++;
-          continue;
-        }
         found += fixed >= 0 ? 1 : 0;
+        // a fixed x_k is not kept for later columns
+        merged = fixed == k;
       }
       if (!merged) {
         keptRows[k] = Arrays.copyOf(rows, len);
@@ -2408,36 +2410,45 @@ final class Presolve {
       List<Integer> same =
           end == 0 ? byCost.firstEntry().getValue() : byCost.lastEntry().getValue();
       int tries = 0;
-      for (int q = same.size() - 1; q >= 0 && tries < PARALLEL_DOMINATED_TRIES; q--) {
+      int q = same.size() - 1;
+      while (q >= 0 && tries < PARALLEL_DOMINATED_TRIES) {
         int j = same.get(q);
-        if (!colAlive[j]) {
-          continue;
-        }
-        tries++;
-        double lambda = multiple(keptRows[j], keptVals[j], rows, vals, len);
-        if (lambda == 0) {
-          continue;
-        }
-        double delta = lambda * wtrue[j] - wtrue[k];
-        double tol = DUAL_DOMINATED * (1 + Math.abs(wtrue[k]) + Math.abs(lambda * wtrue[j]));
-        if (Math.abs(delta) <= tol) {
-          continue;
-        }
-        // t > 0 pays when delta < 0 (x_k down), t < 0 when delta > 0 (x_k up); x_j moves by
-        // lambda t
-        boolean kUp = delta > 0;
-        boolean jUp = kUp != lambda > 0;
-        if (unbounded(j, jUp) && !Double.isInfinite(kUp ? hi[k] : lo[k])) {
-          // x_j takes up any move: x_k goes to its bound
-          dominated(k, kUp ? hi[k] : lo[k]);
-          return k;
-        }
-        if (unbounded(k, kUp) && !Double.isInfinite(jUp ? hi[j] : lo[j])) {
-          // x_k takes up any move: x_j goes to its bound
-          dominated(j, jUp ? hi[j] : lo[j]);
-          return j;
+        q--;
+        if (colAlive[j]) {
+          tries++;
+          int fixed = dominatedPair(k, j, multiple(keptRows[j], keptVals[j], rows, vals, len));
+          if (fixed >= 0) {
+            return fixed;
+          }
         }
       }
+    }
+    return -1;
+  }
+
+  // the column fixed when column k is lambda times column j and one of them dominates the other,
+  // or -1
+  private int dominatedPair(int k, int j, double lambda) {
+    if (lambda == 0) {
+      return -1;
+    }
+    double delta = lambda * wtrue[j] - wtrue[k];
+    double tol = DUAL_DOMINATED * (1 + Math.abs(wtrue[k]) + Math.abs(lambda * wtrue[j]));
+    if (Math.abs(delta) <= tol) {
+      return -1;
+    }
+    // t > 0 pays when delta < 0 (x_k down), t < 0 when delta > 0 (x_k up); x_j moves by lambda t
+    boolean kUp = delta > 0;
+    boolean jUp = kUp != lambda > 0;
+    if (unbounded(j, jUp) && !Double.isInfinite(kUp ? hi[k] : lo[k])) {
+      // x_j takes up any move: x_k goes to its bound
+      dominated(k, kUp ? hi[k] : lo[k]);
+      return k;
+    }
+    if (unbounded(k, kUp) && !Double.isInfinite(jUp ? hi[j] : lo[j])) {
+      // x_k takes up any move: x_j goes to its bound
+      dominated(j, jUp ? hi[j] : lo[j]);
+      return j;
     }
     return -1;
   }

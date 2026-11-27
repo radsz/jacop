@@ -795,7 +795,6 @@ class RevisedDualSimplexTest {
     // row implies the upper bound of its column singleton (s, t, w, cost 1), so y_i <= 1, and x
     // (cost 5, in two rows) is dominated; u and v (cost 1) are only weakly dominated by the
     // singletons and stay or go with the others. min 2
-    double inf = Double.POSITIVE_INFINITY;
     for (boolean presolve : new boolean[] {false, true}) {
       RevisedDualSimplex lp =
           new RevisedDualSimplex(
@@ -822,7 +821,6 @@ class RevisedDualSimplexTest {
   void equationTheOtherEquationsImplyIsRemoved() {
     // x + y + 2z = 3 and y + z + w = 2 give x + 2y + 3z + w = 5, the third equation; with 6 on its
     // right-hand side the equations have no solution. min x + y + z + w over [0, 4]
-    double inf = Double.POSITIVE_INFINITY;
     for (double third : new double[] {5, 6}) {
       for (boolean presolve : new boolean[] {false, true}) {
         RevisedDualSimplex lp =
@@ -1134,7 +1132,12 @@ class RevisedDualSimplexTest {
       return;
     }
     for (int r : new int[] {i, k}) {
-      double b = p.rowLo[r] != -INF ? p.rowLo[r] : p.rowHi[r] != INF ? p.rowHi[r] : 0;
+      double b = 0;
+      if (p.rowLo[r] > -INF) {
+        b = p.rowLo[r];
+      } else if (p.rowHi[r] < INF) {
+        b = p.rowHi[r];
+      }
       p.rowLo[r] = b;
       p.rowHi[r] = b;
     }
