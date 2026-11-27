@@ -8013,6 +8013,7 @@ class FlatzincFrontEndTest {
     }
   }
 
+  @Test
   void aSearchOverUndeclaredSymbolsOrSymbolsOfAnotherTypeIsAnError() throws IOException {
     // the thread that followed the annotation threw a NullPointerException (or ignored an
     // undeclared q under input_order), while -f and the other threads of -p 2 solved the model
@@ -9050,6 +9051,7 @@ class FlatzincFrontEndTest {
     assertEquals("", later.substring(atReturn.length()));
   }
 
+  @Test
   void listsDifferClausesReadNoSumOfMinValueWeightsAsADifference() throws IOException {
     // int_lin_ne_imp([-2147483648, -2147483648], [p_i, p_j], 0, b) says p_i + p_j != 0, but
     // a[0] == -a[1] holds for it in int arithmetic, so DisjunctiveListsDifferDetector read it as
