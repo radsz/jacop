@@ -14869,4 +14869,65 @@ class SingleConstraintTest extends TestHelper {
     assertThat(x.dom().toString()).isEqualTo("0");
     assertThat(y.dom().toString()).isEqualTo("{1..3}");
   }
+
+  // NetworkFlow restores an arc changed at a higher level for changes of a lower one (a late arc)
+  // from the domain of its variable when a level is removed. s0 narrowed at level 3 without a
+  // consistency, then an empty level 4 removed: the restore moved the flow of s0 out of its arc
+  // without registering the nodes left unbalanced, so the network failed at h0 = 1, which has six
+  // solutions as without the walk.
+  @Test
+  void networkFlowRepairsTheBalancesOfAnArcRestoredFromANarrowedDomain() {
+    for (boolean walk : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar[] x = {
+        new IntVar(store, "x0", 0, 2),
+        new IntVar(store, "x1", 0, 1),
+        new IntVar(store, "h0", 0, 2),
+        new IntVar(store, "h1", 0, 2),
+        new IntVar(store, "h2", 1, 2),
+        new IntVar(store, "s0", 0, 2),
+        new IntVar(store, "s1", 0, 0),
+        new IntVar(store, "s2", 0, 2),
+        new IntVar(store, "cost", 0, 4)
+      };
+      x[8].domain.inComplement(0, x[8], 3);
+      store.imposeDecomposition(
+          new SoftGCC(
+              new IntVar[] {x[0], x[1]},
+              new IntVar[] {x[2], x[3], x[4]},
+              new IntVar[] {x[5], x[6], x[7]},
+              x[8],
+              ViolationMeasure.VALUE_BASED));
+      store.setLevel(1);
+      assertThat(store.consistency()).isTrue();
+      if (walk) {
+        x[5].domain.in(1, x[5], 0, 1);
+        store.setLevel(2);
+        assertThat(store.consistency()).isTrue();
+        store.setLevel(3);
+        x[8].domain.in(3, x[8], 2, 4);
+        x[5].domain.in(3, x[5], 0, 0);
+        store.setLevel(4);
+        store.removeLevel(4);
+        store.setLevel(3);
+        store.removeLevel(3);
+        store.setLevel(2);
+      } else {
+        x[5].domain.in(1, x[5], 0, 1);
+        store.setLevel(2);
+        assertThat(store.consistency()).isTrue();
+      }
+      store.setLevel(3);
+      x[2].domain.in(3, x[2], 1, 1);
+      assertThat(store.consistency()).as("after the walk " + walk).isTrue();
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      search.getSolutionListener().searchAll(true);
+      search.getSolutionListener().recordSolutions(false);
+      search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()));
+      assertThat(search.getSolutionListener().solutionsNo())
+          .as("after the walk " + walk)
+          .isEqualTo(6);
+    }
+  }
 }
