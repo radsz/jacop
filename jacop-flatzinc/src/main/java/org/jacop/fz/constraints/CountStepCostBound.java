@@ -251,14 +251,21 @@ public final class CountStepCostBound {
       IntVar[] vars = new IntVar[counted.size() + 1];
       int[] as = new int[vars.length];
       long max = 0;
+      boolean fits = least >= IntDomain.MIN_INT;
       for (int i = 0; i < counted.size(); i++) {
         vars[i] = counted.get(i).term;
         as[i] = (int) counted.get(i).weight;
+        fits &= as[i] == counted.get(i).weight;
         max += counted.get(i).weight * counted.get(i).term.max();
-        covered.put(vars[i], true);
       }
-      if (max > IntDomain.MAX_INT) {
+      // the sum's domain and its coefficients are ints: a bound beyond them is left out
+      if (!fits || max > IntDomain.MAX_INT) {
         continue;
+      }
+      for (IntVar term : vars) {
+        if (term != null) {
+          covered.put(term, true);
+        }
       }
       IntVar sum = new IntVar(support.store, (int) least, (int) max);
       vars[counted.size()] = sum;

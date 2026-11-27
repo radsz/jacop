@@ -11037,4 +11037,21 @@ class FlatzincFrontEndTest {
         "LCG -a against the default");
     assertEquals(4, solveAll(some).size());
   }
+
+  @Test
+  void countStepCostBoundBeyondIntIsLeftOut() throws IOException {
+    // the least cost -2.4e9 of the counted terms was cast to int for the domain of their sum:
+    // it wrapped to a positive singleton and the model was reported unsatisfiable
+    String model =
+        "var 1..1: x1 :: output_var;\nvar 1..2: x2 :: output_var;\nvar 1..2: x3 :: output_var;\n"
+            + "var 0..3: c;\nvar bool: b;\nvar -500000000..-400000000: y;\n"
+            + "var 400000000..450000000: z;\nvar -536870909..536870909: obj :: output_var;\n"
+            + "constraint jacop_count([x1, x2, x3], 1, c);\nconstraint int_le_reif(c, 0, b);\n"
+            + "constraint jacop_if_then_else_int([b, true], [-500000000, -400000000], y);\n"
+            + "constraint int_lin_eq([6, 6, -1], [y, z, obj], 0);\nsolve minimize obj;\n";
+    for (String lcg : new String[] {"on", "off"}) {
+      String out = run(model, "--lcg", lcg)[0];
+      assertTrue(out.contains("obj = 0;\n----------\n=========="), out);
+    }
+  }
 }
