@@ -229,6 +229,7 @@ setup to run configuration. -->
                                 <presolve.dominance.trials>500</presolve.dominance.trials>
                                 <wakeup.trials>1000</wakeup.trials>
                                 <consistency.instances>50</consistency.instances>
+                                <symmetry.default.models>200</symmetry.default.models>
                                 <floats.fuzz.trials>100</floats.fuzz.trials>
                                 <floats.fuzz.opt.trials>3</floats.fuzz.opt.trials>
                                 <float.builtins.trials>200</float.builtins.trials>
@@ -462,6 +463,7 @@ setup to run configuration. -->
                                 <include>**/FunctionalTabuFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
+                                <include>**/DefaultSymmetryBruteForceTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
@@ -789,6 +791,7 @@ setup to run configuration. -->
                                 <include>**/FunctionalTabuFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
+                                <include>**/DefaultSymmetryBruteForceTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
@@ -1106,6 +1109,7 @@ setup to run configuration. -->
                                 <include>**/FunctionalTabuFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
+                                <include>**/DefaultSymmetryBruteForceTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
@@ -1420,6 +1424,7 @@ setup to run configuration. -->
                                 <include>**/FunctionalTabuFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
+                                <include>**/DefaultSymmetryBruteForceTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
