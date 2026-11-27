@@ -8744,13 +8744,23 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       outputSet.addAll(Arrays.asList(localOutput.getBoolVars()));
       outputSet.addAll(Arrays.asList(localOutput.getFloatVars()));
       shown = outputSet.toArray(new Var[0]);
+      // the output variables that no constraint touches come after the others, as in the
+      // search of the outputs (untouchedOutputs): above a failing completion every failure
+      // enumerated their values again
+      Set<Var> untouched =
+          untouchedOutputs(
+              localOutput.getIntVars(),
+              localOutput.getBoolVars(),
+              localOutput.getSetVars(),
+              localOutput.getFloatVars(),
+              false);
       addFreeSelects(
           selects,
           monitors,
-          localOutput.getSetVars(),
-          localOutput.getIntVars(),
-          localOutput.getBoolVars(),
-          localOutput.getFloatVars(),
+          withoutVars(localOutput.getSetVars(), untouched, SetVar[]::new),
+          withoutVars(localOutput.getIntVars(), untouched, IntVar[]::new),
+          withoutVars(localOutput.getBoolVars(), untouched, BooleanVar[]::new),
+          withoutVars(localOutput.getFloatVars(), untouched, FloatVar[]::new),
           null);
       addFreeSelects(
           selects,
@@ -8760,6 +8770,24 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           withoutVars(searchVars.getBoolVars(), outputSet, BooleanVar[]::new),
           withoutVars(searchVars.getFloatVars(), outputSet, FloatVar[]::new),
           null);
+      if (!untouched.isEmpty()) {
+        addFreeSelects(
+            selects,
+            monitors,
+            Arrays.stream(localOutput.getSetVars())
+                .filter(untouched::contains)
+                .toArray(SetVar[]::new),
+            Arrays.stream(localOutput.getIntVars())
+                .filter(untouched::contains)
+                .toArray(IntVar[]::new),
+            Arrays.stream(localOutput.getBoolVars())
+                .filter(untouched::contains)
+                .toArray(BooleanVar[]::new),
+            Arrays.stream(localOutput.getFloatVars())
+                .filter(untouched::contains)
+                .toArray(FloatVar[]::new),
+            null);
+      }
     } else {
       // the variables that no constraint touches take any value: branching on them before the
       // others multiplied the tree by their values (a free set of 1..16 above a failing search)

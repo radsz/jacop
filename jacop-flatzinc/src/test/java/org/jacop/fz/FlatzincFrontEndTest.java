@@ -10189,4 +10189,39 @@ class FlatzincFrontEndTest {
     String out = run(model)[0];
     assertTrue(out.contains("x = 3;\n----------\n=========="), out);
   }
+
+  @Test
+  void allSolutionsWithoutAnnotationDecideTheConstraintsBeforeUntouchedOutputs()
+      throws IOException {
+    // every unfixed output (a Boolean, an integer, a float) is touched by no constraint and the
+    // hidden p0..p2 cannot all differ: free search under -a fixed the outputs first and bisected
+    // the float again above every failure of the hidden variables, so the tiny model ended UNKNOWN
+    String model =
+        "var bool: b1;\nvar 1..3: x0 :: output_var;\nvar 1..2: p0;\nvar 1..2: p1;\n"
+            + "var 1..2: p2;\nvar bool: b2;\nvar bool: u0 :: output_var;\n"
+            + "var 0..2: u1 :: output_var;\nvar 0.0..2.5: u2 :: output_var;\n"
+            + "constraint int_ne(p0,p1);\nconstraint int_ne(p0,p2);\nconstraint int_ne(p1,p2);\n"
+            + "constraint jacop_table_int([b1,x0],[1,3]);\nconstraint int_ne_reif(p2,1,b2);\n"
+            + "solve satisfy;\n";
+    for (String[] options :
+        new String[][] {
+          {"-a", "--lcg", "off"}, {"-n", "2", "--lcg", "off"}, {"-a", "--lcg", "on"}
+        }) {
+      String[] args = Arrays.copyOf(options, options.length + 2);
+      args[options.length] = "-t";
+      args[options.length + 1] = "3000";
+      String out = run(model, args)[0];
+      assertTrue(out.contains("=====UNSATISFIABLE====="), Arrays.toString(options) + ": " + out);
+    }
+    // with a completion: each of the 2 * 3 * 1201 output assignments once
+    String sat =
+        model
+            .replace("var 1..2: p2;", "var 1..3: p2;")
+            .replace("var 0.0..2.5: u2", "var 0..1200: u2");
+    String out = run(sat, "-a", "--lcg", "off", "-t", "10000")[0];
+    List<String> solutions = Arrays.asList(out.split("----------\n", -1));
+    assertEquals(7206, solutions.size() - 1, out.substring(0, Math.min(out.length(), 400)));
+    assertEquals(7206, new HashSet<>(solutions.subList(0, 7206)).size());
+    assertTrue(out.endsWith("==========\n"), out.substring(Math.max(0, out.length() - 200)));
+  }
 }
