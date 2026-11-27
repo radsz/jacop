@@ -371,6 +371,14 @@ public final class ClampedBounds {
             }
           }
         }
+        case "jacop_count_values" -> {
+          // each counter counts some of the variables: it lies within 0..n
+          IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+          IntVar[] counter = support.getVarArray((SimpleNode) node.jjtGetChild(2));
+          for (IntVar c : counter) {
+            functions.add(new long[] {ELEMENT_CONST, id(c), 0, x.length});
+          }
+        }
         case "bool2int" -> {
           IntVar z = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
           functions.add(new long[] {ELEMENT_CONST, id(z), 0, 1});

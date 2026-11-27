@@ -11054,4 +11054,23 @@ class FlatzincFrontEndTest {
       assertTrue(out.contains("obj = 0;\n----------\n=========="), out);
     }
   }
+
+  @Test
+  void countersOfCountValuesDeclaredWithoutBoundsKeepTheSearchComplete() throws IOException {
+    // the counters of count_values, declared var int, were narrowed to JaCoP's range without a
+    // bound
+    // that kept them within it, so the only solution of hakank_farm_puzzle was printed without
+    // ========== (and a maximum count without its proof)
+    String model =
+        "var {2,4}: a;\nvar {2,4}: b;\nvar {2,4}: c;\nvar int: n0;\nvar int: n2;\nvar int: n4;\n"
+            + "array [1..3] of var int: x :: output_array([1..3]) = [a,b,c];\n"
+            + "array [1..3] of var int: n :: output_array([1..3]) = [n0,n2,n4];\n"
+            + "constraint int_lin_eq([1,1,1],[a,b,c],10);\n"
+            + "constraint jacop_count_values(x,[0,2,4],n);\n";
+    String all = run(model + "solve satisfy;\n", "-n", "1000")[0];
+    assertEquals(3, all.split("----------", -1).length - 1, all);
+    assertTrue(all.endsWith("----------\n==========\n"), all);
+    String max = run(model + "solve maximize n4;\n")[0];
+    assertTrue(max.endsWith("n = array1d(1..3, [0, 1, 2]);\n----------\n==========\n"), max);
+  }
 }
