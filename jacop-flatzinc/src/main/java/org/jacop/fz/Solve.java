@@ -10980,7 +10980,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       assignments *=
           switch (v) {
             case FloatVar f -> Double.POSITIVE_INFINITY;
-            case SetVar set -> Math.pow(2, set.dom().lub().getSize() - set.dom().glb().getSize());
+            case SetVar set ->
+                Math.pow(2, (double) set.dom().lub().getSize() - set.dom().glb().getSize());
             default -> v.getSize();
           };
     }
