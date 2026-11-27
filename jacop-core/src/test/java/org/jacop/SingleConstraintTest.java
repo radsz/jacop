@@ -14850,4 +14850,23 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     assertThat(profit.domain.contains(7)).as(profit.toString()).isTrue();
   }
+
+  // A no-good that lists one variable with two values always holds and impose leaves it out, but a
+  // direct consistency call read its watches, which impose never set: IllegalStateException with a
+  // fixed x, NullPointerException otherwise.
+  @Test
+  void noGoodListingAVariableWithTwoValuesTakesADirectConsistencyCall() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    IntVar y = new IntVar(store, "y", 1, 3);
+    NoGood noGood = new NoGood(new IntVar[] {x, y, y}, new int[] {0, 1, 0});
+    store.impose(noGood);
+    assertThat(store.consistency()).isTrue();
+    noGood.consistency(store);
+    x.domain.in(0, x, 0, 0);
+    assertThat(store.consistency()).isTrue();
+    noGood.consistency(store);
+    assertThat(x.dom().toString()).isEqualTo("0");
+    assertThat(y.dom().toString()).isEqualTo("{1..3}");
+  }
 }
