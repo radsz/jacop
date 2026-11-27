@@ -10444,4 +10444,62 @@ class FlatzincFrontEndTest {
     }
   }
 
+  @Test
+  void fixedOptimisationTasteCutByTheTimeOutProvesNoOptimum() throws IOException {
+    // fixed search without a solution tastes the search without learning; kept, it found
+    // solutions and ran into the time-out before the end of its tree, and the run still ended
+    // with ========== as if it had proved the optimum. Seven pigeons whose first must take the
+    // last hole, then a permutation of 13 under a weighted sum that branch and bound does not
+    // close in a few seconds
+    int n = 7;
+    int m = 13;
+    StringBuilder model = new StringBuilder();
+    StringBuilder cons = new StringBuilder();
+    StringJoiner order = new StringJoiner(",");
+    StringJoiner nonZero = new StringJoiner(",");
+    for (int v = 1 - n; v <= n - 1; v++) {
+      if (v != 0) {
+        nonZero.add(Integer.toString(v));
+      }
+    }
+    for (int i = 1; i <= n; i++) {
+      model.append("var 1..%d: p%d :: output_var;\n".formatted(i == 1 ? n : n - 1, i));
+      order.add("p" + i);
+    }
+    for (int i = 1; i <= n; i++) {
+      for (int j = i + 1; j <= n; j++) {
+        model.append("var {%s}: d%d_%d;\n".formatted(nonZero, i, j));
+        cons.append("constraint int_lin_eq([1,-1,-1],[p%d,p%d,d%d_%d],0);\n".formatted(i, j, i, j));
+      }
+    }
+    StringJoiner xs = new StringJoiner(",");
+    StringJoiner ws = new StringJoiner(",");
+    for (int i = 0; i < m; i++) {
+      model.append("var 1..%d: x%d :: output_var;\n".formatted(m, i));
+      for (int j = 0; j < i; j++) {
+        cons.append("constraint int_ne(x%d,x%d);\n".formatted(j, i));
+      }
+      xs.add("x" + i);
+      order.add("x" + i);
+      ws.add(Integer.toString(1 + (7 * i + 3) % 29));
+    }
+    model.append("var 0..1000000: obj :: output_var;\n").append(cons);
+    model.append("constraint int_lin_eq([%s,1000,-1],[%s,p1,obj],0);\n".formatted(ws, xs));
+    model.append(
+        "solve :: int_search([%s],input_order,indomain_min,complete) minimize obj;\n"
+            .formatted(order));
+    String out =
+        run(
+            model.toString(),
+            "--lcg",
+            "on",
+            "--lp",
+            "off",
+            "-t",
+            "3000",
+            "--free-config",
+            "lcg-fixed-at=0.0001,lcg-fixed-ratio=-1")[0];
+    assertTrue(out.contains("----------"), out);
+    assertFalse(out.contains("=========="), out);
+  }
 }

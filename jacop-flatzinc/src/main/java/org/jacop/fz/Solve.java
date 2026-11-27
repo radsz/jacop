@@ -5023,7 +5023,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + (fixedTasteOutcome == 2 ? ": kept" : ": LCG goes on"));
     }
     if (found || numberSolutions > 0) {
-      lcgStatus = CdclSolver.SAT;
+      // under an objective the search without learning proves the optimum only at its end
+      lcgStatus = costVar != null && label.timeOutOccured ? CdclSolver.UNKNOWN : CdclSolver.SAT;
       return true;
     }
     if (!label.timeOutOccured) {
