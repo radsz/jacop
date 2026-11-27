@@ -141,12 +141,6 @@ class LocalSearchTest {
   }
 
   /**
-   * The model of the search is dropped when it returns; the best solution and the counters stay.
-   * Kept, the clauses given as extra constraints, the rows and the copies of the scratch store held
-   * 260 MB of rcpsp-wet-diverse j60_19_6 (MiniZinc Challenge 2019) under -f for the rest of the
-   * run, since the caller keeps the search for its solution and statistics.
-   */
-  /**
    * The extra constraints, a list of the SAT solver's clauses, are not searched once for each
    * constraint of the store while substituted variables are replaced: on MiniZinc Challenge 2026
    * atp-stage2 instance9-stage2 (64,000 clauses) building local search took 12 s.
@@ -186,6 +180,12 @@ class LocalSearchTest {
     assertTrue(v[0] + v[1] + v[2] >= 2 && v[2] + v[3] >= 1, Arrays.toString(v));
   }
 
+  /**
+   * The model of the search is dropped when it returns; the best solution and the counters stay.
+   * Kept, the clauses given as extra constraints, the rows and the copies of the scratch store held
+   * 260 MB of rcpsp-wet-diverse j60_19_6 (MiniZinc Challenge 2019) under -f for the rest of the
+   * run, since the caller keeps the search for its solution and statistics.
+   */
   @Test
   void dropsItsModelWhenItReturns() throws Exception {
     Store store = new Store();

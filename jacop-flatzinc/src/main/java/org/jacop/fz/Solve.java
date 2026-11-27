@@ -5123,7 +5123,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               weak,
               solutionFound));
     }
-    return weak;
+    return weak && !boundNearlyClosed(bestPrintedCost.get());
   }
 
   // whether the first check of an optimisation search's learning was printed
@@ -5218,11 +5218,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             / 1e9) {
       // fast enough; it still gives way when learning cuts the tree too little to pay for its cost
       // per node, and it stopped making progress
-      weak =
-          !unsolvedOnly
-              && optimisationLearningCutsLittle(solver, now)
-              && solutionFound
-              && !boundNearlyClosed(bestPrintedCost.get());
+      weak = !unsolvedOnly && optimisationLearningCutsLittle(solver, now) && solutionFound;
       if (!weak || "report".equals(options.freeConfig("lcg-opt-probe", "on"))) {
         return false;
       }
