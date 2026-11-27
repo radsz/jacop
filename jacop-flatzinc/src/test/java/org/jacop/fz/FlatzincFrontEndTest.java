@@ -10266,4 +10266,54 @@ class FlatzincFrontEndTest {
     assertTrue(out.endsWith("=====UNKNOWN=====\n"), out);
     assertEquals(0, lastStatus);
   }
+
+  /**
+   * The heap runs out in the search after a solution: o = 2 fixes x by propagation, o = 1 leaves
+   * the all-different x to a search whose trail of holes outgrows the 64 MB heap. The run printed
+   * only the message and exited with status 1, losing the solution kept back; it ends as at a
+   * time-out, with that solution and no completion line.
+   */
+  @Test
+  void anOutOfMemoryErrorInTheSearchPrintsTheKeptSolution()
+      throws IOException, InterruptedException {
+    int n = 3000;
+    StringBuilder model = new StringBuilder();
+    model.append("var 1..2: o :: output_var;\nvar bool: c;\n");
+    model.append("array [1..").append(n).append("] of var 1..").append(n).append(": x;\n");
+    model.append("constraint int_eq_reif(o,2,c);\n");
+    for (int i = 1; i <= n; i++) {
+      model.append("constraint int_eq_imp(x[").append(i).append("],").append(i).append(",c);\n");
+    }
+    model.append("constraint jacop_alldiff(x);\n");
+    model.append(
+        "solve :: seq_search([int_search([o], input_order, indomain_max, complete),"
+            + " int_search(x, input_order, indomain_middle, complete)]) minimize o;\n");
+    Path fzn = tmp.resolve("oom.fzn");
+    Files.writeString(fzn, model);
+    Path java = Path.of(System.getProperty("java.home"), "bin", "java");
+    ProcessBuilder pb =
+        new ProcessBuilder(
+            java.toString(),
+            "-Xmx64m",
+            "-XX:+UseSerialGC",
+            "-cp",
+            System.getProperty("java.class.path"),
+            "org.jacop.fz.Fz2jacop",
+            "--lcg",
+            "off",
+            fzn.toString());
+    pb.redirectErrorStream(true);
+    Process p = pb.start();
+    String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+    boolean ended = p.waitFor(120, TimeUnit.SECONDS);
+    if (!ended) {
+      p.destroyForcibly();
+    }
+    assertTrue(ended, out);
+    assertTrue(out.contains("%% Out of memory error"), out);
+    assertTrue(out.contains("o = 2;\n----------\n"), out);
+    assertFalse(out.contains("=========="), out);
+    assertFalse(out.contains("=====UNSATISFIABLE====="), out);
+    assertEquals(0, p.exitValue(), out);
+  }
 }
