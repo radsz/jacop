@@ -4093,8 +4093,9 @@ class LcgSolverTest {
       assertThat(own).isGreaterThan(300);
       // the cuts are found by one walk each way since the cut explanation of WordDesign2-words-mdd
       // (XCSP 2023) was made faster; the atoms are those of the four walks per cut before it (751
-      // until the product and sum reasons of the other relations changed the search)
-      assertThat(atoms).isEqualTo(746);
+      // until the product and sum reasons of the other relations changed the search, 746 while
+      // learnt clauses were shrunk, which changed the search too)
+      assertThat(atoms).isEqualTo(725);
     }
   }
 
