@@ -9790,7 +9790,8 @@ class FlatzincFrontEndTest {
     for (int i = 0; i < 3; i++) {
       model.append("var 1..2: p").append(i).append(";\n");
     }
-    for (int i = 0; i < 6; i++) {
+    // (eleven of them, more assignments than the search leaves where the model puts them)
+    for (int i = 0; i < 11; i++) {
       model.append("var 1..2: u").append(i).append(" :: output_var;\n");
     }
     model.append(
@@ -9798,18 +9799,15 @@ class FlatzincFrontEndTest {
             + "constraint int_ne_reif(p1,p2,b0);\nconstraint int_ne(x,p2);\n"
             + "solve :: int_search([x], input_order, indomain_min, complete) satisfy;\n");
     StringBuilder expected = new StringBuilder();
-    for (int x = 1; x <= 2; x++) {
-      for (int k = 0; k < 64; k++) {
-        expected.append("x = ").append(x).append(";\n");
-        for (int i = 0; i < 6; i++) {
-          expected.append("u").append(i).append(" = ").append(1 + (k >> (5 - i) & 1)).append(";\n");
-        }
-        expected.append("----------\n");
+    for (int k = 0; k < 64; k++) {
+      expected.append("x = 1;\n");
+      for (int i = 0; i < 11; i++) {
+        expected.append("u").append(i).append(" = ").append(1 + (k >> (10 - i) & 1)).append(";\n");
       }
+      expected.append("----------\n");
     }
-    expected.append("==========\n");
     for (int round = 0; round < 3; round++) {
-      String out = run(model.toString(), "-a", "--lcg", "off")[0];
+      String out = run(model.toString(), "-n", "64", "--lcg", "off")[0];
       assertTrue(out.contains(expected), out);
     }
   }
@@ -10154,5 +10152,24 @@ class FlatzincFrontEndTest {
     String out = run(model, "-a")[0];
     assertEquals(4, out.split("----------", -1).length - 1, out);
     assertTrue(out.contains("n = 0;\nc = false;\n"), out);
+  }
+
+  @Test
+  void untouchedOutputVariablesOfFewAssignmentsKeepTheirPlace() throws IOException {
+    // an untouched output of few values costs the completion little when it stays above it, so it
+    // stays where the outputs put it and -a prints the solutions in the order it always had (u
+    // first), with presolve as without it; labelled below the completion it came last
+    String model =
+        "var bool: b0;\nvar 1..2: u :: output_var;\nvar 1..3: x :: output_var;\nvar 1..2: p;\n"
+            + "constraint int_le_reif(x, 1, b0);\nconstraint int_ne(x, p);\n"
+            + "solve :: bool_search([b0], input_order, indomain_min, complete) satisfy;\n";
+    String expected =
+        "u = 1;\nx = 2;\n----------\nu = 1;\nx = 3;\n----------\nu = 2;\nx = 2;\n----------\n"
+            + "u = 2;\nx = 3;\n----------\nu = 1;\nx = 1;\n----------\nu = 2;\nx = 1;\n----------\n"
+            + "==========\n";
+    for (String presolve : new String[] {"off", "on", "check"}) {
+      String out = run(model, "-a", "--lcg", "off", "--presolve", presolve)[0];
+      assertTrue(out.contains(expected), presolve + ": " + out);
+    }
   }
 }

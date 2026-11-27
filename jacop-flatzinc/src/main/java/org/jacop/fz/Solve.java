@@ -45,6 +45,7 @@ import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -9274,7 +9275,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         other = true;
       }
     }
-    return other ? untouched : Set.of();
+    return other && !fewAssignments(untouched) ? untouched : Set.of();
   }
 
   /** Adds the branching on the untouched variables at the end of the free search. */
@@ -10891,16 +10892,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
-   * Returns the given output variables that no constraint of the model touches, in the loaded store
-   * before presolve or among the clauses kept for the LCG solver, and that are not the objective;
-   * or none when no variable outside them was touched, so that the completion search cannot fail.
-   * With allVariables the given variables are all the variables of the search, and none are
-   * returned when no variable of the default search was touched. The decision is taken on the model
-   * before presolve, so that presolve, which removes constraints, and the linear relaxation imposed
-   * after it, which spans what is left, do not change the order of the search; constraints imposed
-   * after presolve are implied by the model or keep an optimum, so the untouched variables still
-   * take any value. A view and the base of a view come from an equation of the model, which touched
-   * both.
+   * Returns the given output variables that the search labels last, below the completion search.
+   * The rule: a variable is labelled last when it is not fixed and not the objective, no constraint
+   * of the loaded model touched it before presolve and no clause kept for the SAT or LCG solver
+   * names it; when before presolve some variable of the default search that is not output (with
+   * allVariables, where the given variables are all the variables of the search: any variable of
+   * the default search) was touched and not fixed, so that the completion can fail; and when the
+   * untouched variables together have more than {@link #FEW_ASSIGNMENTS} assignments (a float
+   * counts as unbounded, a set as 2 to its undecided elements), so that re-enumerating them for
+   * each failure below them is what hurts. Otherwise every variable stays where the outputs put it,
+   * as it always did. The rule reads the model before presolve, so presolve, which removes
+   * constraints, and the linear relaxation imposed after it, which spans what is left, do not
+   * change the order of the search; the constraints imposed after presolve are implied by the model
+   * or keep an optimum, so an untouched variable still takes any value, and -a prints each output
+   * assignment once. A view and the base of a view come from an equation of the model, which
+   * touched both.
    */
   private Set<Var> untouchedOutputs(
       IntVar[] ints, BooleanVar[] bools, SetVar[] sets, FloatVar[] floats, boolean allVariables) {
@@ -10919,7 +10925,29 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         }
       }
     }
-    return untouched;
+    return fewAssignments(untouched) ? Set.of() : untouched;
+  }
+
+  // the most assignments of the untouched variables that the search still labels where the model
+  // puts them: re-enumerating them for each failure of what is below costs at most this factor
+  private static final double FEW_ASSIGNMENTS = 1024;
+
+  /**
+   * Whether the variables have at most {@link #FEW_ASSIGNMENTS} assignments together: the product
+   * of the sizes of the integer domains, of 2 to the number of undecided elements of each set, and
+   * no bound for a float, whose bisection goes down to the precision.
+   */
+  private static boolean fewAssignments(Collection<Var> vars) {
+    double assignments = 1;
+    for (Var v : vars) {
+      assignments *=
+          switch (v) {
+            case FloatVar f -> Double.POSITIVE_INFINITY;
+            case SetVar set -> Math.pow(2, set.dom().lub().getSize() - set.dom().glb().getSize());
+            default -> v.getSize();
+          };
+    }
+    return assignments <= FEW_ASSIGNMENTS;
   }
 
   /** The variables of the clauses kept for the SAT or LCG solver. */
