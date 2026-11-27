@@ -10247,4 +10247,23 @@ class FlatzincFrontEndTest {
       assertTrue(out.contains("=====UNSATISFIABLE====="), all + ": " + out);
     }
   }
+
+  @Test
+  void aSearchDeeperThanTheStackEndsUnknown() throws IOException {
+    // the annotation refutes the values of u1 one by one above a completion that always fails
+    // (h2 <-> h2 = h1 with h1 false), one Java frame per refuted value: the stack overflow ended
+    // the run with no status line and exit status 1, as if the model were rejected
+    String model =
+        "var bool: b0;\nvar bool: b1;\nvar bool: b2 :: output_var;\nvar 1..3: x0 :: output_var;\n"
+            + "var bool: h0;\nvar bool: h1;\nvar bool: h2;\nvar 0..0: u0 :: output_var;\n"
+            + "var 1..400000000: u1 :: output_var;\n"
+            + "constraint bool_eq_reif(h1,h2,h2);\nconstraint bool_eq(h1,false);\n"
+            + "constraint int_le_reif(x0,3,b1);\nconstraint bool_clause([h0],[h0,b0]);\n"
+            + "constraint bool_lin_eq([1,1],[b2,h0],2);\n"
+            + "solve :: int_search([u0,u1,x0], smallest, indomain_min, complete) satisfy;\n";
+    String out = run(model, "--lcg", "off", "-t", "10000")[0];
+    assertTrue(out.contains("%% Stack overflow exception error"), out);
+    assertTrue(out.endsWith("=====UNKNOWN=====\n"), out);
+    assertEquals(0, lastStatus);
+  }
 }

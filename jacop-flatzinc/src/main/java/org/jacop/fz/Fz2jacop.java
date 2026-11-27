@@ -318,9 +318,21 @@ public class Fz2jacop {
     } catch (OutOfMemoryError _) {
       print(opt, () -> IO.println("%% Out of memory error; consider option -Xmx... for JVM"));
     } catch (StackOverflowError _) {
+      // a search too deep for the JVM's stack (one recursion per refuted value of a large
+      // domain) ended before it was complete: as at a time-out, the best solution kept so far is
+      // printed, or UNKNOWN when none was printed
       print(
           opt,
-          () -> IO.println("%% Stack overflow exception error; consider option -Xss... for JVM"));
+          () -> {
+            IO.println("%% Stack overflow exception error; consider option -Xss... for JVM");
+            StringBuffer kept = parser.solver.lastSolution;
+            if (!opt.getAll() && kept != null) {
+              parser.solver.helperSolutionPrinter(kept.toString());
+            } else if (parser.solver.numberSolutions == 0) {
+              IO.println("=====UNKNOWN=====");
+            }
+          });
+      status = 0;
     } catch (TrivialSolution _) {
       Runtime.getRuntime().removeShutdownHook(t);
       status = 0;
