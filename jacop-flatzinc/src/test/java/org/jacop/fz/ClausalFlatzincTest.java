@@ -253,19 +253,46 @@ class ClausalFlatzincTest {
     assertTrue(out.contains("----------"), wide + out);
   }
 
+  // with a larger maxDomain the sums over wide domains are compiled too, so the fuzz covers them
+  @Test
+  void differenceOverMoreThanThreeValuesIsNotCompiled() throws IOException {
+    String small =
+        """
+        var 0..2: x0 :: output_var;
+        var 0..2: x1 :: output_var;
+        var 1..2: d :: output_var;
+        constraint int_lin_eq([1,-1,-1],[x0,x1,d],0);
+        constraint int_ne(x0,x1);
+        solve satisfy;
+        """;
+    assertTrue(run(small, true).contains("clausalModel=true"), small);
+    // the differences of a Costas array: lazy clause generation is faster
+    String wide = small.replace("0..2", "0..3");
+    String out = run(wide, true);
+    assertFalse(out.contains("clausalModel=true"), wide + out);
+    assertTrue(out.contains("----------"), wide + out);
+  }
+
   private void agree(int[][] domains, String maxDomain) throws IOException {
     String old = System.getProperty("org.jacop.fz.clausal.maxDomain");
+    String oldSum = System.getProperty("org.jacop.fz.clausal.sumDomain");
     if (maxDomain != null) {
       System.setProperty("org.jacop.fz.clausal.maxDomain", maxDomain);
+      System.setProperty("org.jacop.fz.clausal.sumDomain", maxDomain);
     }
     try {
       agree(domains);
     } finally {
-      if (old == null) {
-        System.clearProperty("org.jacop.fz.clausal.maxDomain");
-      } else {
-        System.setProperty("org.jacop.fz.clausal.maxDomain", old);
-      }
+      restore("org.jacop.fz.clausal.maxDomain", old);
+      restore("org.jacop.fz.clausal.sumDomain", oldSum);
+    }
+  }
+
+  private static void restore(String key, String value) {
+    if (value == null) {
+      System.clearProperty(key);
+    } else {
+      System.setProperty(key, value);
     }
   }
 

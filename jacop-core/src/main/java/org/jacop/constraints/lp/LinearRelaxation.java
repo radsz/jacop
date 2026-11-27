@@ -7709,6 +7709,12 @@ public class LinearRelaxation extends Constraint
           return false;
         }
       } else {
+        // a deduction of another branch may be tried: its fact x = v must hold at the position,
+        // or the bounds of x cited are no reason for the column at 1
+        if (trail.minBefore(c.variable(), position) != c.value()
+            || trail.maxBefore(c.variable(), position) != c.value()) {
+          return false;
+        }
         trail.addLowerBound(c.variable(), position, out);
         trail.addUpperBound(c.variable(), position, out);
       }
