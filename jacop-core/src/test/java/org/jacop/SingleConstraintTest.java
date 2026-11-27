@@ -14930,4 +14930,36 @@ class SingleConstraintTest extends TestHelper {
           .isEqualTo(6);
     }
   }
+
+  @Test
+  void elementVariableKeepsTheSharedEmptyDomainEmpty() {
+    // a position whose variable shares no value with the rest of the value domain had as its
+    // supports the empty domain an intersection of a small dense and an interval domain returns,
+    // SmallDenseDomain.emptyDomain, which moving a support there then changed for every domain
+    Store store = new Store();
+    IntVar index = new IntVar(store, "i", 1, 4);
+    IntVar value = new IntVar(store, "v", 1, 2);
+    IntVar x0 = new IntVar(store, "x0", 2, 2);
+    IntVar x1 = new IntVar(store, "x1", 3, 3);
+    IntervalDomain d2 = new IntervalDomain(1, 1);
+    d2.unionAdapt(3, 4);
+    IntervalDomain d3 = new IntervalDomain(1, 1);
+    d3.unionAdapt(3, 3);
+    IntVar x2 = new IntVar(store, "x2", d2);
+    IntVar x3 = new IntVar(store, "x3", d3);
+    store.impose(new ElementVariable(index, new IntVar[] {x0, x1, x2, x3}, value));
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    search.labeling(
+        store,
+        new SimpleSelect<>(
+            new IntVar[] {index, x3, x0, x1, value, x2}, null, new IndomainRandom<>(46)));
+    // i = 1: 6 solutions, i = 3: 2, i = 4: 3
+    assertThat(search.getSolutionListener().solutionsNo()).isEqualTo(11);
+    assertThat(SmallDenseDomain.emptyDomain.isEmpty()).isTrue();
+    assertThat(new SmallDenseDomain(5, 6).intersect(new IntervalDomain(10, 10)).isEmpty()).isTrue();
+  }
+
 }

@@ -227,7 +227,10 @@ public class ElementVariable extends AbstractElement
     for (int i = list.length - 1; i >= 0; i--) {
       // a position the index cannot select supports no value, and it never becomes selectable again
       if (!temp.isEmpty() && index.domain.contains(i + 1 + indexOffset)) {
-        supports[i] = temp.intersect(list[i].domain);
+        IntDomain supported = temp.intersect(list[i].domain);
+        // an empty intersection may be a shared empty domain, which the supports moved here later
+        // would change for every domain
+        supports[i] = supported.isEmpty() ? new IntervalDomain() : supported;
         if (!supports[i].isEmpty()) {
           temp = temp.subtract(supports[i]);
         }
