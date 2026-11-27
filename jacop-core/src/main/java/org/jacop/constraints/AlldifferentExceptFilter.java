@@ -221,8 +221,9 @@ final class AlldifferentExceptFilter {
       if (d instanceof IntervalDomain) {
         IntervalDomain id = (IntervalDomain) d;
         for (int j = 0; j < id.size; j++) {
-          for (int w = id.leftElement(j), max = id.rightElement(j); w <= max; w++) {
-            adj[e++] = w - base;
+          // long: an interval may end at Integer.MAX_VALUE (a FlatZinc constant)
+          for (long w = id.leftElement(j), max = id.rightElement(j); w <= max; w++) {
+            adj[e++] = (int) (w - base);
           }
         }
       } else {
@@ -444,8 +445,8 @@ final class AlldifferentExceptFilter {
       } else if (d instanceof IntervalDomain) {
         IntervalDomain id = (IntervalDomain) d;
         for (int i = 0; i < id.size; i++) {
-          for (int value = id.leftElement(i), max = id.rightElement(i); value <= max; value++) {
-            count = removeIfUnsupported(value, count);
+          for (long value = id.leftElement(i), max = id.rightElement(i); value <= max; value++) {
+            count = removeIfUnsupported((int) value, count);
           }
         }
       } else {

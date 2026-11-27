@@ -45,11 +45,17 @@ import lombok.Setter;
 @NoArgsConstructor
 public class ProfileItem {
 
+  /**
+   * The min and max of an item that holds no interval; no IntVar has this value, while -1 may be
+   * the start or the end of a real item.
+   */
+  public static final int NO_POINT = Integer.MIN_VALUE;
+
   /** It specifies the starting point of the profile item. */
-  @Getter @Setter public int min = -1;
+  @Getter @Setter public int min = NO_POINT;
 
   /** It specifies the ending point of the profile item. */
-  @Getter @Setter public int max = -1;
+  @Getter @Setter public int max = NO_POINT;
 
   /** It specifies the amount by which this profile item contributes in the profile. */
   @Getter @Setter public int value = -1;

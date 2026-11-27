@@ -41,6 +41,7 @@ import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.VarMap;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -132,7 +133,11 @@ public class XorSystem extends Constraint
   private final int[] seenLevel;
   private int seenSize;
   private final long[] newlyUnfixed;
-  private boolean firstCall = true;
+  // a consistency call was made since the imposition
+  private boolean called;
+  // the first call checks every row and gives every row a pivot, again when its level is removed:
+  // a row it checked there, such as an empty row of parity 1, is not checked otherwise
+  private InitOnce firstCall = new InitOnce();
   private final long[] newlyFixed;
   private final int[] newlyFixedWords;
 
@@ -291,7 +296,7 @@ public class XorSystem extends Constraint
    */
   @Override
   public void impose(Store store) {
-    if (!firstCall) {
+    if (called) {
       for (int i = 0; i < rows.length; i++) {
         Arrays.fill(rows[i], 0L);
         for (int c : givenRows[i]) {
@@ -308,7 +313,8 @@ public class XorSystem extends Constraint
       pendingSize = 0;
       Arrays.fill(dirty, -1L);
       failedValid = false;
-      firstCall = true;
+      called = false;
+      firstCall = new InitOnce();
     }
     super.impose(store);
   }
@@ -328,11 +334,13 @@ public class XorSystem extends Constraint
     }
     refreshFixed();
     int fixedWords = 0;
-    boolean unfixed = firstCall;
-    if (firstCall) {
-      // every row gets a pivot
+    called = true;
+    boolean unfixed = false;
+    if (firstCall.begin(store)) {
+      // every row gets a pivot and is checked
       Arrays.fill(newlyUnfixed, -1L);
-      firstCall = false;
+      Arrays.fill(dirty, -1L);
+      unfixed = true;
     }
     for (int j = 0; j < words; j++) {
       assert (seen[j] & ~fixed[j]) == 0 : "a backtrack forgets the columns it unfixes";

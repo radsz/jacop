@@ -129,6 +129,12 @@ public class CountValues extends AbstractCountValues
     this(list.toArray(new IntVar[0]), counter, values);
   }
 
+  /** The flow explanations of this class cover the bounds of the counts of sets of values. */
+  @Override
+  protected boolean subsetBounds() {
+    return getClass() == CountValues.class;
+  }
+
   @Override
   protected void updateCounterRest(Store store, int restEq, int restMayBe) {
     counterRest.domain.in(store.level, counterRest, restEq, restEq + restMayBe);

@@ -229,7 +229,8 @@ public class CountPartnersDetector {
         }
         if (a.length == 1 && a[0] != 0 && c % a[0] == 0) {
           exclude(v[0], c / a[0]);
-        } else if (a.length == 2 && c == 0 && a[0] == -a[1] && a[0] != 0) {
+        } else if (a.length == 2 && c == 0 && a[0] == -(long) a[1] && a[0] != 0) {
+          // -a[1] in long: [MIN_VALUE, MIN_VALUE] weighs x + y, not x - y
           different(v[0], v[1]);
         }
       }

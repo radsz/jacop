@@ -685,4 +685,48 @@ class XcspReaderTest {
     }
     return i == nonLoop && len == moved;
   }
+
+  /**
+   * An XCSP3 identifier may be a name the translation generates for the output array or a table:
+   * the generated names keep clear of it, so the one solution is printed with the right values.
+   */
+  @Test
+  void identifiersOfGeneratedNamesKeepTheirValues() throws IOException {
+    String xml =
+        "<instance format=\"XCSP3\" type=\"CSP\"><variables><var id=\"XCSP_ARRAY_0_\"> 0..3 </var>"
+            + "<array id=\"x\" size=\"[2]\"> 0..3 </array><var id=\"T_XCSP_0_\"> 0..3 </var></variables>"
+            + "<constraints><intension> lt(XCSP_ARRAY_0_,x[0]) </intension>"
+            + "<extension><list> x[0] x[1] T_XCSP_0_ </list><supports> (1,2,3)(2,0,1)(3,3,3) </supports></extension>"
+            + "<intension> ne(x[1],T_XCSP_0_) </intension><intension> eq(XCSP_ARRAY_0_,1) </intension>"
+            + "</constraints></instance>";
+    String out = competitionOutput(xml);
+    assertTrue(out.contains("s SATISFIABLE") && out.contains("<values> 1 2 0 1 </values>"), out);
+  }
+
+  /**
+   * A matrix element whose column index has no value in the column range is unsatisfiable: the
+   * constant matrix was read as a table over the index domains as they were, out of the matrix.
+   */
+  @Test
+  void matrixElementWithAnIndexOutOfRangeIsUnsatisfiable() throws IOException {
+    String xml =
+        "<instance format=\"XCSP3\" type=\"CSP\"><variables><array id=\"x\" size=\"[3]\"> 0..1 </array>"
+            + "</variables><constraints><element><matrix startColIndex=\"2\"> (-2) </matrix>"
+            + "<index> x[0] x[1] </index><value> x[2] </value></element></constraints></instance>";
+    String out = competitionOutput(xml);
+    assertTrue(out.contains("s UNSATISFIABLE"), out);
+  }
+
+  /**
+   * The power of a base that can only be 0 is 1 when the exponent is 0: the result was given the
+   * domain 0..0, so the instance was unsatisfiable.
+   */
+  @Test
+  void powerOfZeroToTheZeroIsOne() throws IOException {
+    String xml =
+        "<instance format=\"XCSP3\" type=\"CSP\"><variables><var id=\"x\"> 0 1 3 </var></variables>"
+            + "<constraints><intension> eq(pow(0,x),1) </intension></constraints></instance>";
+    String out = competitionOutput(xml);
+    assertTrue(out.contains("s SATISFIABLE") && out.contains("<values> 0 </values>"), out);
+  }
 }

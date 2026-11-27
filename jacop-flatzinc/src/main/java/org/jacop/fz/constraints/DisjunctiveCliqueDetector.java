@@ -246,9 +246,10 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
           differs.put(aVar(node, 2), new IntVar[] {aVar(node, 0), aVar(node, 1)});
       case "int_lin_ne_imp", "int_lin_ne_reif" -> {
         int[] a = support.getIntArray(child(node, 0));
+        // -a[1] in long: [MIN_VALUE, MIN_VALUE] weighs x + y, not x - y
         if (a != null
             && a.length == 2
-            && a[0] == -a[1]
+            && a[0] == -(long) a[1]
             && a[0] != 0
             && support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2)) == 0) {
           IntVar[] x = support.getVarArray(child(node, 1));
@@ -309,10 +310,11 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
     }
   }
 
-  // a*x + b*y <= c (or = c) with b = -a: a difference constraint between x and y
+  // a*x + b*y <= c (or = c) with b = -a: a difference constraint between x and y; -a[1] in long,
+  // since [MIN_VALUE, MIN_VALUE] weighs x + y
   private void linear(ASTConstElem node, IntVar literal, boolean equation) {
     int[] a = support.getIntArray(child(node, 0));
-    if (a == null || a.length != 2 || a[0] != -a[1] || a[0] == 0) {
+    if (a == null || a.length != 2 || a[0] != -(long) a[1] || a[0] == 0) {
       return;
     }
     IntVar[] x = support.getVarArray(child(node, 1));

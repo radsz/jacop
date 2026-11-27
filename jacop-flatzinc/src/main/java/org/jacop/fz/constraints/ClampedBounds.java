@@ -582,6 +582,27 @@ public final class ClampedBounds {
     return kept;
   }
 
+  /**
+   * Tells whether the rows keep every narrowed variable within JaCoP's range, so that the narrowing
+   * cut off no solution at all. A solution whose cut values harmless() moves to the end of the
+   * range is another solution, which an enumeration of all solutions misses.
+   *
+   * @return true if no solution of the model has a value beyond the range.
+   */
+  public boolean noSolutionCut() {
+    long[] lo = Arrays.copyOf(declaredLow, vars.size());
+    long[] hi = Arrays.copyOf(declaredHigh, vars.size());
+    if (!propagate(lo, hi)) {
+      return true;
+    }
+    for (int id : clamped) {
+      if (lo[id] < IntDomain.MIN_INT || hi[id] > IntDomain.MAX_INT) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   // a narrowed variable whose cut values can be replaced by the end of JaCoP's range
   private boolean movable(int id, Integer objectiveId, long[] lo, long[] hi, List<Integer> moved) {
     if (objectiveId != null && objectiveId == id || otherOccurrences.get(id)[0] > 0) {
