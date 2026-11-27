@@ -9433,4 +9433,30 @@ class FlatzincFrontEndTest {
     String out = run(model, "--lcg", "on", "--presolve", "on")[0];
     assertTrue(out.contains("b0 = true;\nal = true;\n----------\n=========="), out);
   }
+
+  @Test
+  void linearIndexElementKeepsAnIndexThatAnAllDifferentOfDisequalitiesReads() throws IOException {
+    // z_i = x_i + 3 y_i is read by its element and by int_ne disequalities that the all-different
+    // detection replaced by an alldiff over the z_i; the linear index element detection read only
+    // the constraints not replaced, so it turned each z_i and its element into a table over x_i,
+    // y_i and v_i and left the alldiff over free variables: the pairs (x_i, y_i) give z_i in
+    // {4, 5} only, so five distinct z_i cannot exist, but a solution was reported
+    StringBuilder model =
+        new StringBuilder("array [1..12] of int: A = [10,11,12,13,14,15,16,17,18,19,20,21];\n");
+    for (int i = 1; i <= 5; i++) {
+      model.append("var 1..6: x" + i + " :: output_var;\nvar 0..1: y" + i + " :: output_var;\n");
+      model.append("var 1..12: z" + i + ";\nvar 0..30: v" + i + ";\n");
+    }
+    for (int i = 1; i <= 5; i++) {
+      model.append("constraint int_lin_eq([1,3,-1],[x" + i + ",y" + i + ",z" + i + "],0);\n");
+      model.append("constraint array_int_element(z" + i + ",A,v" + i + ");\n");
+      model.append("constraint jacop_table_int([x" + i + ",y" + i + "],[1,1,4,0,2,1,5,0]);\n");
+      for (int j = 1; j < i; j++) {
+        model.append("constraint int_ne(z" + j + ",z" + i + ");\n");
+      }
+    }
+    model.append("solve satisfy;\n");
+    String out = run(model.toString(), "--lcg", "off")[0];
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+  }
 }
