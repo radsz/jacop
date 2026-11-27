@@ -835,6 +835,7 @@ class RevisedDualSimplexTest {
                 true);
         lp.setExact(true);
         lp.setPresolve(presolve);
+        lp.presolveDependent = true;
         for (int j = 0; j < 4; j++) {
           lp.setBounds(j, 0, 4);
         }
@@ -1063,11 +1064,13 @@ class RevisedDualSimplexTest {
       String what = "run " + run + " presolved";
       RevisedDualSimplex lp = p.simplex(scale);
       lp.setPresolve(true);
+      lp.presolveDependent = true;
       assertThat(solveAndCheck(p, lp, scale, what)).as(what).isEqualTo(status);
       // a solve in short chunks, as the root solve of LinearRelaxation makes, goes on with the
       // reduced problem; a query in between takes the basis postsolved from it
       RevisedDualSimplex chunked = p.simplex(scale);
       chunked.setPresolve(true);
+      chunked.presolveDependent = true;
       for (int k = 0;
           k < 100_000 && chunked.solve(1 + chunks.nextInt(3)) == RevisedDualSimplex.LIMIT;
           k++) {

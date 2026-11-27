@@ -161,9 +161,13 @@ final class Presolve {
   // the columns of each end of a hash that a parallel column is tried against for domination
   private static final int PARALLEL_DOMINATED_TRIES = 4;
 
-  // whether equations that the other equations imply are removed (org.jacop.jalp.presolveDependent)
-  private static final boolean DEPENDENT_RULE =
-      Boolean.parseBoolean(System.getProperty("org.jacop.jalp.presolveDependent", "true"));
+  // whether equations that the other equations imply are removed
+  // (org.jacop.jalp.presolveDependent);
+  // off: on the 147 LPs of the LP bench where it removes rows (HiGHS: the same on qap10, nug08-3rd,
+  // dano3) the simplex took 7.6 % longer in all (2,085 -> 2,244 s at 120 s, dano3 44k -> 72k pivots
+  // from one row, pds-100 lost)
+  static final boolean DEPENDENT_RULE =
+      Boolean.parseBoolean(System.getProperty("org.jacop.jalp.presolveDependent", "false"));
 
   // the most entries of the equations the search for dependent ones factorizes
   // (org.jacop.jalp.dependentEntries)
@@ -415,7 +419,7 @@ final class Presolve {
         break;
       }
     }
-    if (DEPENDENT_RULE && dependentEquations() > 0 && !passes()) {
+    if (dependent && dependentEquations() > 0 && !passes()) {
       provedInfeasible = true;
       return false;
     }
@@ -596,6 +600,9 @@ final class Presolve {
   // whether the dual bounds propagate over every column (DUAL_BOUNDS_RULE; off in tests of other
   // rules)
   boolean dualBounds = DUAL_BOUNDS_RULE;
+
+  // whether dependent equations are removed (DEPENDENT_RULE; on in its tests)
+  boolean dependent = DEPENDENT_RULE;
 
   // the columns whose reduced cost moved a dual bound
   private boolean[] dualSource;
