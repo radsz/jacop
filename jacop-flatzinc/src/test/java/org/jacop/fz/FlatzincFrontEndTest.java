@@ -9419,4 +9419,18 @@ class FlatzincFrontEndTest {
     String out = run(model, "--lcg", "on")[0];
     assertTrue(out.contains("s0 = {};\nx1 = 2;\n----------"), out);
   }
+
+  @Test
+  void dualReductionsKeepTheLinksOfAnObjectiveOfCollectedClauses() throws IOException {
+    // under LCG the clause b0 = true is kept for the SAT solver, not in the store, so b0 is exempt
+    // from the dual reductions; the alias al = b0 was still taken for the definition of the
+    // objective, al was fixed to 0 for minimize b0, and the model was reported unsatisfiable
+    String model =
+        "var bool: b0 :: output_var;\n"
+            + "var bool: al :: output_var = b0;\n"
+            + "constraint bool_eq(b0,true);\n"
+            + "solve minimize b0;\n";
+    String out = run(model, "--lcg", "on", "--presolve", "on")[0];
+    assertTrue(out.contains("b0 = true;\nal = true;\n----------\n=========="), out);
+  }
 }
