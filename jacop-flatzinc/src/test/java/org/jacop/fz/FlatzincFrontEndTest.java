@@ -9948,4 +9948,34 @@ class FlatzincFrontEndTest {
       assertTrue(out.contains("x = " + v + ";\n"), out);
     }
   }
+
+  @Test
+  void eachFloatSearchOfASequenceSplitsToItsOwnPrecision() throws IOException {
+    // each float_search sets its precision when it starts and a child search of another precision
+    // left its own in force: under a coarse master the master's variables were no longer singleton
+    // when it recorded its solution (RuntimeException "Variable is not grounded in the solution"),
+    // and under a fine master the master went on splitting, and bounding its cost, at the coarse
+    // precision of the child (obj -5.0912 printed, below the optimum -5.0833 at f0 = -5/6)
+    String coarseFirst =
+        "var -1.5..1.0: f0 :: output_var;\n"
+            + "var 0.0..1.0: f1 :: output_var;\n"
+            + "constraint float_le(f1, f0);\n"
+            + "solve :: seq_search([float_search([f0], 0.01, input_order, indomain_split, complete),"
+            + " float_search([f1], 0.0001, input_order, indomain_split, complete)]) satisfy;\n";
+    String out = run(coarseFirst, "--lcg", "off")[0];
+    assertTrue(out.contains("----------"), out);
+    String fineFirst =
+        "var -1.0..0.0: f0 :: output_var;\n"
+            + "var 0.0..1.0: f1 :: output_var;\n"
+            + "var -10.0..10.0: a0;\n"
+            + "var -1000.0..1000.0: obj :: output_var;\n"
+            + "constraint float_times(f0, f0, a0);\n"
+            + "constraint float_lin_eq([5.0,3.0,-1.0], [f0,a0,obj], 3.0);\n"
+            + "solve :: seq_search([float_search([f0], 1e-06, input_order, indomain_reverse_split,"
+            + " complete), float_search([f1], 0.05, input_order, indomain_split, complete)])"
+            + " minimize obj;\n";
+    out = run(fineFirst, "--lcg", "off")[0];
+    assertTrue(out.contains("obj = -5.08333"), out);
+    assertTrue(out.contains("=========="), out);
+  }
 }

@@ -137,6 +137,7 @@ import org.jacop.search.ComparatorVariable;
 import org.jacop.search.ConsistencyListener;
 import org.jacop.search.CreditCalculator;
 import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.ExitListener;
 import org.jacop.search.FailConstraintsStatistics;
 import org.jacop.search.Indomain;
 import org.jacop.search.IndomainMax;
@@ -11718,6 +11719,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     } else {
       label.setInitializeListener(new PrecisionSetting(si.precision));
     }
+    label.setExitListener(new PrecisionRestore(label));
     attachFloatCid(label, si.vars());
 
     return label;
@@ -12374,6 +12376,46 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     public void setChildrenListeners(InitializeListener child) {
       initializeChildListeners = new InitializeListener[1];
       initializeChildListeners[0] = child;
+    }
+  }
+
+  /**
+   * Gives back, when a float search ends, the precision of the float search it runs under. A float
+   * search sets its precision when it starts, and a child search of another precision left that one
+   * in force after it returned: the master search, whose variables are split only down to its own
+   * precision, found them no longer singleton when it recorded its solution and threw "Variable is
+   * not grounded in the solution" (seq_search of float_search 0.01 then 0.0001).
+   */
+  static final class PrecisionRestore implements ExitListener {
+
+    private final DepthFirstSearch<?> label;
+
+    PrecisionRestore(DepthFirstSearch<?> label) {
+      this.label = label;
+    }
+
+    /** {@inheritDoc} */
+    public void executedAtExit(Store store, int solutionsNo) {
+      for (Search<? extends Var> s = label.masterSearch; s != null; ) {
+        if (!(s instanceof DepthFirstSearch<?> master)) {
+          return;
+        }
+        if (master.getInitializeListener() instanceof PrecisionSetting setting) {
+          FloatDomain.setPrecision(setting.precision);
+          return;
+        }
+        s = master.masterSearch;
+      }
+    }
+
+    /** {@inheritDoc} */
+    public void setChildrenListeners(ExitListener[] children) {
+      // no children
+    }
+
+    /** {@inheritDoc} */
+    public void setChildrenListeners(ExitListener child) {
+      // no children
     }
   }
 
