@@ -7766,7 +7766,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     long budget = Long.parseLong(options.freeConfig("ls-max", "0"));
     if (options.getTimeOut() > 0) {
-      long part = (long) (share * options.getRemainingTimeOut());
+      // at least a millisecond: a time limit of 0 is none, and the time left is a millisecond once
+      // the time-out has passed, so the local search ran until its patience ran out
+      long part = Math.max(1, (long) (share * options.getRemainingTimeOut()));
       budget = budget > 0 ? Math.min(budget, part) : part;
     } else if (budget <= 0) {
       budget = 10_000;

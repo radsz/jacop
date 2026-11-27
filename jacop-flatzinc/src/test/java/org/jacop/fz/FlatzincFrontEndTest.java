@@ -10316,4 +10316,67 @@ class FlatzincFrontEndTest {
     assertFalse(out.contains("=====UNSATISFIABLE====="), out);
     assertEquals(0, p.exitValue(), out);
   }
+
+  /**
+   * The local search of a scheduling model takes half of the time left: once the time-out has
+   * passed, half of the millisecond left was a time limit of 0, which local search reads as none,
+   * and it ran until its patience ran out (5 s by default, here 10 minutes), 5 s past -t 5 on the
+   * rcpsp instances of upTo5sec in process.
+   */
+  @Test
+  void localSearchStopsWhenTheTimeOutHasPassed() throws IOException {
+    int[] d = {3, 10, 2, 5, 2, 8, 8, 8, 7, 4, 2, 8, 1, 7, 7};
+    String r1 = "2,5,1,4,0,2,0,0,0,5,4,0,3,5,1";
+    String r2 = "6,11,0,8,3,12,7,7,8,3,5,3,10,3,12";
+    int[][] before = {
+      {0, 3}, {1, 11}, {2, 14}, {3, 4}, {4, 13}, {5, 13}, {7, 10}, {9, 10}, {9, 11}, {9, 12},
+      {10, 11}, {10, 14}
+    };
+    StringBuilder model = new StringBuilder();
+    StringJoiner starts = new StringJoiner(",");
+    StringJoiner durations = new StringJoiner(",");
+    for (int i = 0; i < d.length; i++) {
+      model.append("var 0..82: s").append(i).append(" :: output_var;\n");
+      starts.add("s" + i);
+      durations.add(Integer.toString(d[i]));
+    }
+    model.append("var 0..82: ms :: output_var;\n");
+    model.append(
+        "constraint jacop_cumulative([%s],[%s],[%s],5);\n".formatted(starts, durations, r1));
+    model.append(
+        "constraint jacop_cumulative([%s],[%s],[%s],12);\n".formatted(starts, durations, r2));
+    for (int[] p : before) {
+      model.append("constraint int_lin_le([1,-1],[s%d,s%d],%d);\n".formatted(p[0], p[1], -d[p[0]]));
+    }
+    for (int i = 0; i < d.length; i++) {
+      model.append("constraint int_lin_le([1,-1],[s%d,ms],%d);\n".formatted(i, -d[i]));
+    }
+    model.append("solve minimize ms;\n");
+    Path fzn = tmp.resolve("rcpsp.fzn");
+    Files.writeString(fzn, model.toString(), StandardCharsets.UTF_8);
+    // the time-out passes as the search starts: a millisecond is left from then on
+    boolean[] late = {false};
+    Options opt =
+        new Options(
+            new String[] {
+              "-f",
+              "--lcg",
+              "on",
+              "--free-config",
+              "ls-patience=600000",
+              "-t",
+              "60000",
+              fzn.toString()
+            }) {
+          @Override
+          public int getRemainingTimeOut() {
+            late[0] |=
+                StackWalker.getInstance()
+                    .walk(s -> s.anyMatch(f -> f.getMethodName().equals("executeLcgSearch")));
+            return late[0] ? 1 : super.getRemainingTimeOut();
+          }
+        };
+    String out = assertTimeoutPreemptively(Duration.ofSeconds(60), () -> runInThisJvm(opt, fzn));
+    assertTrue(out.contains("----------"), out);
+  }
 }
