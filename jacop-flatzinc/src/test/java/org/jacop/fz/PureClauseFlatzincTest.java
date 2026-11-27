@@ -216,7 +216,271 @@ class PureClauseFlatzincTest {
     assertEquals(1, out.split("----------", -1).length - 1, out);
   }
 
-  private String run(String model, boolean free) throws IOException {
+  private static final int SMALL = 16;
+
+  private static final Pattern SMALL_MODEL =
+      Pattern.compile("ys = array1d\\(1\\.\\.\\d+, \\[(.*?)\\]\\);");
+
+  // a random model of linear rows over SMALL 0/1 variables that are each a few clauses: clauses
+  // over literals (a negated literal 1 - x moves 1 to the right-hand side), x + y <= 1, exactly one
+  // of three and x -> y and z (2 x - y - z <= 0); with windows, also y[i] + y[i+1] + y[i+2] <= 1
+  // over the first eight variables, which the sequence detector posts as one sequence too, and with
+  // wide, at most 4 of 9 variables, 126 clauses, more than lazy clause generation takes. Each row
+  // holds its relation (-1 for le, 0 for eq, 1 for ge), its right-hand side and its weights
+  private static List<long[]> rows(long seed, boolean windows, boolean wide) {
+    Random random = new Random(seed);
+    List<long[]> rows = new ArrayList<>();
+    int count = 22 + random.nextInt(10);
+    for (int r = 0; r < count; r++) {
+      long[] row = new long[2 + SMALL];
+      int[] v = new int[3];
+      for (int k = 0; k < 3; k++) {
+        do {
+          v[k] = random.nextInt(SMALL);
+        } while (k > 0 && (v[k] == v[0] || k > 1 && v[k] == v[1]));
+      }
+      switch (random.nextInt(6)) {
+        case 0, 1, 2 -> {
+          row[0] = 1;
+          row[1] = 1;
+          for (int k = 0; k < 3; k++) {
+            boolean negated = random.nextBoolean();
+            row[2 + v[k]] = negated ? -1 : 1;
+            row[1] -= negated ? 1 : 0;
+          }
+        }
+        case 3 -> {
+          row[0] = -1;
+          row[1] = 1;
+          row[2 + v[0]] = 1;
+          row[2 + v[1]] = 1;
+        }
+        case 4 -> {
+          row[0] = 0;
+          row[1] = 1;
+          for (int k = 0; k < 3; k++) {
+            row[2 + v[k]] = 1;
+          }
+        }
+        default -> {
+          row[0] = -1;
+          row[1] = 0;
+          row[2 + v[0]] = 2;
+          row[2 + v[1]] = -1;
+          row[2 + v[2]] = -1;
+        }
+      }
+      rows.add(row);
+    }
+    if (windows) {
+      for (int i = 0; i + 3 <= 8; i++) {
+        long[] row = new long[2 + SMALL];
+        row[0] = -1;
+        row[1] = 1;
+        for (int k = i; k < i + 3; k++) {
+          row[2 + k] = 1;
+        }
+        rows.add(row);
+      }
+    }
+    if (wide) {
+      long[] row = new long[2 + SMALL];
+      row[0] = -1;
+      row[1] = 4;
+      for (int k = 0; k < 9; k++) {
+        row[2 + k] = 1;
+      }
+      rows.add(row);
+    }
+    return rows;
+  }
+
+  private static boolean holds(List<long[]> rows, int assignment) {
+    for (long[] row : rows) {
+      long sum = 0;
+      for (int i = 0; i < SMALL; i++) {
+        sum += row[2 + i] * (assignment >> i & 1);
+      }
+      boolean ok = row[0] < 0 ? sum <= row[1] : row[0] == 0 ? sum == row[1] : sum >= row[1];
+      if (!ok) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static String linearModel(List<long[]> rows) {
+    StringBuilder s = new StringBuilder();
+    StringBuilder ys = new StringBuilder();
+    for (int v = 1; v <= SMALL; v++) {
+      s.append("var 0..1: y").append(v).append(";\n");
+      ys.append(v == 1 ? "" : ",").append('y').append(v);
+    }
+    s.append("array [1..").append(SMALL).append("] of var int: ys:: output_array([1..");
+    s.append(SMALL).append("]) = [").append(ys).append("];\n");
+    for (long[] row : rows) {
+      StringBuilder w = new StringBuilder();
+      StringBuilder x = new StringBuilder();
+      for (int i = 0; i < SMALL; i++) {
+        if (row[2 + i] != 0) {
+          w.append(w.isEmpty() ? "" : ",").append(row[2 + i]);
+          x.append(x.isEmpty() ? "" : ",").append('y').append(i + 1);
+        }
+      }
+      if (w.isEmpty()) {
+        continue;
+      }
+      // ge as -sum <= -rhs
+      if (row[0] > 0) {
+        w = new StringBuilder();
+        for (int i = 0; i < SMALL; i++) {
+          if (row[2 + i] != 0) {
+            w.append(w.isEmpty() ? "" : ",").append(-row[2 + i]);
+          }
+        }
+      }
+      String op = row[0] == 0 ? "int_lin_eq" : "int_lin_le";
+      long rhs = row[0] > 0 ? -row[1] : row[1];
+      s.append("constraint ").append(op).append("([").append(w).append("],[").append(x);
+      s.append("],").append(rhs).append(");\n");
+    }
+    s.append("solve satisfy;\n");
+    return s.toString();
+  }
+
+  @Test
+  void clauseShapedRowsGoToJaSat() throws IOException {
+    int routed = 0;
+    int unsat = 0;
+    int runs = 0;
+    for (long seed = 1; seed <= 24; seed++) {
+      boolean windows = seed % 3 == 0;
+      boolean wide = seed % 4 == 0;
+      List<long[]> rows = rows(seed, windows, wide);
+      int solutions = 0;
+      for (int a = 0; a < 1 << SMALL; a++) {
+        solutions += holds(rows, a) ? 1 : 0;
+      }
+      unsat += solutions == 0 ? 1 : 0;
+      for (boolean free : new boolean[] {false, true}) {
+        String out = run(linearModel(rows), free);
+        runs++;
+        boolean pure = out.contains("%%%mzn-stat: pureClauseModel=true");
+        routed += pure ? 1 : 0;
+        if (wide) {
+          assertFalse(pure, out);
+        }
+        if (solutions == 0) {
+          assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+          continue;
+        }
+        Matcher m = SMALL_MODEL.matcher(out);
+        assertTrue(m.find(), out);
+        String[] values = m.group(1).split(",");
+        int a = 0;
+        for (int i = 0; i < SMALL; i++) {
+          a |= Integer.parseInt(values[i].trim()) << i;
+        }
+        assertTrue(holds(rows, a), out);
+      }
+    }
+    assertTrue(routed >= runs / 2, routed + " of " + runs + " runs given to JaSAT");
+    assertTrue(unsat > 0 && unsat < 24, unsat + " unsatisfiable");
+  }
+
+  // the pigeonhole formula of p pigeons and h holes: each pigeon in a hole, no two in one hole;
+  // its pigeons and its holes are interchangeable, so symmetry breaking posts lex-leader
+  // constraints, which JaSAT gets as clauses
+  private static String pigeons(int p, int h) {
+    StringBuilder s = new StringBuilder();
+    StringBuilder all = new StringBuilder();
+    for (int i = 0; i < p; i++) {
+      for (int j = 0; j < h; j++) {
+        s.append("var bool: q").append(i).append('_').append(j).append(";\n");
+        all.append(all.isEmpty() ? "" : ",").append('q').append(i).append('_').append(j);
+      }
+    }
+    s.append("array [1..").append(p * h).append("] of var bool: qs:: output_array([1..");
+    s.append(p * h).append("]) = [").append(all).append("];\n");
+    for (int i = 0; i < p; i++) {
+      StringBuilder some = new StringBuilder();
+      for (int j = 0; j < h; j++) {
+        some.append(some.isEmpty() ? "" : ",").append('q').append(i).append('_').append(j);
+      }
+      s.append("constraint bool_clause([").append(some).append("],[]);\n");
+    }
+    for (int j = 0; j < h; j++) {
+      for (int i = 0; i < p; i++) {
+        for (int k = i + 1; k < p; k++) {
+          s.append("constraint bool_clause([],[q").append(i).append('_').append(j);
+          s.append(",q").append(k).append('_').append(j).append("]);\n");
+        }
+      }
+    }
+    s.append("solve satisfy;\n");
+    return s.toString();
+  }
+
+  @Test
+  void symmetryBreakingOfClausesGoesToJaSatAsClauses() throws IOException {
+    Pattern qs = Pattern.compile("qs = array1d\\(1\\.\\.\\d+, \\[(.*?)\\]\\);");
+    for (int h = 3; h <= 6; h++) {
+      // the root refutation of the linear relaxation decides the unsatisfiable ones
+      String out = run(pigeons(h + 1, h), true, "--symmetry", "on");
+      assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+      out = run(pigeons(h, h), false, "--symmetry", "on");
+      assertTrue(out.contains("%%%mzn-stat: pureClauseModel=true"), out);
+      assertFalse(out.contains("%%%mzn-stat: pureClauseLexPairs=0"), out);
+      Matcher m = qs.matcher(out);
+      assertTrue(m.find(), out);
+      String[] values = m.group(1).split(",");
+      // a permutation: one hole per pigeon, one pigeon per hole
+      for (int i = 0; i < h; i++) {
+        int row = 0;
+        int column = 0;
+        for (int j = 0; j < h; j++) {
+          row += "true".equals(values[i * h + j].trim()) ? 1 : 0;
+          column += "true".equals(values[j * h + i].trim()) ? 1 : 0;
+        }
+        assertEquals(1, row, out);
+        assertEquals(1, column, out);
+      }
+    }
+  }
+
+  @Test
+  void symmetricCnfsKeepTheirAnswer() throws IOException {
+    // a random CNF closed under swapping variable i with i + VARS / 2: symmetry breaking orders the
+    // two halves, and JaSAT gets the lex-leader constraints as clauses
+    int routed = 0;
+    int lexed = 0;
+    int unsat = 0;
+    for (long seed = 1; seed <= 16; seed++) {
+      List<int[]> half = cnf(seed).subList(0, 108);
+      List<int[]> cnf = new ArrayList<>(half);
+      for (int[] clause : half) {
+        int[] image = new int[clause.length];
+        for (int i = 0; i < clause.length; i++) {
+          int v = Math.abs(clause[i]);
+          int w = v <= VARS / 2 ? v + VARS / 2 : v - VARS / 2;
+          image[i] = clause[i] > 0 ? w : -w;
+        }
+        cnf.add(image);
+      }
+      unsat += satisfiable(cnf) ? 0 : 1;
+      for (boolean free : new boolean[] {false, true}) {
+        String out = run(model(cnf, "", "solve satisfy;"), free, "--symmetry", "on");
+        routed += out.contains("%%%mzn-stat: pureClauseModel=true") ? 1 : 0;
+        lexed += out.contains("%%%mzn-stat: pureClauseLexPairs=0") ? 0 : 1;
+        check(cnf, out);
+      }
+    }
+    assertTrue(routed >= 16, routed + " of 32 runs given to JaSAT");
+    assertTrue(lexed >= 8, lexed + " runs with lex-leader clauses");
+    assertTrue(unsat > 0 && unsat < 16, unsat + " unsatisfiable");
+  }
+
+  private String run(String model, boolean free, String... extra) throws IOException {
     Path fzn = tmp.resolve("run.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);
     // the tests of the build run with LCG off by default (jacop.lcg)
@@ -224,6 +488,7 @@ class PureClauseFlatzincTest {
     if (free) {
       args.add("-f");
     }
+    args.addAll(List.of(extra));
     args.add(fzn.toString());
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     PrintStream originalOut = System.out;

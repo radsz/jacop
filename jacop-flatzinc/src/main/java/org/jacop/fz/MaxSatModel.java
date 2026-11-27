@@ -46,6 +46,7 @@ import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.lcg.LinearForm;
 import org.jacop.search.ls.MaxSatLocalSearch;
 
@@ -105,6 +106,41 @@ final class MaxSatModel {
     return new MaxSatLocalSearch(lsVars, hard, soft, w, softBound, seed);
   }
 
+  /**
+   * A model of the hard clauses found by JaSAT, as an assignment of the local search, as MaxSAT
+   * local search solvers start from one (SATLike-c, Lei, Lyu, Cai, Zhang, Yin, Wu and Zhang, MaxSAT
+   * Evaluation 2021): on hanoi5 of the PB competition 2016 the local search falsified a few of its
+   * 13,383 hard clauses to the end of its 7 s, and JaSAT satisfies them all in 16,000 conflicts (2
+   * s).
+   *
+   * @param millis the milliseconds, of the clock of JaSAT ({@link CdclSolver#now}), after which
+   *     JaSAT gives up
+   * @return the assignment, or null when JaSAT found none in time or the hard clauses have no model
+   */
+  boolean[] hardModel(long millis) {
+    CdclSolver solver = new CdclSolver();
+    solver.ensureVars(lsVars);
+    for (int[] c : hard) {
+      int[] lits = new int[c.length];
+      for (int k = 0; k < c.length; k++) {
+        lits[k] = (c[k] & 1) == 0 ? (c[k] >> 1) + 1 : -((c[k] >> 1) + 1);
+      }
+      if (!solver.addClause(lits)) {
+        return null;
+      }
+    }
+    solver.setDeadline(solver.now() + millis * 1_000_000L);
+    if (solver.solve() != CdclSolver.SAT) {
+      return null;
+    }
+    boolean[] a = new boolean[lsVars];
+    for (int v = 0; v < lsVars; v++) {
+      a[v] = solver.modelValue(v + 1);
+    }
+    fixRelaxed(a);
+    return a;
+  }
+
   /** The cost of an assignment of the local search whose soft clauses falsify the given weight. */
   long cost(long falsified) {
     return constant + falsified;
@@ -147,6 +183,44 @@ final class MaxSatModel {
 
   private static boolean binary(IntVar x) {
     return x.min() >= 0 && x.max() <= 1;
+  }
+
+  // the clauses with those of the rows over 0/1 variables that are a few clauses
+  // (PureClauseModel.clausesOf) and no alias or negation, which it adds to used: as x + y <= 1
+  // between cost terms in the PB competition's hanoi5, their clauses are hard. Taken for redundant
+  // rows on the cost, they were left to the store, and the search, blind to the 1,931 rows, ran for
+  // its whole share (8 s of a 60 s run, 30 s of a 600 s one) on assignments of cost 1,810 that the
+  // store rejected, below the optimum 1,931
+  private static List<IntVar[][]> withShapedRows(
+      List<IntVar[][]> clauses, Map<Constraint, LinearForm> forms, Set<Constraint> used) {
+    List<IntVar[][]> all = new ArrayList<>(clauses);
+    for (Map.Entry<Constraint, LinearForm> e : forms.entrySet()) {
+      List<IntVar[][]> shaped =
+          used.contains(e.getKey()) || link(e.getValue())
+              ? null
+              : PureClauseModel.clausesOf(e.getKey());
+      if (shaped != null) {
+        all.addAll(shaped);
+        used.add(e.getKey());
+      }
+    }
+    return all;
+  }
+
+  // x - y = 0 or x + y = 1 over 0/1 variables (also with both signs flipped): an alias or a
+  // negation
+  private static boolean link(LinearForm f) {
+    if (f.relation() != LinearForm.EQ
+        || f.vars().length != 2
+        || !binary(f.vars()[0])
+        || !binary(f.vars()[1])
+        || Math.abs(f.weights()[0]) != 1
+        || Math.abs(f.weights()[1]) != 1) {
+      return false;
+    }
+    long w0 = f.weights()[0];
+    long w1 = f.weights()[1];
+    return w0 == -w1 && f.c() == 0 || w0 == w1 && f.c() == w0;
   }
 
   /**
@@ -274,6 +348,7 @@ final class MaxSatModel {
     Map<IntVar, Integer> index = new IdentityHashMap<>();
     List<IntVar> vars = new ArrayList<>();
     List<int[]> links = new ArrayList<>();
+    clauses = withShapedRows(clauses, forms, used);
     for (Map.Entry<Constraint, LinearForm> e : forms.entrySet()) {
       if (used.contains(e.getKey())) {
         continue;

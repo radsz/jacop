@@ -1982,7 +1982,32 @@ public class Support implements ParserTreeConstants {
       sum.setWeightedVariables(list);
       pose(sum);
     }
+    poseCounterTotal(list, counters, values);
     return true;
+  }
+
+  /**
+   * Poses the total of the counters of a split CountValues: at most the number of variables, and
+   * exactly that when every variable takes one of the values. The whole CountValues knows it, the
+   * sums of the block counters do not: XCSP 2025 RoadefPlaning2-2022-10 (a count of 162 variables
+   * over 5 values) was refuted at the root by the whole constraint and stayed open for 240 s after
+   * the split.
+   */
+  private void poseCounterTotal(IntVar[] list, IntVar[] counters, int[] values) {
+    IntervalDomain covered = new IntervalDomain();
+    for (int v : values) {
+      covered.unionAdapt(v, v);
+    }
+    boolean all = true;
+    for (IntVar x : list) {
+      if (!x.dom().isIntersecting(covered) || !covered.contains(x.dom())) {
+        all = false;
+        break;
+      }
+    }
+    int[] ones = new int[counters.length];
+    Arrays.fill(ones, 1);
+    pose(new LinearInt(counters, ones, all ? "==" : "<=", list.length));
   }
 
   void pose(Constraint c) throws FailException {
