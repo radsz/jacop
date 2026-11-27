@@ -51,7 +51,7 @@ import java.util.List;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-final class ClauseShape {
+public final class ClauseShape {
 
   private ClauseShape() {}
 
@@ -68,7 +68,7 @@ final class ClauseShape {
    * @param cap the most clauses
    * @return the clauses, or null
    */
-  static List<int[]> clauses(long[] a, int[] l, long k, int cap) {
+  public static List<int[]> clauses(long[] a, int[] l, long k, int cap) {
     List<int[]> out = new ArrayList<>();
     if (k <= 0) {
       return out;
