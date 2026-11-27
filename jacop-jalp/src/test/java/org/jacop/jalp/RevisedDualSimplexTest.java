@@ -854,6 +854,35 @@ class RevisedDualSimplexTest {
   }
 
   @Test
+  void parallelColumnThatADearerOneCanReplaceFixesIt() {
+    // y = 2x in every row, x >= 0 without upper bound costs 1 and y in [0, 3] costs 3 > 2 * 1: x up
+    // by 2t and y down by t keep the rows and save t, so y = 0 in every optimum. min x + 3y + z
+    // with x + 2y + z >= 4 and 2x + 4y - z <= 6, z in [0, 1]: x = 3, z = 1, 4
+    double inf = Double.POSITIVE_INFINITY;
+    for (boolean presolve : new boolean[] {false, true}) {
+      RevisedDualSimplex lp =
+          new RevisedDualSimplex(
+              new int[][] {{0, 1, 2}, {0, 1, 2}},
+              new double[][] {{1, 2, 1}, {2, 4, -1}},
+              new double[] {4, -inf},
+              new double[] {inf, 6},
+              new double[] {1, 3, 1},
+              true);
+      lp.setExact(true);
+      lp.setPresolve(presolve);
+      lp.presolveDualBounds = false;
+      lp.setBounds(0, 0, inf);
+      lp.setBounds(1, 0, 3);
+      lp.setBounds(2, 0, 1);
+      assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      assertThat(lp.objective()).isCloseTo(4, org.assertj.core.data.Offset.offset(1e-9));
+      if (presolve) {
+        assertThat(lp.presolveReductions()[Presolve.DOMINATED_COLUMN]).isEqualTo(1);
+      }
+    }
+  }
+
+  @Test
   void weaklyDominatedColumnIsFixedAtItsBound() {
     // x + y <= 4 and x + 2y >= 1 with x, y >= 0, costs x 0, y 1, and z (cost 0, no upper bound)
     // in the first row only: its reduced cost -y0 is at least 0 over the dual bound the row gives

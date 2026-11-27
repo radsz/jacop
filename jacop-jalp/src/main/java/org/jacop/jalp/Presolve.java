@@ -153,6 +153,14 @@ final class Presolve {
   private static final boolean DUAL_WEAK_RULE =
       Boolean.parseBoolean(System.getProperty("org.jacop.jalp.presolveWeakDominated", "true"));
 
+  // whether a parallel column that another one of a different cost can replace is fixed
+  // (org.jacop.jalp.presolveParallelDominated)
+  private static final boolean PARALLEL_DOMINATED_RULE =
+      Boolean.parseBoolean(System.getProperty("org.jacop.jalp.presolveParallelDominated", "true"));
+
+  // the columns of each end of a hash that a parallel column is tried against for domination
+  private static final int PARALLEL_DOMINATED_TRIES = 4;
+
   // whether equations that the other equations imply are removed (org.jacop.jalp.presolveDependent)
   private static final boolean DEPENDENT_RULE =
       Boolean.parseBoolean(System.getProperty("org.jacop.jalp.presolveDependent", "true"));
@@ -2377,6 +2385,15 @@ final class Presolve {
           }
         }
       }
+      if (!merged && byCost != null && PARALLEL_DOMINATED_RULE) {
+        // a parallel column of another cost: the cheapest and the dearest of the hash are tried
+        int fixed = dominatedParallel(k, byCost, keptRows, keptVals, rows, vals, len);
+        if (fixed == k) {
+          found++;
+          continue;
+        }
+        found += fixed >= 0 ? 1 : 0;
+      }
       if (!merged) {
         keptRows[k] = Arrays.copyOf(rows, len);
         keptVals[k] = Arrays.copyOf(vals, len);
@@ -2387,6 +2404,63 @@ final class Presolve {
       }
     }
     return found;
+  }
+
+  // dominated parallel columns (HiGHS detectParallelRowsAndCols): with column k lambda times column
+  // j, x_j + lambda t and x_k - t keep every row, at a cost of t (lambda c_j - c_k). When that is
+  // negative and x_j can move by lambda t without a bound, every optimum has x_k at its lower bound
+  // (when positive, at its upper bound with x_j unbounded the other way), and x_k is fixed there;
+  // the same with the roles of j and k exchanged fixes x_j. The cheapest and the dearest columns of
+  // the hash, by cost over their first entry, are tried. The column fixed, or -1
+  private int dominatedParallel(
+      int k,
+      TreeMap<Double, List<Integer>> byCost,
+      int[][] keptRows,
+      double[][] keptVals,
+      int[] rows,
+      double[] vals,
+      int len) {
+    for (int end = 0; end < 2; end++) {
+      List<Integer> same =
+          end == 0 ? byCost.firstEntry().getValue() : byCost.lastEntry().getValue();
+      int tries = 0;
+      for (int q = same.size() - 1; q >= 0 && tries < PARALLEL_DOMINATED_TRIES; q--) {
+        int j = same.get(q);
+        if (!colAlive[j]) {
+          continue;
+        }
+        tries++;
+        double lambda = multiple(keptRows[j], keptVals[j], rows, vals, len);
+        if (lambda == 0) {
+          continue;
+        }
+        double delta = lambda * wtrue[j] - wtrue[k];
+        double tol = DUAL_DOMINATED * (1 + Math.abs(wtrue[k]) + Math.abs(lambda * wtrue[j]));
+        if (Math.abs(delta) <= tol) {
+          continue;
+        }
+        // t > 0 pays when delta < 0 (x_k down), t < 0 when delta > 0 (x_k up); x_j moves by
+        // lambda t
+        boolean kUp = delta > 0;
+        boolean jUp = kUp != lambda > 0;
+        if (unbounded(j, jUp) && !Double.isInfinite(kUp ? hi[k] : lo[k])) {
+          // x_j takes up any move: x_k goes to its bound
+          dominated(k, kUp ? hi[k] : lo[k]);
+          return k;
+        }
+        if (unbounded(k, kUp) && !Double.isInfinite(jUp ? hi[j] : lo[j])) {
+          // x_k takes up any move: x_j goes to its bound
+          dominated(j, jUp ? hi[j] : lo[j]);
+          return j;
+        }
+      }
+    }
+    return -1;
+  }
+
+  // whether column j has no bound upwards (downwards)
+  private boolean unbounded(int j, boolean up) {
+    return up ? hi[j] == Double.POSITIVE_INFINITY : lo[j] == Double.NEGATIVE_INFINITY;
   }
 
   // column k is lambda times column j: x_j + lambda x_k takes the place of x_j
