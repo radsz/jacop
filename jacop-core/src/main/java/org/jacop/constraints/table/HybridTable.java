@@ -2447,8 +2447,10 @@ public class HybridTable extends Constraint
     }
     String[] tuple = new String[tupleCount];
     List<IntDomain> domains = new ArrayList<>();
+    int[][] values = new int[arity][];
     for (int i = 0; i < arity; i++) {
       domains.add(model.domain(x[i]));
+      values[i] = domainValues(domains.get(i));
     }
     Map<Long, List<String>> support = new HashMap<>();
     for (int t = 0; t < tupleCount; t++) {
@@ -2460,18 +2462,13 @@ public class HybridTable extends Constraint
       for (int i = 0; i < arity; i++) {
         Restriction r = cells[t * arity + i];
         if (r.kind == Restriction.Kind.ANY) {
-          for (ValueEnumeration e = domains.get(i).valueEnumeration(); e.hasMoreElements(); ) {
-            support.computeIfAbsent(key(i, e.nextElement()), k -> new ArrayList<>()).add(lit);
+          for (int v : values[i]) {
+            support.computeIfAbsent(key(i, v), k -> new ArrayList<>()).add(lit);
           }
           continue;
         }
         // the accepted values: lit implies the bounds of them and excludes the others between
-        List<Integer> accepted = new ArrayList<>();
-        List<Integer> rejected = new ArrayList<>();
-        for (ValueEnumeration e = domains.get(i).valueEnumeration(); e.hasMoreElements(); ) {
-          int v = e.nextElement();
-          (r.accepts(v) ? accepted : rejected).add(v);
-        }
+        List<Integer> accepted = accepted(r, values[i]);
         if (accepted.isEmpty()) {
           model.clause(PbModel.not(lit));
           holds = null;
@@ -2484,8 +2481,12 @@ public class HybridTable extends Constraint
         model.clause(PbModel.not(lit), PbModel.not(above));
         holds.add(PbModel.not(model.atLeast(x[i], lo)));
         holds.add(above);
-        for (int v : rejected) {
-          if (v > lo && v < hi) {
+        // the domain values strictly between lo and hi that the restriction rejects
+        for (int k = Arrays.binarySearch(values[i], lo) + 1;
+            k < values[i].length && values[i][k] < hi;
+            k++) {
+          int v = values[i][k];
+          if (!r.accepts(v)) {
             model.clause(PbModel.not(lit), PbModel.not(model.equalTo(x[i], v)));
             holds.add(model.equalTo(x[i], v));
           }
@@ -2519,6 +2520,42 @@ public class HybridTable extends Constraint
       }
     }
     return true;
+  }
+
+  private static int[] domainValues(IntDomain d) {
+    int[] values = new int[d.getSize()];
+    int k = 0;
+    for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
+      values[k++] = e.nextElement();
+    }
+    return values;
+  }
+
+  /**
+   * The values of a column's sorted domain that a unary restriction accepts, in increasing order.
+   * An EQ or IN restriction looks its values up in the domain instead of scanning it, since tables
+   * of many tuples on wide domains are mostly made of them.
+   */
+  private static List<Integer> accepted(Restriction r, int[] domain) {
+    List<Integer> accepted = new ArrayList<>();
+    if (r.kind == Restriction.Kind.EQ) {
+      if (Arrays.binarySearch(domain, r.value) >= 0) {
+        accepted.add(r.value);
+      }
+    } else if (r.kind == Restriction.Kind.IN) {
+      for (int v : r.values) {
+        if (Arrays.binarySearch(domain, v) >= 0) {
+          accepted.add(v);
+        }
+      }
+    } else {
+      for (int v : domain) {
+        if (r.accepts(v)) {
+          accepted.add(v);
+        }
+      }
+    }
+    return accepted;
   }
 
   /**

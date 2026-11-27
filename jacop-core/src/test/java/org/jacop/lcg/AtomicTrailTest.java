@@ -84,6 +84,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.LazyBitSetDomain;
+import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
 import org.junit.jupiter.api.Test;
 
@@ -2925,6 +2926,8 @@ class AtomicTrailTest {
         }
       }
       AtomicTrail trail = new AtomicTrail(store);
+      // the shadows are kept only to check the direct recording against them
+      trail.checkDirectChanges();
       int base = store.level;
       for (int step = 0; step < 60; step++) {
         if (store.level > base && rnd.nextInt(4) == 0) {
@@ -2968,6 +2971,82 @@ class AtomicTrailTest {
         }
       }
       trail.detach();
+    }
+  }
+
+  @Test
+  void directAtomsAreTheShadowDiff() {
+    // option B of the LCG cost study (osolpro #685): the atoms of a change are written from what
+    // the domain reports of it; in check mode the trail also keeps its shadows and throws when the
+    // two disagree. Every kind of narrowing of every domain kind, several per level, with
+    // backtracks in between.
+    Random rnd = new Random(20261126);
+    for (int run = 0; run < 300; run++) {
+      Store s = new Store();
+      List<IntVar> xs = new ArrayList<>();
+      for (int k = 0; k < 4; k++) {
+        switch (rnd.nextInt(4)) {
+          case 0 -> xs.add(newVar(s, "x" + k, rnd));
+          case 1 -> {
+            IntVar x = new IntVar(s, "x" + k, new SmallDenseDomain(-5, 20));
+            x.domain.subtractAdapt(rnd.nextInt(26) - 5);
+            x.refreshBounds();
+            xs.add(x);
+          }
+          case 2 -> xs.add(new IntVar(s, "x" + k, new LazyBitSetDomain(-10, 90)));
+          default -> xs.add(holey(s, "x" + k, -20, 300, rnd));
+        }
+      }
+      AtomicTrail trail = new AtomicTrail(s);
+      trail.checkDirectChanges();
+      int depth = 0;
+      for (int step = 0; step < 60; step++) {
+        if (depth > 0 && rnd.nextInt(4) == 0) {
+          s.removeLevel(s.level);
+          s.setLevel(s.level - 1);
+          depth--;
+          continue;
+        }
+        s.setLevel(s.level + 1);
+        depth++;
+        try {
+          for (int c = rnd.nextInt(3) + 1; c > 0; c--) {
+            narrow(s, xs.get(rnd.nextInt(xs.size())), rnd);
+          }
+        } catch (FailException e) {
+          s.removeLevel(s.level);
+          s.setLevel(s.level - 1);
+          depth--;
+        }
+      }
+      while (depth-- > 0) {
+        s.removeLevel(s.level);
+        s.setLevel(s.level - 1);
+      }
+    }
+  }
+
+  private static void narrow(Store s, IntVar x, Random rnd) {
+    int lo = x.min();
+    int span = x.max() - lo + 1;
+    int a = lo + rnd.nextInt(span);
+    int b = Math.min(x.max(), a + rnd.nextInt(Math.max(1, span / 3)));
+    switch (rnd.nextInt(7)) {
+      case 0 -> x.domain.inMin(s.level, x, a);
+      case 1 -> x.domain.inMax(s.level, x, a);
+      case 2 -> x.domain.in(s.level, x, Math.min(a, b - 1), b);
+      case 3 -> x.domain.inComplement(s.level, x, a);
+      case 4 -> x.domain.inComplement(s.level, x, a, b);
+      case 5 -> {
+        IntervalDomain d = new IntervalDomain();
+        for (int v = lo - 1; v <= x.max() + 1; v += 1 + rnd.nextInt(3)) {
+          int w = v + rnd.nextInt(3);
+          d.unionAdapt(v, w);
+          v = w + 1;
+        }
+        x.domain.in(s.level, x, d);
+      }
+      default -> x.domain.inValue(s.level, x, x.dom().getRandomValue());
     }
   }
 }

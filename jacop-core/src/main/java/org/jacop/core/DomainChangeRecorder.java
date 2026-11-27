@@ -57,4 +57,24 @@ public interface DomainChangeRecorder {
    * @param value the value
    */
   default void removingValue(IntVar x, int value) {}
+
+  /**
+   * The change of a variable's domain reported by the next call of {@link #domainChanged} moves
+   * only its bounds: no value between the new bounds is removed. The domains call it right before
+   * that report, so that the removed values need not be searched for; the default ignores it.
+   *
+   * @param x the variable
+   */
+  default void changingBounds(IntVar x) {}
+
+  /**
+   * The values of an interval of a variable are about to be removed; a call of {@link
+   * #domainChanged} follows unless no value of the interval is in the domain or the removal fails.
+   * The default ignores it.
+   *
+   * @param x the variable
+   * @param min the first value of the interval
+   * @param max the last value of the interval
+   */
+  default void removingInterval(IntVar x, int min, int max) {}
 }

@@ -9539,7 +9539,7 @@ Version 5.0 (unreleased)
    -Dorg.jacop.lp.subsetCardinalities=false turns the merge off,
    org.jacop.lp.subsetCardinalityLength (default 5) bounds the clauses.
 
-521. Lazy clause generation under a fixed search on an optimisation model
+527. Lazy clause generation under a fixed search on an optimisation model
    first runs the annotation's search without learning for 0.5 % of the
    time limit, at most a second, and LCG then gets three times as long,
    at least a second. When LCG has not reached that search's best cost by
@@ -9563,7 +9563,26 @@ Version 5.0 (unreleased)
    -Dorg.jacop.fz.diffnPairs=0 the pairs (diffnPairsDensity sets the
    density). -s prints fixedFirst=decided, lcg, cp or cp-lcg.
 
-522. The clausal compilation of satisfaction models (entry 489) leaves
+528. Lazy clause generation records the atoms of a domain change from what
+   the domain reports of it instead of comparing a shadow copy of the
+   domain's runs with the new domain (option B of the LCG cost per
+   conflict study, osolpro #685). IntervalDomain, SmallDenseDomain and
+   LazyBitSetDomain tell the DomainChangeRecorder whether a narrowing moved
+   only the bounds (changingBounds), removed one value (removingValue) or
+   an interval (removingInterval); AtomicTrail then writes the bound atoms
+   from the old bounds and the != atoms of the values inside the new
+   bounds that it has not yet recorded, and keeps no runs, so a backtrack
+   restores only the bounds and the size. The atoms are the same as
+   before, so the search is the same. In a JFR profile under --lcg the
+   shadow share falls from 7.0 to 3.2 % (tower), 4.5 to 2.2 %
+   (ghoulomb) and 5.1 to 4.1 % (valve-network). Wide-quick (62
+   instances) at 240 s with -f: total 2,858 -> 2,779 s and 2,834 ->
+   2,658 s in two rounds, 52 -> 53 solved; default search 4,540 ->
+   4,534 s. -Djacop.lcg.directChanges=false restores the shadow diff;
+   -Djacop.lcg.checkDirect=true keeps the shadows and throws when the
+   two recordings disagree on any change (testing only).
+
+529. The clausal compilation of satisfaction models (entry 489) leaves
    models with a difference x - y = d (a linear equality of three terms
    with coefficients of both signs) over more than 3 values to lazy clause
    generation (-Dorg.jacop.fz.clausal.sumDomain, default 3). It fires on
@@ -9573,7 +9592,7 @@ Version 5.0 (unreleased)
    CostasArray-15..18 (XCSP 2022): 2,417 -> 1,262 s; costas-array 17
    314-389 -> 61-84 s, CostasArray-16 and -17 lose 11-48 s.
 
-523. CountValues (global_cardinality with variable counts) bounds the sum
+530. CountValues (global_cardinality with variable counts) bounds the sum
    of the counters of every set of at least two classes (counted values
    and the rest, up to six classes) by the variables that may take a class
    of the set and those that can take only classes of it, the Hall-set
@@ -9588,7 +9607,7 @@ Version 5.0 (unreleased)
    node (111 of 35,753 nodes missed it). The 25 FlatZinc test models with
    count_values: same search or same results, total time 202 -> 201 s.
 
-527. The linear relaxation of an objective tries all linearized rows of the
+531. The linear relaxation of an objective tries all linearized rows of the
    model's constraints (big-M rows of reifications and implications, the
    sides of min and max, ...) up to 8,000 of them
    (-Dorg.jacop.lp.trialRows), not only a share of twice the linear rows
@@ -9605,6 +9624,16 @@ Version 5.0 (unreleased)
    (before not proved), GCM_0007 314 -> 263 s. wide-quick at 240 s: total
    time 0.997 (default search) and 1.008 (-f) before the doubling rule,
    the same instances solved.
+
+532. FlatZinc parsing and set-up of big models are faster, with the same
+   parse tree. The hot syntactic lookaheads of the FlatZinc grammar
+   (array literal, set literal, array access, packed integer element) are
+   token-kind checks instead of lookahead scans, and three detector passes
+   (DisjunctiveListsDiffer, LinearIndexElement, CountStepCostBound) return
+   at once when the model has none of the constraint kinds they read.
+   Same parse tree on all 4,856 FlatZinc test and PB models. PB 2016
+   simp-nonunif-100_100.10 set-up 29.1 -> 26.0 s (median of 3); wide-quick
+   at 240 s total 1.006 (noise), PB5 at 600 s total 0.986.
 
 Version 4.11
 =============
