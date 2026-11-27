@@ -400,6 +400,21 @@ class LcgSlowFallbackFlatzincTest {
   }
 
   @Test
+  void weakLearningKeptWhenTheBoundNearlyClosedTheGap() {
+    // MiniZinc Challenge 2025 hitori h14-1 (maximised, so negated) at the check of 600 s: the core
+    // phase raised the bound from 1468 to 578 with 572 found, 99 % of the gap; kept, LCG proves 572
+    assertTrue(Solve.closesShare(-1468, -578, -572, 0.95));
+    // FBDk07: 15 to 103 with 130 found (77 %), proved by search without learning
+    assertFalse(Solve.closesShare(15, 103, 130, 0.95));
+    // hitori h20-2: 3568 to 1709 with 1590 found (94 %)
+    assertFalse(Solve.closesShare(-3568, -1709, -1590, 0.95));
+    // community-detection: no raise; no solution; a share above 1 turns it off
+    assertFalse(Solve.closesShare(-10, -10, -6, 0.95));
+    assertFalse(Solve.closesShare(-1468, -578, Integer.MAX_VALUE, 0.95));
+    assertFalse(Solve.closesShare(-1468, -572, -572, 1.01));
+  }
+
+  @Test
   void satisfactionProbeTellsWeakLearning() {
     // costas-array 17: conflicts at depth 22 jump back 1.17 levels, LBD 11
     assertTrue(Solve.learningCutsLittle(430_606, 21.8, 1.169, 10.7, 1.3, 0.35));

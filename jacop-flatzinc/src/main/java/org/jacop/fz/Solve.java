@@ -5218,7 +5218,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             / 1e9) {
       // fast enough; it still gives way when learning cuts the tree too little to pay for its cost
       // per node, and it stopped making progress
-      weak = !unsolvedOnly && optimisationLearningCutsLittle(solver, now) && solutionFound;
+      weak =
+          !unsolvedOnly
+              && optimisationLearningCutsLittle(solver, now)
+              && solutionFound
+              && !boundNearlyClosed(bestPrintedCost.get());
       if (!weak || "report".equals(options.freeConfig("lcg-opt-probe", "on"))) {
         return false;
       }
@@ -5584,6 +5588,46 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     return boundClosesGap(before, after, gain, cost);
+  }
+
+  /**
+   * Whether LCG raised the bound on the objective, since its speed check started, by nearly all of
+   * the gap to the best cost (lcg-opt-closed, 0.95; above 1 turns it off). A fast LCG whose
+   * learning cuts the tree little then keeps the search: its core-guided phase is close to the
+   * proof, which search without learning does not make. With -f, MiniZinc Challenge 2025 hitori
+   * h14-1 gave way at the check (bound 578 of 1468 to 572 closed, 99 %) and was not proved in 600 s
+   * on 3 seeds, and is proved in 110 to 128 s with LCG kept; FBDk07 (77 %), hitori h20-2 (94 %) and
+   * the 2017 community-detection instances (no raise) still give way.
+   *
+   * @param cost the best cost printed
+   * @return true if the bound closed at least the share of the gap
+   */
+  private boolean boundNearlyClosed(long cost) {
+    double share = Double.parseDouble(options.freeConfig("lcg-opt-closed", "0.95"));
+    long bound = lcgStartBound;
+    synchronized (lcgBounds) {
+      if (!lcgBounds.isEmpty()) {
+        bound = lcgBounds.peekLast()[1];
+      }
+    }
+    return closesShare(lcgStartBound, bound, cost, share);
+  }
+
+  /**
+   * Whether the bound {@code bound}, raised from {@code start}, closed at least the share {@code
+   * share} of the gap from {@code start} to the best cost {@code cost}.
+   *
+   * @param start the bound when the search started
+   * @param bound the bound now
+   * @param cost the best cost ({@code Integer.MAX_VALUE} when there is none)
+   * @param share the share of the gap
+   * @return true if the bound closed that share of the gap
+   */
+  static boolean closesShare(long start, long bound, long cost, double share) {
+    return cost != Integer.MAX_VALUE
+        && cost > start
+        && bound > start
+        && bound - start >= share * (cost - start);
   }
 
   /**
