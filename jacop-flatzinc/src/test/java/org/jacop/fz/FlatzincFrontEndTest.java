@@ -9668,4 +9668,31 @@ class FlatzincFrontEndTest {
       assertTrue(out.contains("o = true;\n"), out);
     }
   }
+
+  @Test
+  void partialCopiesKeepACopyWhoseDefaultLiteralADeclarationEquates() throws IOException {
+    // z2 = b ? x : 2 is a copy of z1, so it became an alias of z1 and its three constraints were
+    // skipped, which left c2 free; but o2 is declared equal to c2, and not b forces c2 while x <= 1
+    // excludes b /\ c2, so o2 = not b: -a printed four solutions instead of two
+    String model =
+        "var -2..1: x;\n"
+            + "var bool: b :: output_var;\n"
+            + "var -2..2: z1;\n"
+            + "var -2..2: z2;\n"
+            + "var bool: c1;\n"
+            + "var bool: c2;\n"
+            + "var bool: o1 :: output_var = c1;\n"
+            + "var bool: o2 :: output_var = c2;\n"
+            + "constraint int_eq_imp(z1,x,b);\n"
+            + "constraint int_eq_imp(z1,2,c1);\n"
+            + "constraint bool_clause([c1,b],[]);\n"
+            + "constraint int_eq_imp(z2,x,b);\n"
+            + "constraint int_eq_imp(z2,2,c2);\n"
+            + "constraint bool_clause([c2,b],[]);\n"
+            + "solve satisfy;\n";
+    String out = run(model, "-a")[0];
+    assertEquals(2, out.split("----------", -1).length - 1, out);
+    assertTrue(out.contains("b = false;\no1 = true;\no2 = true;\n"), out);
+    assertTrue(out.contains("b = true;\no1 = false;\no2 = false;\n"), out);
+  }
 }
