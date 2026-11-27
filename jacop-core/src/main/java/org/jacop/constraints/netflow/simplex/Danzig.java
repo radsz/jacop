@@ -47,10 +47,10 @@ public record Danzig(NetworkSimplex network) implements PivotRule {
    */
   public Arc next() {
     Arc next = null;
-    int minimumCost = 0;
+    long minimumCost = 0;
     for (int i = 0; i < network.numArcs; i++) {
       Arc arc = network.lower[i];
-      int reducedCost = arc.reducedCost();
+      long reducedCost = arc.reducedCost();
       if (minimumCost > reducedCost) {
         minimumCost = reducedCost;
         next = arc;

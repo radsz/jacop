@@ -80,10 +80,13 @@ public class XeqA extends PrimitiveConstraint {
   @Override
   public void consistency(Store store) {
 
+    a.domain.inCardinality(store.level, a, 1, 1);
+    if (!a.domain.glb().isEmpty()) {
+      // a = {e} for the element e of its glb
+      x.domain.in(store.level, x, a.domain.glb());
+    }
     x.domain.in(store.level, x, a.domain.lub());
     a.domain.inLub(store.level, a, x.domain);
-
-    a.domain.inCardinality(store.level, a, 1, 1);
   }
 
   @Override

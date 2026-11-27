@@ -30,6 +30,8 @@
 
 package org.jacop.lcg;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Map;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.BooleanVar;
@@ -71,6 +73,18 @@ public final class ExplanationChecker {
 
   /** Statistics: explanations whose search for a counterexample reached its node limit. */
   public long undecided;
+
+  /** Statistics: clauses checked by {@link #checkClause}. */
+  public long clausesChecked;
+
+  /**
+   * Statistics: clauses not checked, for a constraint that cannot be copied or a literal that is no
+   * atom.
+   */
+  public long clausesSkipped;
+
+  /** The kind of an atom {@code x = v} in {@link #checkClause}, besides the kinds of the trail. */
+  public static final int EQ = 3;
 
   private static final long NODE_LIMIT = 100_000;
 
@@ -148,11 +162,114 @@ public final class ExplanationChecker {
   }
 
   /**
+   * Checks a clause the solver is handed, after every conversion of the entries of its explanations
+   * into literals (dropped dominated atoms, value literals, weakened bounds, deferred removals
+   * explained in place): with every literal of the clause false, the constraints whose explanations
+   * it combines must have no solution over the initial domains. The atoms given are the negations
+   * of the literals, so {@code [x >= v]} for the literal {@code [x <= v - 1]}.
+   *
+   * @param constraints the constraints whose explanations the clause combines
+   * @param vars the variable of each atom
+   * @param kinds the kind of each atom: {@link AtomicTrail#GE}, {@link AtomicTrail#LE}, {@link
+   *     AtomicTrail#NE} or {@link #EQ}
+   * @param values the value of each atom
+   * @param n the number of atoms
+   * @param what what the clause is, for the description
+   * @return null when the clause is implied or cannot be checked, otherwise a description
+   */
+  public String checkClause(
+      Collection<Constraint> constraints,
+      IntVar[] vars,
+      int[] kinds,
+      int[] values,
+      int n,
+      String what) {
+    ScratchCopy copy = ScratchCopy.ofAll(trail, new ArrayList<>(constraints));
+    if (copy == null) {
+      clausesSkipped++;
+      return null;
+    }
+    for (int k = 0; k < n; k++) {
+      if (!copy.copyVariable(vars[k])) {
+        clausesSkipped++;
+        return null;
+      }
+    }
+    Store scratch = copy.store;
+    try {
+      for (int k = 0; k < n; k++) {
+        IntVar y = copy.get(vars[k]);
+        int v = values[k];
+        switch (kinds[k]) {
+          case AtomicTrail.GE -> y.domain.inMin(scratch.level, y, v);
+          case AtomicTrail.LE -> y.domain.inMax(scratch.level, y, v);
+          case EQ -> y.domain.in(scratch.level, y, v, v);
+          default -> {
+            if (y.domain.contains(v)) {
+              y.domain.inComplement(scratch.level, y, v);
+            }
+          }
+        }
+      }
+      for (Constraint c : constraints) {
+        if (!copy.imposeCopy(c)) {
+          clausesSkipped++;
+          return null;
+        }
+      }
+      clausesChecked++;
+      if (!scratch.consistency()) {
+        return null;
+      }
+    } catch (FailException _) {
+      clausesChecked++;
+      return null;
+    }
+    String solution = solution(scratch, copy.copies);
+    if (solution == null) {
+      return null;
+    }
+    StringBuilder result = new StringBuilder("the ").append(what);
+    for (int k = 0; k < n; k++) {
+      result.append(k == 0 ? " " : " or ").append(literalString(vars[k], kinds[k], values[k]));
+    }
+    return result
+        .append(" is not implied; solution")
+        .append(solution)
+        .append(", by ")
+        .append(constraints)
+        .toString();
+  }
+
+  // the literal whose negation is the atom
+  private static String literalString(IntVar x, int kind, int v) {
+    return switch (kind) {
+      case AtomicTrail.GE -> "[" + x.id() + " <= " + (v - 1L) + "]";
+      case AtomicTrail.LE -> "[" + x.id() + " >= " + (v + 1L) + "]";
+      case EQ -> "[" + x.id() + " != " + v + "]";
+      default -> "[" + x.id() + " = " + v + "]";
+    };
+  }
+
+  /**
    * Searches the scratch store for a solution, which shows the reason wrong. A search that reaches
    * its node limit counts as undecided.
    */
   private String counterexample(
       Store scratch, Map<Var, Var> copies, Constraint c, int entry, EntryList reason) {
+    String solution = solution(scratch, copies);
+    if (solution != null) {
+      String problem = entry < 0 ? "does not imply the failure" : "does not imply it";
+      return describe(c, entry, reason, problem + "; solution" + solution);
+    }
+    return null;
+  }
+
+  /**
+   * Searches the scratch store for a solution and returns it, or null when there is none or the
+   * search reaches its node limit, which counts as undecided.
+   */
+  private String solution(Store scratch, Map<Var, Var> copies) {
     IntVar[] scope =
         copies.values().stream()
             .filter(IntVar.class::isInstance)
@@ -174,8 +291,7 @@ public final class ExplanationChecker {
           }
         });
     if (search.labeling(scratch, new SimpleSelect<>(scope, null, new IndomainMin<>()))) {
-      String problem = entry < 0 ? "does not imply the failure" : "does not imply it";
-      return describe(c, entry, reason, problem + "; solution" + solution);
+      return solution.toString();
     }
     if (search.getNodes() > NODE_LIMIT) {
       undecided++;

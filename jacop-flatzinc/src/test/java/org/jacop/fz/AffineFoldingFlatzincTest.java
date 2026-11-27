@@ -314,4 +314,27 @@ class AffineFoldingFlatzincTest {
     String on = run(model, true, "-a");
     assertEquals(off, on);
   }
+
+  @Test
+  void aVariableThatControlsAnImpliedRowIsNotFolded() throws IOException {
+    // b1 = obj was folded into the row whose control b1 is: the row kept b1 as its control, the
+    // definition was dropped, and obj = 1 was reported with x2 - x1 - x0 = 0, not 6
+    String model =
+        """
+        var bool: x0 :: output_var;
+        var -1..3: x1 :: output_var;
+        var -2..2: x2 :: output_var;
+        var bool: b0;
+        var bool: b1;
+        var 0..1: obj :: output_var;
+        constraint int_eq_imp(x2,x1,b0);
+        constraint int_lin_eq_imp([-1,1,1],[x2,x1,x0],6,b1);
+        constraint bool_clause([b0],[]);
+        constraint int_lin_eq([1,-1],[b1,obj],0) :: defines_var(obj);
+        solve maximize obj;
+        """;
+    assertEquals("0", optimum(run(model, false, "--lcg", "on")));
+    assertEquals("0", optimum(run(model, true, "--lcg", "on")));
+    assertEquals("0", optimum(run(model, true, "-f")));
+  }
 }

@@ -72,10 +72,12 @@ import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
+import org.jacop.constraints.AmongSeq;
 import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.And;
 import org.jacop.constraints.AndBoolSimple;
 import org.jacop.constraints.AndBoolVector;
+import org.jacop.constraints.ArcTimes;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.ArgMaxMonotone;
 import org.jacop.constraints.ArgMin;
@@ -92,6 +94,8 @@ import org.jacop.constraints.Conditional;
 import org.jacop.constraints.ConditionalSelect;
 import org.jacop.constraints.ConjunctionSum;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.ConvexAllocation;
+import org.jacop.constraints.ConvexCost;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.CountValues;
@@ -110,6 +114,7 @@ import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.EqBool;
+import org.jacop.constraints.ExactCover;
 import org.jacop.constraints.ExtensionalConflictVa;
 import org.jacop.constraints.ExtensionalSupportStr;
 import org.jacop.constraints.ExtensionalSupportVa;
@@ -148,6 +153,7 @@ import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Same;
+import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
@@ -191,6 +197,7 @@ import org.jacop.constraints.XplusClteqZImplied;
 import org.jacop.constraints.XplusCneqZ;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.XplusYgtC;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.binpacking.VectorBinpacking;
@@ -207,6 +214,7 @@ import org.jacop.constraints.geost.Dbox;
 import org.jacop.constraints.geost.ExternalConstraint;
 import org.jacop.constraints.geost.Geost;
 import org.jacop.constraints.geost.GeostObject;
+import org.jacop.constraints.geost.InArea;
 import org.jacop.constraints.geost.NonOverlapping;
 import org.jacop.constraints.geost.Shape;
 import org.jacop.constraints.graph.ArborescenceBound;
@@ -239,18 +247,25 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.LinearForm;
+import org.jacop.search.ConsistencyListener;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMax;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.IndomainRandom;
 import org.jacop.search.InputOrderSelect;
+import org.jacop.search.MultiObjective;
+import org.jacop.search.PrioritySearch;
 import org.jacop.search.RandomSelect;
 import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
+import org.jacop.search.SmallestDomain;
 import org.jacop.search.SplitSelect;
 import org.jacop.search.ls.LocalSearch;
+import org.jacop.search.restart.ConstantCalculator;
+import org.jacop.search.restart.RestartHook;
+import org.jacop.search.restart.RestartSearch;
 import org.jacop.util.DominatorTree;
 import org.jacop.util.QueueForward;
 import org.jacop.util.fsm.Fsm;
@@ -10119,6 +10134,52 @@ class SingleConstraintTest extends TestHelper {
     assertThat(c.satisfied()).isFalse();
   }
 
+  // Counterexample of the consistency checker: only x0, x1 and x3 can take 0 or 1, and at least
+  // one of them is 0, so at most two are 1. Each counter alone has a support, the pair has not.
+  @Test
+  void testCountValuesBoundsTheCountOfTwoValuesTogether() {
+
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", new IntervalDomain(0, 1)),
+      new IntVar(store, "x1", 0, 3),
+      new IntVar(store, "x2", 2, 3),
+      new IntVar(store, "x3", 0, 1)
+    };
+    x[0].addDom(3, 3);
+    IntVar c0 = new IntVar(store, "c0", 1, 2);
+    IntVar c1 = new IntVar(store, "c1", 0, 1);
+    c1.addDom(3, 3);
+    IntVar c2 = new IntVar(store, "c2", 0, 2);
+    store.impose(new CountValues(x, new IntVar[] {c0, c1, c2}, new int[] {0, 1, 3}));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(c1.max()).isEqualTo(1);
+  }
+
+  // x0 and x1 fill the values 0 and 1, each counted at most once, so x2 and x3 take neither.
+  @Test
+  void testCountValuesRemovesValuesOfAFullSetOfValues() {
+
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 0, 1),
+      new IntVar(store, "x1", 0, 1),
+      new IntVar(store, "x2", 0, 2),
+      new IntVar(store, "x3", 0, 3)
+    };
+    IntVar c0 = new IntVar(store, "c0", 0, 1);
+    IntVar c1 = new IntVar(store, "c1", 0, 1);
+    IntVar c2 = new IntVar(store, "c2", 0, 4);
+    store.impose(new CountValues(x, new IntVar[] {c0, c1, c2}, new int[] {0, 1, 2}));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[2].value()).isEqualTo(2);
+    assertThat(x[3].min()).isEqualTo(2);
+    assertThat(c0.value()).isEqualTo(1);
+    assertThat(c1.value()).isEqualTo(1);
+  }
+
   // With min = max the windows force a period of q, so Sequence posts reified memberships on q
   // Booleans and one sum instead of Regular. It must keep the solutions and the domain
   // consistency of the Regular automaton.
@@ -11743,7 +11804,7 @@ class SingleConstraintTest extends TestHelper {
 
   // ConsistencyChecker repeated mode: an arc variable that is also an arrival time was pruned by
   // the time bounds of the same pass, which left every variable fixed to a set of predecessors that
-  // is no circuit; SequenceMdd now repeats its pass while a variable with two roles changes
+  // is no circuit; SequenceMdd repeats its pass while it prunes
   @Test
   public void testSequenceMddWithAnArcThatIsAlsoATimeAcceptsOnlyCircuits() {
     int none = org.jacop.constraints.SequenceMdd.NONE;
@@ -12502,9 +12563,10 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     store.setLevel(1);
     vars[3].domain.in(1, vars[3], 0, 1);
-    store.raiseLevelBeforeConsistency = true;
+    // the changes of level 1 reach the constraint first at level 2, as when the store raised its
+    // level before consistency
+    store.setLevel(2);
     assertThat(store.consistency()).isTrue();
-    assertThat(store.level).isEqualTo(2);
     backToRoot(store);
     assertThat(noOfAllSolutions(store, vars)).isEqualTo(expected);
   }
@@ -13181,5 +13243,1548 @@ class SingleConstraintTest extends TestHelper {
     // Regular 2 * 2, CostRegular 3 * 3 with the costs, Diffn 2 * 2
     assertThat(noOfAllSolutions(store, a, b, c, d, new IntVar[] {costC, costD}, x))
         .isEqualTo(2 * 2 * 3 * 3 * 2 * 2);
+  }
+
+  @Test
+  public void distanceAtTheEndOfTheIntegers() {
+    // |x - y| = 2 at IntDomain.MIN_INT: y - 2 lies below MIN_INT, and the complement of that range
+    // in the check of SmallDenseDomain.in made an interval with min above max
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", IntDomain.MIN_INT, IntDomain.MIN_INT + 2);
+    IntVar y = new IntVar(store, "y", IntDomain.MIN_INT, IntDomain.MIN_INT + 4);
+    IntVar z = new IntVar(store, "z", 2, 2);
+    store.impose(new Distance(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    // (MIN, MIN + 2), (MIN + 1, MIN + 3), (MIN + 2, MIN), (MIN + 2, MIN + 4)
+    assertThat(noOfAllSolutions(store, new IntVar[] {x, y})).isEqualTo(4);
+  }
+
+  @Test
+  public void valuesAtTheEndsOfJavaIntegersInBuiltDomains() {
+    // a value list holding Integer.MAX_VALUE (a parameter of a FlatZinc count_values, gcc or
+    // value_precede_chain): unionAdapt and union compared max + 1 with the next value, which
+    // overflowed and gave the domain {2147483647, 1}; CountValues then failed when x = 1, 0
+    IntervalDomain built = new IntervalDomain();
+    built.unionAdapt(Integer.MAX_VALUE);
+    built.unionAdapt(1);
+    built.unionAdapt(Integer.MIN_VALUE);
+    assertThat(built.checkInvariants()).isNull();
+    assertThat(built.toString()).isEqualTo("{-2147483648, 1, 2147483647}");
+    IntDomain union = new IntervalDomain(Integer.MAX_VALUE, Integer.MAX_VALUE).union(1);
+    assertThat(union.checkInvariants()).isNull();
+    assertThat(union.min()).isEqualTo(1);
+    union = new IntervalDomain(2147483645, Integer.MAX_VALUE).union(-536870909, -536870909);
+    assertThat(union.checkInvariants()).isNull();
+    union =
+        new IntervalDomain(Integer.MAX_VALUE, Integer.MAX_VALUE).union(new IntervalDomain(1, 2));
+    assertThat(union.checkInvariants()).isNull();
+
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 3);
+    }
+    IntVar none = new IntVar(store, "none", 0, 0);
+    IntVar ones = new IntVar(store, "ones", 3, 3);
+    store.impose(new CountValues(x, new IntVar[] {none, ones}, new int[] {Integer.MAX_VALUE, 1}));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    x[1].domain.in(1, x[1], 1, 1);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(2);
+    x[0].domain.in(2, x[0], 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[2].value()).isEqualTo(1);
+
+    // 1 follows a 0 and the value 2^31 - 1, which no variable takes, constrains nothing
+    Store chain = new Store();
+    IntVar[] y = new IntVar[4];
+    for (int i = 0; i < y.length; i++) {
+      y[i] = new IntVar(chain, "y" + i, 0, 3);
+    }
+    chain.impose(new SeqPrecedeChain(y, new int[] {0, 1, Integer.MAX_VALUE}));
+    assertThat(noOfAllSolutions(chain, y)).isEqualTo(136);
+  }
+
+  @Test
+  public void smallDenseDomainInAValueSetBeyondTheIntegers() {
+    // a set of values reaching 2^31 - 1, such as the counted values of CountValues, narrowed a
+    // small dense domain at MIN_INT with distances beyond an int: ArrayIndexOutOfBoundsException
+    Store store = new Store();
+    IntVar v = new IntVar(store, "v", IntDomain.MIN_INT, IntDomain.MIN_INT + 3);
+    IntervalDomain set = new IntervalDomain(IntDomain.MIN_INT + 1, IntDomain.MIN_INT + 2);
+    set.unionAdapt(2147483645, Integer.MAX_VALUE);
+    v.domain.in(0, v, set);
+    assertThat(v.dom().toString()).isEqualTo("{-536870909..-536870908}");
+    IntVar w = new IntVar(store, "w", IntDomain.MIN_INT, IntDomain.MIN_INT + 3);
+    assertThatThrownBy(() -> w.domain.in(0, w, new IntervalDomain(2147483645, Integer.MAX_VALUE)))
+        .isInstanceOf(FailException.class);
+
+    Store count = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(count, "x" + i, IntDomain.MIN_INT, IntDomain.MIN_INT + 3);
+    }
+    IntVar top = new IntVar(count, "top", 0, 3);
+    IntVar low = new IntVar(count, "low", 2, 2);
+    IntVar zero = new IntVar(count, "zero", 0, 3);
+    count.impose(
+        new CountValues(
+            x, new IntVar[] {top, low, zero}, new int[] {Integer.MAX_VALUE, IntDomain.MIN_INT, 0}));
+    // two x are MIN_INT and the third one is none of the counted values: 3 * 3 solutions
+    assertThat(noOfAllSolutions(count, x, new IntVar[] {top, low, zero})).isEqualTo(9);
+  }
+
+  @Test
+  public void sequenceBoundsBeyondTheWindow() {
+    // a bound of AmongSeq beyond 0..q, as far as Integer.MIN_VALUE, overflowed the weights of its
+    // difference constraints, and the model with at most one 1 in each pair failed
+    int[][] bounds = {{Integer.MIN_VALUE, 1, 216}, {1, Integer.MAX_VALUE, 40}, {-5, 7, 256}};
+    for (int[] b : bounds) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[4];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 3);
+      }
+      store.impose(new AmongSeq(x, new IntervalDomain(1, 1), 2, b[0], b[1]));
+      assertThat(noOfAllSolutions(store, x)).as("%d..%d", b[0], b[1]).isEqualTo(b[2]);
+    }
+  }
+
+  @Test
+  public void argMaxAndArgMinAtTheEndsOfTheIntegers() {
+    // the bounds of ArgMax started at MIN_INT (of ArgMin at MAX_INT) with a strict comparison: when
+    // every variable could be MIN_INT no position was found, and the index was pruned to 0, which
+    // lost the solution with all variables at MIN_INT
+    for (boolean max : new boolean[] {true, false}) {
+      Store store = new Store();
+      int low = max ? IntDomain.MIN_INT : IntDomain.MAX_INT - 3;
+      IntVar[] x = new IntVar[3];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, low, low + 3);
+      }
+      IntVar index = new IntVar(store, "index", 1, 4);
+      store.impose(max ? new ArgMax(x, index) : new ArgMin(x, index));
+      // the index of the first extremum is a function of x: one solution per tuple
+      assertThat(noOfAllSolutions(store, x, new IntVar[] {index})).as("max %b", max).isEqualTo(64);
+    }
+  }
+
+  @Test
+  void cumulativeUnaryWhoseFirstCallWasUndoneMakesItsTrailAgain() {
+    // the trail of the tasks left out was made at the first consistency call, at level 1: once
+    // that level was removed it held no value, and the next call read position -1
+    Store store = new Store();
+    int n = 3;
+    IntVar[] s = new IntVar[n];
+    IntVar[] d = new IntVar[n];
+    IntVar[] r = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      s[i] = new IntVar(store, "s" + i, 0, 6);
+      d[i] = new IntVar(store, "d" + i, 2, 2);
+      r[i] = new IntVar(store, "r" + i, 1, 1);
+    }
+    store.impose(new CumulativeUnary(s, d, r, new IntVar(store, "one", 1, 1), true));
+    store.setLevel(1);
+    s[0].domain.in(1, s[0], 0, 0);
+    assertThat(store.consistency()).isTrue();
+    store.removeLevel(1);
+    store.setLevel(0);
+    // the reference: three tasks of length 2 in 0..8 that do not overlap
+    int expected = 0;
+    for (int a = 0; a <= 6; a++) {
+      for (int b = 0; b <= 6; b++) {
+        for (int c = 0; c <= 6; c++) {
+          if (Math.abs(a - b) >= 2 && Math.abs(a - c) >= 2 && Math.abs(b - c) >= 2) {
+            expected++;
+          }
+        }
+      }
+    }
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.getSolutionListener().searchAll(true);
+    assertThat(search.labeling(store, new SimpleSelect<>(s, null, new IndomainMin<>()))).isTrue();
+    assertThat(search.getSolutionListener().solutionsNo()).isEqualTo(expected);
+  }
+
+  @Test
+  void exactCoverWhoseFirstConsistencyCallWasUndoneKeepsItsSolutions() {
+    // the first call pushed the fixed options and forced the elements of one option at a level
+    // above the root; removing that level undid them, and the flag of the first call kept them from
+    // being made again: elements left uncovered, or the counts out of step with the domains
+    Random random = new Random(20261126);
+    for (int t = 0; t < 300; t++) {
+      int n = 2 + random.nextInt(4);
+      int k = 2 + random.nextInt(6);
+      int[][] sets = new int[k][];
+      for (int o = 0; o < k; o++) {
+        sets[o] = random.ints(0, n).distinct().limit(1 + random.nextInt(n)).sorted().toArray();
+      }
+      int expected = 0;
+      for (int m = 0; m < 1 << k; m++) {
+        int[] covered = new int[n];
+        for (int o = 0; o < k; o++) {
+          if ((m >> o & 1) == 1) {
+            for (int e : sets[o]) {
+              covered[e]++;
+            }
+          }
+        }
+        expected += Arrays.stream(covered).allMatch(c -> c == 1) ? 1 : 0;
+      }
+      Store store = new Store();
+      IntVar[] x = new IntVar[k];
+      for (int o = 0; o < k; o++) {
+        x[o] = new IntVar(store, "o" + o, 0, 1);
+      }
+      store.impose(new ExactCover(x, sets, n));
+      // the first call after a decision at level 2, both levels removed
+      store.setLevel(1);
+      store.setLevel(2);
+      IntVar d = x[random.nextInt(k)];
+      d.domain.in(2, d, random.nextInt(2), d.max());
+      store.consistency();
+      store.removeLevel(2);
+      store.removeLevel(1);
+      store.setLevel(0);
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      search.getSolutionListener().searchAll(true);
+      search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()));
+      assertThat(search.getSolutionListener().solutionsNo())
+          .as("instance %d", t)
+          .isEqualTo(expected);
+    }
+  }
+
+  // 1-D geost over objects with x[i] in lo[i]..hi[i] and kinds 0..shapes.length - 1, each shape a
+  // list of {offset, length} boxes, optionally within the area [area[0], area[1]): the number of
+  // solutions found by search and, as the second element, by brute force in long arithmetic
+  private static long[] geostLineCounts(int[] lo, int[] hi, int[][][] shapeBoxes, int[] area) {
+    Store store = new Store();
+    List<Shape> shapes = new ArrayList<>();
+    for (int s = 0; s < shapeBoxes.length; s++) {
+      List<Dbox> boxes = new ArrayList<>();
+      for (int[] b : shapeBoxes[s]) {
+        boxes.add(new Dbox(new int[] {b[0]}, new int[] {b[1]}));
+      }
+      shapes.add(new Shape(s, boxes));
+    }
+    List<GeostObject> objects = new ArrayList<>();
+    IntVar[] vars = new IntVar[2 * lo.length];
+    for (int i = 0; i < lo.length; i++) {
+      vars[2 * i] = new IntVar(store, "x" + i, lo[i], hi[i]);
+      vars[2 * i + 1] = new IntVar(store, "k" + i, 0, shapeBoxes.length - 1);
+      objects.add(
+          new GeostObject(
+              i,
+              new IntVar[] {vars[2 * i]},
+              vars[2 * i + 1],
+              new IntVar(store, 0, 0),
+              new IntVar(store, 1, 1),
+              new IntVar(store, 1, 1)));
+    }
+    List<ExternalConstraint> constraints = new ArrayList<>();
+    constraints.add(new NonOverlapping(objects, new int[] {0, 1}));
+    if (area != null) {
+      constraints.add(
+          new InArea(new Dbox(new int[] {area[0]}, new int[] {area[1] - area[0]}), null));
+    }
+    // the reference is enumerated before the constraint prunes the domains
+    long expected =
+        bruteForce(
+                vars,
+                t -> {
+                  for (int i = 0; i < lo.length; i++) {
+                    for (int[] b : shapeBoxes[t[2 * i + 1]]) {
+                      long from = (long) t[2 * i] + b[0];
+                      if (area != null && (from < area[0] || from + b[1] > area[1])) {
+                        return false;
+                      }
+                      for (int j = i + 1; j < lo.length; j++) {
+                        for (int[] c : shapeBoxes[t[2 * j + 1]]) {
+                          long other = (long) t[2 * j] + c[0];
+                          if (from < other + c[1] && other < from + b[1]) {
+                            return false;
+                          }
+                        }
+                      }
+                    }
+                  }
+                  return true;
+                })
+            .size();
+    store.impose(new Geost(objects, constraints, shapes));
+    long found = 0;
+    if (store.consistency()) {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      search.getSolutionListener().searchAll(true);
+      search.getSolutionListener().recordSolutions(false);
+      if (search.labeling(store, new SimpleSelect<>(vars, null, new IndomainMin<>()))) {
+        found = search.getSolutionListener().solutionsNo();
+      }
+    }
+    return new long[] {found, expected};
+  }
+
+  @Test
+  void geostPlacesAnObjectAtTheEndsOfTheIntegerRange() {
+    // pruneMin and pruneMax answered IntDomain.MAX_INT and MIN_INT for "no feasible position",
+    // so an object whose only position was MAX_INT or MIN_INT had its shapes removed: FlatZinc
+    // geost with an origin at MIN_INT was unsatisfiable
+    int[][][] shapes = {{{0, 1}}, {{0, 2}}};
+    for (int end : new int[] {IntDomain.MIN_INT, IntDomain.MAX_INT}) {
+      int near = end < 0 ? end + 3 : end - 4;
+      long[] counts =
+          geostLineCounts(new int[] {end, near}, new int[] {end, near + 1}, shapes, null);
+      assertThat(counts[0]).as("end %d", end).isEqualTo(counts[1]).isEqualTo(8);
+    }
+  }
+
+  @Test
+  void geostKeepsShapesWithHolesApartNearTheEndOfTheIntegerRange() {
+    // the frame of an object whose shape has holes was computed at 4 times its coordinates,
+    // which left the integers for boxes reaching beyond MAX_INT + 2 or below MIN_INT - 1: cells
+    // -1 and 2..4 of objects at MAX_INT - 2 and MAX_INT overlap at MAX_INT + 2, and were accepted
+    int[][][] shapes = {{{-1, 1}, {2, 3}}};
+    int top = IntDomain.MAX_INT;
+    long[] counts =
+        geostLineCounts(new int[] {top - 9, top - 9}, new int[] {top, top}, shapes, null);
+    assertThat(counts[0]).isEqualTo(counts[1]).isEqualTo(20);
+    int bottom = IntDomain.MIN_INT;
+    shapes = new int[][][] {{{-3, 3}, {0, 1}}};
+    counts =
+        geostLineCounts(
+            new int[] {bottom, bottom}, new int[] {bottom + 9, bottom + 9}, shapes, null);
+    assertThat(counts[0]).isEqualTo(counts[1]).isEqualTo(42);
+    // the holes of a shape far from the origin were computed at 4 times its offsets
+    shapes = new int[][][] {{{600_000_000, 1}, {600_000_003, 1}}};
+    counts =
+        geostLineCounts(
+            new int[] {bottom, bottom}, new int[] {bottom + 5, bottom + 5}, shapes, null);
+    assertThat(counts[0]).isEqualTo(counts[1]).isEqualTo(24);
+  }
+
+  @Test
+  void geostKeepsAnAreaForBoxesBeyondTheEndOfTheIntegerRange() {
+    // an allowed area gave IntDomain.MIN_INT and MAX_INT as its extreme infeasible points, so it
+    // was filtered out for an object whose boxes all lie beyond MAX_INT: the box of height 2 at
+    // y + 2 left the area y < MAX_INT + 3 at y = MAX_INT
+    int top = IntDomain.MAX_INT;
+    for (int low = top - 1; low <= top; low++) {
+      Store store = new Store();
+      IntVar y = new IntVar(store, "y", low, top);
+      List<GeostObject> objects =
+          List.of(
+              new GeostObject(
+                  0,
+                  new IntVar[] {new IntVar(store, "x", 0, 0), y},
+                  new IntVar(store, 0, 0),
+                  new IntVar(store, 0, 0),
+                  new IntVar(store, 1, 1),
+                  new IntVar(store, 1, 1)));
+      Dbox area = new Dbox(new int[] {-5, top - 3}, new int[] {10, 6});
+      store.impose(
+          new Geost(
+              objects,
+              List.of(new NonOverlapping(objects, new int[] {0, 1, 2}), new InArea(area, null)),
+              List.of(new Shape(0, new int[] {0, 2}, new int[] {1, 2}))));
+      if (low == top) {
+        assertThat(store.consistency()).isFalse();
+      } else {
+        assertThat(store.consistency()).isTrue();
+        assertThat(y.dom().toString()).isEqualTo(String.valueOf(top - 1));
+      }
+    }
+  }
+
+  @Test
+  void networkFlowFindsTheFlowsBesideAnArcOfLargeNegativeWeight() {
+    // 1 -> 2 -> 3 with weights a, b in 0..3 and 1 -> 3 with weight w; one unit from 1 to 3 at a
+    // cost in 0..30, so only the path through 2 is a solution: 16 of them. The artificial arcs of
+    // the network simplex cost 100000, less than the arc of weight -200000, and the optimum kept
+    // flow on them: the network was infeasible
+    for (int w : new int[] {-200_000, IntDomain.MIN_INT, IntDomain.MAX_INT}) {
+      Store store = new Store();
+      NetworkBuilder net = new NetworkBuilder();
+      Node[] node = {net.addNode("n1", 1), net.addNode("n2", 0), net.addNode("n3", -1)};
+      IntVar[] flow = new IntVar[3];
+      IntVar[] weight = new IntVar[2];
+      for (int i = 0; i < 3; i++) {
+        flow[i] = new IntVar(store, "f" + i, 0, 3);
+      }
+      for (int i = 0; i < 2; i++) {
+        weight[i] = new IntVar(store, "w" + i, 0, 3);
+      }
+      net.addArc(node[0], node[1], weight[0], flow[0]);
+      net.addArc(node[1], node[2], weight[1], flow[1]);
+      net.addArc(node[0], node[2], w, flow[2]);
+      IntVar cost = new IntVar(store, "cost", 0, 30);
+      net.setCostVariable(cost);
+      store.impose(new NetworkFlow(net));
+      assertThat(store.consistency()).as("w = %d", w).isTrue();
+      assertThat(noOfAllSolutions(store, flow, weight, new IntVar[] {cost}))
+          .as("w = %d", w)
+          .isEqualTo(16);
+    }
+  }
+
+  // solutions of a network flow with flows 0..fmax, arcs {from, to, weight min, weight max} and
+  // the cost in low..high, found by search and, as the second element, in long arithmetic
+  private long[] networkFlowCounts(int[] balance, int[][] arcs, int fmax, int low, int high) {
+    Store store = new Store();
+    NetworkBuilder net = new NetworkBuilder();
+    Node[] node = new Node[balance.length];
+    for (int i = 0; i < balance.length; i++) {
+      node[i] = net.addNode("n" + i, balance[i]);
+    }
+    IntVar[] vars = new IntVar[2 * arcs.length + 1];
+    for (int i = 0; i < arcs.length; i++) {
+      vars[2 * i] = new IntVar(store, "f" + i, 0, fmax);
+      vars[2 * i + 1] = new IntVar(store, "w" + i, arcs[i][2], arcs[i][3]);
+      net.addArc(node[arcs[i][0]], node[arcs[i][1]], vars[2 * i + 1], vars[2 * i]);
+    }
+    IntVar cost = new IntVar(store, "cost", low, high);
+    vars[2 * arcs.length] = cost;
+    net.setCostVariable(cost);
+    // the cost is a function of the flows and weights, and its domain may be wide
+    long expected =
+        bruteForce(
+                Arrays.copyOf(vars, 2 * arcs.length),
+                t -> {
+                  long[] out = new long[balance.length];
+                  long sum = 0;
+                  for (int i = 0; i < arcs.length; i++) {
+                    out[arcs[i][0]] += t[2 * i];
+                    out[arcs[i][1]] -= t[2 * i];
+                    sum += (long) t[2 * i] * t[2 * i + 1];
+                  }
+                  for (int i = 0; i < balance.length; i++) {
+                    if (out[i] != balance[i]) {
+                      return false;
+                    }
+                  }
+                  return sum >= low && sum <= high;
+                })
+            .size();
+    store.impose(new NetworkFlow(net));
+    return new long[] {noOfAllSolutionsNoRecord(store, vars), expected};
+  }
+
+  @Test
+  void networkFlowComputesCostsBeyondTheIntegersInLong() {
+    // the cost of a ground flow below MIN_INT was cast to int, which wrapped it into the domain
+    // of the cost: 126 solutions instead of 4; the slack between the cost bound and an optimum
+    // below MIN_INT was clamped to Integer.MAX_VALUE, and the bound of a weight wrapped
+    int m = IntDomain.MAX_INT;
+    int[][] arcs = {
+      {1, 0, 3, 4}, {1, 0, -m, -m}, {0, 1, 100_000, 100_001}, {1, 0, -m, -m}, {0, 1, -m / 2, -m / 2}
+    };
+    long[] counts = networkFlowCounts(new int[] {0, 0}, arcs, 2, -30, 30);
+    assertThat(counts[0]).isEqualTo(counts[1]).isEqualTo(4);
+    arcs =
+        new int[][] {
+          {2, 0, 1_000_000, 1_000_000},
+          {1, 2, -m - 1, -m - 1},
+          {1, 3, -m, -m + 1},
+          {3, 0, 100_000_000, 100_000_000},
+          {3, 1, -m - 1, -m - 1}
+        };
+    counts = networkFlowCounts(new int[] {-1, 1, 0, 0}, arcs, 2, -30, 30);
+    assertThat(counts[0]).isEqualTo(counts[1]).isEqualTo(0);
+    arcs =
+        new int[][] {
+          {1, 0, m, m},
+          {0, 1, -m, -m},
+          {1, 0, -100_000_000, -100_000_000},
+          {1, 0, 2, 2},
+          {0, 1, -m - 1, -m}
+        };
+    counts = networkFlowCounts(new int[] {2, -2}, arcs, 2, -m - 1, m);
+    assertThat(counts[0]).isEqualTo(counts[1]).isEqualTo(0);
+  }
+
+  @Test
+  void stockingCostComputesTheCostOfAProducedOrderInLong() {
+    // due - x of a produced order wrapped in int for a due date near Integer.MAX_VALUE (or an x
+    // below MIN_INT, a FlatZinc constant): the cost of order 0 at -5, due at 2^31 - 1, became
+    // negative and assignments of cost 2^31 + 4 were accepted with cost 0..30
+    for (int x0 : new int[] {-5, 0, 3}) {
+      Store store = new Store();
+      IntVar[] x = {
+        new IntVar(store, "x0", x0, x0),
+        new IntVar(store, "x1", 0, 3),
+        new IntVar(store, "x2", 0, 3)
+      };
+      IntVar cost = new IntVar(store, "cost", 0, 30);
+      store.impose(
+          new StockingCost(x, new int[] {Integer.MAX_VALUE, 2, 3}, new int[] {1, 1, 1}, cost, 1));
+      assertThat(store.consistency() && noOfAllSolutions(store, x, new IntVar[] {cost}) > 0)
+          .as("x0 = %d", x0)
+          .isFalse();
+    }
+  }
+
+  @Test
+  void amongVarCountsValuesOfSetsSpanningTheIntegerRange() {
+    // the counts per value of the set were kept in arrays as long as the span of the values, about
+    // 13 GB for a set holding IntDomain.MIN_INT and IntDomain.MAX_INT; they are now as long as the
+    // number of values. Solution count by brute force.
+    int[][] doms = {
+      {-1, 0, 1}, {0, 1, IntDomain.MAX_INT}, {IntDomain.MIN_INT, 1, IntDomain.MAX_INT}, {0, 2}
+    };
+    int expected = 0;
+    for (int x0 : doms[0]) {
+      for (int x1 : doms[1]) {
+        for (int s : doms[2]) {
+          int count = (x0 == s ? 1 : 0) + (x1 == s ? 1 : 0);
+          for (int n : doms[3]) {
+            expected += count == n ? 1 : 0;
+          }
+        }
+      }
+    }
+    Store store = new Store();
+    IntVar[] v = new IntVar[doms.length];
+    for (int i = 0; i < doms.length; i++) {
+      v[i] = new IntVar(store, "v" + i, new IntervalDomain());
+      for (int value : doms[i]) {
+        v[i].addDom(value, value);
+      }
+    }
+    store.impose(new AmongVar(new IntVar[] {v[0], v[1]}, new IntVar[] {v[2]}, v[3]));
+    assertThat(countInOrder(store, v)).isEqualTo(expected);
+  }
+
+  /**
+   * Solutions of org.jacop.constraints.Cumulative (with profile, limit as a capacity) over the
+   * intervals min[k]..max[k] of n starts, n durations, n resources and the limit, and the
+   * brute-force count: every task within the limit, and the load at no time above it.
+   */
+  private static int[] profileCumulativeCounts(int n, int[] min, int[] max, boolean edgeFinding) {
+    int expected = 0;
+    int[] value = min.clone();
+    while (true) {
+      boolean ok = true;
+      for (int i = 0; i < n; i++) {
+        ok &= value[2 * n + i] <= value[3 * n];
+      }
+      for (int i = 0; i < n && ok; i++) {
+        // the load is highest at the start of some task
+        long load = 0;
+        for (int j = 0; j < n; j++) {
+          if (value[j] <= value[i] && value[i] < (long) value[j] + value[n + j]) {
+            load += value[2 * n + j];
+          }
+        }
+        ok = load <= value[3 * n];
+      }
+      expected += ok ? 1 : 0;
+      int k = 0;
+      while (k < value.length && ++value[k] > max[k]) {
+        value[k] = min[k];
+        k++;
+      }
+      if (k == value.length) {
+        break;
+      }
+    }
+    Store store = new Store();
+    IntVar[] v = new IntVar[3 * n + 1];
+    for (int k = 0; k < v.length; k++) {
+      v[k] = new IntVar(store, "v" + k, min[k], max[k]);
+    }
+    store.impose(
+        new org.jacop.constraints.Cumulative(
+            Arrays.copyOfRange(v, 0, n),
+            Arrays.copyOfRange(v, n, 2 * n),
+            Arrays.copyOfRange(v, 2 * n, 3 * n),
+            v[3 * n],
+            edgeFinding,
+            true,
+            false));
+    return new int[] {expected, countInOrder(store, v)};
+  }
+
+  @Test
+  void profileCumulativeKeepsTasksThatStartBeforeZero() {
+    // the profile took a piece starting at -1 for an empty one and the task with no compulsory
+    // part for one using [-1, ...): it lost load at -1 and pruned tasks of negative start that fit
+    int[][][] instances = {
+      {{-2, -3, -2, 1, 1, 1, 0, 1, 0, 2}, {-1, -1, 0, 2, 1, 2, 1, 2, 1, 2}},
+      {{-6, -6, -2, 1, 1, 2, 0, 0, 1, 1}, {-6, -5, -1, 2, 1, 3, 1, 0, 2, 1}},
+      {{-2, -2, -4, 2, 2, 0, 1, 2, 2, 2}, {0, -1, -3, 2, 2, 1, 1, 3, 3, 3}},
+      {{-1, 1, 1, 1}, {-1, 1, 1, 1}},
+      {{-2, 5, 1, 1}, {-2, 5, 1, 1}}
+    };
+    for (int[][] instance : instances) {
+      int n = (instance[0].length - 1) / 3;
+      for (boolean edgeFinding : new boolean[] {true, false}) {
+        int[] counts = profileCumulativeCounts(n, instance[0], instance[1], edgeFinding);
+        assertThat(counts[1])
+            .as(
+                "%s..%s, edge finding %s",
+                Arrays.toString(instance[0]), Arrays.toString(instance[1]), edgeFinding)
+            .isEqualTo(counts[0]);
+      }
+    }
+  }
+
+  @Test
+  void edgeFindingCumulativeComputesTheAreaOfLongTasksInLong() {
+    // the area of the tasks that edge finding tries to fit was summed in int: a task of duration
+    // 536870908 and resource 8 overflowed and the single solution was lost
+    int[][][] instances = {
+      {{-2, -536870908, 1, 536870908, 2, 8, 10}, {-2, -536870908, 1, 536870908, 2, 8, 10}},
+      {{-2, -10, 1, 10, 2, 536870907, 536870909}, {-2, -10, 1, 10, 2, 536870907, 536870909}},
+      {{-2, -536870908, 1, 536870908, 1, 8, 10}, {0, -536870906, 1, 536870908, 2, 8, 10}}
+    };
+    for (int[][] instance : instances) {
+      int[] counts = profileCumulativeCounts(2, instance[0], instance[1], true);
+      assertThat(counts[1])
+          .as("%s..%s", Arrays.toString(instance[0]), Arrays.toString(instance[1]))
+          .isEqualTo(counts[0]);
+    }
+  }
+
+  @Test
+  void diffnPrunesAnOriginWhoseExcludedValuesReachTheEndOfTheIntegerRange() {
+    // the sweep removed the origins from a start up to the date of an end, and that date is one
+    // past IntDomain.MAX_INT for a rectangle ending there: the domain built for the pruning was
+    // malformed and the search threw. Every rectangle has its origin at (x, x); the first two are
+    // the same 1 x 2 rectangle, so no x is a solution, as the brute force says.
+    int top = IntDomain.MAX_INT;
+    long expected = 0;
+    for (long v = top - 2; v <= top; v++) {
+      // rectangles 0 and 1 overlap unless one ends before the other starts in some dimension
+      boolean apart = v + 1 <= v || v + 2 <= v;
+      expected += apart ? 1 : 0;
+    }
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", top - 2, top);
+    IntVar one = new IntVar(store, 1, 1);
+    IntVar two = new IntVar(store, 2, 2);
+    store.impose(
+        new Diffn(new IntVar[][] {{x, x, one, two}, {x, x, one, two}, {x, x, one, one}}, true));
+    assertThat(countInOrder(store, x)).isEqualTo((int) expected);
+  }
+
+  @Test
+  void convexAllocationEvaluatesTheCostOfAVariableWiderThanItsTable() {
+    // the cost of a variable whose initial domain is too wide to be tabulated was evaluated by a
+    // call to the same method, which recursed until the stack overflowed
+    ConvexCost[] f = {ConvexCost.abs(1, 1, -2), ConvexCost.square(1, 1, 0)};
+    long expected = 0;
+    for (int a = 0; a <= 70_000; a++) {
+      for (int b = 0; b <= 2; b++) {
+        for (int c = 0; c <= 3; c++) {
+          expected += a + b == 3 && c >= f[0].value(a) + f[1].value(b) ? 1 : 0;
+        }
+      }
+    }
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 0, 70_000);
+    IntVar b = new IntVar(store, "b", 0, 2);
+    IntVar total = new IntVar(store, "total", 3, 3);
+    IntVar cost = new IntVar(store, "cost", 0, 3);
+    store.impose(new ConvexAllocation(new IntVar[] {a, b}, f, total, cost));
+    assertThat(countInOrder(store, a, b, cost)).isEqualTo((int) expected);
+  }
+
+  @Test
+  void diff2AndDisjointPruneAnOriginWhoseForbiddenIntervalEndsBeyondTheIntegerRange() {
+    // a forbidden interval of the origins ending one past IntDomain.MAX_INT (a rectangle ending at
+    // MAX_INT + 1) gave the domain MIN_INT..a plus MAX_INT + 1..MAX_INT: the narrowed domain was
+    // malformed and the search threw ArrayIndexOutOfBoundsException. Three rectangles near the top
+    // of the range; Diff2 lets rectangles of zero length overlap, Disjoint does not.
+    // the first instance hits the narrowing by obligatory rectangles, the second the profile
+    int[][][] instances = {
+      {
+        {0, 536870905, 0, 1, 536870908, 536870906, 1, 1, 536870908, 536870906, 1, 2},
+        {0, 536870907, 1, 1, 536870909, 536870908, 1, 1, 536870909, 536870906, 1, 2}
+      },
+      {
+        {3, 536870907, 0, 1, 536870907, 536870907, 1, 2, 536870906, 536870907, 2, 2},
+        {5, 536870907, 0, 1, 536870909, 536870909, 2, 3, 536870907, 536870909, 3, 2}
+      }
+    };
+    for (int q = 0; q < 2 * instances.length; q++) {
+      boolean disjoint = q % 2 == 1;
+      int[] min = instances[q / 2][0];
+      int[] max = instances[q / 2][1];
+      Store store = new Store();
+      IntVar[] x = new IntVar[12];
+      for (int i = 0; i < 12; i++) {
+        x[i] = new IntVar(store, "v" + i, min[i], max[i]);
+      }
+      IntVar[][] rect = {
+        Arrays.copyOfRange(x, 0, 4), Arrays.copyOfRange(x, 4, 8), Arrays.copyOfRange(x, 8, 12)
+      };
+      long expected =
+          bruteForce(
+                  x,
+                  t -> {
+                    for (int a = 0; a < 3; a++) {
+                      for (int b = a + 1; b < 3; b++) {
+                        boolean apart = false;
+                        boolean empty = false;
+                        for (int k = 0; k < 2; k++) {
+                          apart |=
+                              (long) t[4 * a + k] + t[4 * a + 2 + k] <= t[4 * b + k]
+                                  || (long) t[4 * b + k] + t[4 * b + 2 + k] <= t[4 * a + k];
+                          empty |= t[4 * a + 2 + k] == 0 || t[4 * b + 2 + k] == 0;
+                        }
+                        if (!apart && (disjoint || !empty)) {
+                          return false;
+                        }
+                      }
+                    }
+                    return true;
+                  })
+              .size();
+      boolean profile = q / 2 == 1;
+      store.impose(disjoint ? new Disjoint(rect, profile) : new Diff2(rect, profile));
+      assertThat(countInOrder(store, x)).as("instance %d", q).isEqualTo((int) expected);
+    }
+  }
+
+  /**
+   * Makes the first consistency call of the constraints imposed so far at level 2, after a random
+   * bound at levels 1 and 2, and removes both levels, as a search that raises a level before it
+   * propagates does.
+   */
+  private static void firstCallAboveTheRoot(Store store, IntVar[] vars, Random random) {
+    for (int level = 1; level <= 2; level++) {
+      store.setLevel(level);
+      IntVar x = vars[random.nextInt(vars.length)];
+      int v = x.min() + random.nextInt(x.max() - x.min() + 1);
+      if (random.nextBoolean()) {
+        x.domain.inMin(level, x, v);
+      } else {
+        x.domain.inMax(level, x, v);
+      }
+    }
+    store.consistency();
+    store.removeLevel(2);
+    store.setLevel(1);
+    store.removeLevel(1);
+    store.setLevel(0);
+  }
+
+  @Test
+  void aConstraintWhoseFirstCallWasUndoneRunsAgainThoughNothingWakesIt() {
+    // removing the level of a first call above the root left the constraints unqueued: In, which
+    // prunes once and is woken by no event, a constraint over variables fixed at imposition, and a
+    // constraint still queued behind a failure at that level never ran again, and the search
+    // accepted the values they rule out
+    Random random = new Random(20261126);
+    for (int t = 0; t < 300; t++) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", -3, 6);
+      IntVar y = new IntVar(store, "y", -3, 6);
+      int a = random.nextInt(2);
+      int b = random.nextInt(2);
+      IntVar f = new IntVar(store, "f", a, a);
+      IntVar g = new IntVar(store, "g", b, b);
+      IntervalDomain allowed = new IntervalDomain();
+      for (int v = -3; v <= 6; v++) {
+        if (random.nextInt(3) == 0) {
+          allowed.unionAdapt(v, v);
+        }
+      }
+      IntVar[] vars = {x, y, f, g};
+      int expected =
+          bruteForce(vars, s -> s[0] <= s[1] && allowed.contains(s[1]) && s[2] != s[3]).size();
+      store.impose(new XlteqY(x, y));
+      store.impose(new In(y, allowed));
+      store.impose(new XneqY(f, g));
+      firstCallAboveTheRoot(store, new IntVar[] {x, y}, random);
+      assertThat(countInOrder(store, vars)).as("instance %d", t).isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void restartSearchWithAHookKeepsThePruningOfAConstraintThatPrunesOnce() {
+    // each run of a restart search with a hook makes its first consistency call at a level of its
+    // own, removed when the run ends: In(x, {5, 7}) was undone with it and, woken by no event,
+    // never
+    // ran again, so the second run took x = 0 as a better solution
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    IntervalDomain allowed = new IntervalDomain(5, 5);
+    allowed.unionAdapt(7, 7);
+    store.impose(new In(x, allowed));
+    store.impose(new XplusYeqC(x, y, 9));
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    SelectChoicePoint<IntVar> select =
+        new SimpleSelect<>(new IntVar[] {y, x}, null, new IndomainMax<>());
+    RestartSearch<IntVar> restarts =
+        new RestartSearch<>(store, search, select, new ConstantCalculator(100), x);
+    restarts.setRestartHook(
+        new RestartHook() {
+          @Override
+          public void restart(Store s, int status) {}
+
+          @Override
+          public void solution() {}
+
+          @Override
+          public boolean completeMarked() {
+            return false;
+          }
+        });
+    restarts.setRestartsLimit(5);
+    assertThat(restarts.labeling()).isTrue();
+    assertThat(restarts.getIntCost()).isEqualTo(5);
+  }
+
+  @Test
+  void xorSystemWhoseFirstCallWasUndoneChecksEveryRowAgain() {
+    // the first call checks every row; a row it checked at a level then removed, such as an empty
+    // row of parity 1 (xor(b, b) = 1), was not checked again and the search found solutions
+    Random random = new Random(20261126);
+    for (int t = 0; t < 300; t++) {
+      Store store = new Store();
+      int n = 3 + random.nextInt(4);
+      IntVar[] b = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        b[i] = new IntVar(store, "b" + i, 0, 1);
+      }
+      int rows = 1 + random.nextInt(3);
+      int[][] index = new int[rows][];
+      IntVar[][] vars = new IntVar[rows][];
+      int[] parity = new int[rows];
+      for (int r = 0; r < rows; r++) {
+        index[r] = random.ints(1 + random.nextInt(Math.min(4, n)), 0, n).toArray();
+        vars[r] = Arrays.stream(index[r]).mapToObj(i -> b[i]).toArray(IntVar[]::new);
+        parity[r] = random.nextInt(2);
+      }
+      int expected =
+          bruteForce(
+                  b,
+                  s -> {
+                    for (int r = 0; r < rows; r++) {
+                      if (Arrays.stream(index[r]).map(i -> s[i]).sum() % 2 != parity[r]) {
+                        return false;
+                      }
+                    }
+                    return true;
+                  })
+              .size();
+      store.impose(new XorSystem(vars, parity));
+      firstCallAboveTheRoot(store, b, random);
+      assertThat(countInOrder(store, b)).as("instance %d", t).isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void tableCoverWhoseFirstCallWasUndoneReadsEveryDomainAgain() {
+    // the first call kills the tuples out of the domains and checks every element; when its level
+    // was removed the tuples came back alive and the flag kept the call from being made again, so
+    // a value no tuple supports any more was kept
+    Random random = new Random(20261126);
+    for (int t = 0; t < 300; t++) {
+      Store store = new Store();
+      int groups = 2 + random.nextInt(2);
+      IntVar[][] g = new IntVar[groups][];
+      int[][][] tuples = new int[groups][][];
+      for (int i = 0; i < groups; i++) {
+        int size = 1 + random.nextInt(2);
+        g[i] = new IntVar[size];
+        for (int l = 0; l < size; l++) {
+          g[i][l] = new IntVar(store, "g" + i + "_" + l, 0, 4);
+        }
+        tuples[i] = new int[1 + random.nextInt(5)][size];
+        for (int[] tuple : tuples[i]) {
+          for (int l = 0; l < size; l++) {
+            tuple[l] = random.nextInt(5);
+          }
+        }
+      }
+      IntVar[] all = Arrays.stream(g).flatMap(Arrays::stream).toArray(IntVar[]::new);
+      int expected =
+          bruteForce(
+                  all,
+                  s -> {
+                    if (Arrays.stream(s).distinct().count() != s.length) {
+                      return false;
+                    }
+                    int at = 0;
+                    for (int i = 0; i < groups; i++) {
+                      int from = at;
+                      if (Arrays.stream(tuples[i])
+                          .noneMatch(
+                              tu ->
+                                  Arrays.equals(
+                                      tu, Arrays.copyOfRange(s, from, from + tu.length)))) {
+                        return false;
+                      }
+                      at += g[i].length;
+                    }
+                    return true;
+                  })
+              .size();
+      store.impose(new TableCover(g, tuples, false));
+      firstCallAboveTheRoot(store, all, random);
+      assertThat(countInOrder(store, all)).as("instance %d", t).isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void networkFlowWhoseFirstCallWasUndoneRestoresItsArcsAtEveryLevel() {
+    // the variables queued by the imposition, processed by a first call at level 2, set the arcs
+    // there from the domains of level 2; removing level 2 restored them from the domains of level
+    // 1, and nothing restored them when level 1 went, so the search lost solutions
+    Random random = new Random(20261126);
+    for (int t = 0; t < 400; t++) {
+      Store store = new Store();
+      boolean varWeight = random.nextBoolean();
+      int nodes = 3 + random.nextInt(2);
+      int arcs = 3 + random.nextInt(3);
+      int[] from = new int[arcs];
+      int[] to = new int[arcs];
+      int[] weight = new int[arcs];
+      for (int k = 0; k < arcs; k++) {
+        from[k] = random.nextInt(nodes);
+        to[k] = (from[k] + 1 + random.nextInt(nodes - 1)) % nodes;
+        weight[k] = random.nextInt(5) - 1;
+      }
+      int[] balance = new int[nodes];
+      balance[0] = random.nextInt(3);
+      balance[1 + random.nextInt(nodes - 1)] -= balance[0];
+      IntVar[] x = new IntVar[arcs];
+      for (int k = 0; k < arcs; k++) {
+        x[k] = new IntVar(store, "f" + k, 0, 3);
+      }
+      IntVar w = new IntVar(store, "w", varWeight ? -1 : 0, varWeight ? 2 : 0);
+      IntVar cost = new IntVar(store, "cost", -4, 12);
+      NetworkBuilder net = new NetworkBuilder();
+      Node[] node = new Node[nodes];
+      for (int i = 0; i < nodes; i++) {
+        node[i] = net.addNode("n" + i, balance[i]);
+      }
+      for (int k = 0; k < arcs; k++) {
+        if (varWeight && k == 0) {
+          net.addArc(node[from[k]], node[to[k]], w, x[k]);
+        } else {
+          net.addArc(node[from[k]], node[to[k]], weight[k], x[k]);
+        }
+      }
+      net.setCostVariable(cost);
+      IntVar[] vars = Arrays.copyOf(x, arcs + 2);
+      vars[arcs] = w;
+      vars[arcs + 1] = cost;
+      int expected =
+          bruteForce(
+                  vars,
+                  s -> {
+                    int[] out = new int[nodes];
+                    long total = 0;
+                    for (int k = 0; k < arcs; k++) {
+                      out[from[k]] += s[k];
+                      out[to[k]] -= s[k];
+                      total += (long) (varWeight && k == 0 ? s[arcs] : weight[k]) * s[k];
+                    }
+                    return Arrays.equals(out, balance) && total == s[arcs + 1];
+                  })
+              .size();
+      store.impose(new NetworkFlow(net));
+      firstCallAboveTheRoot(store, vars, random);
+      assertThat(countInOrder(store, vars)).as("instance %d", t).isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void geostWhoseFirstCallWasUndoneChecksEveryObjectAgain() {
+    // every object is queued at construction and checked by the first call; an object fixed at
+    // imposition is never queued by a change, so when the level of the first call was removed two
+    // fixed overlapping squares were never checked again and the search found a solution
+    for (int a = 0; a < 3; a++) {
+      for (int b = 0; b < 3; b++) {
+        Store store = new Store();
+        List<Shape> shapes = List.of(new Shape(0, new int[] {0, 0}, new int[] {2, 2}));
+        IntVar[] x = {
+          new IntVar(store, "x0", a, a),
+          new IntVar(store, "y0", 0, 0),
+          new IntVar(store, "x1", b, b),
+          new IntVar(store, "y1", 1, 1)
+        };
+        List<GeostObject> objects = new ArrayList<>();
+        for (int i = 0; i < 2; i++) {
+          objects.add(
+              new GeostObject(
+                  i,
+                  new IntVar[] {x[2 * i], x[2 * i + 1]},
+                  new IntVar(store, 0, 0),
+                  new IntVar(store, 0, 0),
+                  new IntVar(store, 1, 1),
+                  new IntVar(store, 1, 1)));
+        }
+        store.impose(
+            new Geost(objects, List.of(new NonOverlapping(objects, new int[] {0, 1})), shapes));
+        store.setLevel(1);
+        store.consistency();
+        store.removeLevel(1);
+        store.setLevel(0);
+        // the squares of side 2 at (a, 0) and (b, 1) overlap unless they are 2 apart
+        assertThat(countInOrder(store, x))
+            .as("a = %d, b = %d", a, b)
+            .isEqualTo(Math.abs(a - b) >= 2 ? 1 : 0);
+      }
+    }
+  }
+
+  @Test
+  void arcTimesWhoseFirstCallWasUndoneChecksEveryNodeAgain() {
+    // the first call removes the successors that a node's earliest time cannot reach; later calls
+    // look only at the nodes whose times changed, so when its level was removed a successor ruled
+    // out by fixed times came back for good
+    Random random = new Random(20261126);
+    for (int t = 0; t < 300; t++) {
+      Store store = new Store();
+      int n = 3;
+      IntVar[] x = new IntVar[n];
+      IntVar[] time = new IntVar[n];
+      for (int v = 0; v < n; v++) {
+        x[v] = new IntVar(store, "x" + v, 1, n);
+        int fixed = random.nextInt(5);
+        time[v] =
+            random.nextBoolean()
+                ? new IntVar(store, "t" + v, fixed, fixed)
+                : new IntVar(store, "t" + v, 0, 4);
+      }
+      long[][] lag = new long[n][n];
+      for (int v = 0; v < n; v++) {
+        for (int w = 0; w < n; w++) {
+          lag[v][w] = random.nextInt(4) - 1;
+        }
+      }
+      IntVar[] vars = Arrays.copyOf(x, 2 * n);
+      System.arraycopy(time, 0, vars, n, n);
+      int expected =
+          bruteForce(
+                  vars,
+                  s -> {
+                    for (int v = 0; v < n; v++) {
+                      int w = s[v] - 1;
+                      if (s[n + w] < s[n + v] + lag[v][w]) {
+                        return false;
+                      }
+                    }
+                    return true;
+                  })
+              .size();
+      store.impose(new ArcTimes(x, 1, time, lag));
+      firstCallAboveTheRoot(store, vars, random);
+      assertThat(countInOrder(store, vars)).as("instance %d", t).isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void paretoFrontOfAModelNotPropagatedAtTheRootKeepsAConstraintThatPrunesOnce() {
+    // each subproblem of MultiObjective makes its first consistency call at a level of its own,
+    // removed when it ends: In(x, {3, 6}) ran in the first subproblem only, and a failure of a
+    // later call dropped it from the queue again, so the front held points with x out of {3, 6}
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    IntervalDomain allowed = new IntervalDomain(3, 3);
+    allowed.unionAdapt(6, 6);
+    store.impose(new In(x, allowed));
+    store.impose(new XplusYgtC(x, y, 8));
+    IntVar[] v = {x, y};
+    MultiObjective<int[]> pareto =
+        new MultiObjective<>(
+            new MultiObjective.DepthFirst<>(
+                store, new SimpleSelect<>(v, null, new IndomainMin<>()), v, v),
+            false,
+            false);
+    assertThat(pareto.pareto()).isEqualTo(MultiObjective.Status.OPTIMAL);
+    assertThat(pareto.front()).containsExactlyInAnyOrder(new int[] {3, 6}, new int[] {6, 3});
+  }
+
+  // ConsistencyChecker counted nodes where a second call of SequenceMdd pruned more: arcs removed
+  // by
+  // a pass change the diagram of the next one, and the store does not wake the constraint for its
+  // own pruning; SequenceMdd now repeats its pass until it prunes nothing
+  @Test
+  void sequenceMddReachesItsFixpointInOneCall() {
+    int none = org.jacop.constraints.SequenceMdd.NONE;
+    Random random = new Random(7);
+    int notAtFixpoint = 0;
+    for (int t = 0; t < 400; t++) {
+      Store store = new Store();
+      int n = 3 + random.nextInt(2);
+      IntVar[] arcs = new IntVar[n];
+      IntVar[] in = new IntVar[n];
+      IntVar[] out = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        arcs[i] = new IntVar(store, "a" + i, 0, n - 1);
+        in[i] = new IntVar(store, "in" + i, 0, 6);
+        out[i] = new IntVar(store, "out" + i, 0, 6);
+        for (IntVar v : new IntVar[] {in[i], out[i]}) {
+          if (random.nextBoolean()) {
+            v.domain.inComplement(0, v, random.nextInt(7));
+          }
+        }
+      }
+      int[][] travel = new int[n][n];
+      for (int[] row : travel) {
+        for (int j = 0; j < n; j++) {
+          row[j] = random.nextInt(5) == 0 ? none : random.nextInt(3);
+        }
+      }
+      int[] delta = new int[n];
+      for (int j = 0; j < n; j++) {
+        delta[j] = random.nextInt(5) == 0 ? none : random.nextInt(2);
+      }
+      org.jacop.constraints.SequenceMdd c =
+          new org.jacop.constraints.SequenceMdd(
+              arcs, random.nextBoolean(), 0, in, out, travel, delta, 0, 1 + random.nextInt(3));
+      store.impose(c);
+      if (!store.consistency()) {
+        continue;
+      }
+      List<Var> vars = new ArrayList<>(Arrays.asList(arcs));
+      vars.addAll(Arrays.asList(in));
+      vars.addAll(Arrays.asList(out));
+      String before = vars.toString();
+      try {
+        c.consistency(store);
+      } catch (FailException _) {
+        notAtFixpoint++;
+        continue;
+      }
+      if (!before.equals(vars.toString())) {
+        notAtFixpoint++;
+      }
+    }
+    assertThat(notAtFixpoint).isZero();
+  }
+
+  @Test
+  void constraintImposedInAConsistencyListenerLeavesTheSearchLevelsIntact() {
+    // Alldistinct asks the store to raise its level before its first consistency; imposed with
+    // consistency at a leaf of a search, the store raised the level under the search, which then
+    // made its next decisions at that level and never removed them: x1 = 0 came back after
+    // x1 != 0 and the rejected leaf (0, 0) was found as a solution
+    Store store = new Store();
+    IntVar[] x = new IntVar[2];
+    for (int i = 0; i < 2; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 2);
+    }
+    boolean[] imposed = {false};
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.setConsistencyListener(
+        new ConsistencyListener() {
+          @Override
+          public boolean executeAfterConsistency(boolean consistent) {
+            if (!consistent || imposed[0] || Arrays.stream(x).anyMatch(v -> !v.singleton())) {
+              return consistent;
+            }
+            imposed[0] = true;
+            try {
+              store.imposeWithConsistency(new Alldistinct(x));
+            } catch (FailException e) {
+              return false;
+            }
+            return true;
+          }
+
+          @Override
+          public void setChildrenListeners(ConsistencyListener[] children) {}
+
+          @Override
+          public void setChildrenListeners(ConsistencyListener child) {}
+        });
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(true);
+    search.setAssignSolution(false);
+    search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()));
+    Set<String> found = new HashSet<>();
+    for (int i = 1; i <= search.getSolutionListener().solutionsNo(); i++) {
+      found.add(
+          Arrays.stream(search.getSolutionListener().getSolution(i))
+              .map(d -> String.valueOf(((IntDomain) d).value()))
+              .collect(Collectors.joining(",")));
+    }
+    assertThat(imposed[0]).isTrue();
+    // every tuple but the rejected leaf (0, 0), each once
+    assertThat(search.getSolutionListener().solutionsNo()).isEqualTo(8);
+    assertThat(found).hasSize(8).doesNotContain("0,0");
+    assertThat(store.level).isZero();
+    for (IntVar v : x) {
+      assertThat(v.dom().eq(new IntervalDomain(0, 2))).as(v.toString()).isTrue();
+    }
+  }
+
+  @Test
+  void diff2ImposedAboveTheRootChecksRectanglesFixedBeforeTheNextLevel() {
+    // imposed in a search without a consistency (as from a ConsistencyListener), Diff2 queued all
+    // its variables; the decision of the next level cleared that queue, so the two rectangles fixed
+    // earlier were skipped as checked and their overlap was accepted
+    Store store = new Store();
+    IntVar[][] r = new IntVar[3][4];
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 4; j++) {
+        r[i][j] = new IntVar(store, "r" + i + j, j < 2 ? 0 : 1, j < 2 ? 3 : 1);
+      }
+    }
+    store.setLevel(1);
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < 2; j++) {
+        r[i][j].domain.in(1, r[i][j], 0, 0);
+      }
+    }
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(2);
+    store.impose(new Diff2(r));
+    store.setLevel(3);
+    r[2][0].domain.in(3, r[2][0], 3, 3);
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void diffnRedoingAnUndoneFirstConsistencyChecksRectanglesFixedEarlier() {
+    // imposed in a search over two overlapping rectangles fixed earlier, Diffn failed at its first
+    // consistency one level up; removing that level cleared its changed rectangles, so the first
+    // consistency redone at the same level skipped both as checked and accepted the overlap
+    Store store = new Store();
+    IntVar[][] r = new IntVar[3][4];
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 4; j++) {
+        r[i][j] = new IntVar(store, "r" + i + j, j < 2 ? 0 : 1, j < 2 ? 3 : 1);
+      }
+    }
+    store.setLevel(1);
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < 2; j++) {
+        r[i][j].domain.in(1, r[i][j], 0, 0);
+      }
+    }
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(2);
+    store.impose(new Diffn(r, true));
+    store.setLevel(3);
+    r[2][0].domain.in(3, r[2][0], 3, 3);
+    assertThat(store.consistency()).isFalse();
+    store.removeLevel(3);
+    store.setLevel(3);
+    r[2][0].domain.in(3, r[2][0], 2, 2);
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void geostRedoingAnUndoneFirstConsistencyCountsAGroundedVariableOnce() {
+    // the store queues every variable again when it redoes a first consistency whose level was
+    // removed; Geost counted the variable just fixed at that level a second time, so object 1
+    // looked ground with y open and the search lost solutions
+    Store store = new Store();
+    IntVar[][] p = new IntVar[3][2];
+    List<GeostObject> objects = new ArrayList<>();
+    for (int i = 0; i < 3; i++) {
+      for (int d = 0; d < 2; d++) {
+        p[i][d] = new IntVar(store, "p" + i + d, 0, 1);
+      }
+      objects.add(
+          new GeostObject(
+              i,
+              p[i],
+              new IntVar(store, "s" + i, 0, 0),
+              new IntVar(store, "t" + i, 0, 0),
+              new IntVar(store, "d" + i, 1, 1),
+              new IntVar(store, "e" + i, 1, 1)));
+    }
+    store.setLevel(1);
+    p[0][0].domain.in(1, p[0][0], 0, 0);
+    store.impose(
+        new Geost(
+            objects,
+            List.of(new NonOverlapping(objects, new int[] {0, 1, 2})),
+            List.of(new Shape(0, new int[] {0, 0}, new int[] {1, 1}))));
+    store.setLevel(2);
+    p[1][0].domain.in(2, p[1][0], 1, 1);
+    assertThat(store.consistency()).isTrue();
+    store.removeLevel(2);
+    store.setLevel(2);
+    p[1][0].domain.in(2, p[1][0], 0, 0);
+    assertThat(store.consistency()).isTrue();
+    // objects 0 and 1 take the two cells of column 0, object 2 either cell of column 1
+    IntVar[] all = Arrays.stream(p).flatMap(Arrays::stream).toArray(IntVar[]::new);
+    assertThat(noOfAllSolutions(store, all)).isEqualTo(4);
+  }
+
+  @Test
+  void childSearchRecordsItsSolutionsWithTheMasterSolutionNumbers() {
+    // a child search recording its solutions wrote the master's number one past the end of its
+    // array (an exception at its first solution), and a child that did not record them overwrote
+    // the count of a master that did, which then copied past the end of its arrays
+    for (boolean masterRecords : new boolean[] {false, true}) {
+      for (boolean childRecords : new boolean[] {false, true}) {
+        Store store = new Store();
+        IntVar x = new IntVar(store, "x", 0, 2);
+        IntVar y = new IntVar(store, "y", 0, 1);
+        DepthFirstSearch<IntVar> master = new DepthFirstSearch<>();
+        DepthFirstSearch<IntVar> child = new DepthFirstSearch<>();
+        master.setPrintInfo(false);
+        child.setPrintInfo(false);
+        child.setSelectChoicePoint(new SimpleSelect<>(new IntVar[] {y}, null, new IndomainMin<>()));
+        master.addChildSearch(child);
+        master.getSolutionListener().searchAll(true);
+        child.getSolutionListener().searchAll(true);
+        master.getSolutionListener().recordSolutions(masterRecords);
+        child.getSolutionListener().recordSolutions(childRecords);
+        assertThat(
+                master.labeling(
+                    store, new SimpleSelect<>(new IntVar[] {x}, null, new IndomainMin<>())))
+            .isTrue();
+        assertThat(child.getSolutionListener().solutionsNo()).isEqualTo(6);
+        assertThat(x.singleton() && y.singleton()).isTrue();
+        if (masterRecords) {
+          assertThat(master.getSolutionListener().solutionsNo()).isEqualTo(3);
+        }
+        if (masterRecords && childRecords) {
+          for (int i = 1; i <= 6; i++) {
+            int parent = child.getSolutionListener().getParentSolution(i);
+            assertThat(parent).isEqualTo((i - 1) / 2);
+            assertThat(
+                    ((IntDomain) master.getSolutionListener().getSolution(parent + 1)[0]).value())
+                .isEqualTo((i - 1) / 2);
+          }
+        }
+      }
+    }
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void prioritySearchStoppedAtItsSolutionLimitLeavesTheStoreAtItsLevel() {
+    // the solution limit stopped the searches below where they found the solution, and the
+    // priority search removed only its own level, so the store stayed at the level of that leaf
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 2);
+    IntVar y = new IntVar(store, "y", 0, 2);
+    IntVar u = new IntVar(store, "u", 0, 1);
+    IntVar v = new IntVar(store, "v", 0, 1);
+    store.impose(new XneqY(x, y));
+    DepthFirstSearch<IntVar>[] searches = new DepthFirstSearch[2];
+    searches[0] = new DepthFirstSearch<>();
+    searches[0].setSelectChoicePoint(
+        new SimpleSelect<>(new IntVar[] {x, y}, null, new IndomainMax<>()));
+    searches[1] = new DepthFirstSearch<>();
+    searches[1].setSelectChoicePoint(
+        new SimpleSelect<>(new IntVar[] {u, v}, null, new IndomainMax<>()));
+    for (DepthFirstSearch<IntVar> search : searches) {
+      search.setPrintInfo(false);
+    }
+    PrioritySearch<IntVar> priority =
+        new PrioritySearch<>(new IntVar[] {x, u}, new SmallestDomain<>(), searches);
+    priority.setPrintInfo(false);
+    assertThat(priority.labeling(store)).isTrue();
+    assertThat(store.level).isZero();
+    assertThat(List.of(x.value(), y.value(), u.value(), v.value())).containsExactly(2, 1, 1, 1);
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void prioritySearchKeepsTheAssignedSolutionOfAConstraintThatRaisesTheLevel() {
+    // Alldistinct asks the search to raise the level before the first consistency; the priority
+    // search assigned the solution in that level and then removed it, so y was left open
+    for (boolean all : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", 0, 2);
+      IntVar y = new IntVar(store, "y", 0, 2);
+      IntVar u = new IntVar(store, "u", 0, 1);
+      IntVar v = new IntVar(store, "v", 0, 1);
+      store.impose(new Alldistinct(new IntVar[] {x, y}));
+      DepthFirstSearch<IntVar>[] searches = new DepthFirstSearch[2];
+      searches[0] = new DepthFirstSearch<>();
+      searches[0].setSelectChoicePoint(
+          new SimpleSelect<>(new IntVar[] {x, y}, null, new IndomainMin<>()));
+      searches[1] = new DepthFirstSearch<>();
+      searches[1].setSelectChoicePoint(
+          new SimpleSelect<>(new IntVar[] {u, v}, null, new IndomainMin<>()));
+      for (DepthFirstSearch<IntVar> search : searches) {
+        search.setPrintInfo(false);
+      }
+      PrioritySearch<IntVar> priority =
+          new PrioritySearch<>(new IntVar[] {x, u}, new SmallestDomain<>(), searches);
+      priority.setPrintInfo(false);
+      if (all) {
+        priority.setSolutionLimit(Integer.MAX_VALUE);
+      }
+      assertThat(priority.labeling(store)).isTrue();
+      assertThat(x.singleton() && y.singleton() && u.singleton() && v.singleton()).isTrue();
+      assertThat(x.value()).isNotEqualTo(y.value());
+      // the same as a depth-first search over the same variables
+      Store reference = new Store();
+      IntVar rx = new IntVar(reference, "x", 0, 2);
+      IntVar ry = new IntVar(reference, "y", 0, 2);
+      reference.impose(new Alldistinct(new IntVar[] {rx, ry}));
+      DepthFirstSearch<IntVar> dfs = new DepthFirstSearch<>();
+      dfs.setPrintInfo(false);
+      assertThat(
+              dfs.labeling(
+                  reference, new SimpleSelect<>(new IntVar[] {rx, ry}, null, new IndomainMin<>())))
+          .isTrue();
+      assertThat(store.level).isEqualTo(reference.level);
+    }
+  }
+
+  @Test
+  void masterSearchAssignsTheLastSolutionOfAnOptimizingChildSearchThatRecordsThem() {
+    // the child search finds several better solutions under one solution of the master; the
+    // master assigned the one a binary search met first, not the last and best one
+    for (boolean masterRecords : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", 0, 1);
+      IntVar y = new IntVar(store, "y", 0, 3);
+      IntVar cost = new IntVar(store, "cost", -4, 3);
+      store.impose(new LinearInt(new IntVar[] {y, x, cost}, new int[] {1, -4, -1}, "==", 0));
+      DepthFirstSearch<IntVar> master = new DepthFirstSearch<>();
+      DepthFirstSearch<IntVar> child = new DepthFirstSearch<>();
+      master.setPrintInfo(false);
+      child.setPrintInfo(false);
+      child.setSelectChoicePoint(new SimpleSelect<>(new IntVar[] {y}, null, new IndomainMax<>()));
+      master.addChildSearch(child);
+      master.getSolutionListener().recordSolutions(masterRecords);
+      child.getSolutionListener().recordSolutions(true);
+      assertThat(
+              master.labeling(
+                  store, new SimpleSelect<>(new IntVar[] {x}, null, new IndomainMin<>()), cost))
+          .isTrue();
+      assertThat(master.getCostValue()).isEqualTo(-4);
+      assertThat(child.getSolutionListener().solutionsNo()).isEqualTo(8);
+      assertThat(List.of(x.value(), y.value(), cost.value())).containsExactly(1, 0, -4);
+    }
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void prioritySearchAssignsTheSolutionOfAChildSearchThatRecordsItsSolutions() {
+    // the child search of a priority search numbered its solutions by the listener of the linking
+    // search, so no child solution matched the priority search's and the child's variables were
+    // left open after the search
+    for (boolean optimize : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", 0, 1);
+      IntVar y = new IntVar(store, "y", 0, 1);
+      IntVar z = new IntVar(store, "z", 0, 2);
+      IntVar cost = new IntVar(store, "cost", -10, 10);
+      store.impose(new LinearInt(new IntVar[] {x, y, z, cost}, new int[] {1, 2, -1, -1}, "==", 0));
+      DepthFirstSearch<IntVar>[] searches = new DepthFirstSearch[2];
+      searches[0] = new DepthFirstSearch<>();
+      searches[0].setSelectChoicePoint(
+          new SimpleSelect<>(new IntVar[] {x}, null, new IndomainMax<>()));
+      searches[1] = new DepthFirstSearch<>();
+      searches[1].setSelectChoicePoint(
+          new SimpleSelect<>(new IntVar[] {y}, null, new IndomainMax<>()));
+      DepthFirstSearch<IntVar> child = new DepthFirstSearch<>();
+      child.setSelectChoicePoint(new SimpleSelect<>(new IntVar[] {z}, null, new IndomainMin<>()));
+      child.getSolutionListener().searchAll(true);
+      child.getSolutionListener().recordSolutions(true);
+      for (DepthFirstSearch<IntVar> search : List.of(searches[0], searches[1], child)) {
+        search.setPrintInfo(false);
+      }
+      PrioritySearch<IntVar> priority =
+          new PrioritySearch<>(new IntVar[] {x, y}, new SmallestDomain<>(), searches);
+      priority.setPrintInfo(false);
+      priority.addChildSearch(child);
+      boolean found;
+      if (optimize) {
+        found = priority.labeling(store, cost);
+      } else {
+        priority.setSolutionLimit(Integer.MAX_VALUE);
+        found = priority.labeling(store);
+      }
+      assertThat(found).isTrue();
+      assertThat(child.getSolutionListener().solutionsNo()).isEqualTo(optimize ? 6 : 12);
+      // the last solution: x = 0 and y = 0 last, and z = 2 the last (and best) under them
+      assertThat(List.of(x.value(), y.value(), z.value(), cost.value()))
+          .containsExactly(0, 0, 2, -2);
+    }
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void prioritySearchReportsNoSolutionWhenItsChildSearchFails() {
+    // when the child search found no solution for the last assignment of the priority search, the
+    // priority search still reported that assignment as a solution and assigned it at the end
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    IntVar sum = new IntVar(store, "sum", 0, 2);
+    IntVar a = new IntVar(store, "a", 0, 1);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar c = new IntVar(store, "c", 0, 2);
+    store.impose(new XplusYeqZ(x, y, sum));
+    // c != 2 when x = y = 1, and then a, b and c cannot differ, which only the search finds
+    store.impose(new XneqY(c, sum));
+    store.impose(new XneqY(a, b));
+    store.impose(new XneqY(b, c));
+    store.impose(new XneqY(a, c));
+    DepthFirstSearch<IntVar>[] searches = new DepthFirstSearch[2];
+    searches[0] = new DepthFirstSearch<>();
+    searches[0].setSelectChoicePoint(
+        new SimpleSelect<>(new IntVar[] {x}, null, new IndomainMin<>()));
+    searches[1] = new DepthFirstSearch<>();
+    searches[1].setSelectChoicePoint(
+        new SimpleSelect<>(new IntVar[] {y}, null, new IndomainMin<>()));
+    DepthFirstSearch<IntVar> child = new DepthFirstSearch<>();
+    child.setSelectChoicePoint(
+        new SimpleSelect<>(new IntVar[] {a, b, c}, null, new IndomainMin<>()));
+    for (DepthFirstSearch<IntVar> search : List.of(searches[0], searches[1], child)) {
+      search.setPrintInfo(false);
+    }
+    PrioritySearch<IntVar> priority = new PrioritySearch<>(new IntVar[] {x, y}, null, searches);
+    priority.setPrintInfo(false);
+    priority.addChildSearch(child);
+    priority.setSolutionLimit(Integer.MAX_VALUE);
+    assertThat(priority.labeling(store)).isTrue();
+    assertThat(priority.getSolutionListener().solutionsNo()).isEqualTo(3);
+    assertThat(List.of(x.value(), y.value(), a.value(), b.value(), c.value()))
+        .containsExactly(1, 0, 0, 1, 2);
+  }
+
+  // With sub_circuit_scc_pruning=false only the dominator pruning checks the circuit, and it is
+  // skipped after calls that prune nothing: a skipped call accepted two cycles, x = [2, 1, 4, 3].
+  @Test
+  void subcircuitWithDominatorPruningOnlyFindsExactlyTheBruteForceSolutions() {
+    Random random = new Random(43);
+    for (int run = 0; run < 400; run++) {
+      Store store = new Store();
+      IntVar[] x = randomSubcircuitVars(store, 1 + random.nextInt(6), random);
+      String instance = "run " + run + " subcircuit " + domainsOf(x);
+      Set<String> expected =
+          bruteForce(x, SingleConstraintTest::isSubcircuit).stream()
+              .map(Arrays::toString)
+              .collect(Collectors.toSet());
+      System.setProperty("sub_circuit_scc_pruning", "false");
+      try {
+        store.impose(new Subcircuit(x));
+      } finally {
+        System.clearProperty("sub_circuit_scc_pruning");
+      }
+
+      Set<String> found = new HashSet<>();
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      search.setSolutionListener(
+          new SimpleSolutionListener<>() {
+            @Override
+            public boolean executeAfterSolution(Search<IntVar> s, SelectChoicePoint<IntVar> sel) {
+              found.add(Arrays.toString(Arrays.stream(x).mapToInt(IntVar::value).toArray()));
+              return super.executeAfterSolution(s, sel);
+            }
+          });
+      search.getSolutionListener().searchAll(true);
+      search.labeling(store, new SimpleSelect<>(x, null, new IndomainRandom<>(run)));
+      assertThat(found).as(instance).isEqualTo(expected);
+    }
   }
 }

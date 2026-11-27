@@ -466,8 +466,13 @@ public class NetworkFlow extends Constraint
     network.increaseLevel();
     try {
       disableQueueVariable = true;
-      // a level at or below the imposition is never removed while the constraint is there
-      network.lateLevel = queuedLevel > imposedAt ? queuedLevel : Integer.MAX_VALUE;
+      // a level at or below the imposition is never removed while the constraint is there; the
+      // variables queued by the imposition, processed at a higher level (a first call above it),
+      // take their domains of every level between
+      network.lateLevel =
+          queuedLevel < network.getStoreLevel() && imposedAt != Integer.MAX_VALUE
+              ? Math.max(queuedLevel, imposedAt + 1)
+              : Integer.MAX_VALUE;
       for (IntVar variable : queue) {
         VarHandler handler = map.get(variable);
         handler.processEvent(variable, network);
@@ -499,7 +504,7 @@ public class NetworkFlow extends Constraint
 
     // Slack between the optimal flow cost and the largest allowed cost. costVariable.min() can be
     // larger than the optimum, so it must not be used here or arcs of valid solutions get pruned.
-    int costLimit = (int) Math.min(Integer.MAX_VALUE, costVariable.max() - cost);
+    long costLimit = costVariable.max() - cost;
     network.pruneNodesWithSmallDegree();
     network.analyze(costLimit);
 
@@ -530,6 +535,10 @@ public class NetworkFlow extends Constraint
       }
     }
     if (allVarsGround) {
+      if (cost < costVariable.min()) {
+        // also a cost below the integers, which the cast below would wrap
+        throw Store.failException;
+      }
       costVariable.domain.inMax(store.level, costVariable, (int) cost);
     }
   }

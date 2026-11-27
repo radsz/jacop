@@ -131,7 +131,7 @@ public final class Arc {
    *
    * @return the reduced cost
    */
-  public int reducedCost() {
+  public long reducedCost() {
     // arc from i (tail) to j (head)
     // c_ij^pi = c_ij - pi_i + pi_j
     Node tail = tail();

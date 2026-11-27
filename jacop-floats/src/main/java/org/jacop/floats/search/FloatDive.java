@@ -101,6 +101,9 @@ public final class FloatDive {
 
   private long improvements;
 
+  // the deadline of propagation, as given by System.currentTimeMillis(), 0 for none
+  private long deadline;
+
   /**
    * Dives over the float variables among vars.
    *
@@ -115,6 +118,15 @@ public final class FloatDive {
     this.vars = vars.clone();
     this.cost = cost;
     this.random = new Random(seed);
+  }
+
+  /**
+   * Sets the time at which the propagation of a dive stops; a dive stopped there fails.
+   *
+   * @param deadline the deadline as given by {@link System#currentTimeMillis()}, 0 for none
+   */
+  public void setDeadline(long deadline) {
+    this.deadline = deadline;
   }
 
   /**
@@ -157,7 +169,7 @@ public final class FloatDive {
       try {
         double c = sample(v, i);
         v.domain.in(level, v, Math.max(v.min(), c - h), Math.min(v.max(), c + h));
-        ok = store.consistency();
+        ok = store.consistencyUntil(deadline);
       } catch (FailException _) {
         store.clearChanged();
       }
@@ -166,6 +178,9 @@ public final class FloatDive {
       }
       store.removeLevel(level);
       store.setLevel(level - 1);
+      if (store.isConsistencyCut()) {
+        return false;
+      }
     }
     return false;
   }
