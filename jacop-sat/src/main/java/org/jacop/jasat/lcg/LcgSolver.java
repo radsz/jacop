@@ -5220,7 +5220,13 @@ public final class LcgSolver implements ExternalPropagator {
         // closed, or within the gap: branch and bound from here, which also proves lb >= ub
         return interleaved() ? minimizeWithLowerBoundSearch() : branchAndBound();
       }
-      long hi = ub - 1; // a better solution has the objective at most hi
+      if (lb >= rootMax[objective]) {
+        // the shared bound is above the objective's largest value here (another thread's solution
+        // that a reduction of this store, such as covering dominance, leaves out): no probe
+        return interleaved() ? minimizeWithLowerBoundSearch() : branchAndBound();
+      }
+      // a better solution has the objective at most hi, and the probe's atom is no constant
+      long hi = Math.min(ub - 1, rootMax[objective]);
       int target = (int) Math.min(hi, lb + (long) Math.floor(fraction * (hi - lb)));
       int lit = -geLit(objective, target + 1);
       long limit = sat.conflicts + budget;

@@ -7977,4 +7977,24 @@ class LcgSolverTest {
     assertThat(solver.solve()).isEqualTo(CdclSolver.SAT);
     assertThat(tree.closedCubes()).isEqualTo(3);
   }
+
+  // a portfolio thread of dichotomic bound search took the best solution of another thread,
+  // whose objective is above the largest value it has here (covering dominance of this store
+  // keeps another optimum): the probe "objective <= 10" was a constant and the thread stopped
+  // with "[cost >= 11] is a constant"
+  @Test
+  void bisectionUnderASharedBoundAboveTheObjectivesDomain() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 5);
+    IntVar y = new IntVar(store, "y", 1, 5);
+    IntVar cost = new IntVar(store, "cost", 2, 10);
+    store.impose(new XneqY(x, y));
+    store.impose(new XplusYeqZ(x, y, cost));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setBisection(0.1);
+    solver.setSharedBound(() -> 20);
+    assertThat(solver.minimize(cost)).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.value(cost)).isEqualTo(3);
+  }
 }
