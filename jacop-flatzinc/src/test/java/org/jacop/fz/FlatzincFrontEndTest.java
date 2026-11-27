@@ -10057,4 +10057,30 @@ class FlatzincFrontEndTest {
         run("var 1..3: x :: output_var;\nconstraint int_eq(x, 2);\nsolve satisfy;\n")[0].contains(
             "x = 2;"));
   }
+
+  @Test
+  void nvalueReifOfAnEmptyArrayCountsZeroValues() throws IOException {
+    // fzn_nvalue_reif declared its count t as var 1..card(index_set(x)), which is empty for an
+    // empty x: nvalue(n, []) \/ c had no solution at all instead of n = 0 or c
+    String text =
+        Files.readString(
+            Path.of("src/main/minizinc/org/jacop/minizinc/fzn_nvalue_reif.mzn"),
+            StandardCharsets.UTF_8);
+    assertTrue(text.contains("var 0..card(index_set(x)): t"), text);
+    // the FlatZinc the library emits for nvalue_reif(n, [], b) /\ (b \/ c)
+    String model =
+        "var 0..0: t;\n"
+            + "var 0..2: n :: output_var;\n"
+            + "var bool: b;\n"
+            + "var bool: c :: output_var;\n"
+            + "constraint jacop_nvalue(t,[]);\n"
+            + "constraint int_eq_reif(n,t,b);\n"
+            + "constraint bool_clause([b,c],[]);\n"
+            + "solve satisfy;\n";
+    for (String[] options : new String[][] {{"-a", "--lcg", "off"}, {"-a", "--lcg", "on"}}) {
+      String out = run(model, options)[0];
+      assertEquals(4, out.split("----------", -1).length - 1, out);
+      assertTrue(out.contains("n = 0;\nc = false;\n"), out);
+    }
+  }
 }
