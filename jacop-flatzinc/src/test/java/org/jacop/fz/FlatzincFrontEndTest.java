@@ -9886,4 +9886,30 @@ class FlatzincFrontEndTest {
     String out = run(model, "--lcg", "off", "-t", "3000")[0];
     assertTrue(out.contains("y = 2;\n----------\n=========="), out);
   }
+
+  @Test
+  void restartSearchWithoutAnnotationLabelsUntouchedVariablesLast() throws IOException {
+    // the restart search over all variables labelled u2, which no constraint touches, before the
+    // hidden h1, h2 whose search always fails: each of the 400,000,000 values of u2 searched that
+    // failure again, and the model ended UNKNOWN; the untouched variables now come last
+    String model =
+        "var bool: b0 :: output_var;\n"
+            + "var 1..3: x0;\n"
+            + "var 0..1: x1 :: output_var;\n"
+            + "var -1..0: x2 :: output_var;\n"
+            + "var bool: h0;\n"
+            + "var bool: h1;\n"
+            + "var bool: h2;\n"
+            + "var {2,4}: u0 :: output_var;\n"
+            + "var bool: u1 :: output_var;\n"
+            + "var 1..400000000: u2 :: output_var;\n"
+            + "array [1..2] of var int: oa :: output_array([1..2]) = [1,1];\n"
+            + "var 3..3: kc :: output_var;\n"
+            + "constraint bool_eq_reif(h1,h2,h2);\n"
+            + "constraint array_bool_and([h0],false);\n"
+            + "constraint bool_eq(h1,false);\n"
+            + "solve :: restart_constant(29) maximize kc;\n";
+    String out = run(model, "--lcg", "off", "-t", "3000")[0];
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+  }
 }

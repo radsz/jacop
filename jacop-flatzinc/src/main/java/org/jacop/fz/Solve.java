@@ -10654,11 +10654,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // The output variables that no constraint touches are labelled below the completion search:
     // above it, every failure of the completion re-enumerated their values (the bisection of an
     // untouched float down to its precision for each failure).
+    // The search over all variables labels those that no constraint touches after the others too:
+    // a restart search without annotation searched a failing tree again for each value of a free
+    // variable of a large domain, and its limit never reached the end.
     Set<Var> untouched =
-        outputVarsOnly
-            ? untouchedOutputs(
-                intSearchVariables, boolSearchVariables, setSearchVariables, floatSearchVariables)
-            : Set.of();
+        untouchedOutputs(
+            intSearchVariables,
+            boolSearchVariables,
+            setSearchVariables,
+            floatSearchVariables,
+            !outputVarsOnly);
     if (label == null
         && untouched.size()
             == intSearchVariables.length
@@ -10869,10 +10874,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   /**
    * Returns the given output variables that no constraint touches, in the store or among the
    * clauses kept for the LCG solver, and that are not the objective; or none when no variable
-   * outside them is left for the completion search, which then cannot fail.
+   * outside them is left for the completion search, which then cannot fail. With allVariables the
+   * given variables are all the variables of the search, and none are returned when none of them is
+   * touched.
    */
   private Set<Var> untouchedOutputs(
-      IntVar[] ints, BooleanVar[] bools, SetVar[] sets, FloatVar[] floats) {
+      IntVar[] ints, BooleanVar[] bools, SetVar[] sets, FloatVar[] floats, boolean allVariables) {
     Set<Var> clauseVars = new HashSet<>();
     for (IntVar[][] clause : sat.collectedClauses()) {
       clauseVars.addAll(Arrays.asList(clause[0]));
@@ -10894,7 +10901,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     for (Var v : rest) {
       hidden |=
           !v.singleton()
-              && !outputs.contains(v)
+              && (allVariables || !outputs.contains(v))
               && (v.dom().sizeConstraints() > 0 || clauseVars.contains(v));
     }
     if (!hidden) {
