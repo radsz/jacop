@@ -55,6 +55,7 @@ import org.jacop.fz.constraints.AlldiffChannels;
 import org.jacop.fz.constraints.AlldifferentDetector;
 import org.jacop.fz.constraints.AntichainDetector;
 import org.jacop.fz.constraints.ArgMaxFunctionDetector;
+import org.jacop.fz.constraints.ArgumentCheck;
 import org.jacop.fz.constraints.BalanceDetector;
 import org.jacop.fz.constraints.BinPackingCostBound;
 import org.jacop.fz.constraints.CardinalityDetector;
@@ -68,6 +69,7 @@ import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.ConvexAllocationDetector;
 import org.jacop.fz.constraints.CostNetworkDetector;
 import org.jacop.fz.constraints.CountPartnersDetector;
+import org.jacop.fz.constraints.CountStepCostBound;
 import org.jacop.fz.constraints.CyclicDistanceDetector;
 import org.jacop.fz.constraints.DifferenceBoundsDetector;
 import org.jacop.fz.constraints.DifferenceCyclesDetector;
@@ -77,12 +79,14 @@ import org.jacop.fz.constraints.ElementTableDetector;
 import org.jacop.fz.constraints.EnforcementInliner;
 import org.jacop.fz.constraints.EntailedDisequalities;
 import org.jacop.fz.constraints.ExactCoverDetector;
+import org.jacop.fz.constraints.FactoredRowDetector;
 import org.jacop.fz.constraints.GiantTourDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
 import org.jacop.fz.constraints.IndexDisjunctionDetector;
 import org.jacop.fz.constraints.IndexFunctionDetector;
 import org.jacop.fz.constraints.IntensionTableDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
+import org.jacop.fz.constraints.LinearIndexElementDetector;
 import org.jacop.fz.constraints.LinearOverlapDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
 import org.jacop.fz.constraints.LinearSystemDetector;
@@ -136,6 +140,8 @@ public class Constraints implements ParserTreeConstants {
   static final int GE = 5;
   final ConstraintFncs cf;
   final Tables dictionary;
+  // checks the arguments of each constraint item against its predicate
+  private final ConstraintArguments arguments;
   final Store store;
   // ============ SAT solver interface ==============
   final float satThreshold = 1.0f; // 1.0 pure SAT problem, 0.85 good heuristic ;)
@@ -159,6 +165,7 @@ public class Constraints implements ParserTreeConstants {
   public Constraints(Store store, Tables dict) {
     this.store = store;
     this.dictionary = dict;
+    this.arguments = new ConstraintArguments(dict);
 
     sat = new SatTranslation(store);
     // impose SAT-solver
@@ -391,10 +398,31 @@ public class Constraints implements ParserTreeConstants {
         }
       }
 
+      // an element over a constant array read through a linear index of a few variables becomes a
+      // table over those variables when nothing else reads the index
+      if (LinearIndexElementDetector.enabled() && options.proof() == null) {
+        LinearIndexElementDetector linear =
+            new LinearIndexElementDetector(support, keptVariables(astTree));
+        linear.detect(astTree, replaced);
+        if (!linear.replaced().isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(linear.replaced());
+          dictionary.removeFromDefaultSearch(linear.removed());
+          dictionary.unusedVariables.addAll(linear.removed());
+        }
+      }
+
+      // the step costs of the counts of one array cannot all stay low: their least sum bounds the
+      // objective
+      if (CountStepCostBound.enabled() && options.proof() == null) {
+        new CountStepCostBound(support)
+            .detect(astTree, replaced, ObjectiveScaling.objective(dictionary, astTree));
+      }
+
       // the tables check their rows against the domains, and --proof does not encode them
       if (ElementTableDetector.enabled() && options.proof() == null) {
         ElementTableDetector elements = new ElementTableDetector(support);
-        elements.detect(astTree);
+        elements.detect(astTree, replaced);
         if (!elements.replaced().isEmpty()) {
           replaced = new HashSet<>(replaced);
           replaced.addAll(elements.replaced());
@@ -733,6 +761,12 @@ public class Constraints implements ParserTreeConstants {
         new ConjunctionSumDetector(support).detect(astTree);
       }
 
+      // a linear row times a variable that multiplies each of its terms (first-level RLT over the
+      // model's products), redundant; --proof does not encode it
+      if (FactoredRowDetector.enabled() && options.proof() == null) {
+        new FactoredRowDetector(support, replaced).detect(astTree);
+      }
+
       // the coloring bound of a maximized sum of 0/1 variables with pairwise conflicts (maximum
       // clique), redundant; --proof does not encode it
       if (MaxCliqueDetector.enabled() && options.proof() == null) {
@@ -1028,7 +1062,12 @@ public class Constraints implements ParserTreeConstants {
           method = cf.getClass().getMethod(p, SimpleNode.class);
           generators.put(p, method);
         }
-        method.invoke(cf, node);
+        dictionary.generatingConstraint(true);
+        try {
+          method.invoke(cf, node);
+        } finally {
+          dictionary.generatingConstraint(false);
+        }
 
       } catch (NoSuchMethodException _) {
         throw new IllegalArgumentException(
@@ -1043,12 +1082,24 @@ public class Constraints implements ParserTreeConstants {
         } else {
           FzConsole.printlnErr("%% problem detected for " + p);
         }
+        if (cause instanceof IndexOutOfBoundsException) {
+          // the arrays of an encoding (an automaton, a diagram, shapes of geost) that point outside
+          // each other: the types and lengths are checked, these values are not
+          throw new IllegalArgumentException(
+              "The arguments of constraint " + p + " do not fit: " + cause.getMessage(), cause);
+        }
         throw cause;
       }
     }
   }
 
   void generateAlias(SimpleNode constraintWithAnnotations) {
+
+    // the arguments are checked before any pass reads them, in every mode and every thread of a
+    // portfolio, so that a malformed model is an error of the model wherever it is read
+    arguments.check(constraintWithAnnotations);
+    // and so are sizes that do not agree, checked once the types are known to fit
+    ArgumentCheck.check(support, constraintWithAnnotations);
 
     SimpleNode node = (SimpleNode) constraintWithAnnotations.jjtGetChild(0);
 

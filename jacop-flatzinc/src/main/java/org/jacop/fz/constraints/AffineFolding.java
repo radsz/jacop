@@ -43,11 +43,9 @@ import java.util.Set;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.ValueEnumeration;
-import org.jacop.core.Var;
 import org.jacop.fz.ASTConstElem;
 import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.FzConsole;
-import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
 
 /**
@@ -77,7 +75,7 @@ import org.jacop.fz.SimpleNode;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-public class AffineFolding implements ParserTreeConstants {
+public class AffineFolding extends ModelRewrite {
 
   private static final String LIN_EQ = "int_lin_eq";
 
@@ -101,14 +99,6 @@ public class AffineFolding implements ParserTreeConstants {
   // the image of x is checked value by value up to this many values, by its bounds above
   private static final int ENUMERATED = 10_000;
 
-  private final Support support;
-
-  private final Set<IntVar> kept;
-
-  private final Set<SimpleNode> replaced = new HashSet<>();
-
-  private final Set<Var> removed = new HashSet<>();
-
   /** A definition z = p*x + q by the constraint node. */
   private record Definition(ASTConstElem node, IntVar x, long p, long q) {}
 
@@ -119,8 +109,7 @@ public class AffineFolding implements ParserTreeConstants {
    * @param kept the variables that must stay: those of the solve item and the output variables.
    */
   public AffineFolding(Support support, Set<IntVar> kept) {
-    this.support = support;
-    this.kept = kept;
+    super(support, kept);
   }
 
   /**
@@ -133,42 +122,13 @@ public class AffineFolding implements ParserTreeConstants {
   }
 
   /**
-   * The definitions that are not posted.
-   *
-   * @return the constraint nodes of the folded definitions.
-   */
-  public Set<SimpleNode> replaced() {
-    return replaced;
-  }
-
-  /**
-   * The variables folded out of the model.
-   *
-   * @return the removed variables.
-   */
-  public Set<Var> removed() {
-    return removed;
-  }
-
-  /**
    * It folds the definitions of the model into its linear constraints.
    *
    * @param astTree the root of the parsed model.
    * @param skipped constraint nodes that are not posted.
    */
   public void detect(SimpleNode astTree, Set<SimpleNode> skipped) {
-    List<ASTConstElem> all = new ArrayList<>();
-    for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
-      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
-      if (node.getId() == JJTCONSTRAINTITEMS) {
-        for (int j = 0; j < node.jjtGetNumChildren(); j++) {
-          SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
-          if (item.getId() == JJTCONSTELEM && !skipped.contains(item)) {
-            all.add((ASTConstElem) item);
-          }
-        }
-      }
-    }
+    List<ASTConstElem> all = FzItems.constraints(astTree, skipped);
     // the definitions first: the occurrences are read only when there is one (a clause model has
     // none, and the occurrences of its millions of clauses took seconds)
     List<Definition> definitions = new ArrayList<>();
@@ -324,7 +284,7 @@ public class AffineFolding implements ParserTreeConstants {
     }
     int rows = 0;
     for (ASTConstElem c : occurrences.getOrDefault(z, Set.of())) {
-      if (c != d.node() && !ROWS.contains(c.getName())) {
+      if (c != d.node() && (!ROWS.contains(c.getName()) || controls(c, z))) {
         return false;
       }
       if (c != d.node()) {
@@ -337,6 +297,14 @@ public class AffineFolding implements ParserTreeConstants {
       return false;
     }
     return covers(z.dom(), x.dom(), d.p(), d.q());
+  }
+
+  // whether z is the 0/1 control of a reified or implied row, which folding leaves as it is
+  private boolean controls(ASTConstElem c, IntVar z) {
+    return c.jjtGetNumChildren() > 3
+        && c.jjtGetChild(3) instanceof ASTScalarFlatExpr b
+        && b.getType() != 0
+        && support.getVariable(b) == z;
   }
 
   // whether every value p*v + q for v in dx is in dz
@@ -460,24 +428,7 @@ public class AffineFolding implements ParserTreeConstants {
     if (!(arg instanceof ASTScalarFlatExpr e)) {
       return;
     }
-    IntVar[] vars;
-    if (e.getType() == 2) {
-      // read as the constraints read their arguments, so that aliases resolve the same way
-      if (support.dictionary.getDeclaredVariableArray(e.getIdent()) != null) {
-        vars = support.getVarArray(e);
-      } else if (support.dictionary.getVariable(e) != null) {
-        vars = new IntVar[] {support.getVariable(e)};
-      } else {
-        return;
-      }
-    } else if (e.getType() == 3
-        && support.dictionary.getDeclaredVariableArray(e.getIdent()) != null) {
-      // an element of an array of integer variables; float and set arrays are not ours
-      vars = new IntVar[] {support.getVariable(e)};
-    } else {
-      return;
-    }
-    for (IntVar v : vars) {
+    for (IntVar v : FzItems.variables(support, e)) {
       if (v != null && !v.singleton()) {
         occurrences.computeIfAbsent(v, x -> new Occurrences()).add(c);
       }

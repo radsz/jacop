@@ -206,6 +206,7 @@ setup to run configuration. -->
                                 <unary.transition.trials>100</unary.transition.trials>
                                 <grounding.trials>10</grounding.trials>
                                 <setfuzz.trials>100</setfuzz.trials>
+                                <setfixpoint.instances>100</setfixpoint.instances>
                                 <rootRefutation.fuzz.trials>1000</rootRefutation.fuzz.trials>
                                 <layeredgraph.trials>8</layeredgraph.trials>
                                 <disjunctiveCliques.trials>100</disjunctiveCliques.trials>
@@ -340,6 +341,7 @@ setup to run configuration. -->
                                 <include>**/ColouredTreeFuzzTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
+                                <include>**/SetFixpointTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/HornFlowTest.java</include>
@@ -395,6 +397,7 @@ setup to run configuration. -->
                                 <include>**/IndexFunctionFlatzincTest.java</include>
                                 <include>**/MddLinearSumFlatzincTest.java</include>
                                 <include>**/ProductOfSumsFlatzincTest.java</include>
+                                <include>**/FactoredRowFlatzincTest.java</include>
                                 <include>**/TableMddFlatzincTest.java</include>
                                 <include>**/CostAlldifferentFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
@@ -403,6 +406,9 @@ setup to run configuration. -->
                                 <include>**/DefinedVariablesFlatzincTest.java</include>
                                 <include>**/DefinedLastFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
+                                <include>**/LinearIndexElementFlatzincTest.java</include>
+                                <include>**/CountStepCostFlatzincTest.java</include>
+                                <include>**/BoundedCyclesFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
                                 <include>**/ProgressionTilingFlatzincTest.java</include>
@@ -472,6 +478,7 @@ setup to run configuration. -->
                                 <include>**/LocalSearchFlatzincTest.java</include>
                                 <include>**/LcgSlowFallbackFlatzincTest.java</include>
                                 <include>**/FreeFirstFlatzincTest.java</include>
+                                <include>**/FixedFirstFlatzincTest.java</include>
                                 <include>**/NValueBlocksFlatzincTest.java</include>
                                 <include>**/EntailedDisequalitiesFlatzincTest.java</include>
                                 <include>**/PureClauseFlatzincTest.java</include>
@@ -632,6 +639,7 @@ setup to run configuration. -->
                                 <include>**/ColouredTreeFuzzTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
+                                <include>**/SetFixpointTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/HornFlowTest.java</include>
@@ -692,6 +700,7 @@ setup to run configuration. -->
                                 <include>**/IndexFunctionFlatzincTest.java</include>
                                 <include>**/MddLinearSumFlatzincTest.java</include>
                                 <include>**/ProductOfSumsFlatzincTest.java</include>
+                                <include>**/FactoredRowFlatzincTest.java</include>
                                 <include>**/TableMddFlatzincTest.java</include>
                                 <include>**/CostAlldifferentFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
@@ -700,6 +709,9 @@ setup to run configuration. -->
                                 <include>**/DefinedVariablesFlatzincTest.java</include>
                                 <include>**/DefinedLastFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
+                                <include>**/LinearIndexElementFlatzincTest.java</include>
+                                <include>**/CountStepCostFlatzincTest.java</include>
+                                <include>**/BoundedCyclesFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
                                 <include>**/ProgressionTilingFlatzincTest.java</include>
@@ -770,6 +782,7 @@ setup to run configuration. -->
                                 <include>**/LocalSearchFlatzincTest.java</include>
                                 <include>**/LcgSlowFallbackFlatzincTest.java</include>
                                 <include>**/FreeFirstFlatzincTest.java</include>
+                                <include>**/FixedFirstFlatzincTest.java</include>
                                 <include>**/NValueBlocksFlatzincTest.java</include>
                                 <include>**/EntailedDisequalitiesFlatzincTest.java</include>
                                 <include>**/PureClauseFlatzincTest.java</include>
@@ -924,6 +937,7 @@ setup to run configuration. -->
                                 <include>**/ColouredTreeFuzzTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
+                                <include>**/SetFixpointTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/HornFlowTest.java</include>
@@ -984,6 +998,7 @@ setup to run configuration. -->
                                 <include>**/IndexFunctionFlatzincTest.java</include>
                                 <include>**/MddLinearSumFlatzincTest.java</include>
                                 <include>**/ProductOfSumsFlatzincTest.java</include>
+                                <include>**/FactoredRowFlatzincTest.java</include>
                                 <include>**/TableMddFlatzincTest.java</include>
                                 <include>**/CostAlldifferentFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
@@ -992,6 +1007,9 @@ setup to run configuration. -->
                                 <include>**/DefinedVariablesFlatzincTest.java</include>
                                 <include>**/DefinedLastFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
+                                <include>**/LinearIndexElementFlatzincTest.java</include>
+                                <include>**/CountStepCostFlatzincTest.java</include>
+                                <include>**/BoundedCyclesFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
                                 <include>**/ProgressionTilingFlatzincTest.java</include>
@@ -1062,6 +1080,7 @@ setup to run configuration. -->
                                 <include>**/LocalSearchFlatzincTest.java</include>
                                 <include>**/LcgSlowFallbackFlatzincTest.java</include>
                                 <include>**/FreeFirstFlatzincTest.java</include>
+                                <include>**/FixedFirstFlatzincTest.java</include>
                                 <include>**/NValueBlocksFlatzincTest.java</include>
                                 <include>**/EntailedDisequalitiesFlatzincTest.java</include>
                                 <include>**/PureClauseFlatzincTest.java</include>
@@ -1216,6 +1235,7 @@ setup to run configuration. -->
                                 <include>**/ColouredTreeFuzzTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
+                                <include>**/SetFixpointTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/HornFlowTest.java</include>
@@ -1274,6 +1294,7 @@ setup to run configuration. -->
                                 <include>**/IndexFunctionFlatzincTest.java</include>
                                 <include>**/MddLinearSumFlatzincTest.java</include>
                                 <include>**/ProductOfSumsFlatzincTest.java</include>
+                                <include>**/FactoredRowFlatzincTest.java</include>
                                 <include>**/TableMddFlatzincTest.java</include>
                                 <include>**/CostAlldifferentFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
@@ -1282,6 +1303,9 @@ setup to run configuration. -->
                                 <include>**/DefinedVariablesFlatzincTest.java</include>
                                 <include>**/DefinedLastFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
+                                <include>**/LinearIndexElementFlatzincTest.java</include>
+                                <include>**/CountStepCostFlatzincTest.java</include>
+                                <include>**/BoundedCyclesFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
                                 <include>**/ProgressionTilingFlatzincTest.java</include>

@@ -173,7 +173,7 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
     remove(i);
     i = addOverlapPart(i, new1, val);
     i = addOverlapPart(i, new2, val);
-    if (new3.min != -1 && new3.min != new3.max) {
+    if (new3.min != ProfileItem.NO_POINT && new3.min != new3.max) {
       if (new3.max == b) {
         addToProfile(index, new3.min, new3.max, val, exList);
       } else {
@@ -185,7 +185,7 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
   }
 
   private int addOverlapPart(int i, ProfileItemCondition part, int val) {
-    if (part.min == -1) {
+    if (part.min == ProfileItem.NO_POINT) {
       return i;
     }
     ProfileItemCondition previous = (i != 0) ? get(i - 1) : new ProfileItemCondition();

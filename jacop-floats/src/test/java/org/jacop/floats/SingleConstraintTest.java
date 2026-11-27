@@ -61,6 +61,7 @@ import org.jacop.floats.constraints.ElementFloat;
 import org.jacop.floats.constraints.ElementFloatVariable;
 import org.jacop.floats.constraints.EquationSystem;
 import org.jacop.floats.constraints.ExpPeqR;
+import org.jacop.floats.constraints.HyperbolicPeqR;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.LnPeqR;
 import org.jacop.floats.constraints.PdivCeqR;
@@ -913,6 +914,247 @@ class SingleConstraintTest {
       return store.consistency();
     } catch (FailException _) {
       return false;
+    }
+  }
+
+  /**
+   * f(x) = x with one variable for both arguments: sin, asin, atan, sinh, tanh (and so asinh and
+   * atanh) have the single solution 0, cosh none, and tan only 0 between its poles at -PI/2 and
+   * PI/2. Propagation shrank the bounds towards 0 by about x^3 per pass, so sinh and tanh did not
+   * return and the others left a search that failed millions of times without reaching 0.
+   */
+  @Test
+  void functionOfItselfKeepsItsExactSolutions() {
+    List<Function<FloatVar, Constraint>> zeroOnly =
+        List.of(
+            x -> new SinPeqR(x, x),
+            x -> new AsinPeqR(x, x),
+            x -> new AtanPeqR(x, x),
+            x -> new HyperbolicPeqR(x, HyperbolicPeqR.Function.SINH, x),
+            x -> new HyperbolicPeqR(x, HyperbolicPeqR.Function.TANH, x));
+    assertTimeoutPreemptively(
+        Duration.ofSeconds(10),
+        () -> {
+          for (Function<FloatVar, Constraint> build : zeroOnly) {
+            Store store = new Store();
+            FloatVar x = new FloatVar(store, "x", -10, 10);
+            Constraint c = build.apply(x);
+            store.impose(c);
+            assertThat(store.consistency()).as("%s", c).isTrue();
+            assertThat(x.min() == 0.0 && x.max() == 0.0).as("%s", c).isTrue();
+
+            Store away = new Store();
+            FloatVar y = new FloatVar(away, "y", 1e-9, 1);
+            away.impose(build.apply(y));
+            assertThat(away.consistency()).as("%s without 0", c).isFalse();
+          }
+
+          Store store = new Store();
+          FloatVar x = new FloatVar(store, "x", -10, 10);
+          store.impose(new HyperbolicPeqR(x, HyperbolicPeqR.Function.COSH, x));
+          assertThat(store.consistency()).as("cosh(x) = x").isFalse();
+
+          store = new Store();
+          x = new FloatVar(store, "x", -1.5, 1.5);
+          store.impose(new TanPeqR(x, x));
+          assertThat(store.consistency()).isTrue();
+          assertThat(x.min() == 0.0 && x.max() == 0.0).as("tan(x) = x: %s", x).isTrue();
+
+          store = new Store();
+          x = new FloatVar(store, "x", 4, 5);
+          store.impose(new TanPeqR(x, x));
+          assertThat(store.consistency()).isTrue();
+          assertThat(x.min() <= 4.4934094579091 && x.max() >= 4.4934094579090)
+              .as("tan(x) = x: %s", x)
+              .isTrue();
+        });
+  }
+
+  /**
+   * With the index fixed and the value a singleton interval that is not a point, the list variable
+   * at the index was set to the lower end of the value, outside its domain [9.5, 9.6]: a failure
+   * although 9.5 is in both.
+   */
+  @Test
+  void elementFloatVariableKeepsTheWholeSingletonValue() {
+    Store store = new Store();
+    IntVar index = new IntVar(store, "i", 1, 1);
+    FloatVar first = new FloatVar(store, "f1", 9.5, 9.6);
+    FloatVar second = new FloatVar(store, "f2", 0, 1);
+    FloatVar value = new FloatVar(store, "v", Math.nextDown(9.5), 9.5);
+    store.impose(new ElementFloatVariable(index, new FloatVar[] {first, second}, value));
+    assertThat(store.consistency()).isTrue();
+    assertThat(first.min() == 9.5 && value.max() == 9.5).as("%s %s", first, value).isTrue();
+  }
+
+  /**
+   * A divisor narrower than the precision around 0 is not 0: x / y = z with x = 3e-4, y = 5e-5 and
+   * z = 6 holds, but with precision 1e-3 the domain of y, -2e-4..4e-4, counted as the value 0 and
+   * the division failed (FlatZinc float_div under float_search precision 0.001 claimed
+   * UNSATISFIABLE).
+   */
+  @Test
+  void divisionByASingletonAroundZeroKeepsItsSolutions() {
+    double precision = FloatDomain.precision();
+    FloatDomain.setPrecision(1e-3);
+    try {
+      Store store = new Store();
+      FloatVar x = new FloatVar(store, "x", -1e-4, 5e-4);
+      FloatVar y = new FloatVar(store, "y", -2e-4, 4e-4);
+      FloatVar z = new FloatVar(store, "z", 5, 7);
+      store.impose(new PdivQeqR(x, y, z));
+      assertThat(store.consistency()).isTrue();
+      assertThat(x.dom().contains(3e-4) && y.dom().contains(5e-5) && z.dom().contains(6))
+          .as("%s %s %s", x, y, z)
+          .isTrue();
+    } finally {
+      FloatDomain.setPrecision(precision);
+    }
+  }
+
+  /**
+   * The logarithm of the smallest subnormal, -744.44, bounds ln(x) from below: the bound one step
+   * outside x was 0, and ln(x) kept its whole lower range. x^y = exp(y * ln(x)) with x = 4.9e-324
+   * and y in 0.001..0.002 is in 0.22..0.48, but z = x^y &lt;= 0.1 was consistent and FlatZinc
+   * float_pow printed z = 2.9e-12.
+   */
+  @Test
+  void logarithmOfTheSmallestSubnormalIsBounded() {
+    Store store = new Store();
+    FloatVar x = new FloatVar(store, "x", Double.MIN_VALUE, Double.MIN_VALUE);
+    FloatVar y = new FloatVar(store, "y", 0.001, 0.002);
+    FloatVar lnX = new FloatVar(store, "lnX", -1e150, 1e150);
+    FloatVar product = new FloatVar(store, "product", -1e150, 1e150);
+    FloatVar z = new FloatVar(store, "z", 0, 0.1);
+    store.impose(new LnPeqR(x, lnX));
+    store.impose(new PmulQeqR(lnX, y, product));
+    store.impose(new ExpPeqR(product, z));
+    assertThat(store.consistency()).as("%s %s %s", lnX, product, z).isFalse();
+  }
+
+  /**
+   * A singleton interval that contains a pole of tan is not the pole: with precision 0.1, x in
+   * -4.75..-4.65 holds the pole -3 PI / 2 and the solution x = -4.68, tan(x) = -30.8, but TanPeqR
+   * failed (FlatZinc float_tan under float_search precision 0.1 claimed UNSATISFIABLE).
+   */
+  @Test
+  void tanOfASingletonAroundAPoleKeepsItsSolutions() {
+    double precision = FloatDomain.precision();
+    FloatDomain.setPrecision(0.1);
+    try {
+      Store store = new Store();
+      FloatVar x = new FloatVar(store, "x", -4.75, -4.65);
+      FloatVar y = new FloatVar(store, "y", -40, -30);
+      store.impose(new TanPeqR(x, y));
+      assertThat(store.consistency()).isTrue();
+      assertThat(x.dom().contains(-4.68) && y.dom().contains(Math.tan(-4.68)))
+          .as("%s %s", x, y)
+          .isTrue();
+    } finally {
+      FloatDomain.setPrecision(precision);
+    }
+  }
+
+  /**
+   * Splitting a domain whose bounds add up beyond Double.MAX_VALUE: the middle (min + max) / 2 was
+   * infinite, the choice x &lt; Infinity narrowed nothing and the search recursed until a
+   * StackOverflowError.
+   */
+  @Test
+  void splitOfADomainNearTheLargestDoubleNarrowsIt() {
+    Store store = new Store();
+    FloatVar x = new FloatVar(store, "x", 1.0e308, 1.7e308);
+    DepthFirstSearch<FloatVar> search = new DepthFirstSearch<>();
+    SplitSelectFloat<FloatVar> select = new SplitSelectFloat<>(store, new FloatVar[] {x}, null);
+    search.setPrintInfo(false);
+    assertThat(search.labeling(store, select)).isTrue();
+    assertThat(x.min() >= 1.0e308 && x.max() <= 1.7e308).as("%s", x).isTrue();
+  }
+
+  /** A singleton near the largest double is printed as its value, not as Infinity. */
+  @Test
+  void singletonNearTheLargestDoubleIsPrintedAsItsValue() {
+    Store store = new Store();
+    FloatVar x = new FloatVar(store, "x", 1.7e308, 1.7e308);
+    FloatVar y = new FloatVar(store, "y", -1.7e308, -1.7e308);
+    assertThat(x + " " + y).isEqualTo("x = 1.7E308 y = -1.7E308");
+  }
+
+  /**
+   * Reified(PneqQ, b) with b = 0 (rewritten to p = q) is woken by a bound of q before q is ground,
+   * so p follows it.
+   */
+  @Test
+  void reifiedPneqQKeepsPEqualToQWhenFalse() {
+    Store store = new Store();
+    FloatVar p = new FloatVar(store, "p", -6.5, 44.8);
+    FloatVar q = new FloatVar(store, "q", -0.25, 0.5);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new PneqQ(p, q), b));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    b.domain.in(1, b, 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(p.max()).isEqualTo(0.5);
+    store.setLevel(2);
+    q.domain.in(2, q, -0.25, 0.125);
+    assertThat(store.consistency()).isTrue();
+    assertThat(p.max()).isEqualTo(0.125);
+  }
+
+  /**
+   * An imposed LinearFloat decides satisfied() and notSatisfied() on the domains, not on lookahead
+   * bounds of its tree that a pruning which does not tighten a node leaves behind.
+   */
+  @Test
+  void linearFloatIsNeitherSatisfiedNorViolatedWhileItsDomainsAreWide() {
+    Store store = new Store();
+    FloatVar x = new FloatVar(store, "x", -1.8780677374266989E300, -1.8606912395141863E300);
+    FloatVar y = new FloatVar(store, "y", -8.221777502660739E300, -7.597346940295383E300);
+    FloatVar z = new FloatVar(store, "z", -1.671906474190407E301, 5.323658782343591E301);
+    LinearFloat c = new LinearFloat(new FloatVar[] {x, y, z}, new double[] {1, 1, -1}, "==", 0);
+    store.impose(c);
+    assertThat(store.consistency()).isTrue();
+    // x + y - z ranges over about [-8e299, 8e299]
+    assertThat(c.satisfied()).isFalse();
+    assertThat(c.notSatisfied()).isFalse();
+
+    store = new Store();
+    x = new FloatVar(store, "x", 2.3030640102294456E18, 2.305905814307228E18);
+    y = new FloatVar(store, "y", -6.010757219254396E300, -6.010431060653899E300);
+    z = new FloatVar(store, "z", -2.372857391164876E301, -6.010431060653899E300);
+    c = new LinearFloat(new FloatVar[] {x, y, z}, new double[] {1, 1, -1}, "==", 0);
+    store.impose(c);
+    assertThat(store.consistency()).isTrue();
+    // z = x + y has solutions with y inside its interval
+    assertThat(c.notSatisfied()).isFalse();
+  }
+
+  /**
+   * Optimize bisects the cost: when the lower half of the cost had no solution, the other branch
+   * imposed the negation of the choice next to the choice itself, failed at once, and minimize
+   * returned false with a cost that was not the least: z = x * x - 3 * x - 1 over [1, 5] is least,
+   * -3.25, at x = 1.5, and the first solution, x = 1, costs -3.
+   */
+  @Test
+  void floatOptimizeSearchesTheCostsAboveAChoiceWithoutSolution() {
+    double precision = FloatDomain.precision();
+    FloatDomain.setPrecision(1e-6);
+    try {
+      Store store = new Store();
+      FloatVar x = new FloatVar(store, "x", 1, 5);
+      FloatVar v = new FloatVar(store, "v", -1e6, 1e6);
+      FloatVar z = new FloatVar(store, "z", -1e6, 1e6);
+      store.impose(new PmulQeqR(x, x, v));
+      store.impose(new LinearFloat(new FloatVar[] {z, v, x}, new double[] {-1, 1, -3}, "==", 1));
+      DepthFirstSearch<FloatVar> search = new DepthFirstSearch<>();
+      SplitSelectFloat<FloatVar> select = new SplitSelectFloat<>(store, new FloatVar[] {x}, null);
+      org.jacop.floats.search.Optimize<FloatVar> optimize =
+          new org.jacop.floats.search.Optimize<>(store, search, select, z);
+      assertThat(optimize.minimize()).isTrue();
+      assertThat(optimize.getFinalCost().min()).isCloseTo(-3.25, offset(1e-4));
+    } finally {
+      FloatDomain.setPrecision(precision);
     }
   }
 }

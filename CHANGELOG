@@ -9305,6 +9305,23 @@ Version 5.0 (unreleased)
    instead of 45 and 65, Strike.s2.k8 and s6.k5 are unchanged. The test
    holds on 3 of the 187 optimisation instances of the wide set, and the
    wide-quick set at 240 s gives way on none.
+515. The FlatZinc front end multiplies a linear row by a variable that
+   the model multiplies with every variable of the row, and posts the
+   product row as a redundant linear constraint (FactoredRowDetector,
+   -Dorg.jacop.fz.factoredRows=false turns it off): from
+   sum(i) a[i] * x[i] <= b and z[i] = x[i] * m (int_times) with m >= 0
+   it posts sum(i) a[i] * z[i] <= b * m (an equality for an equality
+   row, reversed for m <= 0). This is the first level of the
+   reformulation-linearization technique (Sherali and Adams, SIAM J.
+   Discrete Math. 1990; Sherali and Tuncbilek, J. Global Optim. 1992)
+   over the products the model already has. In cutting stock models
+   with a pattern per stock piece it gives the linear relaxation the
+   material bound s * sum(m) >= sum(p) size[p] * demand[p]. MiniZinc
+   Challenge 2019 stack-cuttingstock under -f at 240 s: d5 and d14
+   proved in 3.4-3.5 s (none proved in 240 s before; 900-975 s in the
+   2019 replay), d7 and d8, open in the 2019 Challenge, proved optimal
+   (31, 58) in 8-10 s, d3 5.0 -> 1.1 s; hoist-benchmark PU_3_8_5 under
+   fd 125 -> 6.5 s.
 
 516. Opt-in variable-bound MIR of the Gomory rows of the linear relaxation
    (-Dorg.jacop.lp.vbGomory=true). The exact slack Gomory separator, which
@@ -9340,7 +9357,50 @@ Version 5.0 (unreleased)
    changes, 600 s: default one more solved (GCM_0006), total time 0.949;
    -f the same solved, total time 0.968.
 
-518. The FlatZinc front end posts a strict diffn whose rectangles are fixed
+518. Three gaps of the 2019 MiniZinc Challenge replay are closed.
+   (a) A permutation with an assignment cost whose cycles are at most K
+   long (labels cycle[i] = cycle[succ[i]] and bin_packing(K, cycle,
+   unit weights), kidney-exchange) gets the cycle formulation of
+   Abraham, Blum and Sandholm (EC 2007) and Roth, Sonmez and Unver
+   (American Economic Review 2007) for K <= 4 and at most 20,000 cycles:
+   a 0/1 variable per cycle, one cycle per vertex, succ[i] and the cost
+   as sums of them, posted as redundant linear rows. The bound of
+   3_20_0.25_2 goes from 1275 (assignment) to the optimum 1008; the five
+   2019 instances are proved in 1.6-2.3 s with -f (8-14 s before,
+   Chuffed 0.7-2.4 s) and 1.4-3.3 s in the default search (2.4-10 s).
+   -Dorg.jacop.fz.boundedCycles=false turns it off.
+   (b) Elements over constant arrays whose index is defined by
+   int_lin_eq from two to four variables (a lookup in a multi-dimensional
+   array, liner-sf-repositioning) become one table over the defining
+   variables and the looked-up values when the index occurs nowhere
+   else, as the multi-dimensional element of Gecode and the element
+   expansion of the CP-SAT presolve (Perron, Didier and Gay, CP 2023).
+   -Dorg.jacop.fz.linearIndexElement=false turns it off.
+   (c) Lazy clause generation explains x = y + k (and its mirror) by the
+   values in both root domains only: a disentailment over 0..100000
+   against three values was given the generic reason of 998 atoms,
+   now 5. liner-sf fm3_3 -f 40 s -> 8-39 s (Chuffed 9.4 s), tp7_4 600 s
+   default unproved -> proved in 480-505 s.
+   Of the 240 wide-set instances (a) and (b) fire on 4; at 600 s none is
+   worse. Wide-quick at 240 s is unchanged (-f total 0.978 without the
+   seed-noisy work-task-variation, default 1.004).
+
+519. The FlatZinc front end bounds an objective that sums step costs of
+   counts of values in one array (MiniZinc Challenge ptv: passengers
+   per service and station, cost 0 below 265, 10 below 529, ...). For
+   every such array the least cost of its counts over the assignments
+   of the array's variables is found by a branch and bound over the
+   step of each count with a maximum flow check, and posted as
+   objective = sum of the arrays' costs + the other terms, each cost at
+   least its least value: the bound of a separable concave cost over
+   the transportation polytope of the counts (Guisewite and Pardalos,
+   Annals of Operations Research 1990). On ptv pax_period_20_5a the
+   bound is the optimum 50, which is now proved with -f in 18-81 s
+   (never in 1200 s before; CP-SAT 2.3 s, Chuffed stalls at 70); the
+   other four ptv instances are unchanged. It fires on none of the 240
+   wide-set instances. -Dorg.jacop.fz.countStepCost=false turns it off.
+
+520. The FlatZinc front end posts a strict diffn whose rectangles are fixed
    along one axis (origins and lengths, as the time axis of accap) as unary
    resources (CumulativeUnary) over the other axis, one for each maximal set
    of rectangles that overlap along the fixed axis: the maximal cliques of
@@ -9360,7 +9420,7 @@ Version 5.0 (unreleased)
    -Dorg.jacop.fz.diffnFixedAxis=off keeps Diffn; pairs posts the pairwise
    disjunctions of MiniZinc's decomposition instead, both posts both.
 
-519. Lazy clause generation: the reasons of the value precedence
+521. Lazy clause generation: the reasons of the value precedence
    constraint (SeqPrecedeChain, which index-value symmetry breaking posts
    for interchangeable values) cite "x != v" for a value v removed from x
    in place of the bound atom that removed it ([x <= 11] for 12). The
@@ -9377,7 +9437,7 @@ Version 5.0 (unreleased)
    lcgValueLiterals; -Djacop.lcg.valueLiterals=false cites the bounds
    again.
 
-520. Free search on models that order their own rows and columns with
+522. Free search on models that order their own rows and columns with
    lex-leader constraints (MiniZinc Challenge opd): each lex_lesseq(X, Y)
    of the model whose swap of X and Y, with the variables the model
    defines from them (the products of two rows), maps every other
@@ -9408,6 +9468,125 @@ Version 5.0 (unreleased)
    (best known 24). The 14 other wide set instances whose local search
    changes (split sums under -f): proved 9 -> 10, total 1,376 -> 1,277 s,
    no objective worse.
+
+523. Lazy clause generation: a count over more than lcg-split (20)
+   variables is split like a long sum, into counts over blocks of about
+   sqrt(n) variables and a sum of the block counts, the totalizer of
+   O. Bailleux and Y. Boufkhad, Efficient CNF encoding of Boolean
+   cardinality constraints, CP 2003, LNCS 2833, cut to one level as for
+   linear constraints in I. Abio and P. J. Stuckey, Encoding linear
+   constraints into SAT, CP 2014, LNCS 8656. A reason of the whole count
+   cites every variable that takes or misses the value; a block count
+   cites its block and the sum its block counts, so learnt clauses stay
+   short (peaceable queens 8: 53 -> 3.8 atoms per Count reason). The
+   block counts are defined variables, which free LCG search branches
+   on last; the linear relaxation keeps them as columns with the value
+   rows of their blocks (substituting them as block sums lost the count
+   row: kletzander test03 root bound 9,385 -> 350). -s prints
+   lcgSplitCounts; --free-config lcg-split-count=0 keeps counts whole.
+   MZNC 2021 peaceable_queens 8 -f: time-out at 240 s -> proved in 88 s.
+   240 s, the 16 wide set instances with such counts: -f proved 14 ->
+   15, total 589 -> 546 s; default total 1,041 -> 950 s. The 62 MZNC
+   instances (2011-2026) with such counts, -f: total 4,271 -> 4,279 s
+   without the 8 league instances, whose times swing both ways between
+   rounds; gametes, arithmetic-target and pq_n7 faster in both rounds.
+
+524. Lazy clause generation: CountValues over more than lcg-split (20)
+   variables is split the same way, into CountValues over the blocks
+   with a counter per block and value, and for each value a sum of its
+   block counters, unless the block counters would outnumber the
+   variables (warehouse assignments with 66 facilities over 1,936
+   tokens, 6,402 counters, got worse objectives). -s counts the block
+   counters in lcgSplitCounts; --free-config lcg-split-count-values=0
+   keeps CountValues whole (lcg-split-count=0 keeps both whole). MZNC
+   2022 generalized-peacable-queens n9_q5: CountValues reasons 69 -> 8.9
+   atoms, -f proved in 90-180 s (time-out at 240 s); n8_q3 175-213 s ->
+   74-76 s. 240 s, the 10 MZNC 2022-2023 instances it splits
+   (generalized-peacable-queens, chessboard): -f total 2,069 -> 1,921 s
+   and 2,136 -> 1,917 s in two rounds, proved 3 -> 4 and 2 -> 3,
+   chessboard n39_2 452 -> 622 and 466 -> 634 (maximised); default
+   2,043 -> 1,892 s, proved 2 -> 3.
+
+525. FlatZinc set-up on big Pseudo-Boolean models is faster, with the same
+   search. The output-variable check used by alias merging is a set
+   instead of a scan of every output array, side components take only
+   their own clauses, LinearOverlapDetector walks the shorter row, the
+   detector gates of #906 read a cached census of constraint kinds and
+   cover ten more detectors, and the XOR pairing and common-subexpression
+   keys avoid boxed maps. PB 2016 set-up: cache-ibm-q-unbounded 40.5 ->
+   24.6 s, ped2.B.recomb1 32.6 -> 17.4 s, atlanta-ip 17.0 -> 11.6 s,
+   simp-nonunif 29.9 -> 22.8 s; wide-quick at 240 s total 1.002.
+
+526. Pseudo-Boolean models: two root deductions that CP-SAT makes and
+   JaCoP missed on small PB16 instances (Pseudo-Boolean Competition 2016).
+   The XorSystem detector reads an equation modulo 2 whose odd
+   coefficients leave one or two variables as what it states: x = parity,
+   or x = y / x != y (before, such equations were too short for a parity
+   row and dropped); -s prints xorImpliedParities. factor-mod-size=8
+   (OPT-NLC): optimum proved in 2 s, before not proved in 600 s. The root
+   LP refutations merge clauses over every subset of m literals of a set
+   of n literals (the binomial encoding of a cardinality constraint) into
+   the row sum >= n - m + 1 (SubsetCardinalities; cardinality detection in
+   CNF after A. Biere, D. Le Berre, E. Lonca and N. Manthey, "Detecting
+   cardinality constraints in CNF", SAT 2014; resolution needs
+   exponential proofs of such counting arguments, A. Haken, "The
+   intractability of resolution", TCS 39, 1985); -s prints
+   lpRefutationCardinalities. fixed-bandwidth-19 (PB 2015, cardinalities
+   in clauses): unsatisfiable in 0.7 s, before unknown at 600 s;
+   ECgrid5x30split 94 -> 1.5 s. On the 26 instances of the wide set, PB25
+   and PB16 where either fires, 600 s: total 2,509 -> 1,708 s (default
+   search) and 2,326 -> 1,410 s (-f), one more proved, none lost.
+   -Dorg.jacop.lp.subsetCardinalities=false turns the merge off,
+   org.jacop.lp.subsetCardinalityLength (default 5) bounds the clauses.
+
+521. Lazy clause generation under a fixed search on an optimisation model
+   first runs the annotation's search without learning for 0.5 % of the
+   time limit, at most a second, and LCG then gets three times as long,
+   at least a second. When LCG has not reached that search's best cost by
+   then and is at least three times slower per node, it gives way to the
+   annotation's search without learning under the best cost. When that
+   search then goes twice as long as it had run (at least 10 s) without a
+   better solution, LCG goes on under the best cost. Small sparse diffn
+   (at most 30 rectangles, whose minimal areas fill at most 5 % of the
+   box) is posted as MiniZinc's pairwise disjunctions under LCG fixed
+   search, so that learning gets the disjunct literals. MiniZinc Challenge
+   2017 city-position, the same improving solutions 16 times faster per
+   node without learning, at 600 s: city-5-05 proved in 44 s (223 s),
+   city-5-06 in 133 s (320 s), city-5-08 proved 4,500 in 502 s (927,199
+   unproved); city-8-06 at 1200 s 2,468,829 -> 2,224,509. cargo
+   (2013-2018), 10 sparse-diffn instances at 600 s: 0 -> 7 proved. Wide
+   set fd, 202 instances at 600 s, before the hand-back: solved 138 -> 144,
+   total time 0.936; the 18 on which LCG gave way or lost, with it: total
+   8,255 -> 7,071 s. --free-config fixed-first=0 turns the
+   first search off (fixed-first-max, fixed-first-lcg, fixed-first-rate,
+   fixed-first-stall and fixed-first-stall-min tune it), and
+   -Dorg.jacop.fz.diffnPairs=0 the pairs (diffnPairsDensity sets the
+   density). -s prints fixedFirst=decided, lcg, cp or cp-lcg.
+
+522. The clausal compilation of satisfaction models (entry 489) leaves
+   models with a difference x - y = d (a linear equality of three terms
+   with coefficients of both signs) over more than 3 values to lazy clause
+   generation (-Dorg.jacop.fz.clausal.sumDomain, default 3). It fires on
+   Costas arrays, NonTransitiveDice and Primes (already over the clause
+   limit) of the 211 XCSP models the compilation took. At 600 s with -f,
+   four runs each, total over costas-array 17 (MZNC 2011) and
+   CostasArray-15..18 (XCSP 2022): 2,417 -> 1,262 s; costas-array 17
+   314-389 -> 61-84 s, CostasArray-16 and -17 lose 11-48 s.
+
+523. CountValues (global_cardinality with variable counts) bounds the sum
+   of the counters of every set of at least two classes (counted values
+   and the rest, up to six classes) by the variables that may take a class
+   of the set and those that can take only classes of it, the Hall-set
+   reasoning of the flow model of global cardinality (J.-C. Regin,
+   "Generalized arc consistency for global cardinality constraint", AAAI
+   1996). Each counter of the set gets the bounds the others leave, and a
+   set at a bound takes or loses the variables it may take. Before, a
+   counter could keep a bound that needs more variables than the values
+   it shares them with leave: x0 in {0, 1, 3}, x1 in 0..3, x2 in 2..3,
+   x3 in 0..1, at least one 0 among them left three 1s possible. The
+   consistency checker now finds CountValues bounds(Z) consistent at every
+   node (111 of 35,753 nodes missed it). The 25 FlatZinc test models with
+   count_values: same search or same results, total time 202 -> 201 s.
 
 Version 4.11
 =============

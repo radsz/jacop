@@ -223,4 +223,44 @@ class CumulativeTest {
     }
     return solutions;
   }
+
+  /**
+   * A limit that may be negative holds while no task runs and fails once one runs: the propagators
+   * took no negative limit, and the model stopped with "Resource limit must be &gt;= 0" or "m must
+   * be at least 1" instead of being solved.
+   */
+  @Test
+  @Timeout(TIMEOUT_MS)
+  void aLimitThatMayBeNegativeHoldsOnlyWhileNoTaskRuns() throws IOException {
+    String model =
+        "var -1..1: b :: output_var;\nvar 0..2: s0 :: output_var;\nvar 0..2: s1 :: output_var;\n"
+            + "var 0..1: d0 :: output_var;\nvar 0..1: r1 :: output_var;\n"
+            + "constraint jacop_cumulative([s0,s1],[d0,2],[1,r1],b);\nsolve satisfy;\n";
+    Set<String> expected = new TreeSet<>();
+    for (int b = -1; b <= 1; b++) {
+      for (int s0 = 0; s0 <= 2; s0++) {
+        for (int s1 = 0; s1 <= 2; s1++) {
+          for (int d0 = 0; d0 <= 1; d0++) {
+            for (int r1 = 0; r1 <= 1; r1++) {
+              boolean ok = true;
+              for (int t = 0; t <= 4; t++) {
+                int load = (s0 <= t && t < s0 + d0 ? 1 : 0) + (s1 <= t && t < s1 + 2 ? r1 : 0);
+                ok &= load == 0 || load <= b;
+              }
+              if (ok) {
+                expected.add(
+                    "b=" + b + ";s0=" + s0 + ";s1=" + s1 + ";d0=" + d0 + ";r1=" + r1 + ";");
+              }
+            }
+          }
+        }
+      }
+    }
+    assertEquals(expected, new TreeSet<>(solve(model)));
+    assertTrue(
+        solve(
+                "var 0..3: s0 :: output_var;\nvar 0..3: s1 :: output_var;\n"
+                    + "constraint jacop_cumulative([s0,s1],[2,2],[1,1],-1);\nsolve satisfy;\n")
+            .isEmpty());
+  }
 }

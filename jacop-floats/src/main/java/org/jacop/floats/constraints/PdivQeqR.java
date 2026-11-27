@@ -61,7 +61,9 @@ public class PdivQeqR extends PmulQeqR {
     // P / Q = R is decomposed as R * Q = P, which accepts Q = 0 with P = 0 and any R, so 0 is
     // removed from the bounds of Q (repeated when the product pruning moves a bound of Q to 0)
     do {
-      if (q.singleton(0.0)) {
+      // only the point 0: a singleton interval around 0 is up to the precision wide and its
+      // values beside 0 may divide p into r
+      if (q.min() == 0.0 && q.max() == 0.0) {
         throw Store.failException;
       }
       if (q.min() == 0.0) {

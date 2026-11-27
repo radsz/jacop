@@ -319,13 +319,21 @@ class PortfolioOneParseTest {
         unsupported,
         "var 1..3: x :: output_var;\nconstraint no_such_constraint(x, x);\nsolve minimize x;\n",
         StandardCharsets.UTF_8);
-    // an exception the front end does not handle, in every thread
+    // an undeclared symbol, which every thread rejects as the arguments are read
     Path unassigned = tmp.resolve("unassigned.fzn");
     Files.writeString(
         unassigned,
         "var 1..3: x :: output_var;\nconstraint int_lin_le(w, [x], 3);\nsolve minimize x;\n",
         StandardCharsets.UTF_8);
-    String[] exception = status("-p", "3", unassigned.toString());
+    // an exception the front end does not handle (a negative number of rows, a value the argument
+    // check does not look at), in every thread
+    Path rows = tmp.resolve("rows.fzn");
+    Files.writeString(
+        rows,
+        "var 1..3: x :: output_var;\nvar 1..3: y :: output_var;\n"
+            + "constraint jacop_lex_chain_less_int([x, y], -1);\nsolve minimize x;\n",
+        StandardCharsets.UTF_8);
+    String[] exception = status("-p", "3", rows.toString());
     assertEquals("1", exception[0]);
     assertEquals(1, exception[2].lines().filter(l -> l.contains("stopped")).count(), exception[2]);
     Path broken = tmp.resolve("broken.fzn");
@@ -333,7 +341,7 @@ class PortfolioOneParseTest {
         broken,
         "var 1..3: x :: output_var;\nconstraint int_le(x;\nsolve minimize x;\n",
         StandardCharsets.UTF_8);
-    for (Path fzn : new Path[] {unsupported, broken}) {
+    for (Path fzn : new Path[] {unsupported, unassigned, broken}) {
       String[] one = status(fzn.toString());
       assertEquals("1", one[0]);
       for (String p : new String[] {"2", "4"}) {
@@ -368,5 +376,106 @@ class PortfolioOneParseTest {
                 .filter(l -> l.startsWith("%%"))
                 .toList());
     return new String[] {Integer.toString(status), out.toString(StandardCharsets.UTF_8), err};
+  }
+
+  // a Golomb ruler of 10 marks within 65: the root of its linear relaxation (a dense simplex of a
+  // few thousand pivots, then rounds of cuts) takes about a second, and no thread solves it in 1 s
+  private static String golombRuler() {
+    int marks = 10;
+    int length = 65;
+    StringBuilder vars = new StringBuilder();
+    StringBuilder constraints = new StringBuilder();
+    for (int i = 0; i < marks; i++) {
+      vars.append("var 0..").append(length).append(": g").append(i).append(" :: output_var;\n");
+    }
+    constraints.append("constraint int_eq(g0, 0);\n");
+    for (int i = 0; i + 1 < marks; i++) {
+      constraints
+          .append("constraint int_lt(g")
+          .append(i)
+          .append(", g")
+          .append(i + 1)
+          .append(");\n");
+    }
+    java.util.List<String> d = new java.util.ArrayList<>();
+    for (int i = 0; i < marks; i++) {
+      for (int j = i + 1; j < marks; j++) {
+        String v = "d" + i + "_" + j;
+        vars.append("var 1..").append(length).append(": ").append(v).append(";\n");
+        constraints.append(
+            "constraint int_lin_eq([1, -1, -1], [g" + j + ", g" + i + ", " + v + "], 0);\n");
+        d.add(v);
+      }
+    }
+    for (int a = 0; a < d.size(); a++) {
+      for (int b = a + 1; b < d.size(); b++) {
+        constraints.append("constraint int_ne(" + d.get(a) + ", " + d.get(b) + ");\n");
+      }
+    }
+    return vars + constraints.toString() + "solve minimize g" + (marks - 1) + ";\n";
+  }
+
+  @Test
+  void aThreadStillRunningPrintsNothingAfterTheRunReturns() throws Exception {
+    // the portfolio waits for its threads only until 300 ms after the time-out; a thread then
+    // still in the root of its linear relaxation printed =====UNKNOWN===== and the time-out line
+    // later, into whatever stdout was by then: in process, into the output of the next run
+    Path fzn = write(golombRuler());
+    PrintStream originalOut = System.out;
+    PrintStream originalErr = System.err;
+    // time-outs that fall at different points of the root
+    for (int timeOut = 350; timeOut <= 850; timeOut += 100) {
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      ByteArrayOutputStream after = new ByteArrayOutputStream();
+      int printed;
+      try (PrintStream o = new PrintStream(out, true, StandardCharsets.UTF_8);
+          PrintStream a = new PrintStream(after, true, StandardCharsets.UTF_8)) {
+        System.setOut(o);
+        System.setErr(o);
+        try {
+          new Fz2jacop()
+              .callMain(
+                  new String[] {
+                    "-p", "3", "--lcg", "on", "-t", Integer.toString(timeOut), fzn.toString()
+                  });
+        } finally {
+          printed = out.size();
+          // what comes next, as another run in this JVM would see it
+          System.setOut(a);
+          System.setErr(a);
+        }
+        Thread.sleep(1500);
+      } finally {
+        System.setOut(originalOut);
+        System.setErr(originalErr);
+      }
+      String text = out.toString(StandardCharsets.UTF_8);
+      assertEquals(printed, out.size(), text);
+      assertEquals("", after.toString(StandardCharsets.UTF_8), text);
+      // one answer: a solution or =====UNKNOWN=====, at the time-out
+      assertEquals(
+          1, count(text, "=====UNKNOWN=====") + Math.min(1, count(text, "----------")), text);
+      assertEquals(0, count(text, "=====UNSATISFIABLE=====") + count(text, "=========="), text);
+    }
+  }
+
+  @Test
+  void theThreadsHaveEndedWhenTheRunReturns() throws Exception {
+    // the root of the linear relaxation looked neither at the time-out within a dense solve or
+    // between its rounds of cuts nor at the stop of the portfolio: its threads went on for up to
+    // a second after the time-out, past the wait of the portfolio
+    Path fzn = write(golombRuler());
+    for (int timeOut = 350; timeOut <= 850; timeOut += 100) {
+      java.util.Set<Thread> before = new java.util.HashSet<>(Thread.getAllStackTraces().keySet());
+      String out = run("-p", "3", "--lcg", "on", "-t", Integer.toString(timeOut), fzn.toString());
+      // a short grace for a thread that printed its last line and is ending
+      Thread.sleep(100);
+      java.util.List<String> running =
+          Thread.getAllStackTraces().keySet().stream()
+              .filter(t -> !before.contains(t) && t.getName().startsWith("jacop-portfolio-"))
+              .map(Thread::getName)
+              .toList();
+      assertEquals(java.util.List.of(), running, out);
+    }
   }
 }

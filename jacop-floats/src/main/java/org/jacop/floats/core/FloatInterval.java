@@ -149,9 +149,12 @@ public record FloatInterval(double min, double max) {
     String result;
 
     if (!FloatDomain.intervalPrint && singleton()) {
-      result =
-          String.format(
-              locale, form, (min + max) / 2); // mean value if singleton considering precision
+      double mean = (min + max) / 2; // mean value if singleton considering precision
+      if (Double.isInfinite(mean)) {
+        // the sum of two bounds beyond Double.MAX_VALUE / 2 overflows
+        mean = min / 2 + max / 2;
+      }
+      result = String.format(locale, form, mean);
     } else {
       result =
           String.format(locale, form, min)

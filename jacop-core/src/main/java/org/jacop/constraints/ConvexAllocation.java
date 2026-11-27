@@ -258,7 +258,7 @@ public class ConvexAllocation extends Constraint
         return t[(int) k];
       }
     }
-    return val(j, v);
+    return f[j].value(v);
   }
 
   private long marginal(int j, long v) {

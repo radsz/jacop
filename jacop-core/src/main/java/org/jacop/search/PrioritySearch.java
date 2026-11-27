@@ -205,6 +205,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     final boolean result = store.consistency();
     store.setLevel(store.level + 1);
     depth = store.level;
+    final int searchLevel = store.level;
 
     visited.clear();
     int subSearch = getSubSearch();
@@ -214,6 +215,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       try {
         search.get(2 * subSearch).labeling();
       } catch (SolutionsLimitReached _) {
+        removeLevelsAbove(searchLevel);
         if (collectStatistics) {
           getStatistics();
         }
@@ -246,6 +248,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     boolean result = store.consistency();
     store.setLevel(store.level + 1);
     depth = store.level;
+    final int searchLevel = store.level;
 
     visited.clear();
     int subSearch = getSubSearch();
@@ -255,6 +258,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       try {
         result = search.get(2 * subSearch).labeling();
       } catch (SolutionsLimitReached _) {
+        removeLevelsAbove(searchLevel);
         if (collectStatistics) {
           getStatistics();
         }
@@ -271,6 +275,19 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     depth--;
 
     return result;
+  }
+
+  /**
+   * Removes the levels that the searches below left when the solution limit stopped them where they
+   * found the last solution.
+   *
+   * @param level the level of this search, which stays
+   */
+  private void removeLevelsAbove(int level) {
+    while (store.level > level) {
+      store.removeLevel(store.level);
+      store.setLevel(store.level - 1);
+    }
   }
 
   /**
@@ -317,7 +334,10 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     if (printInfo) {
       log.info("{}", statistics());
     }
-    restoreStoreLevelIfRaised(raisedLevel);
+    // as in DepthFirstSearch, the solution stays assigned in the level raised for the search
+    if (!assignSolution) {
+      restoreStoreLevelIfRaised(raisedLevel);
+    }
     return true;
   }
 
@@ -479,7 +499,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     if (printInfo) {
       log.info("{}", statistics());
     }
-    restoreStoreLevelIfRaised(raisedLevel);
+    if (!assignSolution) {
+      restoreStoreLevelIfRaised(raisedLevel);
+    }
     return masterSearch == null || result;
   }
 
@@ -826,8 +848,14 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         if (earlyReturn.isPresent()) {
           return earlyReturn.get();
         }
-        noSolutions +=
+        int found =
             lastChildSearchRun.getSolutionListener().solutionsNo() - lastChildSolutionsBefore;
+        if (found == 0) {
+          // the child searches failed: no solution to report
+          visited.set(index, false);
+          return false;
+        }
+        noSolutions += found;
         constraineCostFromChild(lastChildSearchRun);
       } else {
         constraineCost();
@@ -843,7 +871,13 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         DepthFirstSearch<T> child = (DepthFirstSearch<T>) asDfs(childObj);
         lastChildSearchRun = child;
         child.setStore(store);
-        child.getSolutionListener().setParentSolutionListener(solutionListener);
+        // a child that records its solutions matches them with those of the priority search
+        child
+            .getSolutionListener()
+            .setParentSolutionListener(
+                child.getSolutionListener().isRecordingSolutions()
+                    ? master.solutionListener
+                    : solutionListener);
         child.setCostVar(costVariable);
         int currentChildSolutionNo = child.getSolutionListener().solutionsNo();
         lastChildSolutionsBefore = currentChildSolutionNo;
@@ -872,7 +906,13 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         DepthFirstSearch<T> child = (DepthFirstSearch<T>) asDfs(childObj);
         lastChildSearchRun = child;
         child.setStore(store);
-        child.getSolutionListener().setParentSolutionListener(solutionListener);
+        // a child that records its solutions matches them with those of the priority search
+        child
+            .getSolutionListener()
+            .setParentSolutionListener(
+                child.getSolutionListener().isRecordingSolutions()
+                    ? master.solutionListener
+                    : solutionListener);
         int currentChildSolutionNo = child.getSolutionListener().solutionsNo();
         lastChildSolutionsBefore = currentChildSolutionNo;
         boolean result = child.labeling();
@@ -907,8 +947,13 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       if (earlyReturn.isPresent()) {
         return earlyReturn.get();
       }
-      noSolutions +=
-          lastChildSearchRun.getSolutionListener().solutionsNo() - lastChildSolutionsBefore;
+      int found = lastChildSearchRun.getSolutionListener().solutionsNo() - lastChildSolutionsBefore;
+      if (found == 0) {
+        // the child searches failed: no solution to report
+        visited.set(index, false);
+        return false;
+      }
+      noSolutions += found;
       if (noSolutions >= solutionsLimit) {
         throw new SolutionsLimitReached();
       }

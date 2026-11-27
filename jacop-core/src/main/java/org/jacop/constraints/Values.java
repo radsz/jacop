@@ -571,7 +571,8 @@ public class Values extends Constraint implements SatisfiedPresent, Copyable<Val
     if (ranges == 0) {
       throw Store.failException;
     }
-    v.domain.in(store.level, v, supportedMin[0], IntDomain.MAX_INT);
+    // inMin: a FlatZinc constant beyond MAX_INT has its value above MAX_INT
+    v.domain.inMin(store.level, v, supportedMin[0]);
     int covered = supportedMax[0];
     for (int k = 1; k < ranges && covered < v.max(); k++) {
       if (supportedMin[k] > covered + 1 && covered + 1 <= v.max()) {

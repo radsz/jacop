@@ -186,13 +186,13 @@ public class Profile extends ArrayList<ProfileItem> {
     remove(i);
     i = addOverlapPart(i, new1, val);
     i = addOverlapPart(i, new2, val);
-    if (new3.min != -1 && new3.min != new3.max) {
+    if (new3.min != ProfileItem.NO_POINT && new3.min != new3.max) {
       addToProfile(new3.min, new3.max, new3.value);
     }
   }
 
   private int addOverlapPart(int i, ProfileItem part, int val) {
-    if (part.min == -1) {
+    if (part.min == ProfileItem.NO_POINT) {
       return i;
     }
     ProfileItem previous = (i != 0) ? get(i - 1) : new ProfileItem(type);

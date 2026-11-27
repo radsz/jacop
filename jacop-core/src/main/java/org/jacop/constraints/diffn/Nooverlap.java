@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.Stateful;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -57,7 +58,7 @@ import org.jacop.util.VarIntMap;
  * @version 5.0
  */
 public class Nooverlap extends Constraint
-    implements Copyable<Nooverlap>, Explainable, Stateful, PbEncodable {
+    implements Copyable<Nooverlap>, Explainable, Stateful, PbEncodable, UsesQueueVariable {
 
   static final int X = 0;
   static final int Y = 1;
@@ -522,6 +523,12 @@ public class Nooverlap extends Constraint
 
   @Override
   public void queueVariable(int level, Var v) {
+    // a first consistency whose level was removed is redone with every variable queued again
+    // (UsesQueueVariable), since removing the level cleared the changed rectangles; at imposition
+    // the rectangles are not mapped yet, and impose marks all of them as changed
+    if (rectanglesSlot == null) {
+      return;
+    }
     int slot = rectanglesSlot.get(v);
     if (slot == VarIntMap.ABSENT) {
       return;

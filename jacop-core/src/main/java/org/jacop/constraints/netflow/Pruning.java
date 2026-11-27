@@ -347,7 +347,7 @@ public class Pruning extends Network {
    *
    * @param costLimit the maximum cost increase allowed for pruning decisions.
    */
-  public void analyze(int costLimit) {
+  public void analyze(long costLimit) {
 
     pass++;
     analyzeUnitArcs(costLimit);
@@ -364,7 +364,10 @@ public class Pruning extends Network {
       analyzeCompanionArcs(companion, costLimit);
 
       if (companion.wVar != null && companion.flowOffset > 0) {
-        int maxCost = companion.wVar.min() + (costLimit / companion.flowOffset);
+        int maxCost =
+            (int)
+                Math.min(
+                    Integer.MAX_VALUE, companion.wVar.min() + costLimit / companion.flowOffset);
         wvarIn(companion, maxCost);
       }
 
@@ -387,7 +390,7 @@ public class Pruning extends Network {
    *
    * @param costLimit the maximum cost increase allowed
    */
-  private void analyzeUnitArcs(int costLimit) {
+  private void analyzeUnitArcs(long costLimit) {
     // a failure in an earlier pass can leave arcs behind
     for (List<Arc> arcs : unitArcs) {
       arcs.clear();
@@ -425,7 +428,7 @@ public class Pruning extends Network {
         continue;
       }
       boolean reverse = (key & 1) == 1;
-      int minimumReducedCost = Integer.MAX_VALUE;
+      long minimumReducedCost = Long.MAX_VALUE;
       for (Arc arc : arcs) {
         minimumReducedCost = Math.min(minimumReducedCost, arc.reducedCost());
       }
@@ -445,7 +448,7 @@ public class Pruning extends Network {
         targets[i] = reverse ? arcs.get(i).head : arcs.get(i).tail();
       }
       distances.compute(
-          nodes[key >> 1], reverse, (long) costLimit - minimumReducedCost, targets, arcs.size());
+          nodes[key >> 1], reverse, costLimit - minimumReducedCost, targets, arcs.size());
       for (Arc arc : arcs) {
         decide(arc, reverse ? arc.head : arc.tail(), costLimit);
       }
@@ -475,7 +478,7 @@ public class Pruning extends Network {
    * @param end the node at which a path from the head of the arc reaches its tail
    * @param costLimit the maximum cost increase allowed
    */
-  private void decide(Arc arc, Node end, int costLimit) {
+  private void decide(Arc arc, Node end, long costLimit) {
     long distance = distances.distance(end);
     if (distance == ResidualDistances.UNREACHED || arc.reducedCost() + distance > costLimit) {
       // no unit of flow fits through the arc
@@ -511,7 +514,7 @@ public class Pruning extends Network {
     statistics.Svars.minScoreSum += prev.pruningScore;
   }
 
-  private void analyzeCompanionArcs(ArcCompanion companion, int costLimit) {
+  private void analyzeCompanionArcs(ArcCompanion companion, long costLimit) {
     Arc arc1 = companion.arc;
     Arc arc2 = arc1.sister;
     int residual1 = arc1.capacity;
@@ -530,7 +533,7 @@ public class Pruning extends Network {
     }
   }
 
-  private void analyzeArcHelper(Arc arc, int costLimit) {
+  private void analyzeArcHelper(Arc arc, long costLimit) {
     if (arc.capacity == 0 || arc.decidedPass == pass) {
       return;
     }
@@ -589,7 +592,7 @@ public class Pruning extends Network {
     reoptimize(999999);
   }
 
-  private int analyzeArc(Arc arc, int costLimit) {
+  private int analyzeArc(Arc arc, long costLimit) {
     if (ASSERTS_ENABLED && arc.capacity <= 0) {
       throw new IllegalStateException("Assertion failed");
     }
@@ -607,9 +610,9 @@ public class Pruning extends Network {
     Node source = arc.head;
     Node sink = arc.tail();
 
-    int[] state = new int[] {flow, capacity, costLimit};
+    long[] state = new long[] {flow, capacity, costLimit};
     analyzeArcLoop(arc, source, sink, state);
-    flow = state[0];
+    flow = (int) state[0];
 
     IntVar wVar = arc.getCompanion().wVar;
 
@@ -630,14 +633,14 @@ public class Pruning extends Network {
     return flow;
   }
 
-  private void analyzeArcLoop(Arc arc, Node source, Node sink, int[] state) {
+  private void analyzeArcLoop(Arc arc, Node source, Node sink, long[] state) {
     while (state[1] > 0) {
-      int unitCost = arc.reducedCost();
+      long unitCost = arc.reducedCost();
       if (ASSERTS_ENABLED && unitCost < 0) {
         throw new IllegalStateException("Assertion failed");
       }
       if (unitCost > 0) {
-        int maxCapacity = state[2] / unitCost;
+        long maxCapacity = state[2] / unitCost;
         if (state[1] > maxCapacity) {
           state[1] = maxCapacity;
           if (state[1] == 0) {
@@ -645,7 +648,7 @@ public class Pruning extends Network {
           }
         }
       }
-      int delta = augmentFlow(source, sink, state[1]);
+      int delta = augmentFlow(source, sink, (int) state[1]);
       state[0] += delta;
       state[1] -= delta;
       state[2] -= unitCost * delta;

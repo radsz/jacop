@@ -32,6 +32,7 @@
 package org.jacop.jasat.lcg;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import java.time.Duration;
@@ -50,6 +51,7 @@ import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 import java.util.function.ToLongBiFunction;
 import java.util.stream.IntStream;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldifferent;
@@ -125,6 +127,8 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.jasat.cdcl.CdclSolver;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
 import org.jacop.lcg.ValueIndicator;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMax;
@@ -2365,6 +2369,65 @@ class LcgSolverTest {
     // about 800 since reasons cite the earliest bound beyond a value (shorter searches)
     assertThat(own).isGreaterThan(500);
     assertThat(own).isGreaterThan(20 * generic);
+  }
+
+  /**
+   * An explanation that cites a bound as the removal of one value ({@link
+   * EntryList#addExcludedValue}, precedence reasons) and other bounds of the same variable: x <=
+   * 13, then x <= 11, which removed 12. The bound that stands for x != 12 implies no bound, so x <=
+   * 13 stays, and each kept atom keeps its own removed value when the list is compacted. Before, x
+   * <= 11 counted as the strongest bound and dropped x <= 13, leaving x != 12; and a plain x <= 11
+   * moved into the place of a dropped x != 12 was cited as x != 12.
+   */
+  @Test
+  void droppedImpliedAtomsKeepTheRemovedValues() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 20);
+    IntVar y = new IntVar(store, "y", 1, 20);
+    store.impose(new XlteqY(x, y));
+    LcgSolver solver = new LcgSolver(store);
+    AtomicTrail trail = solver.trail();
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x.domain.inMax(store.level, x, 13);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x.domain.inMax(store.level, x, 11);
+    assertThat(store.consistency()).isTrue();
+    int le13 = -1;
+    int le11 = -1;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.variable(e) == x && trail.kind(e) == AtomicTrail.LE) {
+        if (trail.value(e) == 13) {
+          le13 = e;
+        } else if (trail.value(e) == 11) {
+          le11 = e;
+        }
+      }
+    }
+    assertThat(le13).isNotNegative();
+    assertThat(le11).isNotNegative();
+
+    // x != 12 (cited by x <= 11) and x <= 13: neither implies the other
+    EntryList reason = new EntryList();
+    reason.addExcludedValue(le11, 12);
+    reason.add(le13);
+    solver.dropDominated(reason, null);
+    assertThat(reason.size()).isEqualTo(2);
+    assertThat(reason.get(0)).isEqualTo(le11);
+    assertThat(reason.hasExcludedValue(0)).isTrue();
+    assertThat(reason.excludedValue(0)).isEqualTo(12);
+    assertThat(reason.get(1)).isEqualTo(le13);
+    assertThat(reason.hasExcludedValue(1)).isFalse();
+
+    // x != 14 (cited by x <= 13) is implied by x <= 11, which moves into its place
+    reason = new EntryList();
+    reason.addExcludedValue(le13, 14);
+    reason.add(le11);
+    solver.dropDominated(reason, null);
+    assertThat(reason.size()).isEqualTo(1);
+    assertThat(reason.get(0)).isEqualTo(le11);
+    assertThat(reason.hasExcludedValue(0)).isFalse();
   }
 
   /**
@@ -7664,5 +7727,109 @@ class LcgSolverTest {
     assertThat(solver.minimize(cost)).isEqualTo(CdclSolver.SAT);
     // 3*1 + 2*2 + 1*3 + 0*4
     assertThat(solver.value(cost)).isEqualTo(10);
+  }
+
+  // the reasons of value precedence mark a bound that removed a value as that value's removal,
+  // which may be cited as x != v; dropping dominated atoms compacts the reason, and the marks
+  // stayed at their old positions: a moved bound took the mark of the atom before it, so the
+  // learnt clause cited x != v of a value the reason did not need and lost the bound, and the
+  // optimum 6 was missed (9)
+  @Test
+  void droppedDominatedAtomsKeepTheValueMarksWithTheirEntries() {
+    int[] optimum = new int[2];
+    for (int mode = 0; mode < 2; mode++) {
+      Store store = new Store();
+      int[] lo = {1, 1, 1, 0, 1, 1, 1, 1};
+      IntVar[] x = new IntVar[8];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, lo[i], 5);
+      }
+      for (int i : new int[] {1, 3, 7}) {
+        x[i].domain.inComplement(0, x[i], 4);
+      }
+      IntVar obj = new IntVar(store, "obj", -1000, 1000);
+      store.impose(
+          new LinearInt(
+              new IntVar[] {x[1], x[3], x[4], x[5], x[6], x[0], x[2], obj},
+              new int[] {3, 2, 2, 3, 2, -1, -3, -1},
+              "==",
+              0));
+      store.impose(new SeqPrecedeChain(x, new int[] {4, 5, 3, 1}));
+      store.impose(new LinearInt(new IntVar[] {x[0], x[2]}, new int[] {1, 1}, "<=", 7));
+      if (mode == 0) {
+        DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+        search.setPrintInfo(false);
+        assertThat(search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()), obj))
+            .isTrue();
+        optimum[mode] = obj.value();
+      } else {
+        LcgSolver solver = new LcgSolver(store);
+        IntVar[] order = new IntVar[x.length];
+        for (int i = 0; i < x.length; i++) {
+          order[i] = x[x.length - 1 - i];
+        }
+        solver.setAnnotation(new SimpleSelect<>(order, null, new IndomainMin<>()), false);
+        assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+        optimum[mode] = solver.value(obj);
+      }
+    }
+    assertThat(optimum[0]).isEqualTo(6);
+    assertThat(optimum[1]).isEqualTo(optimum[0]);
+  }
+
+  // x <= y whose reason of [y >= v] marks the bound [x >= v] as the removal of a value it does not
+  // remove: the entry implies the atom, but the literal [x != value] cited in its place does not
+  static final class MismarkedXlteqY extends XlteqY {
+    private final int value;
+
+    MismarkedXlteqY(IntVar x, IntVar y, int value) {
+      super(x, y);
+      this.value = value;
+    }
+
+    @Override
+    public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+      if (trail.variable(entry) != y || trail.kind(entry) != AtomicTrail.GE) {
+        return false;
+      }
+      EntryList bound = new EntryList();
+      trail.addLowerBound(x, entry, bound);
+      if (bound.size() != 1 || trail.value(bound.get(0)) < trail.value(entry)) {
+        return false;
+      }
+      out.addExcludedValue(bound.get(0), value);
+      return true;
+    }
+
+    @Override
+    public XlteqY copy(VarMap map) {
+      return new XlteqY(map.get(x), map.get(y));
+    }
+  }
+
+  // the checker validated the entries of an explanation, not the literals the solver was handed
+  // after converting them (value marks, dropped dominated atoms, weakened bounds), so a value mark
+  // that made the clause unimplied went unseen (EntryList.move lost the marks in dropDominated)
+  @Test
+  void checkerChecksTheClauseHandedToTheSolver() {
+    Store store = new Store();
+    BooleanVar b = new BooleanVar(store, "b");
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    IntVar w = new IntVar(store, "w", 0, 9);
+    store.impose(new Reified(new XneqC(x, 5), b));
+    store.impose(new MismarkedXlteqY(x, y, 5));
+    // x = 9, 8, 7 and 6 fail through y + w <= 10 and w >= x - 1, so later reasons of [y >= v]
+    // find the literal [x = 5] false and cite it
+    store.impose(new LinearInt(new IntVar[] {y, w}, new int[] {1, 1}, "<=", 10));
+    store.impose(new LinearInt(new IntVar[] {w, x}, new int[] {1, -1}, ">=", -1));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setAnnotation(
+        new SimpleSelect<>(new IntVar[] {b, x, y, w}, null, new IndomainMax<>()), false);
+    assertThatThrownBy(solver::solve)
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("reason clause")
+        .hasMessageContaining("[x = 5]");
   }
 }

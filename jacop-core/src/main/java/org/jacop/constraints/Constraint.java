@@ -174,6 +174,14 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   /** The store level of the first consistency call, or NOT_RUN or RUN_UNDONE. */
   private int firstRunAt = NOT_RUN;
 
+  /** The store level at which the store last imposed the constraint, or Integer.MAX_VALUE. */
+  private int imposedAt = Integer.MAX_VALUE;
+
+  /**
+   * Whether the store owes the constraint its first consistency call, see {@link #firstRunOwed}.
+   */
+  private boolean firstRunOwed;
+
   private long consistencyCalls;
 
   /** The store whose propagation queues {@link #queueMembership} refers to. */
@@ -508,6 +516,45 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    */
   public final void setFirstRunAt(int level) {
     firstRunAt = level;
+  }
+
+  /**
+   * Returns the store level at which the store last imposed the constraint, by {@link
+   * Store#impose(Constraint)} or one of its variants.
+   *
+   * @return the level, or Integer.MAX_VALUE if the store did not impose the constraint.
+   */
+  public final int imposedAt() {
+    return imposedAt;
+  }
+
+  /**
+   * Sets the store level at which the constraint is imposed; only the store calls it.
+   *
+   * @param level the level.
+   */
+  public final void setImposedAt(int level) {
+    imposedAt = level;
+  }
+
+  /**
+   * Tells whether the store owes the constraint its first consistency call: the call was undone
+   * with its level, or the constraint was still queued for it when a level above its imposition was
+   * removed. The store queues it at its next consistency call until the call is made.
+   *
+   * @return true if the call is owed.
+   */
+  public final boolean firstRunOwed() {
+    return firstRunOwed;
+  }
+
+  /**
+   * Sets whether the store owes the constraint its first consistency call; only the store calls it.
+   *
+   * @param owed true if the call is owed.
+   */
+  public final void setFirstRunOwed(boolean owed) {
+    firstRunOwed = owed;
   }
 
   /**

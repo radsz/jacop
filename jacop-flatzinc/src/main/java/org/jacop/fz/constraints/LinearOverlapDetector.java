@@ -33,6 +33,7 @@ package org.jacop.fz.constraints;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
@@ -364,9 +365,22 @@ public class LinearOverlapDetector implements ParserTreeConstants {
       }
     }
     List<IntVar> best = null;
+    Map<IntVar, Integer> positions = null;
     for (int j : touched) {
       if (count[j] >= MIN_SIZE && (best == null || count[j] > best.size())) {
-        List<IntVar> group = largestProportionalGroup(row, rows.get(j));
+        LinkedHashMap<IntVar, Long> other = rows.get(j);
+        List<IntVar> group;
+        if (other.size() < row.size()) {
+          if (positions == null) {
+            positions = new IdentityHashMap<>(2 * row.size());
+            for (IntVar x : row.keySet()) {
+              positions.put(x, positions.size());
+            }
+          }
+          group = largestProportionalGroup(row, other, commonInOrder(positions, other));
+        } else {
+          group = largestProportionalGroup(row, other, row.keySet());
+        }
         if (group.size() >= MIN_SIZE && (best == null || group.size() > best.size())) {
           best = group;
         }
@@ -376,19 +390,40 @@ public class LinearOverlapDetector implements ParserTreeConstants {
     return best != null && substitute(i, best, linear);
   }
 
-  /** The largest set of common variables whose coefficients have the same ratio in both rows. */
+  /**
+   * The variables of row b that row a has, in the order of a: a long row a with many short partners
+   * was read in full for each of them (MIPLIB atlanta-ip, half of the set-up).
+   */
+  private static List<IntVar> commonInOrder(
+      Map<IntVar, Integer> positions, LinkedHashMap<IntVar, Long> b) {
+    List<IntVar> common = new ArrayList<>();
+    for (IntVar x : b.keySet()) {
+      if (positions.containsKey(x)) {
+        common.add(x);
+      }
+    }
+    common.sort(Comparator.comparingInt(positions::get));
+    return common;
+  }
+
+  /**
+   * The largest set of common variables whose coefficients have the same ratio in both rows.
+   *
+   * @param candidates the variables of a to look at, in the order of a, a superset of the common
+   *     variables
+   */
   private List<IntVar> largestProportionalGroup(
-      LinkedHashMap<IntVar, Long> a, LinkedHashMap<IntVar, Long> b) {
+      LinkedHashMap<IntVar, Long> a, LinkedHashMap<IntVar, Long> b, Iterable<IntVar> candidates) {
     Map<List<Long>, List<IntVar>> groups = new HashMap<>();
     List<IntVar> best = List.of();
-    for (Map.Entry<IntVar, Long> t : a.entrySet()) {
-      Long other = b.get(t.getKey());
-      if (other == null || t.getKey().singleton() || occurrences.get(t.getKey()) == null) {
+    for (IntVar x : candidates) {
+      Long other = b.get(x);
+      if (other == null || x.singleton() || occurrences.get(x) == null) {
         continue;
       }
       work++;
       long p = other;
-      long q = t.getValue();
+      long q = a.get(x);
       long g = gcd(Math.abs(p), Math.abs(q));
       p /= g;
       q /= g;
@@ -397,7 +432,7 @@ public class LinearOverlapDetector implements ParserTreeConstants {
         q = -q;
       }
       List<IntVar> group = groups.computeIfAbsent(List.of(p, q), k -> new ArrayList<>());
-      group.add(t.getKey());
+      group.add(x);
       if (group.size() > best.size()) {
         best = group;
       }

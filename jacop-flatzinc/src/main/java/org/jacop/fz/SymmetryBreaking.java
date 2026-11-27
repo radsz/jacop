@@ -133,8 +133,9 @@ final class SymmetryBreaking implements ParserTreeConstants {
   static final boolean SETS = !FALSE.equals(System.getProperty("org.jacop.fz.symmetrySets"));
 
   /**
-   * The most element vertices that set variables add to the graph; the set variables met after that
-   * keep a colour of their own.
+   * The most element vertices that set variables add to the graph, and the most Booleans their
+   * channels may make (one per value between the smallest and the largest element of an upper
+   * bound); the set variables met after that keep a colour of their own.
    */
   static final int MAX_SET_ELEMENTS = 200_000;
 
@@ -3626,6 +3627,9 @@ final class SymmetryBreaking implements ParserTreeConstants {
     Map<SetVar, Integer> setValueSpaces = Map.of();
     private final Map<Long, Integer> setValueVertex = new HashMap<>();
     private int setElements;
+    // the Booleans that channelling the set variables with element vertices may make, one per
+    // value from the smallest to the largest element of each upper bound
+    private long setBooleans;
 
     Graph(IntVar objective, Map<IntVar, Integer> spaceOf) {
       this.objective = objective;
@@ -3916,8 +3920,10 @@ final class SymmetryBreaking implements ParserTreeConstants {
         }
         SetDomain d = s.dom();
         int free = d.lub().getSize() - d.glb().getSize();
-        if (setElements + free <= MAX_SET_ELEMENTS) {
+        long span = d.lub().isEmpty() ? 0 : (long) d.lub().max() - d.lub().min() + 1;
+        if (setElements + free <= MAX_SET_ELEMENTS && setBooleans + span <= MAX_SET_ELEMENTS) {
           setElements += free;
+          setBooleans += span;
           Integer space = setValueSpaces.get(s);
           // in a set value space the edges to the value vertices tell the bounds
           v =

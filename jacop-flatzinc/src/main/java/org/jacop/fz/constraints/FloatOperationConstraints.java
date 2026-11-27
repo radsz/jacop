@@ -290,7 +290,9 @@ class FloatOperationConstraints implements ParserTreeConstants {
     FloatVar v2 = support.getFloatVariable(p2);
     FloatVar v3 = support.getFloatVariable(p3);
 
-    if (v2.singleton()) {
+    // only a point is a constant exponent: a singleton interval is up to the precision wide, and
+    // x^min differs from x^y for the other y in it by more than the precision
+    if (v2.min() == v2.max()) {
       powConstantExponent(v1, v2.min(), v3);
       return;
     }
