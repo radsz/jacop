@@ -276,6 +276,7 @@ public class SequenceDetector implements ParserTreeConstants {
       // redundant: it does not add to the degrees that variable selection reads
       c.setDegreeWeight(0);
       support.pose(c);
+      support.dictionary.windowSequences.add(c);
     }
     posted++;
   }

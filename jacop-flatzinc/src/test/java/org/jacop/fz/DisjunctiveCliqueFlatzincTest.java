@@ -672,6 +672,50 @@ class DisjunctiveCliqueFlatzincTest {
     assertFalse(out.contains("%%%mzn-stat: nodes="), out);
   }
 
+  /**
+   * Four tasks of length 2, each on one of {@code machines} machines, with {@code s_i + 2 <= s_j \/
+   * s_j + 2 <= s_i \/ m_i != m_j} for every pair, as a flexible job shop flattens.
+   */
+  private static String flexibleShop(int machines) {
+    StringBuilder fzn = new StringBuilder();
+    int n = 4;
+    for (int i = 0; i < n; i++) {
+      fzn.append("var 0..8: s").append(i).append(" :: output_var;\n");
+      fzn.append("var 1..").append(machines).append(": m").append(i).append(" :: output_var;\n");
+    }
+    int b = 0;
+    StringBuilder constraints = new StringBuilder();
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        for (int k = 0; k < 3; k++) {
+          fzn.append("var bool: b").append(b + k).append(";\n");
+        }
+        constraints.append(
+            "constraint int_lin_le_imp([1,-1],[s" + i + ",s" + j + "],-2,b" + b + ");\n");
+        constraints.append(
+            "constraint int_lin_le_imp([1,-1],[s" + j + ",s" + i + "],-2,b" + (b + 1) + ");\n");
+        constraints.append("constraint int_ne_imp(m" + i + ",m" + j + ",b" + (b + 2) + ");\n");
+        constraints.append(
+            "constraint bool_clause([b" + b + ",b" + (b + 1) + ",b" + (b + 2) + "],[]);\n");
+        b += 3;
+      }
+    }
+    return fzn.append(constraints).append("solve satisfy;\n").toString();
+  }
+
+  @Test
+  void optionalUnaryResourcesOnlyForTasksWithFewMachines() throws IOException {
+    // with two machines per task each machine gets a unary resource with optional tasks; with
+    // eight, as in test scheduling (XCSP 2024 TestScheduling, 20 machines), each task is on a
+    // machine with a small chance: the resources pruned nothing there and made -f 25 % slower
+    String few = run(flexibleShop(2), "-debug");
+    assertTrue(few.contains("% redundant unary resource with optional tasks"), few);
+    assertTrue(few.contains("----------"), few);
+    String many = run(flexibleShop(8), "-debug");
+    assertFalse(many.contains("% redundant unary resource with optional tasks"), many);
+    assertTrue(many.contains("----------"), many);
+  }
+
   @Test
   void detectionCanBeTurnedOff() throws IOException {
     String property = "org.jacop.fz.disjunctiveCliques";

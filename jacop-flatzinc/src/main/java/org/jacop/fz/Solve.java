@@ -258,6 +258,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   // a variable of the pure clause model fixed by its complement symmetry
   private boolean pureComplementFixed;
+
+  // the linear constraints and the lex-leader pairs the pure clause model took as clauses
+  private int pureShaped;
+
+  private int pureLexPairs;
   int lcgStatus;
 
   // the linear relaxation (--lp), or null
@@ -3574,11 +3579,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (refutation != null) {
         ignored.add(refutation);
       }
+      ignored.addAll(dictionary.windowSequences);
       if (!refuteAtRoot()) {
         return false;
       }
       PureClauseModel cnf =
-          PureClauseModel.of(store, sat.collectedClauses(), ignored, this::declaredVariables);
+          PureClauseModel.of(
+              store, sat.collectedClauses(), ignored, dictionary.lexPairs, this::declaredVariables);
       if (cnf != null) {
         return executePureClauseSearch(cnf);
       }
@@ -4421,6 +4428,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private boolean executePureClauseSearch(PureClauseModel cnf) {
     pureSat = cnf.solver;
+    pureShaped = cnf.shapedConstraints;
+    pureLexPairs = cnf.lexPairs;
     pureComplementFixed = cnf.complementFixed != 0;
     if (options.debug()) {
       FzConsole.println("% pure clause model: " + cnf.numVars() + " variables solved by JaSAT");
@@ -7123,6 +7132,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         IO.println("%%%mzn-stat: clausalModel=true");
       } else if (pureSat != null) {
         IO.println("%%%mzn-stat: pureClauseModel=true");
+        IO.println("%%%mzn-stat: pureClauseShaped=" + pureShaped);
+        IO.println("%%%mzn-stat: pureClauseLexPairs=" + pureLexPairs);
         if (pureComplementFixed) {
           IO.println("%%%mzn-stat: complementSymmetry=true");
         }
@@ -8118,6 +8129,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private MaxSatModel maxSat;
   private MaxSatLocalSearch maxSatSearch;
   private long maxSatMillis;
+  // the time JaSAT took for a model of the hard clauses the local search did not satisfy
+  // (--free-config maxsat-sat=0 turns it off)
+  private long maxSatSatMillis;
   private long maxSatProposals;
   private SymmetryCanonicalizer maxSatCanonical;
 
@@ -8199,7 +8213,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     long improvedAt = started;
     // the fewest falsified hard clauses so far, and when they were reached
     int fewestHard = Integer.MAX_VALUE;
-    long hardAt = started;
+    boolean jasat = !"0".equals(options.freeConfig("maxsat-sat", "1"));
+    long hardAt = hardSince(jasat, started);
     int[] hintValues = null;
     while (!stopped[0]) {
       long now = System.currentTimeMillis();
@@ -8219,12 +8234,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       if (ls.lowestFalsifiedHard() < fewestHard) {
         fewestHard = ls.lowestFalsifiedHard();
-        hardAt = System.currentTimeMillis();
+        hardAt = hardSince(jasat, System.currentTimeMillis());
       }
       if (ls.falsifiedHard() == 0 && ls.cost() == 0) {
         break;
       }
     }
+    best = jasatStart(model, ls, stopped, started, deadline, best, jasat);
     if (best < Long.MAX_VALUE && model.cost(best) < bestPrintedCost.get()) {
       int[] values = canonical(model.values(ls.bestAssignment()));
       long expected = model.cost(best);
@@ -8250,9 +8266,63 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + ls.steps()
               + "\n%%%mzn-stat: maxsatTime="
               + maxSatMillis / 1000.0
+              + "\n%%%mzn-stat: maxsatSatTime="
+              + maxSatSatMillis / 1000.0
               + (best == Long.MAX_VALUE ? "" : "\n%%%mzn-stat: maxsatBest=" + model.cost(best)));
     }
     return hintValues == null ? null : new Hint(hintedVariables(), hintValues);
+  }
+
+  // the JaSAT start when the local search reached no assignment of the hard clauses (best is
+  // Long.MAX_VALUE) and jasat is on; returns the best cost of the local search
+  private long jasatStart(
+      MaxSatModel model,
+      MaxSatLocalSearch ls,
+      boolean[] stopped,
+      long started,
+      long deadline,
+      long bestSoFar,
+      boolean jasat) {
+    if (bestSoFar != Long.MAX_VALUE || stopped[0] || !jasat) {
+      return bestSoFar;
+    }
+    // no assignment of the hard clauses by the patience: JaSAT looks for one in the rest of the
+    // budget, and the search goes on from it for at least 200 ms, until it finds nothing better
+    // in the last half of the time since, and for at most half the time it searched before
+    // (hanoi5 of the PB competition 2016: the search reached no assignment of its 13,383 hard
+    // clauses in 7 to 15 s, JaSAT finds one of the optimal cost in 0.7 s; on mqc-10tree of the
+    // MaxSAT Evaluation 2024 the search went on for 4 s from the JaSAT start of cost 123 and
+    // ended far from the optimum 2, which the solver then found in 1 s)
+    long asked = System.currentTimeMillis();
+    boolean[] start = deadline <= asked ? null : model.hardModel(deadline - asked);
+    long from = System.currentTimeMillis();
+    maxSatSatMillis = from - asked;
+    if (start == null) {
+      return bestSoFar;
+    }
+    ls.start(start);
+    long best = ls.bestCost();
+    long improvedAt = from;
+    long now = from;
+    while (!stopped[0]
+        && ls.cost() != 0
+        && now <= deadline
+        && now - from <= (from - started) / 2
+        && (now - from <= 200 || now - improvedAt <= (now - from) / 2)) {
+      long found = ls.run(100_000, () -> stopped[0] || System.currentTimeMillis() > deadline);
+      if (found < best) {
+        best = found;
+        improvedAt = System.currentTimeMillis();
+      }
+      now = System.currentTimeMillis();
+    }
+    return best;
+  }
+
+  // the time the fewest falsified hard clauses fell, or long before when JaSAT takes over at the
+  // patience, so that the local search stops there
+  private static long hardSince(boolean jasat, long now) {
+    return jasat ? Long.MIN_VALUE / 4 : now;
   }
 
   /**
