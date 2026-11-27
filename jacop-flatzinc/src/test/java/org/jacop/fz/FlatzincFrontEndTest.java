@@ -10102,4 +10102,32 @@ class FlatzincFrontEndTest {
       assertFalse(out.contains("o = true;\nb = 0;"), out);
     }
   }
+
+  @Test
+  void tableLibraryDecidesATableOfNoVariableByItsRows() throws IOException {
+    // array1d of a table with no column is empty whatever its number of rows, so
+    // table([], array2d(1..2, 1..0, [])) reached jacop_table_int([], []), the empty table: the
+    // model was unsatisfiable (and the reified table false) although the empty tuple is a row
+    Path lib = Path.of("src/main/minizinc/org/jacop/minizinc");
+    for (String file :
+        List.of(
+            "fzn_table_int.mzn",
+            "fzn_table_int_reif.mzn",
+            "fzn_table_bool.mzn",
+            "fzn_table_bool_reif.mzn")) {
+      String text = Files.readString(lib.resolve(file), StandardCharsets.UTF_8);
+      int calls = text.split("jacop_table_[a-z_]+\\(x, array1d\\(t\\)", -1).length - 1;
+      int guards = text.split("if length\\(x\\) = 0 then ", -1).length - 1;
+      assertEquals(calls, guards, file);
+    }
+    // the reified table with a variable keeps its meaning
+    String model =
+        "var 1..2: x :: output_var;\n"
+            + "var bool: b :: output_var;\n"
+            + "constraint jacop_table_int_reif([x],[2],b);\n"
+            + "solve satisfy;\n";
+    String out = run(model, "-a")[0];
+    assertEquals(2, out.split("----------", -1).length - 1, out);
+    assertTrue(out.contains("x = 2;\nb = true;\n"), out);
+  }
 }
