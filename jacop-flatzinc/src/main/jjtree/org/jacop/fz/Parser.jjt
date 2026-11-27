@@ -257,7 +257,43 @@ public class Parser {
 	    node.setClamped(t1.image + ".." + t2.image, low.compareTo(min) < 0, high.compareTo(max) > 0);
 	}
     }
+    // Token-kind checks that replace syntactic lookaheads on the hot paths of constraint
+    // arguments (a 214 MB model spent about a fifth of its parse in jj_scan_token). Each one
+    // answers exactly as the syntactic lookahead it replaces.
+
+    // LOOKAHEAD(3) set_literal(): '{', or INT_LITERAL or IDENT, then '..', then INT_LITERAL or IDENT
+    private boolean setLiteralAhead() {
+	int k1 = getToken(1).kind;
+	if (k1 == LB) {
+	    return true;
+	}
+	if (k1 != INT_LITERAL && k1 != IDENT) {
+	    return false;
+	}
+	// an array access a[i] matches the first alternative of int_flat_expr, IDENT, and then
+	// fails on '[' where '..' is expected, so the syntactic lookahead never chose it
+	if (getToken(2).kind != DOTDOT) {
+	    return false;
+	}
+	int k3 = getToken(3).kind;
+	return k3 == INT_LITERAL || k3 == IDENT;
+    }
+
+    // LOOKAHEAD(2) array_access_expr(): IDENT '['
+    private boolean arrayAccessAhead() {
+	return getToken(1).kind == IDENT && getToken(2).kind == LBOX;
+    }
+
+    // LOOKAHEAD(<INT_LITERAL> (<COMMA> | <RBOX>))
+    private boolean packedIntAhead() {
+	if (getToken(1).kind != INT_LITERAL) {
+	    return false;
+	}
+	int k2 = getToken(2).kind;
+	return k2 == COMMA || k2 == RBOX;
+    }
 }
+
 PARSER_END(Parser)
 
 
@@ -833,8 +869,10 @@ void flat_exprs() :
 void flat_expr() :
 {}
 {
-     non_array_flat_expr()
-	 | array_literal()
+     // explicit token-kind choices: a syntactic choice would scan non_array_flat_expr first
+     LOOKAHEAD({getToken(1).kind == LBOX})
+         array_literal()
+	 | LOOKAHEAD({true}) non_array_flat_expr()
 }
 
 // non_array_flat_exprs:
@@ -855,9 +893,9 @@ void non_array_flat_expr() :
 {}
 {
 //     LOOKAHEAD(set_literal())
-    LOOKAHEAD(3)
+    LOOKAHEAD({setLiteralAhead()})
         set_literal()
-	| scalar_flat_expr()
+	| LOOKAHEAD({true}) scalar_flat_expr()
 }
 
 // scalar_flat_exprs:
@@ -885,7 +923,7 @@ void scalar_flat_expr() #ScalarFlatExpr:
 }
 {
 //     LOOKAHEAD(array_access_expr())
-    LOOKAHEAD(2)
+    LOOKAHEAD({arrayAccessAhead()})
     aa = array_access_expr()
 	{ jjtThis.setType(3); 
 	  jjtThis.setIdent(aa.getIdent()); 
@@ -1034,7 +1072,7 @@ ArrayList<Integer> l = new ArrayList<Integer>();
 void set_literal() #SetLiteral:
 {}
 {
-    ( <LB> [ scalar_flat_exprs() ] <RB>
+    ( <LB> [ LOOKAHEAD({getToken(1).kind != RB}) scalar_flat_exprs() ] <RB>
 	{jjtThis.setType(1);}
      )
     | (int_flat_expr() <DOTDOT> int_flat_expr() 
@@ -1055,16 +1093,16 @@ void set_literal() #SetLiteral:
 void array_literal() #ArrayLiteral:
 { PackedInts ints = new PackedInts(); }
 {
-    <LBOX> [ array_element(ints) ( <COMMA> array_element(ints) )* ] <RBOX>
+    <LBOX> [ LOOKAHEAD({getToken(1).kind != RBOX}) array_element(ints) ( <COMMA> array_element(ints) )* ] <RBOX>
     { ints.close(jjtThis); }
 }
 
 void array_element(PackedInts ints) :
 { Token t; }
 {
-    LOOKAHEAD(<INT_LITERAL> (<COMMA> | <RBOX>))
+    LOOKAHEAD({packedIntAhead()})
     t=<INT_LITERAL> { ints.add(intLiteral(t), jjtree); }
-    | { ints.unpack(jjtree); } non_array_flat_expr()
+    | LOOKAHEAD({true}) { ints.unpack(jjtree); } non_array_flat_expr()
 }
 
 void set_element() #SetElement:

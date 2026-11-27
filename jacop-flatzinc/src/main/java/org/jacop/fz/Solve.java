@@ -4038,9 +4038,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     // fixed search gives way only without a solution, to the annotation's search without learning
-    // the search without learning that LCG gives way to would print the solutions found again
+    // the search without learning that LCG gives way to would print the solutions found again;
+    // under --proof LCG keeps the search: its proof is closed when its search returns, and a second
+    // search after a slice without learning wrote its steps to the closed proof
     Thread slowCheck =
-        worker == null && (free || fixedLabel != null) && !enumerate
+        worker == null && (free || fixedLabel != null) && !enumerate && options.proof() == null
             ? slowLcgCheck(costVar, !free)
             : null;
     Thread firstCheck = fixedFirstMillis > 0 ? fixedFirstCheck(lcg) : null;
