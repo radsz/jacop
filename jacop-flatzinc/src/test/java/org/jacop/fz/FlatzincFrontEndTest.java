@@ -121,6 +121,29 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void argumentsParseWithTokenKindLookahead() throws IOException {
+    // the parser picks set literals, array accesses and packed int array elements by token kinds,
+    // which replaced syntactic lookaheads; each form of argument still reads as before
+    String fzn =
+        """
+        var 1..5: x:: output_var;
+        var 1..5: y:: output_var;
+        array [1..2] of var 1..5: a = [x, y];
+        var bool: b;
+        constraint set_in(x, {1, 3, 5});
+        constraint set_in(y, 2..4);
+        constraint int_lt(a[1], a[2]);
+        constraint int_lin_le([1, -1], [x, 4], 0);
+        constraint int_lin_le([1, 1, 1], [x, y, 0], 9);
+        constraint bool_clause([b], []);
+        solve satisfy;
+        """;
+
+    assertEquals(
+        Set.of("x = 1; y = 2;", "x = 1; y = 3;", "x = 1; y = 4;", "x = 3; y = 4;"), solveAll(fzn));
+  }
+
+  @Test
   void valueChoiceIndomainIsAscendingOrderWithoutWarning() throws IOException {
     // indomain is the MiniZinc value choice "assign values in ascending order"; it was searched as
     // indomain_min but reported on stderr as a not implemented value choice
@@ -2420,6 +2443,44 @@ class FlatzincFrontEndTest {
     assertTrue(!out.contains("does not support"), out);
     String proof = Files.readString(Path.of(prefix + ".pbp"), StandardCharsets.UTF_8);
     assertTrue(proof.contains("conclusion BOUNDS 4 4"), proof);
+  }
+
+  @Test
+  void fixedTasteUnderProofKeepsLcg() throws IOException {
+    // 24 queens in the annotation's order. Under --proof the fixed-search taste stopped LCG after
+    // 1 ms, its search returned and closed the proof, and LCG went on after a taste it did not keep
+    // (ratio 10^6): the next proof step threw "Stream closed". Under --proof LCG keeps the search.
+    int n = 24;
+    StringBuilder fzn = new StringBuilder();
+    StringBuilder q = new StringBuilder();
+    for (int i = 0; i < n; i++) {
+      fzn.append("var 1..").append(n).append(": q").append(i).append(":: output_var;\n");
+      q.append(i == 0 ? "" : ",").append('q').append(i);
+    }
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        fzn.append("constraint int_ne(q").append(i).append(",q").append(j).append(");\n");
+        fzn.append("constraint int_lin_ne([1,-1],[q").append(i).append(",q").append(j);
+        fzn.append("],").append(j - i).append(");\n");
+        fzn.append("constraint int_lin_ne([1,-1],[q").append(i).append(",q").append(j);
+        fzn.append("],").append(i - j).append(");\n");
+      }
+    }
+    fzn.append("solve :: int_search([").append(q).append("],input_order,indomain_min,complete)");
+    fzn.append(" satisfy;\n");
+    String prefix = tmp.resolve("taste").toString();
+    String out =
+        run(
+            fzn.toString(),
+            "--proof",
+            prefix,
+            "-t",
+            "60000",
+            "--free-config",
+            "lcg-fixed-at=0.00001,lcg-fixed-ratio=1000000,lcg-fixed-share=0.001")[0];
+    assertTrue(out.contains("----------"), out);
+    String proof = Files.readString(Path.of(prefix + ".pbp"), StandardCharsets.UTF_8);
+    assertTrue(proof.contains("conclusion SAT"), proof);
   }
 
   @Test
@@ -9285,5 +9346,122 @@ class FlatzincFrontEndTest {
     model.append("solve satisfy;\n");
     String out = run(model.toString(), "-a", "--lcg", "off")[0];
     assertEquals(24, out.split("----------\n", -1).length - 1, out);
+  }
+
+  @Test
+  void pairedInequalitiesOfMinValueWeightsMakeNoParityRow() throws IOException {
+    // -2147483648 * b1 + b2 + b3 <= 1 and -2147483648 * b1 - b2 - b3 <= -1 are no equation (b2 + b3
+    // = 1 only when b1 = 0), but -(-2147483648) is -2147483648 in int: paired, they gave the parity
+    // row b2 xor b3 = 1 and the XOR system kept 8 of the 10 solutions
+    StringBuilder model = new StringBuilder();
+    for (int i = 1; i <= 5; i++) {
+      model.append("var bool: b").append(i).append(" :: output_var;\nvar 0..1: i").append(i);
+      model.append(";\n");
+    }
+    for (int i = 1; i <= 5; i++) {
+      model.append("constraint bool2int(b").append(i).append(",i").append(i).append(");\n");
+    }
+    model.append("constraint int_lin_le([-2147483648,1,1],[i1,i2,i3],1);\n");
+    model.append("constraint int_lin_le([-2147483648,-1,-1],[i1,i2,i3],-1);\n");
+    model.append("constraint int_lin_eq([1,1,1,1],[i2,i3,i4,i5],2);\n");
+    model.append("solve satisfy;\n");
+    String out = run(model.toString(), "-a", "--lcg", "off")[0];
+    assertEquals(10, out.split("----------\n", -1).length - 1, out);
+  }
+
+  @Test
+  void linearRelaxationReasonsCiteOnlyFactsThatHold() throws IOException {
+    // the relaxation explains a bound by the latest of its deductions on the variable that the
+    // trail implies; a deduction of another branch that took the column [x2 = 4] at 1 cited the
+    // bounds of x2 as its fact without checking that x2 = 4 held, so in the core-guided phase
+    // [obj <= 14] got an empty reason, a root fact that cuts off the optimum 15
+    String model =
+        ""
+            + "var 1..2: x0;\n"
+            + "var 1..5: x1;\n"
+            + "var 1..4: x2;\n"
+            + "var bool: b0;\n"
+            + "var {-2,-1,0,1,2,3,5,6}: y0;\n"
+            + "var bool: b1 :: output_var;\n"
+            + "var bool: b2 :: output_var;\n"
+            + "var bool: b3;\n"
+            + "var bool: b4 :: output_var;\n"
+            + "var bool: b5 :: output_var;\n"
+            + "var bool: b6 :: output_var;\n"
+            + "var {-1,0,2,3,4,5,6}: y1;\n"
+            + "var bool: b7 :: output_var;\n"
+            + "var bool: b8 :: output_var;\n"
+            + "var bool: b9 :: output_var;\n"
+            + "var bool: b10 :: output_var;\n"
+            + "var {1,2,3,4,6}: y2;\n"
+            + "var bool: b11;\n"
+            + "var bool: b12;\n"
+            + "var 0..2: y3;\n"
+            + "var 0..1: y4 :: output_var;\n"
+            + "var 0..1: y5;\n"
+            + "var -15..36: obj :: output_var;\n"
+            + "constraint int_eq_reif(x2,1,b7) :: defines_var(b7);\n"
+            + "constraint int_eq_reif(x2,2,b8);\n"
+            + "constraint int_eq_reif(x1,5,b5);\n"
+            + "constraint int_ne_reif(x1,3,b3);\n"
+            + "constraint bool2int(b2,y5) :: defines_var(y5);\n"
+            + "constraint array_bool_or([b11],b12) :: defines_var(b12);\n"
+            + "constraint array_int_element(x0,[6,-2,0],y0) :: defines_var(y0);\n"
+            + "constraint int_eq_reif(x1,4,b4);\n"
+            + "constraint array_int_element(x1,[-1,0,4,6,1],y1);\n"
+            + "constraint int_eq_reif(x1,1,b1) :: defines_var(b1);\n"
+            + "constraint int_ne_reif(x2,3,b9);\n"
+            + "constraint jacop_count([x0,x1,x2],2,y3);\n"
+            + "constraint array_int_element(x2,[1,5,1,6,2],y2) :: defines_var(y2);\n"
+            + "constraint jacop_alldiff([x0,x1,x2]);\n"
+            + "constraint int_eq_imp(x2,4,b10);\n"
+            + "constraint int_ne_reif(x0,2,b0);\n"
+            + "constraint bool2int(b9,y4) :: defines_var(y4);\n"
+            + "constraint int_eq_reif(x1,2,b2) :: defines_var(b2);\n"
+            + "constraint int_lin_eq([1,1,4,-2,1,3,5,3,1,-1,3,0,2,-1,-2,-1],[y0,b1,b4,b6,y1,b7,b8,b9,b10,y2,b11,b12,y3,y4,y5,obj],0) :: defines_var(obj);\n"
+            + "constraint int_lin_le([1,1],[b4,b10],1);\n"
+            + "constraint bool_clause_reif([b8,b6,b10],[],b11);\n"
+            + "constraint int_eq_reif(x1,6,b6) :: defines_var(b6);\n"
+            + "solve maximize obj;\n";
+    System.setProperty("jacop.lcg.check", "true");
+    try {
+      String out = run(model, "--lcg", "on")[0];
+      assertTrue(out.contains("obj = 15;\n----------\n=========="), out);
+    } finally {
+      System.clearProperty("jacop.lcg.check");
+    }
+  }
+
+  @Test
+  void dominanceNogoodsTieAnAffineViewToItsBase() throws IOException {
+    // the fast presolve level makes b1 the view 2 * x11; the dominance nogoods read b1 as a
+    // variable of its own, which only the objective row holds, raised it to 6, so x11 = 3, and
+    // every search reported the model unsatisfiable (x11 = 2 in each solution, the optimum is 78)
+    String model =
+        "var {0,2,3}: x0 :: output_var;\n"
+            + "var 0..2: x1 :: output_var;\n"
+            + "var 1..4: x2 :: output_var;\n"
+            + "var 2..3: x3 :: output_var;\n"
+            + "var 2..5: x6 :: output_var;\n"
+            + "var 2..5: x7 :: output_var;\n"
+            + "var {1,2,4,5,6}: x8 :: output_var;\n"
+            + "var 2..6: x9 :: output_var;\n"
+            + "var -1..4: x11 :: output_var;\n"
+            + "var 2..6: x12 :: output_var;\n"
+            + "var 11..27: b0;\n"
+            + "var 1..7: b1;\n"
+            + "var 31..43: b2;\n"
+            + "var -1000..1000: obj :: output_var;\n"
+            + "constraint int_lin_eq([2,1,-1],[x7,x6,x3],7);\n"
+            + "constraint int_lin_eq([-1,1,2,-1],[x3,x7,x1,x11],1);\n"
+            + "constraint jacop_alldiff([x9,x3,x7]);\n"
+            + "constraint int_lin_eq([2,-1],[x11,b1],0);\n"
+            + "constraint int_lin_eq([1,3,1,2,2,1,1,-1],[x6,x12,x9,x2,x7,x8,x0,b2],0);\n"
+            + "constraint int_lin_eq([1,2,1,-1],[b0,b1,b2,obj],0);\n"
+            + "solve maximize obj;\n";
+    for (String level : new String[] {"fast", "medium"}) {
+      String out = run(model, "--presolve", "on", "--lcg", "off", "--presolve-level", level)[0];
+      assertTrue(out.contains("obj = 78;\n----------\n=========="), level + ": " + out);
+    }
   }
 }

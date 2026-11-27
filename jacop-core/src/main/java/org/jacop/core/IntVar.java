@@ -473,6 +473,29 @@ public class IntVar extends Var {
   }
 
   /**
+   * Tells the store's domain change recorder, if any, that the change reported next moves only the
+   * bounds; see {@link DomainChangeRecorder#changingBounds}.
+   */
+  public void changingBounds() {
+    if (store.domainChangeRecorder != null) {
+      store.domainChangeRecorder.changingBounds(this);
+    }
+  }
+
+  /**
+   * Tells the store's domain change recorder, if any, that the values of an interval are about to
+   * be removed; see {@link DomainChangeRecorder#removingInterval}.
+   *
+   * @param min the first value of the interval
+   * @param max the last value of the interval
+   */
+  public void removingInterval(int min, int max) {
+    if (store.domainChangeRecorder != null) {
+      store.domainChangeRecorder.removingInterval(this, min, max);
+    }
+  }
+
+  /**
    * It informs the variable that its variable has changed according to the specified event.
    *
    * @param event the type of the change (GROUND, BOUND, ANY).

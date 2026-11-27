@@ -523,6 +523,7 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
     saveLevel(storeLevel, v);
     size -= count(minBound, value - 1);
     minBound = value;
+    changingBounds(v);
     v.domainHasChanged(minBound == maxBound ? GROUND : MIN_EVENT);
   }
 
@@ -538,6 +539,7 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
     saveLevel(storeLevel, v);
     size -= count(value + 1, maxBound);
     maxBound = value;
+    changingBounds(v);
     v.domainHasChanged(minBound == maxBound ? GROUND : MAX_EVENT);
   }
 
@@ -560,6 +562,7 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
     boolean maxChanged = hi != maxBound;
     minBound = lo;
     maxBound = hi;
+    changingBounds(v);
     v.domainHasChanged(lo == hi ? GROUND : boundEvent(minChanged, maxChanged));
   }
 
@@ -575,6 +578,7 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
     minBound = value;
     maxBound = value;
     size = 1;
+    v.changingBounds();
     v.domainHasChanged(GROUND);
   }
 
@@ -606,6 +610,7 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
 
   @Override
   public void inComplement(int storeLevel, Var v, int lo, int hi) {
+    removingInterval(v, lo, hi);
     int oldMin = minBound;
     int oldMax = maxBound;
     int oldSize = size;
