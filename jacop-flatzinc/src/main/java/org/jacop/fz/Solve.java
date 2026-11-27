@@ -5203,16 +5203,36 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (now < lcgRegularCheck) {
       return !hopelessLcg(solver, now, unsolvedOnly);
     }
-    printSpeedCheck(solver, now);
+    if (options.debug() && !lcgCheckPrinted) {
+      lcgCheckPrinted = true;
+      IO.println(
+          "%% LCG speed check: "
+              + solver.sat().conflicts
+              + " conflicts, "
+              + solver.sat().decisions
+              + " decisions in "
+              + String.format(Locale.ROOT, "%.1f", (now - lcgStart) / 1e9)
+              + " s, "
+              + (solutionFound ? "with" : "without")
+              + " a solution");
+    }
     // LCG gives way only with a solution to hand over: without one, the check is made again until
     // LCG has one or is no longer slow. cutstock type16 TEST9 found its first solution with LCG at
     // 37 s and none without
     if (tooLateForFreeSearch(solver)) {
       return false;
     }
-    int speed = lcgSpeed(solver, now, rate, perLiteral, unsolvedOnly);
-    if (speed == LCG_FAST) {
-      return false;
+    boolean weak = false;
+    if (solver.sat().conflicts
+        >= slowRate(solver.sat().conflicts, solver.sat().learntLiterals, rate, perLiteral)
+            * (now - lcgStart)
+            / 1e9) {
+      // fast enough; it still gives way when learning cuts the tree too little to pay for its cost
+      // per node, and it stopped making progress
+      weak = !unsolvedOnly && optimisationLearningCutsLittle(solver, now) && solutionFound;
+      if (!weak || "report".equals(options.freeConfig("lcg-opt-probe", "on"))) {
+        return false;
+      }
     }
     long cost = bestPrintedCost.get();
     costs.addLast(new long[] {now, cost});
@@ -5222,9 +5242,30 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (solutionFound && unsolvedOnly) {
       // fixed search keeps LCG once it has a solution
       return false;
+    } else if (solutionFound
+        && slowDeep.holds(
+            solver.sat().conflicts,
+            solver.sat().decisions,
+            solver.solutions,
+            solver.sat().learntLiterals,
+            (now - lcgStart) / 1e9)) {
+      lcgSlowDeep = true;
+      return false;
     } else if (solutionFound) {
-      return keepSlowLcg(
-          solver, now, stallNanos, gain, cost, costs.peekFirst()[1], speed == LCG_WEAK);
+      long before = lcgCostAt(now - stallNanos, costs.peekFirst()[1]);
+      long raised =
+          boundGained(now, stallNanos, lcgBoundGain, cost) ? lcgBoundRaised : Long.MIN_VALUE;
+      if (stillProgressing(now, stallNanos, gain, raised, before, cost)) {
+        lcgSlowDeferred++;
+      } else if (coresRising(now)) {
+        lcgSlowCoreKeeps++;
+      } else {
+        lcgWeak = weak;
+        lcgSlow = true;
+        sliceInsteadOfHandOver();
+        solver.stop();
+        return false;
+      }
     } else if ((solver.sat().conflicts < unsolvedRate * (now - lcgStart) / 1e9
             || !unsolvedOnly && unsolvedLate(now))
         && !keptForCores(now)) {
@@ -5272,99 +5313,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return false;
     }
     lcgSlowCoreKeeps++;
-    return true;
-  }
-
-  // prints the first check of LCG's speed under -debug
-  private void printSpeedCheck(LcgSolver solver, long now) {
-    if (options.debug() && !lcgCheckPrinted) {
-      lcgCheckPrinted = true;
-      IO.println(
-          "%% LCG speed check: "
-              + solver.sat().conflicts
-              + " conflicts, "
-              + solver.sat().decisions
-              + " decisions in "
-              + String.format(Locale.ROOT, "%.1f", (now - lcgStart) / 1e9)
-              + " s, "
-              + (solutionFound ? "with" : "without")
-              + " a solution");
-    }
-  }
-
-  // lcgSlowDeferred as counted by the search thread
-  private int lcgSlowDeferrals;
-  // lcg-opt-probe=report: the probe of weak learning only reports
-  private static final String OPT_PROBE_REPORT = "report";
-  // the outcomes of lcgSpeed
-  private static final int LCG_FAST = 0;
-  private static final int LCG_SLOW = 1;
-  private static final int LCG_WEAK = 2;
-
-  /**
-   * Classifies LCG's speed at a check.
-   *
-   * @return LCG_SLOW below the slow rate; LCG_WEAK when fast enough but learning cuts the tree too
-   *     little to pay for its cost per node (it still gives way when it stopped making progress);
-   *     LCG_FAST otherwise
-   */
-  private int lcgSpeed(
-      LcgSolver solver, long now, double rate, double perLiteral, boolean unsolvedOnly) {
-    if (solver.sat().conflicts
-        < slowRate(solver.sat().conflicts, solver.sat().learntLiterals, rate, perLiteral)
-            * (now - lcgStart)
-            / 1e9) {
-      return LCG_SLOW;
-    }
-    boolean weak = !unsolvedOnly && optimisationLearningCutsLittle(solver, now) && solutionFound;
-    return !weak || OPT_PROBE_REPORT.equals(options.freeConfig("lcg-opt-probe", "on"))
-        ? LCG_FAST
-        : LCG_WEAK;
-  }
-
-  /**
-   * Decides on a slow (or weak) LCG with a solution: it is kept when it goes deep between its
-   * conflicts ({@link DeepDescents}), still makes progress in the stall window, or its core-guided
-   * phase keeps finding cores; otherwise it gives way to search without learning.
-   *
-   * @param firstCost the best cost at the oldest check in the stall window
-   * @param weak true if LCG is fast enough but learning cuts too little
-   * @return false, since the check is not made again once LCG is kept for its depth or gives way;
-   *     true if it is to be made again
-   */
-  private boolean keepSlowLcg(
-      LcgSolver solver,
-      long now,
-      long stallNanos,
-      double gain,
-      long cost,
-      long firstCost,
-      boolean weak) {
-    if (slowDeep.holds(
-        solver.sat().conflicts,
-        solver.sat().decisions,
-        solver.solutions,
-        solver.sat().learntLiterals,
-        (now - lcgStart) / 1e9)) {
-      lcgSlowDeep = true;
-      return false;
-    }
-    long before = lcgCostAt(now - stallNanos, firstCost);
-    long raised =
-        boundGained(now, stallNanos, lcgBoundGain, cost) ? lcgBoundRaised : Long.MIN_VALUE;
-    if (stillProgressing(now, stallNanos, gain, raised, before, cost)) {
-      // counted by the search thread, published to the volatile read by the statistics
-      lcgSlowDeferrals++;
-      lcgSlowDeferred = lcgSlowDeferrals;
-    } else if (coresRising(now)) {
-      lcgSlowCoreKeeps++;
-    } else {
-      lcgWeak = weak;
-      lcgSlow = true;
-      sliceInsteadOfHandOver();
-      solver.stop();
-      return false;
-    }
     return true;
   }
 
@@ -7021,10 +6969,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IO.println("%%%mzn-stat: lcgUnsolvedSlices=" + lcgUnsolvedSlices);
       IO.println("%%%mzn-stat: lcgSlowUnsolved=" + lcgSlowUnsolved);
     }
-    if (lcgSlowDeep) {
-      // LCG made too few conflicts but went deep between them, so it was kept
-      IO.println("%%%mzn-stat: lcgSlowDeep=true");
-    }
   }
 
   private void printLcgStatistics(boolean interrupted) {
@@ -7079,6 +7023,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         if (lcgSlowCoreKeeps > 0) {
           // LCG made too few conflicts but its core-guided phase kept finding cores
           IO.println("%%%mzn-stat: lcgSlowCoreKeeps=" + lcgSlowCoreKeeps);
+        }
+        if (lcgSlowDeep) {
+          // LCG made too few conflicts but went deep between them, so it was kept
+          IO.println("%%%mzn-stat: lcgSlowDeep=true");
         }
       }
     }
