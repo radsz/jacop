@@ -10698,4 +10698,23 @@ class FlatzincFrontEndTest {
     assertTrue(out[0].contains("%%%mzn-stat: peakOutputKeys=3\n"), out[0]);
     assertTrue(out[0].contains("%%%mzn-stat: repeatedOutputs=6\n"), out[0]);
   }
+
+  @Test
+  void valuePrecedenceKeepsAnOptimumTheMaximumObjectiveCanTake() throws IOException {
+    // relabelling the colours in the order of their first use lowers the largest one, which the
+    // objective defined as the maximum must then take: z in 3..5 (or {1, 3, 4, 5}) cannot take 2,
+    // and value precedence over 1..5 made the model UNSAT instead of z = 3
+    for (String dom : new String[] {"3..5", "{1,3,4,5}"}) {
+      String model =
+          "var 1..5: x1 :: output_var;\nvar 1..5: x2 :: output_var;\n"
+              + "var "
+              + dom
+              + ": z :: output_var;\nconstraint int_ne(x1, x2);\n"
+              + "constraint jacop_maximum(z, [x1, x2]);\nsolve minimize z;\n";
+      for (String lcg : new String[] {"on", "off"}) {
+        String out = run(model, "--symmetry", "on", "--lcg", lcg)[0];
+        assertTrue(out.contains("z = 3;\n----------\n=========="), out);
+      }
+    }
+  }
 }

@@ -2391,6 +2391,10 @@ final class SymmetryBreaking implements ParserTreeConstants {
     for (Item item : items) {
       List<IntVar> xs = new ArrayList<>();
       if (bounds(item, objective, xs)) {
+        if (!item.name().startsWith("int_l") && !takesEveryMaximum(objective, xs)) {
+          // relabelling lowers the largest value, which the objective then takes
+          return null;
+        }
         bounded.addAll(xs);
         continue;
       }
@@ -2406,6 +2410,27 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
     }
     return bounded.isEmpty() ? null : bounded;
+  }
+
+  /**
+   * Tells whether the objective, the largest of xs, can take every value of the variables xs up to
+   * its own largest value: relabelling the values of a solution in the order of their first use
+   * lowers the largest one, and the objective must then take it (with {@code var 3..5: z = max(x1,
+   * x2)} and {@code x1 != x2} the relabelled solutions have z = 2).
+   */
+  private static boolean takesEveryMaximum(IntVar objective, List<IntVar> xs) {
+    for (IntVar x : xs) {
+      for (ValueEnumeration e = x.dom().valueEnumeration(); e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        if (v > objective.max()) {
+          break;
+        }
+        if (!objective.dom().contains(v)) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   /**
