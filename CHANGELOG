@@ -9539,6 +9539,30 @@ Version 5.0 (unreleased)
    -Dorg.jacop.lp.subsetCardinalities=false turns the merge off,
    org.jacop.lp.subsetCardinalityLength (default 5) bounds the clauses.
 
+521. Lazy clause generation under a fixed search on an optimisation model
+   first runs the annotation's search without learning for 0.5 % of the
+   time limit, at most a second, and LCG then gets three times as long,
+   at least a second. When LCG has not reached that search's best cost by
+   then and is at least three times slower per node, it gives way to the
+   annotation's search without learning under the best cost. When that
+   search then goes twice as long as it had run (at least 10 s) without a
+   better solution, LCG goes on under the best cost. Small sparse diffn
+   (at most 30 rectangles, whose minimal areas fill at most 5 % of the
+   box) is posted as MiniZinc's pairwise disjunctions under LCG fixed
+   search, so that learning gets the disjunct literals. MiniZinc Challenge
+   2017 city-position, the same improving solutions 16 times faster per
+   node without learning, at 600 s: city-5-05 proved in 44 s (223 s),
+   city-5-06 in 133 s (320 s), city-5-08 proved 4,500 in 502 s (927,199
+   unproved); city-8-06 at 1200 s 2,468,829 -> 2,224,509. cargo
+   (2013-2018), 10 sparse-diffn instances at 600 s: 0 -> 7 proved. Wide
+   set fd, 202 instances at 600 s, before the hand-back: solved 138 -> 144,
+   total time 0.936; the 18 on which LCG gave way or lost, with it: total
+   8,255 -> 7,071 s. --free-config fixed-first=0 turns the
+   first search off (fixed-first-max, fixed-first-lcg, fixed-first-rate,
+   fixed-first-stall and fixed-first-stall-min tune it), and
+   -Dorg.jacop.fz.diffnPairs=0 the pairs (diffnPairsDensity sets the
+   density). -s prints fixedFirst=decided, lcg, cp or cp-lcg.
+
 527. The linear relaxation of an objective tries all linearized rows of the
    model's constraints (big-M rows of reifications and implications, the
    sides of min and max, ...) up to 8,000 of them

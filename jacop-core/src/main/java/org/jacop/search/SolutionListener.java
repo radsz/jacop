@@ -131,8 +131,8 @@ public interface SolutionListener<T extends Var> {
   void setParentSolutionListener(SolutionListener<? extends Var> parent);
 
   /**
-   * For a given master solution finds any solution within that listener which matches the master
-   * solution.
+   * For a given master solution finds the last solution within that listener which matches the
+   * master solution, the best one when the search optimizes.
    *
    * @param parentSolutionNo solution number of the parent for which we search matching solution.
    * @return -1 if no solution was found, otherwise the index of the solution.

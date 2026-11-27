@@ -72,6 +72,7 @@ import org.jacop.constraints.XneqY;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.Table;
+import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -3156,5 +3157,237 @@ class LinearRelaxationTest {
     clauses.add(clause(new IntVar[] {x[1]}, x[3]));
     clauses.add(clause(new IntVar[] {x[2], x[3]}, x[0]));
     assertThat(LinearRelaxation.clauseRefutation(store, clauses)).isNull();
+  }
+
+  /**
+   * The first solve of a relaxation made above the root, under decisions, at a level then removed:
+   * its cuts took the bounds of that level as the root's, and the search from the root lost its
+   * optimum on about one model in thirty. The relaxation now finds the bounds below that level
+   * wider than those of the first solve and stops solving, checking only the rows of the model.
+   */
+  @Test
+  void aFirstSolveAtALevelThatIsRemovedKeepsTheOptimum() {
+    int checked = 0;
+    for (long seed = 0; seed < 400; seed++) {
+      Random r = new Random(seed);
+      int n = 3 + r.nextInt(5);
+      int m = 2 + r.nextInt(4);
+      int u = 1 + r.nextInt(r.nextBoolean() ? 2 : 6);
+      int[][] w = new int[m][n];
+      int[] rhs = new int[m];
+      String[] rel = new String[m];
+      for (int i = 0; i < m; i++) {
+        rel[i] = r.nextBoolean() ? "<=" : ">=";
+        int s = 0;
+        for (int j = 0; j < n; j++) {
+          w[i][j] = r.nextInt(3) == 0 ? 0 : r.nextInt(11) - 3;
+          s += w[i][j] * r.nextInt(u + 1);
+        }
+        rhs[i] = s + ("<=".equals(rel[i]) ? r.nextInt(3) : -r.nextInt(3));
+      }
+      int[] c = new int[n + 1];
+      for (int j = 0; j < n; j++) {
+        c[j] = r.nextInt(9) - 2;
+      }
+      c[n] = -1;
+      // the optimum by enumeration
+      int best = Integer.MAX_VALUE;
+      int[] v = new int[n];
+      for (boolean more = true; more; ) {
+        boolean holds = true;
+        for (int i = 0; i < m && holds; i++) {
+          int s = 0;
+          for (int j = 0; j < n; j++) {
+            s += w[i][j] * v[j];
+          }
+          holds = "<=".equals(rel[i]) ? s <= rhs[i] : s >= rhs[i];
+        }
+        if (holds) {
+          int s = 0;
+          for (int j = 0; j < n; j++) {
+            s += c[j] * v[j];
+          }
+          best = Math.min(best, s);
+        }
+        int j = 0;
+        while (j < n && v[j] == u) {
+          v[j++] = 0;
+        }
+        more = j < n;
+        if (more) {
+          v[j]++;
+        }
+      }
+      Store store = new Store();
+      IntVar[] x = new IntVar[n + 1];
+      for (int j = 0; j < n; j++) {
+        x[j] = new IntVar(store, "x" + j, 0, u);
+      }
+      x[n] = new IntVar(store, "cost", -1000, 1000);
+      for (int i = 0; i < m; i++) {
+        store.impose(new LinearInt(Arrays.copyOf(x, n), w[i], rel[i], rhs[i]));
+      }
+      store.impose(new LinearInt(x, c, "==", 0));
+      LinearRelaxation relaxation = LinearRelaxation.of(store, x[n], false);
+      if (relaxation == null) {
+        continue;
+      }
+      store.impose(relaxation);
+      // the relaxation's first solve comes after up to three decisions, each at a level of its own
+      int k = 1 + r.nextInt(3);
+      try {
+        for (int level = 1; level <= k; level++) {
+          store.setLevel(level);
+          IntVar y = x[r.nextInt(n + 1)];
+          if (!y.singleton()) {
+            int value = y.min() + r.nextInt(Math.max(1, Math.min(y.max() - y.min(), 2 * u + 2)));
+            if (r.nextBoolean()) {
+              y.domain.inMax(level, y, value);
+            } else {
+              y.domain.inMin(level, y, value + 1);
+            }
+          }
+        }
+        store.consistency();
+      } catch (FailException e) {
+        // the decisions fail: the level is removed all the same
+      }
+      while (store.level > 0) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      SelectChoicePoint<IntVar> select =
+          new SimpleSelect<>(Arrays.copyOf(x, n), null, new IndomainMin<>());
+      boolean found = search.labeling(store, select, x[n]);
+      assertThat(found ? search.getCostValue() : Integer.MAX_VALUE)
+          .as("seed %d", seed)
+          .isEqualTo(best);
+      checked++;
+    }
+    assertThat(checked).isGreaterThan(300);
+  }
+
+  /**
+   * The explanation checker copies a linear relaxation with its MIR and Gomory cuts, which hold
+   * over the whole search and which its explanations cite: the failure of [obj <= 8], the root
+   * bound of the relaxation, in the search of the core-guided phase for a solution at that bound,
+   * was explained by a Gomory cut over the tuple columns of the table hulls, and the checker, whose
+   * copy had only the rows (with fractional tuple columns), found x0 = x1 = x2 = 1, which no table
+   * allows, and reported a wrong explanation (lpchk.fzn). The search finds the optimum of
+   * depth-first search.
+   */
+  @Test
+  void explanationCheckerCopiesTheCutsOfTheRelaxation() {
+    long expected = -1;
+    // the cuts of the root depend on the time of its solves: several runs, so that one cites them
+    for (int run = 0; run < 6; run++) {
+      boolean lcg = run > 0;
+      Store store = new Store();
+      IntVar[] x = {
+        new IntVar(store, "x0", 1, 5), new IntVar(store, "x1", 1, 5), new IntVar(store, "x2", 1, 3)
+      };
+      IntVar[] t = new IntVar[5];
+      for (int i = 0; i < t.length; i++) {
+        t[i] = new IntVar(store, "t" + i, 0, i == 3 ? 7 : 5);
+      }
+      IntVar obj = new IntVar(store, "obj", 0, 62);
+      IntVar[][] scopes = {
+        {x[0], x[2], x[1], t[0]},
+        {x[0], x[1], x[2], t[1]},
+        {x[0], x[2], x[1], t[2]},
+        {x[0], x[1], x[2], t[4]},
+      };
+      int[][][] tuples = {
+        {
+          {1, 1, 2, 3}, {1, 1, 3, 1}, {1, 1, 5, 1}, {1, 2, 1, 2}, {1, 2, 3, 0}, {1, 2, 4, 1},
+          {1, 2, 5, 4}, {1, 3, 1, 3}, {1, 3, 3, 5}, {1, 3, 4, 0}, {2, 1, 2, 3}, {2, 1, 3, 1},
+          {2, 1, 4, 4}, {2, 1, 5, 5}, {2, 2, 1, 4}, {2, 2, 2, 1}, {2, 2, 4, 3}, {2, 3, 1, 2},
+          {2, 3, 2, 4}, {2, 3, 3, 3}, {2, 3, 5, 2}, {3, 1, 1, 1}, {3, 1, 2, 4}, {3, 1, 3, 2},
+          {3, 1, 4, 4}, {3, 1, 5, 4}, {3, 2, 1, 1}, {3, 2, 2, 1}, {3, 2, 3, 5}, {3, 2, 4, 4},
+          {3, 2, 5, 0}, {3, 3, 1, 1}, {3, 3, 2, 4}, {3, 3, 3, 2}, {3, 3, 4, 0}, {4, 1, 1, 5},
+          {4, 1, 2, 3}, {4, 1, 3, 1}, {4, 1, 5, 1}, {4, 2, 1, 0}, {4, 2, 2, 5}, {4, 2, 3, 1},
+          {4, 2, 4, 3}, {4, 2, 5, 1}, {4, 3, 1, 5}, {4, 3, 2, 1}, {4, 3, 3, 3}, {4, 3, 4, 1},
+          {5, 1, 1, 1}, {5, 1, 2, 0}, {5, 1, 3, 3}, {5, 1, 4, 1}, {5, 1, 5, 5}, {5, 2, 1, 5},
+          {5, 2, 3, 5}, {5, 2, 5, 0}, {5, 3, 2, 0}, {5, 3, 5, 2}
+        },
+        {
+          {1, 1, 1, 4}, {1, 1, 2, 2}, {1, 1, 3, 5}, {1, 2, 3, 0}, {1, 3, 1, 5}, {1, 3, 2, 0},
+          {1, 3, 3, 2}, {1, 4, 1, 3}, {1, 4, 2, 1}, {1, 4, 3, 3}, {1, 5, 1, 3}, {2, 1, 1, 2},
+          {2, 1, 2, 3}, {2, 1, 3, 2}, {2, 2, 1, 1}, {2, 2, 2, 0}, {2, 3, 1, 4}, {2, 3, 2, 4},
+          {2, 4, 1, 1}, {2, 4, 2, 3}, {2, 5, 1, 5}, {2, 5, 2, 4}, {2, 5, 3, 4}, {3, 1, 2, 0},
+          {3, 1, 3, 0}, {3, 2, 1, 0}, {3, 2, 2, 2}, {3, 2, 3, 4}, {3, 3, 1, 0}, {3, 3, 2, 3},
+          {3, 3, 3, 4}, {3, 4, 2, 3}, {3, 4, 3, 4}, {3, 5, 2, 4}, {3, 5, 3, 5}, {4, 1, 2, 5},
+          {4, 1, 3, 0}, {4, 2, 1, 3}, {4, 2, 2, 5}, {4, 2, 3, 4}, {4, 4, 1, 4}, {4, 4, 2, 5},
+          {4, 4, 3, 2}, {4, 5, 1, 2}, {4, 5, 3, 3}, {5, 1, 1, 0}, {5, 1, 2, 5}, {5, 1, 3, 0},
+          {5, 2, 1, 1}, {5, 2, 3, 0}, {5, 3, 2, 5}, {5, 3, 3, 2}, {5, 4, 2, 1}, {5, 4, 3, 5},
+          {5, 5, 3, 1}
+        },
+        {
+          {1, 1, 1, 3}, {1, 1, 3, 1}, {1, 1, 4, 5}, {1, 2, 1, 5}, {1, 2, 3, 0}, {1, 2, 4, 5},
+          {1, 2, 5, 2}, {1, 3, 2, 3}, {1, 3, 3, 5}, {1, 3, 4, 2}, {1, 3, 5, 1}, {2, 1, 2, 4},
+          {2, 1, 4, 5}, {2, 2, 1, 5}, {2, 2, 2, 1}, {2, 2, 3, 4}, {2, 2, 5, 2}, {2, 3, 1, 5},
+          {2, 3, 2, 1}, {3, 1, 1, 1}, {3, 1, 2, 4}, {3, 1, 3, 3}, {3, 1, 4, 0}, {3, 1, 5, 5},
+          {3, 2, 1, 3}, {3, 2, 2, 2}, {3, 2, 3, 0}, {3, 2, 4, 0}, {3, 3, 1, 3}, {3, 3, 4, 3},
+          {3, 3, 5, 3}, {4, 1, 1, 3}, {4, 1, 2, 5}, {4, 1, 3, 4}, {4, 1, 4, 2}, {4, 1, 5, 2},
+          {4, 2, 1, 1}, {4, 2, 2, 5}, {4, 2, 3, 0}, {4, 2, 4, 5}, {4, 3, 4, 1}, {4, 3, 5, 5},
+          {5, 1, 1, 1}, {5, 1, 3, 5}, {5, 1, 5, 5}, {5, 2, 1, 5}, {5, 2, 2, 4}, {5, 2, 3, 3},
+          {5, 2, 4, 4}, {5, 2, 5, 4}, {5, 3, 1, 0}, {5, 3, 2, 4}, {5, 3, 3, 0}, {5, 3, 5, 1}
+        },
+        {
+          {1, 1, 1, 3}, {1, 1, 3, 0}, {1, 2, 2, 3}, {1, 3, 2, 5}, {1, 4, 1, 5}, {1, 4, 2, 0},
+          {1, 4, 3, 4}, {1, 5, 3, 5}, {2, 1, 1, 1}, {2, 1, 3, 3}, {2, 2, 1, 4}, {2, 2, 2, 5},
+          {2, 3, 1, 2}, {2, 3, 3, 0}, {2, 4, 3, 5}, {2, 5, 1, 5}, {3, 1, 1, 4}, {3, 1, 2, 0},
+          {3, 1, 3, 1}, {3, 2, 1, 1}, {3, 2, 2, 4}, {3, 3, 1, 3}, {3, 3, 2, 4}, {3, 3, 3, 3},
+          {3, 4, 2, 0}, {3, 4, 3, 1}, {3, 5, 2, 4}, {3, 5, 3, 1}, {4, 1, 1, 5}, {4, 1, 2, 0},
+          {4, 1, 3, 4}, {4, 2, 1, 1}, {4, 2, 3, 3}, {4, 4, 1, 3}, {4, 4, 2, 0}, {4, 4, 3, 3},
+          {4, 5, 1, 1}, {4, 5, 2, 1}, {4, 5, 3, 2}, {5, 1, 1, 2}, {5, 1, 2, 0}, {5, 1, 3, 4},
+          {5, 2, 1, 5}, {5, 2, 2, 2}, {5, 2, 3, 0}, {5, 3, 1, 1}, {5, 3, 2, 2}, {5, 4, 3, 5},
+          {5, 5, 1, 2}, {5, 5, 3, 2}
+        },
+      };
+      List<TableCliques.Table> tables = new ArrayList<>();
+      for (int k = 0; k < scopes.length; k++) {
+        store.impose(new Table(scopes[k], tuples[k]));
+        tables.add(new TableCliques.Table(scopes[k], tuples[k]));
+      }
+      store.impose(new ElementInteger(x[2], new int[] {2, 7, 5}, t[3], 0));
+      store.impose(
+          new LinearInt(
+              new IntVar[] {t[0], t[1], t[2], t[3], t[4], obj},
+              new int[] {3, 3, 2, 1, 3, -1},
+              "==",
+              0));
+      if (!lcg) {
+        DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+        search.setPrintInfo(false);
+        IntVar[] vars = {x[0], x[1], x[2], t[0], t[1], t[2], t[3], t[4]};
+        assertThat(search.labeling(store, new SimpleSelect<>(vars, null, new IndomainMin<>()), obj))
+            .isTrue();
+        expected = search.getCostValue();
+        continue;
+      }
+      LinearRelaxation r =
+          LinearRelaxation.of(
+              store,
+              obj,
+              false,
+              List.of(),
+              TableCliques.rows(tables).all(),
+              Set.of(),
+              LinearRelaxation.Simplex.DENSE);
+      store.impose(r);
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      // the core-guided phase of the flatzinc front end, whose first search is at the root bound
+      solver.setCoreSearch(0.5, 100_000, 5000);
+      solver.setCoreDelay(0.05, 10_000, 0.02);
+      solver.setTimeLimit(60_000);
+      assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+      assertThat(solver.boundDives).isPositive();
+      assertThat(r.cuts).isPositive();
+      assertThat((long) solver.value(obj)).isEqualTo(expected);
+    }
   }
 }

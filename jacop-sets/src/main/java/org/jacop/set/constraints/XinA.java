@@ -153,7 +153,7 @@ public class XinA extends PrimitiveConstraint implements Copyable<XinA>, Explain
     if (v == x) {
       return IntDomain.ANY;
     } else {
-      return SetDomain.GLB_EVENT;
+      return SetDomain.ANY;
     }
   }
 
@@ -166,10 +166,6 @@ public class XinA extends PrimitiveConstraint implements Copyable<XinA>, Explain
       return;
     }
 
-    if (x.singleton()) {
-      a.domain.inLubComplement(store.level, a, x.value());
-    }
-
     IntDomain xDom = x.domain.subtract(a.domain.glb());
 
     if (xDom.getSize() == 0) {
@@ -177,6 +173,11 @@ public class XinA extends PrimitiveConstraint implements Copyable<XinA>, Explain
     }
 
     x.domain.in(store.level, x, xDom);
+
+    // after pruning x, which may have made it singleton
+    if (x.singleton()) {
+      a.domain.inLubComplement(store.level, a, x.value());
+    }
   }
 
   /**
@@ -229,7 +230,7 @@ public class XinA extends PrimitiveConstraint implements Copyable<XinA>, Explain
     if (v == x) {
       return IntDomain.ANY;
     } else {
-      return SetDomain.GLB_EVENT;
+      return SetDomain.ANY;
     }
   }
 

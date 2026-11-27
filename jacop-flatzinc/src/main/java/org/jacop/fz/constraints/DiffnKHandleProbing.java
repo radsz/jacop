@@ -36,6 +36,7 @@ import org.jacop.constraints.diffn.DiffnK;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.fz.ModelTimeOut;
 
 /**
  * Finds presence handles for non-strict {@link DiffnK} constraints by probing at the root.
@@ -44,7 +45,7 @@ import org.jacop.core.Store;
  * through a presence handle: a length that is 0 whenever any length of the box is 0. For each such
  * box every length that can be 0 is set to 0 in turn and the store propagated; a length that
  * becomes 0 in every probe is the handle. A probe that fails proves the length positive, which is
- * kept at the root.
+ * kept at the root. Probing stops at the time-out, and a probe stopped there proves nothing.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -57,8 +58,15 @@ final class DiffnKHandleProbing {
   private final Store store;
   private int probes;
 
-  DiffnKHandleProbing(Store store) {
+  // the time-out as given by System.currentTimeMillis(), 0 for none
+  private final long deadline;
+
+  // whether a probe stopped at the time-out
+  private boolean cut;
+
+  DiffnKHandleProbing(Store store, long deadline) {
     this.store = store;
+    this.deadline = deadline;
   }
 
   /**
@@ -66,13 +74,14 @@ final class DiffnKHandleProbing {
    * fixpoint.
    *
    * @return false if the store failed after the lengths proved positive were pruned.
+   * @throws ModelTimeOut when that propagation stopped at the time-out.
    */
   boolean probe(List<DiffnK> constraints) {
     for (DiffnK c : constraints) {
       IntVar[] handle = new IntVar[c.boxes()];
       boolean found = false;
       List<IntVar> positive = new ArrayList<>();
-      for (int i = 0; i < handle.length && probes < MAX_PROBES; i++) {
+      for (int i = 0; i < handle.length && probes < MAX_PROBES && !cut; i++) {
         handle[i] = handleOf(c.lengths(i), positive);
         found |= handle[i] != null;
       }
@@ -87,7 +96,10 @@ final class DiffnKHandleProbing {
         } catch (FailException _) {
           return false;
         }
-        if (!store.consistency()) {
+        if (!store.consistencyUntil(deadline)) {
+          if (store.isConsistencyCut()) {
+            throw new ModelTimeOut();
+          }
           return false;
         }
       }
@@ -124,15 +136,21 @@ final class DiffnKHandleProbing {
       probes++;
       store.setLevel(level + 1);
       length[e].domain.in(store.level, length[e], 0, 0);
-      if (store.consistency()) {
+      if (store.consistencyUntil(deadline)) {
         for (int d = 0; d < k; d++) {
           candidate[d] &= length[d].max() == 0;
         }
+      } else if (store.isConsistencyCut()) {
+        // stopped at the time-out: the box gets no handle, and probing ends
+        cut = true;
       } else {
         positive.add(length[e]);
       }
       store.removeLevel(level + 1);
       store.setLevel(level);
+      if (cut) {
+        return null;
+      }
     }
     for (int d = 0; d < k; d++) {
       // a length proved positive cannot be the handle; a box that cannot be absent needs none

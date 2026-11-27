@@ -106,12 +106,16 @@ public class AmongVar extends Constraint
   private TimeStampInt yGrounded;
 
   // Scratch space of consistency, kept between calls so that the counting allocates nothing.
-  // lbOfValue and ubOfValue hold lb[v] and ub[v] at v - valueOffset, valid where valueStamp is
-  // the stamp of the current call.
+  // lbOfValue and ubOfValue hold lb[v] and ub[v] at the rank of v among the values reserved for
+  // the call, valid where valueStamp is the stamp of the current call. The reserved values are the
+  // intervals reservedMin[h]..reservedMax[h], whose first value has rank reservedRank[h].
   private int[] lbOfValue = new int[0];
   private int[] ubOfValue = new int[0];
   private int[] valueStamp = new int[0];
-  private int valueOffset;
+  private int[] reservedMin = new int[0];
+  private int[] reservedMax = new int[0];
+  private int[] reservedRank = new int[0];
+  private int reservedIntervals;
   private int callStamp;
   // per position of listOfX: how many values the x shares with ub(S) and has outside lb(S),
   // 0, 1 or 2 for two or more, and the value when there is exactly one
@@ -883,7 +887,7 @@ public class AmongVar extends Constraint
             if (DEBUG_ALL) {
               log.debug("--- ub[{}] = {}", v, ubTmp);
             }
-            int index = v - valueOffset;
+            int index = valueIndex(v);
             lbOfValue[index] = lbTmp;
             ubOfValue[index] = ubTmp;
             valueStamp[index] = callStamp;
@@ -1132,18 +1136,47 @@ public class AmongVar extends Constraint
   }
 
   /** Makes the value arrays cover the values of pureUbs for this call. */
-  private void reserveValues(IntDomain pureUbs) {
+  private void reserveValues(IntervalDomain pureUbs) {
     if (pureUbs.isEmpty()) {
       return;
     }
-    int min = pureUbs.min();
-    int size = pureUbs.max() - min + 1;
+    int intervals = pureUbs.size;
+    if (intervals > reservedMin.length) {
+      reservedMin = new int[intervals];
+      reservedMax = new int[intervals];
+      reservedRank = new int[intervals];
+    }
+    int size = 0;
+    for (int h = 0; h < intervals; h++) {
+      Interval inv = pureUbs.getInterval(h);
+      reservedMin[h] = inv.min();
+      reservedMax[h] = inv.max();
+      reservedRank[h] = size;
+      size += inv.max() - inv.min() + 1;
+    }
+    reservedIntervals = intervals;
     if (size > valueStamp.length) {
       lbOfValue = new int[size];
       ubOfValue = new int[size];
       valueStamp = new int[size];
     }
-    valueOffset = min;
+  }
+
+  /** The rank of v among the reserved values, or -1 when v is not one of them. */
+  private int valueIndex(int v) {
+    int low = 0;
+    int high = reservedIntervals - 1;
+    while (low <= high) {
+      int mid = (low + high) >>> 1;
+      if (v < reservedMin[mid]) {
+        high = mid - 1;
+      } else if (v > reservedMax[mid]) {
+        low = mid + 1;
+      } else {
+        return reservedRank[mid] + v - reservedMin[mid];
+      }
+    }
+    return -1;
   }
 
   /** Counts, for each x of this round, its values shared with ub(S) and outside lb(S). */
@@ -1172,16 +1205,16 @@ public class AmongVar extends Constraint
 
   private int lbOfValue(int v) {
     checkValueComputed(v);
-    return lbOfValue[v - valueOffset];
+    return lbOfValue[valueIndex(v)];
   }
 
   private int ubOfValue(int v) {
     checkValueComputed(v);
-    return ubOfValue[v - valueOffset];
+    return ubOfValue[valueIndex(v)];
   }
 
   private void checkValueComputed(int v) {
-    int index = v - valueOffset;
+    int index = valueIndex(v);
     if (index < 0 || index >= valueStamp.length || valueStamp[index] != callStamp) {
       throw new IllegalStateException("lb[" + v + "] and ub[" + v + "] were not computed");
     }

@@ -55,6 +55,7 @@ import org.jacop.fz.constraints.AlldiffChannels;
 import org.jacop.fz.constraints.AlldifferentDetector;
 import org.jacop.fz.constraints.AntichainDetector;
 import org.jacop.fz.constraints.ArgMaxFunctionDetector;
+import org.jacop.fz.constraints.ArgumentCheck;
 import org.jacop.fz.constraints.BalanceDetector;
 import org.jacop.fz.constraints.BinPackingCostBound;
 import org.jacop.fz.constraints.CardinalityDetector;
@@ -139,6 +140,8 @@ public class Constraints implements ParserTreeConstants {
   static final int GE = 5;
   final ConstraintFncs cf;
   final Tables dictionary;
+  // checks the arguments of each constraint item against its predicate
+  private final ConstraintArguments arguments;
   final Store store;
   // ============ SAT solver interface ==============
   final float satThreshold = 1.0f; // 1.0 pure SAT problem, 0.85 good heuristic ;)
@@ -162,6 +165,7 @@ public class Constraints implements ParserTreeConstants {
   public Constraints(Store store, Tables dict) {
     this.store = store;
     this.dictionary = dict;
+    this.arguments = new ConstraintArguments(dict);
 
     sat = new SatTranslation(store);
     // impose SAT-solver
@@ -1058,7 +1062,12 @@ public class Constraints implements ParserTreeConstants {
           method = cf.getClass().getMethod(p, SimpleNode.class);
           generators.put(p, method);
         }
-        method.invoke(cf, node);
+        dictionary.generatingConstraint(true);
+        try {
+          method.invoke(cf, node);
+        } finally {
+          dictionary.generatingConstraint(false);
+        }
 
       } catch (NoSuchMethodException _) {
         throw new IllegalArgumentException(
@@ -1073,12 +1082,24 @@ public class Constraints implements ParserTreeConstants {
         } else {
           FzConsole.printlnErr("%% problem detected for " + p);
         }
+        if (cause instanceof IndexOutOfBoundsException) {
+          // the arrays of an encoding (an automaton, a diagram, shapes of geost) that point outside
+          // each other: the types and lengths are checked, these values are not
+          throw new IllegalArgumentException(
+              "The arguments of constraint " + p + " do not fit: " + cause.getMessage(), cause);
+        }
         throw cause;
       }
     }
   }
 
   void generateAlias(SimpleNode constraintWithAnnotations) {
+
+    // the arguments are checked before any pass reads them, in every mode and every thread of a
+    // portfolio, so that a malformed model is an error of the model wherever it is read
+    arguments.check(constraintWithAnnotations);
+    // and so are sizes that do not agree, checked once the types are known to fit
+    ArgumentCheck.check(support, constraintWithAnnotations);
 
     SimpleNode node = (SimpleNode) constraintWithAnnotations.jjtGetChild(0);
 
