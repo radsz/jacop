@@ -10130,4 +10130,29 @@ class FlatzincFrontEndTest {
     assertEquals(2, out.split("----------", -1).length - 1, out);
     assertTrue(out.contains("x = 2;\nb = true;\n"), out);
   }
+
+  @Test
+  void amongReifOfAnEmptyArrayCountsNoVariable() throws IOException {
+    // fzn_among_reif and among_var_reif sized their count by max - min of index_set(x), and the
+    // minimum of an empty index set is undefined in MiniZinc, so among(n, [], v) in a reified
+    // context failed instead of meaning n = 0
+    Path lib = Path.of("src/main/minizinc/org/jacop/minizinc");
+    for (String file : List.of("fzn_among_reif.mzn", "among_var.mzn")) {
+      String text = Files.readString(lib.resolve(file), StandardCharsets.UTF_8);
+      assertFalse(text.contains("int: l = min(index_set(x))"), file);
+    }
+    // the FlatZinc the library emits for among_reif(n, [], {1}, b) /\ (b \/ c)
+    String model =
+        "var 0..0: ni;\n"
+            + "var 0..2: n :: output_var;\n"
+            + "var bool: b;\n"
+            + "var bool: c :: output_var;\n"
+            + "constraint jacop_among([],{1},ni);\n"
+            + "constraint int_eq_reif(ni,n,b);\n"
+            + "constraint bool_clause([b,c],[]);\n"
+            + "solve satisfy;\n";
+    String out = run(model, "-a")[0];
+    assertEquals(4, out.split("----------", -1).length - 1, out);
+    assertTrue(out.contains("n = 0;\nc = false;\n"), out);
+  }
 }
