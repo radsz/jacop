@@ -9539,6 +9539,19 @@ Version 5.0 (unreleased)
    -Dorg.jacop.lp.subsetCardinalities=false turns the merge off,
    org.jacop.lp.subsetCardinalityLength (default 5) bounds the clauses.
 
+527. Under -f, lazy clause generation that is slow at the speed check (10 % of
+   the time limit) but goes deep between its conflicts is kept instead of
+   giving way to search without learning: with a solution, at least 100
+   decisions per conflict, more conflicts than solutions, under 50
+   conflicts/s and learnt clauses of at most 200 literals on average.
+   cable_tree_wiring A073 (MiniZinc Challenge 2020): optimum proved in 3 of
+   3 seeds at 600 s (before 2 of 3, the third ended at 296M);
+   rcpsp-wet-diverse j60 proved in one seed (before never). On the wide set
+   (240 instances, -f, 600 s) the rule fires only on warehouse olil4 without
+   the clause length limit and on none with it. free-config lcg-slow-depth
+   (0 = off), lcg-slow-depth-rate and lcg-slow-depth-length; -s prints
+   lcgSlowDeep.
+
 521. Lazy clause generation under a fixed search on an optimisation model
    first runs the annotation's search without learning for 0.5 % of the
    time limit, at most a second, and LCG then gets three times as long,

@@ -4509,6 +4509,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private final ArrayDeque<long[]> lcgBounds = new ArrayDeque<>();
   // the bound on the objective when the check of LCG's speed started
   private long lcgStartBound;
+  // set when LCG with a solution was kept for its deep descents ({@link #deepDescents})
+  private boolean lcgSlowDeep;
+  // lcg-slow-depth: decisions per conflict at which a slow LCG with a solution is kept
+  private double slowDepth;
+  // lcg-slow-depth-rate: the rule of lcg-slow-depth holds below this many conflicts per second
+  private double slowDepthRate;
+  // lcg-slow-depth-length: the rule of lcg-slow-depth holds only for learnt clauses this short on
+  // average
+  private double slowDepthLength;
   // set when LCG free search gave way without a solution, for making too few conflicts
   private volatile boolean lcgSlowUnsolved;
   // the checks of LCG's speed that found it slow but let it go on, because it made progress
@@ -4614,6 +4623,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     lcgBoundGain = Double.parseDouble(options.freeConfig("lcg-slow-bound-gain", "0.0005"));
     double unsolvedRate = Double.parseDouble(options.freeConfig("lcg-slow-unsolved", "30"));
     double perLiteral = Double.parseDouble(options.freeConfig("lcg-slow-literal", "5"));
+    slowDepth = Double.parseDouble(options.freeConfig("lcg-slow-depth", "100"));
+    slowDepthRate = Double.parseDouble(options.freeConfig("lcg-slow-depth-rate", "50"));
+    slowDepthLength = Double.parseDouble(options.freeConfig("lcg-slow-depth-length", "200"));
     if (costVar == null) {
       // fixed search backtracks the annotation's decisions about one level a conflict whatever
       // learning cuts, so the probe cannot tell; on the 53 satisfaction instances of the wide set
@@ -5199,7 +5211,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IO.println(
           "%% LCG speed check: "
               + solver.sat().conflicts
-              + " conflicts in "
+              + " conflicts, "
+              + solver.sat().decisions
+              + " decisions in "
               + String.format(Locale.ROOT, "%.1f", (now - lcgStart) / 1e9)
               + " s, "
               + (solutionFound ? "with" : "without")
@@ -5230,6 +5244,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     if (solutionFound && unsolvedOnly) {
       // fixed search keeps LCG once it has a solution
+      return false;
+    } else if (solutionFound
+        && deepDescents(
+            solver.sat().conflicts,
+            solver.sat().decisions,
+            solver.solutions,
+            solver.sat().learntLiterals,
+            (now - lcgStart) / 1e9,
+            slowDepth,
+            slowDepthRate,
+            slowDepthLength)) {
+      lcgSlowDeep = true;
       return false;
     } else if (solutionFound) {
       long before = lcgCostAt(now - stallNanos, costs.peekFirst()[1]);
@@ -5294,6 +5320,54 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     lcgSlowCoreKeeps++;
     return true;
+  }
+
+  /**
+   * Whether LCG with a solution makes few conflicts only because it goes deep between them, and is
+   * kept whatever its rate: at least lcg-slow-depth decisions per conflict on average (default 100;
+   * 0 = off), and more conflicts than solutions, so that its long descents end mostly in conflicts
+   * it learns from. Free search without learning takes far longer for each descent there: on
+   * cable_tree_wiring A073 (MiniZinc Challenge 2020, 38,808 reified comparisons) LCG made 16
+   * conflicts/s with about 1,000 decisions per conflict and gave way at 74 s of 600; search without
+   * learning made about 80 failures/s and ended at 304-335M, while LCG kept proved the optimum
+   * 225,905,728 in 318-329 s (OR-Tools free search: 342 s). Of the 48 optimisation instances of the
+   * wide set that reach the check at 240 s, 6 go 100 or more decisions deep: celar graph11,
+   * ihtc-2024-kletzander i09 and rcpsp-wet-diverse j60 end better with LCG kept; unit-commitment
+   * L12 goes 31,600 deep but finds a solution 45 better at almost every descent (1,074 solutions
+   * against 126 conflicts at the check) and ends at 1,598M instead of 1.49M when kept, so it still
+   * gives way; rect-euler, which gains from the hand-over, makes 76 decisions per conflict. The
+   * learnt clauses must also be short, at most lcg-slow-depth-length literals on average (default
+   * 200), so that what LCG learns at each conflict prunes much: warehouse olil4 (MiniZinc Challenge
+   * 2026), the only instance of the wide set where the rule fired without this limit (-f, 600 s),
+   * goes 110-140 decisions deep but learns clauses of about 10,000 literals from its global
+   * cardinality failures, and kept it ended at 59,606-69,660 instead of 52,729-53,714 (3 seeds).
+   * When the rule fires, A073 learns clauses of 30 literals on average, ihtc i09 35 and
+   * rcpsp-wet-diverse j60 6.
+   *
+   * @param conflicts the conflicts of LCG so far
+   * @param decisions the decisions of LCG so far
+   * @param solutions the solutions of LCG so far
+   * @param learntLiterals the literals of the clauses LCG learnt so far
+   * @param seconds the time of LCG so far
+   * @param depth lcg-slow-depth, 0 = off
+   * @param rate lcg-slow-depth-rate, the conflicts per second below which the rule holds
+   * @param length lcg-slow-depth-length, the longest average learnt clause for which the rule holds
+   * @return true if LCG goes deep enough between conflicts to be kept
+   */
+  static boolean deepDescents(
+      long conflicts,
+      long decisions,
+      long solutions,
+      long learntLiterals,
+      double seconds,
+      double depth,
+      double rate,
+      double length) {
+    return depth > 0
+        && conflicts > solutions
+        && decisions >= depth * conflicts
+        && conflicts < rate * seconds
+        && learntLiterals <= length * conflicts;
   }
 
   // the best cost printed before each solution of LCG that improved it, with the time of that
@@ -6955,6 +7029,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         if (lcgSlowCoreKeeps > 0) {
           // LCG made too few conflicts but its core-guided phase kept finding cores
           IO.println("%%%mzn-stat: lcgSlowCoreKeeps=" + lcgSlowCoreKeeps);
+        }
+        if (lcgSlowDeep) {
+          // LCG made too few conflicts but went deep between them, so it was kept
+          IO.println("%%%mzn-stat: lcgSlowDeep=true");
         }
       }
     }
