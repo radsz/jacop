@@ -9561,4 +9561,27 @@ class FlatzincFrontEndTest {
     assertTrue(off.contains("=====UNSATISFIABLE====="), off);
     assertTrue(on.contains("=====UNSATISFIABLE====="), on);
   }
+
+  @Test
+  void indexFunctionsReadNoElementThatTheLinearIndexElementDetectionReplaced() throws IOException {
+    // k = p + d is read only by its definition and two elements, which the linear index element
+    // detection replaced by a table over p, d, a and b, dropping k; the index function detection
+    // then read the replaced elements as functions of k and rewrote p = a * b as a sum over the
+    // values of k, now free: b = -2 forces k = 1, a = -1 and p = 2, but p = -3 was reported
+    String model =
+        "var 1..3: k;\n"
+            + "var -1..3: a;\n"
+            + "var -2..3: b :: output_var;\n"
+            + "var -6..9: p :: output_var;\n"
+            + "var -8..9: d :: output_var;\n"
+            + "constraint array_int_element(k,[-1,3,-1],a);\n"
+            + "constraint array_int_element(k,[-2,1,3],b);\n"
+            + "constraint int_times(a,b,p);\n"
+            + "constraint int_lin_eq([1,-1,-1],[k,p,d],0);\n"
+            + "constraint int_eq(b,-2);\n"
+            + "constraint int_ne(p,2);\n"
+            + "solve satisfy;\n";
+    String out = run(model, "--lcg", "off")[0];
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+  }
 }

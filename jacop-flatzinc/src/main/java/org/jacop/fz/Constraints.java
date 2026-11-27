@@ -552,7 +552,9 @@ public class Constraints implements ParserTreeConstants {
 
       // a product of two functions of one index variable as a sum over the index's value literals
       if (IndexFunctionDetector.enabled() && options.proof() == null) {
-        Set<SimpleNode> products = new IndexFunctionDetector(support).detect(astTree);
+        Set<SimpleNode> products =
+            new IndexFunctionDetector(support, replaced, dictionary.unusedVariables)
+                .detect(astTree);
         if (!products.isEmpty()) {
           replaced = new HashSet<>(replaced);
           replaced.addAll(products);
