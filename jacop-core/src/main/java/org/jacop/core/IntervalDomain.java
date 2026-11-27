@@ -3589,6 +3589,11 @@ public class IntervalDomain extends IntDomain {
           String.valueOf("Min value greater than max value " + min + " > " + max));
     }
 
+    if (size == 0) {
+      // an empty domain stays empty (bounds[0] does not exist)
+      return NONE;
+    }
+
     if (max < bounds[0]) {
       size = 0;
       return GROUND;

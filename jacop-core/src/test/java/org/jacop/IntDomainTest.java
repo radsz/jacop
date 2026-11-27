@@ -1125,4 +1125,16 @@ class IntDomainTest {
 
     return domain;
   }
+
+  @Test
+  void intersectAdaptOfAnEmptyIntervalDomainLeavesItEmpty() {
+    // the bounds of an empty domain were read at index -1 (ArrayIndexOutOfBoundsException)
+    for (IntervalDomain empty :
+        new IntervalDomain[] {new IntervalDomain(), new IntervalDomain(0)}) {
+      assertThat(empty.intersectAdapt(1, 2)).isEqualTo(IntDomain.NONE);
+      assertThat(empty.isEmpty()).isTrue();
+    }
+    assertThat(IntervalDomain.emptyDomain.intersectAdapt(0, 0)).isEqualTo(IntDomain.NONE);
+    assertThat(IntervalDomain.emptyDomain.isEmpty()).isTrue();
+  }
 }
