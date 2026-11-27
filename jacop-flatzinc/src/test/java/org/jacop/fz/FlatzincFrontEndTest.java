@@ -9868,4 +9868,22 @@ class FlatzincFrontEndTest {
     out = run(optimum, "--lcg", "off", "-t", "3000")[0];
     assertTrue(out.contains("b1 = false;\n") && out.contains("----------\n=========="), out);
   }
+
+  @Test
+  void freeSearchBranchesOnUntouchedVariablesLast() throws IOException {
+    // free search branched on the set u0, which no constraint touches, before the hidden h1, h2
+    // whose search fails for h1 = false: every value of u0 repeated that failure (1M nodes,
+    // TIME-OUT); the untouched variables now come after the others
+    String model =
+        "var bool: h0;\n"
+            + "var bool: h1;\n"
+            + "var bool: h2;\n"
+            + "var set of 1..16: u0 :: output_var;\n"
+            + "var 1..4: y :: output_var;\n"
+            + "constraint bool_eq_reif(h1,h2,h2);\n"
+            + "constraint int_le_reif(y,2,h1);\n"
+            + "solve maximize y;\n";
+    String out = run(model, "--lcg", "off", "-t", "3000")[0];
+    assertTrue(out.contains("y = 2;\n----------\n=========="), out);
+  }
 }

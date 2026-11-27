@@ -8743,17 +8743,31 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           withoutVars(searchVars.getBoolVars(), outputSet, BooleanVar[]::new),
           withoutVars(searchVars.getFloatVars(), outputSet, FloatVar[]::new),
           null);
-    } else if (DEFINED_LAST) {
-      addDefinedLastSelects(selects, monitors, searchVars, objective);
     } else {
-      addFreeSelects(
-          selects,
-          monitors,
-          searchVars.getSetVars(),
-          searchVars.getIntVars(),
-          searchVars.getBoolVars(),
-          searchVars.getFloatVars(),
-          objective);
+      // the variables that no constraint touches take any value: branching on them before the
+      // others multiplied the tree by their values (a free set of 1..16 above a failing search)
+      Set<Var> untouched = untouchedFreeVars(searchVars, costVar);
+      DefaultSearchVars touched = searchVars;
+      if (!untouched.isEmpty()) {
+        touched = new DefaultSearchVars(dictionary);
+        touched.setVars = withoutVars(searchVars.getSetVars(), untouched, SetVar[]::new);
+        touched.intVars = withoutVars(searchVars.getIntVars(), untouched, IntVar[]::new);
+        touched.boolVars = withoutVars(searchVars.getBoolVars(), untouched, BooleanVar[]::new);
+        touched.floatVars = withoutVars(searchVars.getFloatVars(), untouched, FloatVar[]::new);
+      }
+      if (DEFINED_LAST) {
+        addDefinedLastSelects(selects, monitors, touched, objective);
+      } else {
+        addFreeSelects(
+            selects,
+            monitors,
+            touched.getSetVars(),
+            touched.getIntVars(),
+            touched.getBoolVars(),
+            touched.getFloatVars(),
+            objective);
+      }
+      addUntouchedFreeSelects(selects, untouched);
     }
     if (selects.isEmpty()) {
       selects.add(new SimpleSelect<>(new IntVar[0], null, new IndomainMin<>()));
@@ -9217,6 +9231,55 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return new IntVar[][] {vars, new IntVar[0]};
     }
     return new IntVar[][] {first.toArray(new IntVar[0]), last.toArray(new IntVar[0])};
+  }
+
+  /**
+   * The variables of the free search that no constraint touches, in the store or among the clauses
+   * kept for the LCG solver, and that are not the objective; none when no other variable is left.
+   */
+  private Set<Var> untouchedFreeVars(DefaultSearchVars searchVars, Var costVar) {
+    Set<Var> clauseVars = new HashSet<>();
+    for (IntVar[][] clause : sat.collectedClauses()) {
+      clauseVars.addAll(Arrays.asList(clause[0]));
+      clauseVars.addAll(Arrays.asList(clause[1]));
+    }
+    List<Var> all = new ArrayList<>(Arrays.asList(searchVars.getSetVars()));
+    all.addAll(Arrays.asList(searchVars.getIntVars()));
+    all.addAll(Arrays.asList(searchVars.getBoolVars()));
+    all.addAll(Arrays.asList(searchVars.getFloatVars()));
+    Set<Var> untouched = new LinkedHashSet<>();
+    boolean other = false;
+    for (Var v : all) {
+      if (!v.singleton()
+          && v != costVar
+          && v != costVariable
+          && v != objectiveVariable
+          && v.dom().sizeConstraints() == 0
+          && !clauseVars.contains(v)) {
+        untouched.add(v);
+      } else if (!v.singleton()) {
+        other = true;
+      }
+    }
+    return other ? untouched : Set.of();
+  }
+
+  /** Adds the branching on the untouched variables at the end of the free search. */
+  private void addUntouchedFreeSelects(
+      List<SelectChoicePoint<? extends Var>> selects, Set<Var> untouched) {
+    SetVar[] sets = untouched.stream().filter(SetVar.class::isInstance).toArray(SetVar[]::new);
+    IntVar[] ints = untouched.stream().filter(IntVar.class::isInstance).toArray(IntVar[]::new);
+    FloatVar[] floats =
+        untouched.stream().filter(FloatVar.class::isInstance).toArray(FloatVar[]::new);
+    if (sets.length > 0) {
+      selects.add(new SimpleSelect<>(sets, null, new IndomainSetMin<>()));
+    }
+    if (ints.length > 0) {
+      selects.add(new SimpleSelect<>(ints, null, new IndomainMin<>()));
+    }
+    if (floats.length > 0) {
+      selects.add(new SplitSelectFloat<Var>(store, floats, freeFloatChoice()));
+    }
   }
 
   private static <V extends Var> V[] withoutVars(
