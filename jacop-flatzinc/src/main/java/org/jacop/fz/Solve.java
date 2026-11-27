@@ -3814,14 +3814,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // and activity branching (CHANGELOG 510). amaze2 2012-07-04, 06-29 and 03-08 found no
       // solution in 300 s on some seeds and are solved in 28 to 125 s; 28 instances where no
       // solution comes early, 240 s, two seeds: solved 25 -> 29, total time 8,486 -> 7,416 s.
-      // Not for satisfaction under the default search of a model without an annotation (jacop
-      // #942), which none of the 28 was: the XCSP CSPs PegSolitaireTable-english-3-3-0 and
-      // SportsScheduling-dummy-14, solved in 20 and 71 s with its turns, were unsolved in 30 and
-      // 90 s without them
-      lcg.setAnnotationDrop(
-          annotatedSearch == null && costVar == null
-              ? 0
-              : Long.parseLong(options.freeConfig("lcg-annotation-drop", "50000")));
+      // Also for the default search of a satisfaction model without an annotation: 119 XCSP CSPs
+      // that reach 30,000 conflicts or stay unsolved, 90 s, seeds 1 and 2, decided 223 -> 230,
+      // total time 4,674 -> 4,298 s (AlmostMagic, ChainReaction, MagicSquare-sum, Primes and
+      // PegSolitaireTable gain, Rostering-00-14-35 loses one run); jacop #942 had turned it off
+      // there on single seeds of PegSolitaireTable-english-3-3-0 and SportsScheduling-dummy-14
+      lcg.setAnnotationDrop(Long.parseLong(options.freeConfig("lcg-annotation-drop", "50000")));
       if (!LcgSolver.CHAIN_LIMIT_SET) {
         // short bound-literal chains (CHANGELOG 311): multi-agent-graph-coverage proofs about 2x
         // faster, two paired 600 s rounds 6/0 and 4/2 families better/worse with one more proof;
@@ -4133,7 +4131,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       slowCheck = null;
     }
     if (fixedTasteDue && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch(lcg)) {
-      return tasteFixedWithoutLearning();
+      return tasteFixedWithoutLearning(costVar);
     }
     if (lcgSliceDue && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch(lcg)) {
       return alternateWithoutLearning();
@@ -4577,6 +4575,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private final ArrayDeque<long[]> lcgBounds = new ArrayDeque<>();
   // the bound on the objective when the check of LCG's speed started
   private long lcgStartBound;
+  // set when LCG with a solution was kept for its deep descents ({@link DeepDescents})
+  private boolean lcgSlowDeep;
+  // lcg-slow-depth, lcg-slow-depth-rate and lcg-slow-depth-length
+  private DeepDescents slowDeep = new DeepDescents(0, 0, 0);
   // set when LCG free search gave way without a solution, for making too few conflicts
   private volatile boolean lcgSlowUnsolved;
   // the checks of LCG's speed that found it slow but let it go on, because it made progress
@@ -4682,11 +4684,22 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     lcgBoundGain = Double.parseDouble(options.freeConfig("lcg-slow-bound-gain", "0.0005"));
     double unsolvedRate = Double.parseDouble(options.freeConfig("lcg-slow-unsolved", "30"));
     double perLiteral = Double.parseDouble(options.freeConfig("lcg-slow-literal", "5"));
+    slowDeep =
+        new DeepDescents(
+            Double.parseDouble(options.freeConfig("lcg-slow-depth", "100")),
+            Double.parseDouble(options.freeConfig("lcg-slow-depth-rate", "50")),
+            Double.parseDouble(options.freeConfig("lcg-slow-depth-length", "200")));
     if (costVar == null) {
       // fixed search backtracks the annotation's decisions about one level a conflict whatever
       // learning cuts, so the probe cannot tell; on the 53 satisfaction instances of the wide set
       // at 240 s it lost 2 instances and 9 % of the time there
-      return unsolvedOnly ? fixedSatisfactionTaste(lcg) : satisfactionProbe(lcg);
+      return unsolvedOnly ? fixedSatisfactionTaste(lcg, false) : satisfactionProbe(lcg);
+    }
+    if (unsolvedOnly && !CdclSolver.VIRTUAL_CLOCK) {
+      // fixed optimisation without a solution tastes the search without learning as fixed
+      // satisfaction does: before its first solution it is the same search for any solution. The
+      // checks below run in a thread, the taste from the solver's alarm
+      fixedSatisfactionTaste(lcg, true);
     }
     if (rate <= 0 || options.getTimeOut() <= 0) {
       return null;
@@ -4780,19 +4793,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * the failures of the search without learning by about 10 % at a 15th of its nodes per second: n
    * = 16 takes 229 s with LCG and 9 s without learning. On the 37 such instances of costas-array
    * and the wide set at 600 s: solved 30 to 33, total time 5,383 to 3,875 s; where LCG goes on
-   * (black-hole, solbat, oocsp, nmseq) the taste costs 5 to 13 s.
+   * (black-hole, solbat, oocsp, nmseq) the taste costs 5 to 13 s. Fixed optimisation without a
+   * solution tastes the same way, its search before the first solution being one for any solution,
+   * and a solution found in the taste keeps the search without learning: on Sampson.s10.k3
+   * (MiniZinc Challenge 2017 community-detection, input_order on the vertices' communities) LCG
+   * makes about 3,000 conflicts/s and finds no solution in 1200 s, while the search without
+   * learning proves the optimum in 56 s.
    *
    * @param solver the LCG solver
+   * @param optimisation true under an objective, where -a and -n ask for improving solutions rather
+   *     than for several solutions
    * @return null; the taste runs from an alarm of the solver, in its search
    */
-  private Thread fixedSatisfactionTaste(LcgSolver solver) {
+  private Thread fixedSatisfactionTaste(LcgSolver solver, boolean optimisation) {
     double at = Double.parseDouble(options.freeConfig("lcg-fixed-at", "0.05"));
     if (at < 0
         || options.getTimeOut() <= 0
         || restartCalculator != null
         || fixedLabel == null
-        || options.getAll()
-        || options.getNumberSolutions() > 1
+        || (options.getAll() || options.getNumberSolutions() > 1) && !optimisation
         || !fixedTreeOrder()) {
       if (options.debug()) {
         IO.println(
@@ -4914,7 +4933,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * with the clauses of the store, for as long as LCG ran; it goes on to the end when it got
    * further in the tree than LCG by lcg-fixed-ratio, otherwise LCG goes on.
    */
-  private boolean tasteFixedWithoutLearning() {
+  private boolean tasteFixedWithoutLearning(Var costVar) {
     fixedTasteDue = false;
     CdclSolver sat = lcg.sat();
     double share = Double.parseDouble(options.freeConfig("lcg-fixed-share", "0.25"));
@@ -4935,8 +4954,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             if (!decided[0] && System.currentTimeMillis() >= tasteEnd) {
               decided[0] = true;
               fixedTasteCpProgress = fixedTreePosition();
-              // a negative ratio keeps it whatever the positions (for tests)
-              keep[0] = ratio < 0 || fixedTasteCpProgress > ratio * lcgPosition;
+              // a negative ratio keeps it whatever the positions (for tests); under an objective
+              // a solution LCG did not find keeps it too, as the positions after it compare no
+              // longer
+              keep[0] =
+                  ratio < 0 || fixedTasteCpProgress > ratio * lcgPosition || numberSolutions > 0;
               if (!keep[0]) {
                 label.setTimeOutMilliseconds(0);
                 if (label.childSearches != null) {
@@ -4978,7 +5000,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       for (IntVar[][] clause : this.sat.collectedClauses()) {
         store.impose(new BoolClause(clause[0], clause[1]));
       }
-      found = executeNonRestartSearch(label, fixedSelect, null, fixedSolveType);
+      found = executeNonRestartSearch(label, fixedSelect, costVar, fixedSolveType);
     } finally {
       label.setConsistencyListener(previous);
       store.removeLevel(root + 1);
@@ -5006,7 +5028,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return false;
     }
     label.timeOutOccured = false;
-    lcgStatus = lcg.solve();
+    lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
     return numberSolutions > 0;
   }
 
@@ -5191,7 +5213,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               weak,
               solutionFound));
     }
-    return weak;
+    return weak && !boundNearlyClosed(bestPrintedCost.get());
   }
 
   // whether the first check of an optimisation search's learning was printed
@@ -5267,7 +5289,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IO.println(
           "%% LCG speed check: "
               + solver.sat().conflicts
-              + " conflicts in "
+              + " conflicts, "
+              + solver.sat().decisions
+              + " decisions in "
               + String.format(Locale.ROOT, "%.1f", (now - lcgStart) / 1e9)
               + " s, "
               + (solutionFound ? "with" : "without")
@@ -5298,6 +5322,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     if (solutionFound && unsolvedOnly) {
       // fixed search keeps LCG once it has a solution
+      return false;
+    } else if (solutionFound
+        && slowDeep.holds(
+            solver.sat().conflicts,
+            solver.sat().decisions,
+            solver.solutions,
+            solver.sat().learntLiterals,
+            (now - lcgStart) / 1e9)) {
+      lcgSlowDeep = true;
       return false;
     } else if (solutionFound) {
       long before = lcgCostAt(now - stallNanos, costs.peekFirst()[1]);
@@ -5362,6 +5395,54 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     lcgSlowCoreKeeps++;
     return true;
+  }
+
+  /**
+   * The rule that keeps a slow LCG with a solution that makes few conflicts only because it goes
+   * deep between them, and is kept whatever its rate: at least lcg-slow-depth decisions per
+   * conflict on average (default 100; 0 = off), and more conflicts than solutions, so that its long
+   * descents end mostly in conflicts it learns from. Free search without learning takes far longer
+   * for each descent there: on cable_tree_wiring A073 (MiniZinc Challenge 2020, 38,808 reified
+   * comparisons) LCG made 16 conflicts/s with about 1,000 decisions per conflict and gave way at 74
+   * s of 600; search without learning made about 80 failures/s and ended at 304-335M, while LCG
+   * kept proved the optimum 225,905,728 in 318-329 s (OR-Tools free search: 342 s). Of the 48
+   * optimisation instances of the wide set that reach the check at 240 s, 6 go 100 or more
+   * decisions deep: celar graph11, ihtc-2024-kletzander i09 and rcpsp-wet-diverse j60 end better
+   * with LCG kept; unit-commitment L12 goes 31,600 deep but finds a solution 45 better at almost
+   * every descent (1,074 solutions against 126 conflicts at the check) and ends at 1,598M instead
+   * of 1.49M when kept, so it still gives way; rect-euler, which gains from the hand-over, makes 76
+   * decisions per conflict. The learnt clauses must also be short, at most lcg-slow-depth-length
+   * literals on average (default 200), so that what LCG learns at each conflict prunes much:
+   * warehouse olil4 (MiniZinc Challenge 2026), the only instance of the wide set where the rule
+   * fired without this limit (-f, 600 s), goes 110-140 decisions deep but learns clauses of about
+   * 10,000 literals from its global cardinality failures, and kept it ended at 59,606-69,660
+   * instead of 52,729-53,714 (3 seeds). When the rule fires, A073 learns clauses of 30 literals on
+   * average, ihtc i09 35 and rcpsp-wet-diverse j60 6.
+   *
+   * @param depth lcg-slow-depth, the decisions per conflict from which the rule holds, 0 = off
+   * @param rate lcg-slow-depth-rate, the conflicts per second below which the rule holds
+   * @param length lcg-slow-depth-length, the longest average learnt clause for which the rule holds
+   */
+  record DeepDescents(double depth, double rate, double length) {
+
+    /**
+     * Whether LCG goes deep enough between its conflicts to be kept.
+     *
+     * @param conflicts the conflicts of LCG so far
+     * @param decisions the decisions of LCG so far
+     * @param solutions the solutions of LCG so far
+     * @param learntLiterals the literals of the clauses LCG learnt so far
+     * @param seconds the time of LCG so far
+     * @return true if LCG is to be kept
+     */
+    boolean holds(
+        long conflicts, long decisions, long solutions, long learntLiterals, double seconds) {
+      return depth > 0
+          && conflicts > solutions
+          && decisions >= depth * conflicts
+          && conflicts < rate * seconds
+          && learntLiterals <= length * conflicts;
+    }
   }
 
   // the best cost printed before each solution of LCG that improved it, with the time of that
@@ -5652,6 +5733,46 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     return boundClosesGap(before, after, gain, cost);
+  }
+
+  /**
+   * Whether LCG raised the bound on the objective, since its speed check started, by nearly all of
+   * the gap to the best cost (lcg-opt-closed, 0.95; above 1 turns it off). A fast LCG whose
+   * learning cuts the tree little then keeps the search: its core-guided phase is close to the
+   * proof, which search without learning does not make. With -f, MiniZinc Challenge 2025 hitori
+   * h14-1 gave way at the check (bound 578 of 1468 to 572 closed, 99 %) and was not proved in 600 s
+   * on 3 seeds, and is proved in 110 to 128 s with LCG kept; FBDk07 (77 %), hitori h20-2 (94 %) and
+   * the 2017 community-detection instances (no raise) still give way.
+   *
+   * @param cost the best cost printed
+   * @return true if the bound closed at least the share of the gap
+   */
+  private boolean boundNearlyClosed(long cost) {
+    double share = Double.parseDouble(options.freeConfig("lcg-opt-closed", "0.95"));
+    long bound = lcgStartBound;
+    synchronized (lcgBounds) {
+      if (!lcgBounds.isEmpty()) {
+        bound = lcgBounds.peekLast()[1];
+      }
+    }
+    return closesShare(lcgStartBound, bound, cost, share);
+  }
+
+  /**
+   * Whether the bound {@code bound}, raised from {@code start}, closed at least the share {@code
+   * share} of the gap from {@code start} to the best cost {@code cost}.
+   *
+   * @param start the bound when the search started
+   * @param bound the bound now
+   * @param cost the best cost ({@code Integer.MAX_VALUE} when there is none)
+   * @param share the share of the gap
+   * @return true if the bound closed that share of the gap
+   */
+  static boolean closesShare(long start, long bound, long cost, double share) {
+    return cost != Integer.MAX_VALUE
+        && cost > start
+        && bound > start
+        && bound - start >= share * (cost - start);
   }
 
   /**
@@ -7025,6 +7146,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         if (lcgSlowCoreKeeps > 0) {
           // LCG made too few conflicts but its core-guided phase kept finding cores
           IO.println("%%%mzn-stat: lcgSlowCoreKeeps=" + lcgSlowCoreKeeps);
+        }
+        if (lcgSlowDeep) {
+          // LCG made too few conflicts but went deep between them, so it was kept
+          IO.println("%%%mzn-stat: lcgSlowDeep=true");
         }
       }
     }
@@ -9152,12 +9277,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private IntVar[][] definedLast(IntVar[] vars, boolean allDefined) {
     Set<Var> defined = Collections.newSetFromMap(new IdentityHashMap<>());
-    defined.addAll(dictionary.definedVariables);
-    // b of a half-reified b -> c (int_lin_ne_imp and the other *_imp) is named defined, but c does
-    // not fix it: on XCSP 2023 WordDesign1 (words 0..3, Hamming distance at least 4 by the sum of
-    // b -> x[i] != y[i]) every b is such a variable, and branching on the 1,200 letters alone
-    // found no solution of words-065/075/085 in 600 s, where dom/wdeg over the b took 23-32 s
-    dictionary.halfDefinedVariables.forEach(defined::remove);
+    defined.addAll(dictionary.definedLastVariables());
     List<IntVar> first = new ArrayList<>();
     List<IntVar> last = new ArrayList<>();
     for (IntVar x : vars) {

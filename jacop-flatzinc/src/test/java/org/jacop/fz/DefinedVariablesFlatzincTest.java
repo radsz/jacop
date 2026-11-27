@@ -94,6 +94,26 @@ class DefinedVariablesFlatzincTest {
     Var r = tables.getVariable("r");
     assertThat(tables.definedVariables).contains(b, r);
     assertThat(tables.halfDefinedVariables).containsExactly(b);
+    assertThat(tables.definedLastVariables()).contains(r).doesNotContain(b);
+  }
+
+  // MiniZinc Challenge 2026 atp-stage2: under a search annotation the b of int_eq_imp are value
+  // choices of the annotated variables and stay after them (Solve.definedLast)
+  @Test
+  void underASearchAnnotationHalfDefinedBooleansStayLast() throws IOException {
+    Path model = dir.resolve("imp-annotated.fzn");
+    Files.writeString(
+        model,
+        """
+        var 0..3: x :: output_var;
+        var bool: b :: is_defined_var :: output_var;
+        constraint int_eq_imp(x, 2, b) :: defines_var(b);
+        solve :: int_search([x], input_order, indomain_min, complete) satisfy;
+        """);
+    Tables tables = load(model);
+    Var b = tables.getVariable("b");
+    assertThat(tables.halfDefinedVariables).containsExactly(b);
+    assertThat(tables.definedLastVariables()).contains(b);
   }
 
   // XCSP 2026 BACPj (500 courses, 100 periods) has no defines_var annotations: free search

@@ -1670,6 +1670,34 @@ public class Tables {
   }
 
   /**
+   * The defined variables that the default search of free search branches on last. The b of a
+   * half-reified b -&gt; c (int_lin_ne_imp and the other *_imp) is named defined, but c does not
+   * fix it: on XCSP 2023 WordDesign1 (words 0..3, Hamming distance at least 4 by the sum of b -&gt;
+   * x[i] != y[i]) every b is such a variable, and branching on the 1,200 letters alone found no
+   * solution of words-065/075/085 in 600 s, where dom/wdeg over the b took 23-32 s. Under a search
+   * annotation, which names the decisions, they stay last: the b of MiniZinc Challenge 2026
+   * atp-stage2 (42,000 int_eq_imp and int_lin_eq_imp) are value choices of the annotated variables,
+   * and branched with them instance9-stage2 ended at 284 and 311 million at 240 s (two seeds)
+   * instead of 264 and 268 million.
+   *
+   * @return the variables
+   */
+  public List<Var> definedLastVariables() {
+    if (searchAnnotated || halfDefinedVariables.isEmpty()) {
+      return definedVariables;
+    }
+    Set<Var> half = Collections.newSetFromMap(new IdentityHashMap<>());
+    half.addAll(halfDefinedVariables);
+    List<Var> vars = new ArrayList<>();
+    for (Var v : definedVariables) {
+      if (!half.contains(v)) {
+        vars.add(v);
+      }
+    }
+    return vars;
+  }
+
+  /**
    * Records a variable named by the defines_var annotation of a half-reified constraint (MiniZinc
    * *_imp, b -&gt; c): it is recorded as defined, but the other variables do not fix it.
    *

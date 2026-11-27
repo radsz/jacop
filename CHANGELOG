@@ -9683,7 +9683,33 @@ Version 5.0 (unreleased)
    simp-nonunif-100_100.10 set-up 29.1 -> 26.0 s (median of 3); wide-quick
    at 240 s total 1.006 (noise), PB5 at 600 s total 0.986.
 
-531. Covering models: column dominance at presolve (CoveringDominance). A 0/1
+536. Under -f, lazy clause generation that is slow at the speed check (10 % of
+   the time limit) but goes deep between its conflicts is kept instead of
+   giving way to search without learning: with a solution, at least 100
+   decisions per conflict, more conflicts than solutions, under 50
+   conflicts/s and learnt clauses of at most 200 literals on average.
+   cable_tree_wiring A073 (MiniZinc Challenge 2020): optimum proved in 3 of
+   3 seeds at 600 s (before 2 of 3, the third ended at 296M);
+   rcpsp-wet-diverse j60 proved in one seed (before never). On the wide set
+   (240 instances, -f, 600 s) the rule fires only on warehouse olil4 without
+   the clause length limit and on none with it. free-config lcg-slow-depth
+   (0 = off), lcg-slow-depth-rate and lcg-slow-depth-length; -s prints
+   lcgSlowDeep.
+
+537. Fixed search on an optimisation model that has no solution yet
+   tastes the annotation's search without learning, as fixed
+   satisfaction does (entry 492), also with -a: lazy clause generation
+   stops at lcg-fixed-at of the time limit, the search without learning
+   runs for lcg-fixed-share of that time, and the one further in the
+   annotation's tree goes on (a solution found in the taste keeps the
+   search without learning). Before, LCG without a solution gave way only
+   below 30 conflicts/s. Sampson.s10.k3 (MiniZinc Challenge 2017
+   community-detection, input_order on the communities): LCG makes about
+   3,000 conflicts/s and found 8 in 600 s; now the optimum 10 is proved in
+   88 s. On the 13 wide-set optimisation instances without a solution
+   after 55 s of fixed search, 600 s: total 7,276 -> 6,763 s, none worse.
+
+538. Covering models: column dominance at presolve (CoveringDominance). A 0/1
    variable with a cost of at least 0 in a minimized objective that occurs
    only in the objective and positively in clauses is fixed to 0 when
    another such variable of no higher cost is in all its clauses (the column
@@ -9706,7 +9732,23 @@ Version 5.0 (unreleased)
    -Dorg.jacop.fz.coveringDominance=false and -Dorg.jacop.lp.foldFixed=0
    turn them off.
 
-536. Pseudo-Boolean models of clauses go to JaSAT whole. A linear constraint
+536. Lazy clause generation no longer shrinks learnt clauses to one
+   literal per lower decision level (all-UIP shrinking, M. Fleury and
+   A. Biere, "Efficient all-UIP learned clause minimization", SAT 2021;
+   it stays on in the pure SAT solver). Under LCG the literals of a lower
+   level are bounds and values reached by propagation, which other orders
+   of the decisions reach too; shrinking replaced them by the decision of
+   that level and pinned the clause to one prefix of the search, so every
+   later first decision refuted the same subtrees again. MZNC 2015
+   open_stacks problem_20_20_1 (fixed search): 90,000 -> 39,000 nodes,
+   30 -> 18 s. 600 s, open stacks and precedence set (fixed search):
+   total 4,318 -> 3,468 s, one more decided (wbo_30_30_1 600 -> 30 s,
+   problem_10_20_1 476 -> 220 s); wide-quick total 1.004 (default search;
+   lot-sizing pigment20a 85 -> 140 s, 21 % more nodes) and 0.883 (-f, one
+   more decided: celar graph11 600 -> 82 s).
+   -Djacop.lcg.shrink=true restores shrinking.
+
+539. Pseudo-Boolean models of clauses go to JaSAT whole. A linear constraint
    over 0/1 variables that is at most two clauses per unfixed variable over
    its own variables (as lazy clause generation already takes it,
    jacop.lcg.clauseShaped) and a lex-leader constraint of symmetry breaking
@@ -9722,8 +9764,8 @@ Version 5.0 (unreleased)
    9 instances where it fires: total default 2,124 -> 1,553 s, -f 1,404 ->
    741 s (battleship 271 -> 4 s, heule-nol unknown -> 28-326 s).
 
-537. The MaxSAT local search of free search takes the linear constraints
-   that are clauses (see 536) as hard clauses; before, it left out every
+540. The MaxSAT local search of free search takes the linear constraints
+   that are clauses (see 539) as hard clauses; before, it left out every
    linear row over cost variables alone as implied by the objective, and
    on hanoi5 (Pseudo-Boolean Competition 2016, 1,931 rows x + y <= 1
    over the 3,862 cost variables) it searched without them, reached cost
