@@ -9552,6 +9552,7 @@ class FlatzincFrontEndTest {
     assertTrue(out.contains("obj = -4;\n----------\n=========="), out);
   }
 
+  @Test
   void untouchedOutputVariablesAreLabelledBelowTheCompletionSearch() throws IOException {
     // the completion search of the hidden b0, b2 was a child of the search of the output float uf,
     // which no constraint touches: for b1 = false the completion fails, and the bisection of uf was
