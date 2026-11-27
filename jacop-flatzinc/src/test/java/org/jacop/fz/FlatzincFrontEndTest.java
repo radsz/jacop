@@ -4247,6 +4247,29 @@ class FlatzincFrontEndTest {
     assertTrue(checked >= 3, "models with a solution: " + checked);
   }
 
+  @Test
+  void lcgSplitCountValuesKeepsTheTotalOfItsCounters() throws IOException {
+    // 43 variables over {0, 1} need counters summing to 43, more than 20 + 20: the whole
+    // CountValues refutes it at the root; split into blocks, the sums of the block counters lost
+    // that and the search took 7,604 nodes (XCSP 2025 RoadefPlaning2-2022-10: refuted in 3 s
+    // whole, open after 240 s split)
+    int n = 43;
+    StringBuilder model = new StringBuilder();
+    for (int i = 0; i < n; i++) {
+      model.append("var 0..1: x%d;%n".formatted(i));
+    }
+    model.append("var 0..20: c0 :: output_var;\nvar 0..20: c1 :: output_var;\n");
+    String xs =
+        java.util.stream.IntStream.range(0, n)
+            .mapToObj(i -> "x" + i)
+            .collect(Collectors.joining(","));
+    model.append("constraint jacop_count_values([%s], [0,1], [c0,c1]);%n".formatted(xs));
+    model.append("solve satisfy;\n");
+    String[] out = run(model.toString(), "--lcg", "--search-statistics", "-s");
+    assertTrue(out[0].contains("=====UNSATISFIABLE====="), out[0]);
+    assertFalse(out[0].contains("%%%mzn-stat: nodes="), out[0]);
+  }
+
   private static double linearAtoms(String out) {
     java.util.regex.Matcher m =
         java.util.regex.Pattern.compile("%% lcg LinearInt: reasons=(\\d+) .*?avgAtoms=([0-9.]+)")
