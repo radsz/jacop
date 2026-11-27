@@ -235,6 +235,7 @@ import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.Restriction;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
+import org.jacop.core.AffineView;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -14785,6 +14786,148 @@ class SingleConstraintTest extends TestHelper {
       search.getSolutionListener().searchAll(true);
       search.labeling(store, new SimpleSelect<>(x, null, new IndomainRandom<>(run)));
       assertThat(found).as(instance).isEqualTo(expected);
+    }
+  }
+
+  // Values reads its difference graph once more at its first call below the root, from the root
+  // domains: the root domain of a view of y = 2*w was read from the view's domain, which holds the
+  // current values of w, so a decision w = 2 linked p and q of q = p + y for good and lost the six
+  // solutions with w = 0 and p = q.
+  @Test
+  void valuesReadsTheRootDomainOfAViewThroughItsBase() {
+    for (boolean view : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar w = new IntVar(store, "w", 0, 2);
+      IntVar y = view ? new AffineView(store, "y", w, 2, 0) : new IntVar(store, "y", 0, 4);
+      if (!view) {
+        store.impose(new XmulCeqZ(w, 2, y));
+      }
+      IntVar p = new IntVar(store, "p", 0, 5);
+      IntVar q = new IntVar(store, "q", 0, 9);
+      IntVar n = new IntVar(store, "n", 1, 2);
+      store.impose(new XplusYeqZ(p, y, q));
+      store.impose(new Values(new IntVar[] {p, q}, n));
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      search.getSolutionListener().searchAll(true);
+      search.getSolutionListener().recordSolutions(false);
+      search.labeling(
+          store, new SimpleSelect<>(new IntVar[] {w, p, q, n}, null, new IndomainMax<>()));
+      assertThat(search.getSolutionListener().solutionsNo()).as("view " + view).isEqualTo(18);
+    }
+  }
+
+  // Knapsack kept the critical item and the optimal profit of the relaxation computed by a
+  // consistency that failed one level up: after the backtrack a direct second consistency call
+  // bounded the profit by the capacity 7 of the failed level and removed the solution 1, 1, 2 of
+  // capacity 8 and profit 7.
+  @Test
+  void knapsackRecomputesTheRelaxationAfterABacktrackedFailure() {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 1);
+    IntVar x1 = new IntVar(store, "x1", 1, 1);
+    IntVar x2 = new IntVar(store, "x2", 0, 2);
+    IntVar capacity = new IntVar(store, "capacity", 4, 8);
+    capacity.domain.inComplement(0, capacity, 6);
+    IntVar profit = new IntVar(store, "profit", 5, 10);
+    Knapsack knapsack =
+        new Knapsack(
+                new int[] {2, 3, 1},
+                new int[] {3, 1, 2},
+                new IntVar[] {x0, x1, x2},
+                capacity,
+                profit)
+            .dynamicProgramming(false);
+    store.impose(knapsack);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    capacity.domain.in(1, capacity, 7, 7);
+    assertThat(store.consistency()).isFalse();
+    store.removeLevel(1);
+    store.setLevel(0);
+    store.setLevel(1);
+    knapsack.consistency(store);
+    assertThat(store.consistency()).isTrue();
+    assertThat(profit.domain.contains(7)).as(profit.toString()).isTrue();
+  }
+
+  // A no-good that lists one variable with two values always holds and impose leaves it out, but a
+  // direct consistency call read its watches, which impose never set: IllegalStateException with a
+  // fixed x, NullPointerException otherwise.
+  @Test
+  void noGoodListingAVariableWithTwoValuesTakesADirectConsistencyCall() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    IntVar y = new IntVar(store, "y", 1, 3);
+    NoGood noGood = new NoGood(new IntVar[] {x, y, y}, new int[] {0, 1, 0});
+    store.impose(noGood);
+    assertThat(store.consistency()).isTrue();
+    noGood.consistency(store);
+    x.domain.in(0, x, 0, 0);
+    assertThat(store.consistency()).isTrue();
+    noGood.consistency(store);
+    assertThat(x.dom().toString()).isEqualTo("0");
+    assertThat(y.dom().toString()).isEqualTo("{1..3}");
+  }
+
+  // NetworkFlow restores an arc changed at a higher level for changes of a lower one (a late arc)
+  // from the domain of its variable when a level is removed. s0 narrowed at level 3 without a
+  // consistency, then an empty level 4 removed: the restore moved the flow of s0 out of its arc
+  // without registering the nodes left unbalanced, so the network failed at h0 = 1, which has six
+  // solutions as without the walk.
+  @Test
+  void networkFlowRepairsTheBalancesOfAnArcRestoredFromANarrowedDomain() {
+    for (boolean walk : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar[] x = {
+        new IntVar(store, "x0", 0, 2),
+        new IntVar(store, "x1", 0, 1),
+        new IntVar(store, "h0", 0, 2),
+        new IntVar(store, "h1", 0, 2),
+        new IntVar(store, "h2", 1, 2),
+        new IntVar(store, "s0", 0, 2),
+        new IntVar(store, "s1", 0, 0),
+        new IntVar(store, "s2", 0, 2),
+        new IntVar(store, "cost", 0, 4)
+      };
+      x[8].domain.inComplement(0, x[8], 3);
+      store.imposeDecomposition(
+          new SoftGCC(
+              new IntVar[] {x[0], x[1]},
+              new IntVar[] {x[2], x[3], x[4]},
+              new IntVar[] {x[5], x[6], x[7]},
+              x[8],
+              ViolationMeasure.VALUE_BASED));
+      store.setLevel(1);
+      assertThat(store.consistency()).isTrue();
+      if (walk) {
+        x[5].domain.in(1, x[5], 0, 1);
+        store.setLevel(2);
+        assertThat(store.consistency()).isTrue();
+        store.setLevel(3);
+        x[8].domain.in(3, x[8], 2, 4);
+        x[5].domain.in(3, x[5], 0, 0);
+        store.setLevel(4);
+        store.removeLevel(4);
+        store.setLevel(3);
+        store.removeLevel(3);
+        store.setLevel(2);
+      } else {
+        x[5].domain.in(1, x[5], 0, 1);
+        store.setLevel(2);
+        assertThat(store.consistency()).isTrue();
+      }
+      store.setLevel(3);
+      x[2].domain.in(3, x[2], 1, 1);
+      assertThat(store.consistency()).as("after the walk " + walk).isTrue();
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      search.getSolutionListener().searchAll(true);
+      search.getSolutionListener().recordSolutions(false);
+      search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()));
+      assertThat(search.getSolutionListener().solutionsNo())
+          .as("after the walk " + walk)
+          .isEqualTo(6);
     }
   }
 }

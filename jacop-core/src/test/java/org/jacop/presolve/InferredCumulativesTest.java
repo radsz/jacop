@@ -155,4 +155,15 @@ class InferredCumulativesTest {
     }
     return true;
   }
+
+  @Test
+  void noCoversKeptInfersWithoutFailing() {
+    // org.jacop.fz.inferredCumulatives.covers=0 keeps no covers of two and three tasks (before: the
+    // first cover offered read the head of the empty queue of the best covers, a
+    // NullPointerException that stopped the FlatZinc front end)
+    InferredCumulatives ic = new InferredCumulatives(new int[] {3, 3, 3, 3});
+    ic.resource(new int[] {0, 1, 2, 3}, new int[] {5, 3, 2, 4}, 7);
+    List<InferredCumulatives.Inferred> found = ic.infer(0, 5, null);
+    assertTrue(found.size() <= 5, found.toString());
+  }
 }

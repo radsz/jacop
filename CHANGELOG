@@ -9683,6 +9683,29 @@ Version 5.0 (unreleased)
    simp-nonunif-100_100.10 set-up 29.1 -> 26.0 s (median of 3); wide-quick
    at 240 s total 1.006 (noise), PB5 at 600 s total 0.986.
 
+531. Covering models: column dominance at presolve (CoveringDominance). A 0/1
+   variable with a cost of at least 0 in a minimized objective that occurs
+   only in the objective and positively in clauses is fixed to 0 when
+   another such variable of no higher cost is in all its clauses (the column
+   reduction of set covering: R. S. Garfinkel and G. L. Nemhauser, "Integer
+   Programming", Wiley 1972, chapter 8; C. Toregas and C. ReVelle, "Binary
+   logic solutions to a class of location problem", Geographical Analysis
+   5, 1973; CP-SAT finds such pairs in its var_domination presolve). It
+   reads the objective through the block sums of lazy clause generation and
+   runs under it, without proof logging, when at least 100 variables are
+   dominated (org.jacop.fz.coveringDominance.min); -s prints coveringFixed. The
+   linear relaxation takes the columns fixed at the root as constants when
+   at least 1000 are fixed, and leaves out rows of constants; -s prints
+   lpFoldedColumns. pdc.r (Pseudo-Boolean Competition 2016, 6,904 covering
+   clauses over 19,021 variables): 16,053 columns fixed, root bound 15 ->
+   88.5, optimum 94 proved in 17-21 s, before 97 found in 120 s.
+   600 s, the 20 instances where either part fires: total -f 3,887 ->
+   3,307 s (pdc.r not proved -> 26 s), default 3,377 -> 3,814 s, which is
+   one instance, fir09_area_opers, now outside the rule and proved or not
+   by the base as well.
+   -Dorg.jacop.fz.coveringDominance=false and -Dorg.jacop.lp.foldFixed=0
+   turn them off.
+
 536. JaLP no longer calls an LP infeasible from a dual ray that only
    rounding makes look like a proof. The bound proof of a dual row now
    sums the ray over every column, the basic columns of the other rows

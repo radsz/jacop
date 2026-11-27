@@ -1539,7 +1539,12 @@ public final class Derivation implements VarMap {
             accepted[0] = false;
           }
         });
-    if (!accepted[0] && retention == Retention.KEPT) {
+    // a propagation stopped by an interruption or a deadline (a portfolio thread no longer
+    // needed) checked nothing
+    if (!accepted[0]
+        && retention == Retention.KEPT
+        && !parent.isInterrupted()
+        && !parent.isConsistencyDeadlinePassed()) {
       throw new IllegalStateException(
           "A solution of the derived store violates the model of the parent store");
     }

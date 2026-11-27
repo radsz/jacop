@@ -150,4 +150,23 @@ class RootExtendTest {
       assertThat(r.rootExtendNanos()).as("run %d", run).isPositive();
     }
   }
+
+  // -Dorg.jacop.lp.rootPivots=0 or 1, below the least pivots of a root solve (5): the solves take
+  // 5 (before: Math.clamp(n, 5, 0) threw, and every model with a linear relaxation stopped)
+  @Test
+  void rootPivotsBelowTheLeastKeepTheOptimum() {
+    for (int pivots : new int[] {0, 1}) {
+      for (int run = 0; run < INSTANCES; run++) {
+        long expected = new Model(run).optimum();
+        LinearRelaxation.rootPivots = pivots;
+        Model m = new Model(run);
+        LinearRelaxation r =
+            LinearRelaxation.of(m.store, m.cost, false, LinearRelaxation.Simplex.SPARSE);
+        m.store.impose(r);
+        long got = m.optimum();
+        LinearRelaxation.rootPivots = savedPivots;
+        assertThat(got).as("pivots %d, run %d", pivots, run).isEqualTo(expected);
+      }
+    }
+  }
 }
