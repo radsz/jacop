@@ -9997,4 +9997,36 @@ class FlatzincFrontEndTest {
     assertTrue(out.contains("obj = -5.0833"), out);
     assertTrue(out.contains("=========="), out);
   }
+
+  @Test
+  void floatVariablesWithExponentRangesAreSolvedInOneThread() throws IOException {
+    // the portfolio keeps floats in one thread since FloatDomain's precision is static, but it
+    // found float variables only by a range with a fraction: with var -10e-1..3e0 the threads ran
+    // and one, at the root, took a box 0.1 wide for a solution at the precision 0.1 that another
+    // thread's float_search had just set, and printed k = 9 as optimal (k = 8 with one thread)
+    String model =
+        "var -10e-1..3e0: x0 :: output_var;\n"
+            + "var -10e-1..2e0: x1 :: output_var;\n"
+            + "var -10e-1..10e-1: x2 :: output_var;\n"
+            + "var -2e0..2e0: x3 :: output_var;\n"
+            + "var 0..30: k :: output_var;\n"
+            + "var 0e0..300e-1: fk;\n"
+            + "var -10e0..10e0: t;\n"
+            + "constraint int2float(k, fk);\n"
+            + "constraint float_lin_le([2.0,1.0],[x1,x0],2.88);\n"
+            + "constraint float_lin_le([1.0,0.5,0.5,3.0],[x1,x2,x3,x0],-0.14);\n"
+            + "constraint float_lin_le([0.5,2.0,3.0,3.0],[x2,x1,x3,x0],2.14);\n"
+            + "constraint float_lin_le([1.0,-6.0,-6.0,-6.0],[fk,x0,x3,x1],0.0);\n"
+            + "constraint float_times(x2,x0,t);\n"
+            + "constraint float_le(t,0.48);\n"
+            + "solve :: seq_search([int_search([k],input_order,indomain_max,complete),"
+            + " float_search([x2], 0.001, input_order, indomain_reverse_split, complete),"
+            + " float_search([x3], 0.1, input_order, indomain_split, complete),"
+            + " float_search([x1], 1.0e-7, input_order, indomain_split, complete),"
+            + " float_search([x0], 0.001, input_order, indomain_split, complete)]) maximize k;\n";
+    String out = run(model, "-p", "2", "--lcg", "off")[0];
+    assertTrue(out.contains("%% -p ignored: the model has float variables"), out);
+    assertTrue(out.contains("k = 8;"), out);
+    assertTrue(out.contains("=========="), out);
+  }
 }
