@@ -271,7 +271,8 @@ final class ExprCompiler {
           }
           long m1 = Math.max(Bounds.abs(x.min()), Bounds.abs(x.max()));
           long e1 = Math.max(0, y.max());
-          long hi = Bounds.pow(m1, Math.min(e1, 64));
+          // x ^ 0 = 1, also for x = 0
+          long hi = Math.max(Bounds.pow(m1, Math.min(e1, 64)), y.min() <= 0 ? 1 : 0);
           long lo = x.min() >= 0 ? 0 : -hi;
           String ax = m.intAtom(x);
           String ay = m.intAtom(y);
