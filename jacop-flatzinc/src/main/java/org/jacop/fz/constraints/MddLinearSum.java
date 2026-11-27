@@ -160,6 +160,15 @@ public final class MddLinearSum {
     if (n == 0 || nodes == 0 || from.length > MAX_EDGES || level[0] != 1) {
       return NOT_A_SUM;
     }
+    // a malformed diagram is left to ExtensionalSupportMdd, which reports it
+    if (label.length != from.length || to.length != from.length) {
+      return NOT_A_SUM;
+    }
+    for (int e = 0; e < from.length; e++) {
+      if (from[e] < 1 || from[e] > nodes || to[e] < 0 || to[e] > nodes) {
+        return NOT_A_SUM;
+      }
+    }
     long[] potential = new long[nodes + 1];
     boolean[] reached = new boolean[nodes + 1];
     reached[1] = true;

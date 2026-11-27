@@ -252,7 +252,7 @@ public class StockingCost extends Constraint
     for (int i = 0; i < n; i++) {
       if (x[i].singleton()) {
         fixedPeriod[fixedOrders++] = x[i].value();
-        fixedCost += (long) h[i] * (due[i] - x[i].value());
+        fixedCost += (long) h[i] * ((long) due[i] - x[i].value());
       } else {
         key[free++] = ((long) x[i].max() << 32) | i;
       }
@@ -596,7 +596,7 @@ public class StockingCost extends Constraint
       if (values[i] > due[i]) {
         return false;
       }
-      total += (long) h[i] * (due[i] - values[i]);
+      total += (long) h[i] * ((long) due[i] - values[i]);
     }
     Arrays.sort(values);
     for (int i = capacity; i < n; i++) {

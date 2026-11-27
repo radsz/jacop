@@ -138,6 +138,12 @@ public class Geost extends Constraint
    */
   static final boolean DEBUG_ALL = false;
 
+  // the results of pruneMin and pruneMax when no placement is feasible: beyond every domain, since
+  // a coordinate may be IntDomain.MIN_INT or MAX_INT itself
+  private static final int NO_LOWER_BOUND = Integer.MAX_VALUE;
+
+  private static final int NO_UPPER_BOUND = Integer.MIN_VALUE;
+
   static final boolean DEBUG_MAIN = DEBUG_ALL;
 
   static final boolean DEBUG_DOUBLE_LAYER = DEBUG_ALL;
@@ -241,6 +247,13 @@ public class Geost extends Constraint
    * objects to their previous state.
    */
   final ArrayList<Var> groundedVars;
+
+  /**
+   * The variables of groundedVars. The store queues every variable again when it redoes a first
+   * consistency whose level was removed, and a variable already counted as grounded is not counted
+   * again.
+   */
+  private final Set<Var> groundedSet = Collections.newSetFromMap(new IdentityHashMap<>());
 
   /**
    * If running a complete sweep for each shape is costly, because some shapes may require a
@@ -785,7 +798,7 @@ public class Geost extends Constraint
    * @param currentShape the shape of the object
    * @param d the current most significant dimension
    * @param limit stop pruning if going beyond this value
-   * @return the bound found if there is one, and Constants.MaxInt if there is no feasible
+   * @return the bound found if there is one, and Integer.MAX_VALUE if there is no feasible
    *     placement.
    */
   protected int pruneMin(
@@ -845,7 +858,7 @@ public class Geost extends Constraint
       }
       return c[d];
     } else {
-      return IntDomain.MAX_INT;
+      return NO_LOWER_BOUND;
     }
   }
 
@@ -895,7 +908,7 @@ public class Geost extends Constraint
    * @param d the current most significant dimension
    * @param currentShape the shape of the object
    * @param limit stop pruning if going beyond this value
-   * @return the bound found if there is one, and Constants.MinInt if there is no feasible
+   * @return the bound found if there is one, and Integer.MIN_VALUE if there is no feasible
    *     placement.
    */
   protected int pruneMax(
@@ -954,7 +967,7 @@ public class Geost extends Constraint
       }
       return c[d];
     } else {
-      return IntDomain.MIN_INT;
+      return NO_UPPER_BOUND;
     }
   }
 
@@ -1083,6 +1096,11 @@ public class Geost extends Constraint
 
       if (init.begin(store)) {
 
+        // every object is checked, also again when the level of the first call was removed: an
+        // object fixed at imposition is never queued by a change
+        objectQueue.addAll(Arrays.asList(objects));
+        Arrays.fill(pruneIfGrounded, true);
+
         // enforce duration > 0 constraint
 
         for (GeostObject o : objects) {
@@ -1196,9 +1214,9 @@ public class Geost extends Constraint
           if (needPruning) {
 
             // It specifies the lowest lower bound found for the origin across multiple shapes.
-            int minLowerBound = IntDomain.MAX_INT;
+            int minLowerBound = NO_LOWER_BOUND;
             // It specifies the highest upper bound for for the origin across multiple shapes.
-            int maxUpperBound = IntDomain.MIN_INT;
+            int maxUpperBound = NO_UPPER_BOUND;
 
             int lastSidIndex = 0;
             boolean bestShapeIDFound = false;
@@ -1227,8 +1245,8 @@ public class Geost extends Constraint
               lastSidIndex--;
             }
 
-            int bestLowerBound = IntDomain.MAX_INT;
-            int bestUpperBound = IntDomain.MIN_INT;
+            int bestLowerBound = NO_LOWER_BOUND;
+            int bestUpperBound = NO_UPPER_BOUND;
 
             for (int i = 0; i <= lastSidIndex; i++) {
 
@@ -1249,9 +1267,9 @@ public class Geost extends Constraint
                       sid,
                       d,
                       //                     internalConstraintsToUse,
-                      fullSweep ? IntDomain.MAX_INT : minLowerBound);
+                      fullSweep ? NO_LOWER_BOUND : minLowerBound);
 
-              if (lowerBound >= IntDomain.MAX_INT) {
+              if (lowerBound == NO_LOWER_BOUND) {
 
                 // remove shape ID, it is infeasible
                 if (DEBUG_DOUBLE_LAYER) {
@@ -1282,9 +1300,9 @@ public class Geost extends Constraint
                         sid,
                         d,
                         //                       internalConstraintsToUse,
-                        fullSweep ? IntDomain.MIN_INT : maxUpperBound);
+                        fullSweep ? NO_UPPER_BOUND : maxUpperBound);
 
-                if (upperBound <= IntDomain.MIN_INT) {
+                if (upperBound == NO_UPPER_BOUND) {
 
                   // remove shape ID, it is infeasible
                   if (DEBUG_DOUBLE_LAYER) {
@@ -1312,14 +1330,14 @@ public class Geost extends Constraint
               }
             }
 
-            if (ASSERTS_ENABLED && minLowerBound <= IntDomain.MIN_INT) {
+            if (ASSERTS_ENABLED && minLowerBound < IntDomain.MIN_INT) {
               throw new IllegalStateException("Assertion failed");
             }
-            if (ASSERTS_ENABLED && maxUpperBound >= IntDomain.MAX_INT) {
+            if (ASSERTS_ENABLED && maxUpperBound > IntDomain.MAX_INT) {
               throw new IllegalStateException("Assertion failed");
             }
 
-            if (minLowerBound < IntDomain.MAX_INT) {
+            if (minLowerBound != NO_LOWER_BOUND) {
 
               IntVar prunedVariable = d != dimension ? o.coords[d] : o.start;
 
@@ -1342,7 +1360,7 @@ public class Geost extends Constraint
               inconsistent = true;
             }
 
-            if (!inconsistent && maxUpperBound > IntDomain.MIN_INT) {
+            if (!inconsistent && maxUpperBound != NO_UPPER_BOUND) {
 
               IntVar prunedVariable = d != dimension ? o.coords[d] : o.end;
 
@@ -1815,22 +1833,24 @@ public class Geost extends Constraint
         return;
       }
 
-      o.onGround(v);
-
-      if (DEBUG_OBJECT_GROUNDING) {
-        log.debug("grounding {}", v);
-      }
-
       // the grounded object is swept once more in its final place, also when Geost's own pruning
       // grounds it during consistency: the flag is not restored on backtracking, so it can still
       // be false from a sweep made in another branch
       pruneIfGrounded[o.no] = true;
 
-      if (lastLevelLastVar.stamp() < store.level) {
-        lastLevelLastVar.update(groundedVars.size());
-      }
+      if (groundedSet.add(v)) {
+        o.onGround(v);
 
-      groundedVars.add(v);
+        if (DEBUG_OBJECT_GROUNDING) {
+          log.debug("grounding {}", v);
+        }
+
+        if (lastLevelLastVar.stamp() < store.level) {
+          lastLevelLastVar.update(groundedVars.size());
+        }
+
+        groundedVars.add(v);
+      }
     }
 
     if (inConsistency) {
@@ -1949,6 +1969,7 @@ public class Geost extends Constraint
     for (int i = groundedVars.size() - 1; i >= removeLimit; i--) {
 
       Var v = groundedVars.remove(i);
+      groundedSet.remove(v);
       if (ASSERTS_ENABLED && v == null) {
         throw new IllegalStateException("Assertion failed");
       }

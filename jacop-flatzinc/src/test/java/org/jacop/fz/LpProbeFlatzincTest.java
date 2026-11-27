@@ -62,7 +62,9 @@ class LpProbeFlatzincTest {
 
   @Test
   void probedSearchKeepsTheOptimumUnderLcg() throws IOException {
-    check(new Random(20261114), 60, false, "--lcg", "on");
+    // without the annotation's search that runs before LCG fixed search, which decides these
+    // small models in its first second, before the probe
+    check(new Random(20261114), 60, false, "--lcg", "on", "--free-config", "fixed-first=0");
   }
 
   @Test

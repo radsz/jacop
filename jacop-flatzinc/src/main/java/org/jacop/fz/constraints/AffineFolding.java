@@ -284,7 +284,7 @@ public class AffineFolding extends ModelRewrite {
     }
     int rows = 0;
     for (ASTConstElem c : occurrences.getOrDefault(z, Set.of())) {
-      if (c != d.node() && !ROWS.contains(c.getName())) {
+      if (c != d.node() && (!ROWS.contains(c.getName()) || controls(c, z))) {
         return false;
       }
       if (c != d.node()) {
@@ -297,6 +297,14 @@ public class AffineFolding extends ModelRewrite {
       return false;
     }
     return covers(z.dom(), x.dom(), d.p(), d.q());
+  }
+
+  // whether z is the 0/1 control of a reified or implied row, which folding leaves as it is
+  private boolean controls(ASTConstElem c, IntVar z) {
+    return c.jjtGetNumChildren() > 3
+        && c.jjtGetChild(3) instanceof ASTScalarFlatExpr b
+        && b.getType() != 0
+        && support.getVariable(b) == z;
   }
 
   // whether every value p*v + q for v in dx is in dz

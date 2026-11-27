@@ -100,7 +100,8 @@ public class AeqS extends PrimitiveConstraint implements Copyable<AeqS>, PbEncod
         return possibleEvent;
       }
     }
-    return SetDomain.GROUND;
+    // notConsistency prunes the lub before a is ground
+    return SetDomain.ANY;
   }
 
   @Override
@@ -148,7 +149,7 @@ public class AeqS extends PrimitiveConstraint implements Copyable<AeqS>, PbEncod
 
   @Override
   protected int getDefaultNotConsistencyPruningEvent() {
-    return SetDomain.GROUND;
+    return SetDomain.ANY;
   }
 
   @Override

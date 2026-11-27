@@ -388,6 +388,10 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
 
       assignOrPruneByCounter(store, start, numberEq, numberMayBe);
 
+      if (!store.propagationHasOccurred && subsetBounds()) {
+        pruneBySubsets(store, start);
+      }
+
     } while (store.propagationHasOccurred);
 
     for (int i = 0; i < values.length; i++) {
@@ -660,6 +664,144 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
     for (int i = 0; i < extendedCounterLength; i++) {
       updateExtendedCounter(
           store, i, n - max + getExtendedCounterMax(i), n - min + getExtendedCounterMin(i));
+    }
+  }
+
+  /** The most classes (the counted values and the rest) whose subsets are checked. */
+  private static final int SUBSET_CLASSES = 6;
+
+  // per subset of the classes, the undecided variables whose classes all lie in it
+  private int[] within;
+
+  /**
+   * Whether the propagation also bounds the counts of every set of classes, see {@link
+   * #pruneBySubsets}.
+   *
+   * @return true if the counts of sets of classes are bounded, false by default.
+   */
+  protected boolean subsetBounds() {
+    return false;
+  }
+
+  /**
+   * Bounds the sum of the counters of every set S of at least two classes (counted values, or the
+   * rest) by the number of variables that may take a class of S and the number that can take only
+   * classes of S, as in the pigeonhole reasoning of the flow model of global cardinality (Regin,
+   * Generalized arc consistency for global cardinality constraint, AAAI 1996). Each counter of S
+   * gets the bounds left by the others, and a set at a bound takes or loses the variables it may
+   * take. Only for at most {@link #SUBSET_CLASSES} classes, at a fixpoint of the other rules.
+   */
+  private void pruneBySubsets(Store store, int start) {
+    int classes = values.length + 1;
+    if (classes < 3 || classes > SUBSET_CLASSES) {
+      return;
+    }
+    int full = (1 << classes) - 1;
+    countWithin(start, classes, full);
+    for (int set = 1; set < full; set++) {
+      if (Integer.bitCount(set) >= 2) {
+        boundSet(store, start, set, full);
+      }
+    }
+  }
+
+  /** Fills within: per set of classes, the undecided variables whose classes all lie in it. */
+  private void countWithin(int start, int classes, int full) {
+    if (within == null) {
+      within = new int[full + 1];
+    }
+    Arrays.fill(within, 0);
+    for (int j = start; j < n; j++) {
+      within[classesOf(list[j].domain)]++;
+    }
+    // sums over subsets (zeta transform), one class at a time
+    for (int b = 0; b < classes; b++) {
+      int bit = 1 << b;
+      for (int set = 0; set <= full; set++) {
+        if ((set & bit) != 0) {
+          within[set] += within[set ^ bit];
+        }
+      }
+    }
+  }
+
+  /** Bounds the counters of one set of classes and prunes the variables of a set at a bound. */
+  private void boundSet(Store store, int start, int set, int full) {
+    int classes = values.length + 1;
+    int fixed = 0;
+    int minSum = 0;
+    int maxSum = 0;
+    for (int i = 0; i < classes; i++) {
+      if ((set & (1 << i)) != 0) {
+        fixed += i < values.length ? numberEq[i] : restEq;
+        minSum += getExtendedCounterMin(i);
+        maxSum += getExtendedCounterMax(i);
+      }
+    }
+    int lo = fixed + within[set];
+    int hi = fixed + (n - start) - within[full ^ set];
+    if (minSum > hi || maxSum < lo) {
+      throw Store.failException;
+    }
+    for (int i = 0; i < classes; i++) {
+      if ((set & (1 << i)) != 0) {
+        boundCounter(store, i, lo, hi, minSum, maxSum);
+      }
+    }
+    if (lo < hi && maxSum == lo) {
+      // the set holds only the variables that can take nothing else
+      restrictStraddling(store, start, set, set);
+    } else if (lo < hi && minSum == hi) {
+      // the set holds every variable that may take it
+      restrictStraddling(store, start, set, full ^ set);
+    }
+  }
+
+  /** Removes the given classes from the variables that may take classes in and out of a set. */
+  private void restrictStraddling(Store store, int start, int set, int remove) {
+    for (int j = start; j < n; j++) {
+      IntVar v = list[j];
+      int mask = classesOf(v.domain);
+      if ((mask & set) != 0 && (mask & ~set) != 0) {
+        restrict(store, v, mask & remove);
+      }
+    }
+  }
+
+  /** Gives counter i of a set the bounds the other counters of the set leave. */
+  private void boundCounter(Store store, int i, int lo, int hi, int minSum, int maxSum) {
+    int min = getExtendedCounterMin(i);
+    int max = getExtendedCounterMax(i);
+    int newMin = Math.max(min, lo - (maxSum - max));
+    int newMax = Math.min(max, hi - (minSum - min));
+    if (newMin != min || newMax != max) {
+      updateExtendedCounter(store, i, newMin, newMax);
+    }
+  }
+
+  /** The classes a domain may take: bit i for values[i], the last bit for the rest. */
+  private int classesOf(IntDomain domain) {
+    int mask = 0;
+    for (int i = 0; i < values.length; i++) {
+      if (domain.contains(values[i])) {
+        mask |= 1 << i;
+      }
+    }
+    if (!valuesDomain.contains(domain)) {
+      mask |= 1 << values.length;
+    }
+    return mask;
+  }
+
+  /** Removes from a variable the classes of a set. */
+  private void restrict(Store store, IntVar v, int remove) {
+    for (int i = 0; i < values.length; i++) {
+      if ((remove & (1 << i)) != 0) {
+        v.domain.inComplement(store.level, v, values[i]);
+      }
+    }
+    if ((remove & (1 << values.length)) != 0) {
+      v.domain.in(store.level, v, valuesDomain);
     }
   }
 

@@ -74,11 +74,13 @@ import org.jacop.fz.SimpleNode;
  * <p>The compiler takes a model only when each constraint is of a kind it compiles, each integer
  * variable has at most {@code org.jacop.fz.clausal.maxDomain} values (default 64), the variables of
  * regular constraints at most {@code org.jacop.fz.clausal.regularDomain} values (default 3: lazy
- * clause generation is faster on RotatingWorkforce2 and NurseRostering), and the CNF has at most
- * {@code org.jacop.fz.clausal.maxClauses} clauses (default 2,000,000: CarSequencing, Primes and the
- * large Crosswords are faster with lazy clause generation). {@code
- * org.jacop.fz.clausal.direct=false} gives every variable order literals. The system property
- * {@code org.jacop.fz.clausal=false} turns the compilation off.
+ * clause generation is faster on RotatingWorkforce2 and NurseRostering), the terms of differences x
+ * - y = d (linear equalities of three terms with coefficients of both signs) at most {@code
+ * org.jacop.fz.clausal.sumDomain} values (default 3: Costas arrays are faster with lazy clause
+ * generation), and the CNF has at most {@code org.jacop.fz.clausal.maxClauses} clauses (default
+ * 2,000,000: CarSequencing, Primes and the large Crosswords are faster with lazy clause
+ * generation). {@code org.jacop.fz.clausal.direct=false} gives every variable order literals. The
+ * system property {@code org.jacop.fz.clausal=false} turns the compilation off.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -89,6 +91,7 @@ public final class ClausalCompiler {
   private static final String ALLDISTINCT = "jacop_alldistinct";
   private static final String COUNT_VALUES = "jacop_count_values";
   private static final String AMONG = "jacop_among";
+  private static final String INT_LIN_EQ = "int_lin_eq";
   private static final String INCREASING = "jacop_increasing";
   private static final String SHORT_TABLE_INT = "jacop_short_table_int";
   private static final String TABLE_INT = "jacop_table_int";
@@ -98,7 +101,7 @@ public final class ClausalCompiler {
   static final Set<String> SUPPORTED =
       Set.of(
           "int_times",
-          "int_lin_eq",
+          INT_LIN_EQ,
           "int_lin_le",
           "int_lin_ne",
           "int_lin_eq_reif",
@@ -178,6 +181,17 @@ public final class ClausalCompiler {
   }
 
   /**
+   * Returns the largest domain a variable of a difference x - y = d of a compiled model may have,
+   * the property {@code org.jacop.fz.clausal.sumDomain}: Costas arrays, whose difference equalities
+   * x_i - x_j = d range over 2n - 1 values, are solved 2-4 times faster by the CP side.
+   *
+   * @return the number of values, 3 by default
+   */
+  static int sumDomain() {
+    return Integer.getInteger("org.jacop.fz.clausal.sumDomain", 3);
+  }
+
+  /**
    * Returns whether variables that only appear in value constraints (tables, alldifferent, the
    * counted lists of count and among) get direct literals without order literals, the property
    * {@code org.jacop.fz.clausal.direct}.
@@ -219,6 +233,7 @@ public final class ClausalCompiler {
   private final Support support;
   private final int maxDomain;
   private final int regularDomain;
+  private final int sumDomain;
   private final boolean direct;
   // variables that need order literals; the others are encoded with direct literals only
   private final Set<IntVar> ordered = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
@@ -251,6 +266,7 @@ public final class ClausalCompiler {
     this.support = support;
     this.maxDomain = maxDomain();
     this.regularDomain = regularDomain();
+    this.sumDomain = sumDomain();
     this.direct = direct();
     this.maxLits = maxLiterals();
     this.maxClauses = maxClauses();
@@ -689,6 +705,9 @@ public final class ClausalCompiler {
     for (ASTConstElem item : items) {
       String name = item.getName();
       if (name.startsWith("int_lin_") && longSum(item)) {
+        if (name.startsWith(INT_LIN_EQ)) {
+          checkSumDomains(item);
+        }
         // a sum of three or more terms is a diagram or adders over direct literals
         continue;
       }
@@ -711,6 +730,25 @@ public final class ClausalCompiler {
       terms += a[i] != 0 && !xs[i].singleton() ? 1 : 0;
     }
     return terms >= 3;
+  }
+
+  // a difference x - y = d of three terms with more than sumDomain values: Costas arrays
+  private void checkSumDomains(ASTConstElem item) {
+    int[] a = ints(item, 0);
+    IntVar[] xs = vars(item, 1);
+    int terms = 0;
+    int positive = 0;
+    int widest = 0;
+    for (int i = 0; i < xs.length; i++) {
+      if (a[i] != 0 && !xs[i].singleton()) {
+        terms++;
+        positive += a[i] > 0 ? 1 : 0;
+        widest = Math.max(widest, xs[i].getSize());
+      }
+    }
+    if (terms == 3 && positive % 3 != 0 && widest > sumDomain) {
+      throw new NotCompiled("difference over " + widest + " values");
+    }
   }
 
   private IntVar[] argumentVars(ASTConstElem item, int i) {
@@ -790,7 +828,7 @@ public final class ClausalCompiler {
   private void compile(ASTConstElem n) {
     switch (n.getName()) {
       case "int_times" -> times(var(n, 0), var(n, 1), var(n, 2));
-      case "int_lin_eq",
+      case INT_LIN_EQ,
           "int_lin_le",
           "int_lin_ne",
           "int_lin_eq_reif",

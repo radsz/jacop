@@ -25,6 +25,11 @@
 
 package org.jacop.fz.constraints;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.FzConsole;
@@ -613,7 +618,159 @@ public final class ConstraintFncs {
 
   /** Handles the jacop_diff2_strict FlatZinc constraint. */
   public void jacop_diff2_strict(SimpleNode n) {
+    if (diffnByPairs(n)) {
+      return;
+    }
     gc.gen_jacop_diff2_strict(n);
+  }
+
+  // under LCG fixed search, a diffn of at most this many rectangles (org.jacop.fz.diffnPairs) is
+  // posted as the pairwise disjunctions of the MiniZinc library instead of Diffn (0 = never)
+  private static final int DIFFN_PAIRS = 30;
+
+  // and only when the rectangles fill at most this share of the box they can lie in
+  // (org.jacop.fz.diffnPairsDensity)
+  private static final double DIFFN_PAIRS_DENSITY =
+      Double.parseDouble(System.getProperty("org.jacop.fz.diffnPairsDensity", "0.05"));
+
+  /**
+   * Posts a diffn of few rectangles under LCG fixed search as the decomposition of the MiniZinc
+   * library: for each pair of rectangles, one of the four ways to lie apart (left, right, below,
+   * above), each a half-reified linear relation on a Boolean of its own, and the clause of the four
+   * Booleans. Learning then works on which way two rectangles lie apart. On the cargo stockyards of
+   * the MiniZinc Challenge 2017 (21 piles) LCG under the annotation stayed at its first solution
+   * with Diffn: challenge02 at 10,063 after 240 s, as Gecode and Choco (fd) without learning, while
+   * Chuffed and the decomposition reach 5,699 in under a second. Diffn's explanations of its
+   * failures take about 67 bounds, the bounds of most piles.
+   *
+   * @param n the constraint's node
+   * @return true if the decomposition was posted
+   */
+  private boolean diffnByPairs(SimpleNode n) {
+    int most = Integer.getInteger("org.jacop.fz.diffnPairs", DIFFN_PAIRS);
+    if (most <= 0
+        || !support.options.lcg()
+        || support.options.freeSearch()
+        || support.options.proof() != null) {
+      return false;
+    }
+    IntVar[][] origin = {
+      support.getVarArray((SimpleNode) n.jjtGetChild(0)),
+      support.getVarArray((SimpleNode) n.jjtGetChild(1))
+    };
+    IntVar[][] length = {
+      support.getVarArray((SimpleNode) n.jjtGetChild(2)),
+      support.getVarArray((SimpleNode) n.jjtGetChild(3))
+    };
+    int count = origin[0].length;
+    if (count < 2 || count > most) {
+      return false;
+    }
+    double density = diffnDensity(origin, length);
+    if (support.options.debug()) {
+      System.out.println("% diffn: " + count + " rectangles, density " + density);
+    }
+    // sparse placements only: on pillars-and-planks (MZNC 2020, density 0.375 to 0.6) Diffn proves
+    // p-d12 in 7 s, the pairs not in 240 s; the cargo stockyards have densities 0.003 to 0.02
+    if (density > DIFFN_PAIRS_DENSITY) {
+      return false;
+    }
+    // origin[d][a] + length[d][a] - origin[d][b] <= 0 for each pair and way, unless decided
+    List<List<Apart>> pairs = new ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      for (int j = i + 1; j < count; j++) {
+        List<Apart> ways = new ArrayList<>(4);
+        boolean apart = false;
+        for (int d = 0; d < 2 && !apart; d++) {
+          for (int w = 0; w < 2 && !apart; w++) {
+            int a = w == 0 ? i : j;
+            int b = w == 0 ? j : i;
+            Apart way = Apart.of(origin[d][a], length[d][a], origin[d][b]);
+            if (way.vars.length == 0) {
+              apart = way.rhs >= 0;
+            } else {
+              ways.add(way);
+            }
+          }
+        }
+        if (apart) {
+          continue;
+        }
+        if (ways.isEmpty()) {
+          // two rectangles that overlap whatever the values: Diffn fails at once
+          return false;
+        }
+        pairs.add(ways);
+      }
+    }
+    IntVar[] none = new IntVar[0];
+    for (List<Apart> ways : pairs) {
+      IntVar[] literals = new IntVar[ways.size()];
+      for (int k = 0; k < literals.length; k++) {
+        Apart way = ways.get(k);
+        literals[k] = new BooleanVar(support.store);
+        poseLinearImplied(Support.LE, way.weights, way.vars, way.rhs, literals[k]);
+      }
+      poseClause(literals, none);
+    }
+    return true;
+  }
+
+  /** The least area of the rectangles over the area of the box their origins and lengths allow. */
+  private static double diffnDensity(IntVar[][] origin, IntVar[][] length) {
+    double area = 0;
+    for (int i = 0; i < origin[0].length; i++) {
+      area += (double) Math.max(0, length[0][i].min()) * Math.max(0, length[1][i].min());
+    }
+    double box = 1;
+    for (int d = 0; d < 2; d++) {
+      long low = Long.MAX_VALUE;
+      long high = Long.MIN_VALUE;
+      for (int i = 0; i < origin[d].length; i++) {
+        low = Math.min(low, origin[d][i].min());
+        high = Math.max(high, (long) origin[d][i].max() + length[d][i].max());
+      }
+      box *= (double) Math.max(1, high - low);
+    }
+    return area / box;
+  }
+
+  /** The relation sum(weights * vars) <= rhs of one way two rectangles lie apart. */
+  private static final class Apart {
+    final int[] weights;
+    final IntVar[] vars;
+    final int rhs;
+
+    private Apart(int[] weights, IntVar[] vars, int rhs) {
+      this.weights = weights;
+      this.vars = vars;
+      this.rhs = rhs;
+    }
+
+    // origin + length - other <= 0, with the fixed terms in the right-hand side and a variable
+    // that occurs twice merged
+    static Apart of(IntVar origin, IntVar length, IntVar other) {
+      IntVar[] terms = {origin, length, other};
+      int[] signs = {1, 1, -1};
+      Map<IntVar, Integer> weight = new LinkedHashMap<>();
+      long rhs = 0;
+      for (int t = 0; t < 3; t++) {
+        if (terms[t].singleton()) {
+          rhs -= (long) signs[t] * terms[t].value();
+        } else {
+          weight.merge(terms[t], signs[t], Integer::sum);
+        }
+      }
+      weight.values().removeIf(w -> w == 0);
+      int[] w = new int[weight.size()];
+      IntVar[] x = new IntVar[weight.size()];
+      int k = 0;
+      for (Map.Entry<IntVar, Integer> e : weight.entrySet()) {
+        x[k] = e.getKey();
+        w[k++] = e.getValue();
+      }
+      return new Apart(w, x, Math.clamp(rhs, Integer.MIN_VALUE, Integer.MAX_VALUE));
+    }
   }
 
   /** Handles the jacop_diffn_k FlatZinc constraint. */

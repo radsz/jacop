@@ -410,14 +410,15 @@ public class CardinalityDetector implements ParserTreeConstants {
   }
 
   // the counter of one value: the variable y of a count a * count - a * y = 0 when there is one
-  // not used yet, otherwise a new variable linked to each linear constraint
+  // not used yet, otherwise a new variable linked to each linear constraint; -a in long, since
+  // weights [MIN_VALUE, MIN_VALUE] weigh count + y, not count - y
   private IntVar counter(List<Count> counts, int n, Set<IntVar> used) {
     IntVar counter = null;
     for (Count k : counts) {
       if (k.rel.equals("==")
           && k.rhs == 0
           && k.y.length == 1
-          && k.c[0] == -k.a
+          && k.c[0] == -(long) k.a
           && !used.contains(k.y[0])) {
         counter = k.y[0];
         break;
@@ -429,7 +430,7 @@ public class CardinalityDetector implements ParserTreeConstants {
       used.add(counter);
     }
     for (Count k : counts) {
-      if (k.y.length == 1 && k.y[0] == counter && k.c[0] == -k.a && k.rhs == 0) {
+      if (k.y.length == 1 && k.y[0] == counter && k.c[0] == -(long) k.a && k.rhs == 0) {
         continue;
       }
       IntVar[] list = new IntVar[k.y.length + 1];

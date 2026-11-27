@@ -32,6 +32,7 @@
 package org.jacop.jasat.lcg;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import java.time.Duration;
@@ -50,6 +51,7 @@ import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 import java.util.function.ToLongBiFunction;
 import java.util.stream.IntStream;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldifferent;
@@ -7848,5 +7850,61 @@ class LcgSolverTest {
     solver.setAnnotation(new SimpleSelect<>(s, null, new IndomainMin<>()), false);
     int status = solver.solve();
     return new long[] {status, solver.sat().conflicts};
+  }
+
+  // x <= y whose reason of [y >= v] marks the bound [x >= v] as the removal of a value it does not
+  // remove: the entry implies the atom, but the literal [x != value] cited in its place does not
+  static final class MismarkedXlteqY extends XlteqY {
+    private final int value;
+
+    MismarkedXlteqY(IntVar x, IntVar y, int value) {
+      super(x, y);
+      this.value = value;
+    }
+
+    @Override
+    public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+      if (trail.variable(entry) != y || trail.kind(entry) != AtomicTrail.GE) {
+        return false;
+      }
+      EntryList bound = new EntryList();
+      trail.addLowerBound(x, entry, bound);
+      if (bound.size() != 1 || trail.value(bound.get(0)) < trail.value(entry)) {
+        return false;
+      }
+      out.addExcludedValue(bound.get(0), value);
+      return true;
+    }
+
+    @Override
+    public XlteqY copy(VarMap map) {
+      return new XlteqY(map.get(x), map.get(y));
+    }
+  }
+
+  // the checker validated the entries of an explanation, not the literals the solver was handed
+  // after converting them (value marks, dropped dominated atoms, weakened bounds), so a value mark
+  // that made the clause unimplied went unseen (EntryList.move lost the marks in dropDominated)
+  @Test
+  void checkerChecksTheClauseHandedToTheSolver() {
+    Store store = new Store();
+    BooleanVar b = new BooleanVar(store, "b");
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    IntVar w = new IntVar(store, "w", 0, 9);
+    store.impose(new Reified(new XneqC(x, 5), b));
+    store.impose(new MismarkedXlteqY(x, y, 5));
+    // x = 9, 8, 7 and 6 fail through y + w <= 10 and w >= x - 1, so later reasons of [y >= v]
+    // find the literal [x = 5] false and cite it
+    store.impose(new LinearInt(new IntVar[] {y, w}, new int[] {1, 1}, "<=", 10));
+    store.impose(new LinearInt(new IntVar[] {w, x}, new int[] {1, -1}, ">=", -1));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setAnnotation(
+        new SimpleSelect<>(new IntVar[] {b, x, y, w}, null, new IndomainMax<>()), false);
+    assertThatThrownBy(solver::solve)
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("reason clause")
+        .hasMessageContaining("[x = 5]");
   }
 }

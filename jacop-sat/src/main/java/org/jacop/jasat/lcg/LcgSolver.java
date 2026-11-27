@@ -7314,8 +7314,10 @@ public final class LcgSolver implements ExternalPropagator {
 
   /**
    * Turns the explanation checker on or off: every explanation is then derived again in a scratch
-   * store, and a wrong one stops the solver with an {@link IllegalStateException}. The system
-   * property {@code jacop.lcg.check=true} turns it on for every solver.
+   * store, and so is the clause of every reason and conflict handed to the solver, after the
+   * entries became literals, against the constraints whose explanations it combines; a wrong one
+   * stops the solver with an {@link IllegalStateException}. The system property {@code
+   * jacop.lcg.check=true} turns it on for every solver.
    *
    * @param on true to check explanations
    */
@@ -8839,6 +8841,8 @@ public final class LcgSolver implements ExternalPropagator {
   // the atoms of a failure held back while the atoms of its fixpoint are pushed, or null
   private EntryList heldFailure;
   private final EntryList heldAtoms = new EntryList();
+  // the constraint whose failure heldFailure holds
+  private Constraint heldFailedBy;
 
   /**
    * Sets whether a constraint failure first hands the solver the atoms its fixpoint recorded and
@@ -8905,7 +8909,7 @@ public final class LcgSolver implements ExternalPropagator {
       if (heldFailure != null) {
         EntryList atoms = heldFailure;
         heldFailure = null;
-        return conflict(atoms, 0);
+        return conflict(atoms, 0, heldFailedBy);
       }
       if (numPending == 0 && !store.hasPendingConstraints()) {
         return 0;
@@ -8920,7 +8924,7 @@ public final class LcgSolver implements ExternalPropagator {
           EntryList atoms = failureAtoms;
           atoms.clear();
           trail.atomsBefore(x, trail.size(), atoms);
-          return conflict(atoms, lit);
+          return conflict(atoms, lit, null);
         }
         if (trail.size() > cause.length) {
           cause = Arrays.copyOf(cause, Math.max(trail.size(), 2 * cause.length));
@@ -8967,10 +8971,11 @@ public final class LcgSolver implements ExternalPropagator {
             heldAtoms.addFrom(atoms, k);
           }
           heldFailure = heldAtoms;
+          heldFailedBy = store.recentlyFailedConstraint;
           numPending = 0;
           continue;
         }
-        return conflict(atoms, 0);
+        return conflict(atoms, 0, store.recentlyFailedConstraint);
       }
     }
   }
@@ -9061,6 +9066,7 @@ public final class LcgSolver implements ExternalPropagator {
     useCounter(trail.reason(e));
     measure(trail.reason(e), own, e, out, mark);
     if (checker != null) {
+      clauseSources.add(trail.reason(e));
       EntryList reason = new EntryList();
       for (int k = mark; k < out.size(); k++) {
         reason.addFrom(out, k);
@@ -9068,6 +9074,39 @@ public final class LcgSolver implements ExternalPropagator {
       verify(checker.checkReason(e, reason));
     }
     return 0;
+  }
+
+  // with the checker on: the constraints whose explanations the clause being built combines
+  private final Set<Constraint> clauseSources = Collections.newSetFromMap(new IdentityHashMap<>());
+
+  /**
+   * With the checker on, checks the clause handed to the solver, after every conversion of the
+   * explanations' entries into literals, against the constraints whose explanations it combines.
+   */
+  private void checkClause(int[] clause, String what) {
+    int n = clause.length;
+    IntVar[] xs = new IntVar[n];
+    int[] kinds = new int[n];
+    int[] values = new int[n];
+    for (int k = 0; k < n; k++) {
+      int lit = clause[k];
+      int d = Math.abs(lit);
+      if (d >= litVar.length || litVar[d] < 0) {
+        checker.clausesSkipped++;
+        return;
+      }
+      xs[k] = vars[litVar[d]];
+      int v = litValue[d];
+      // the negation of the literal
+      if (litKind[d] == GE_KIND) {
+        kinds[k] = lit > 0 ? AtomicTrail.LE : AtomicTrail.GE;
+        values[k] = lit > 0 ? v - 1 : v;
+      } else {
+        kinds[k] = lit > 0 ? AtomicTrail.NE : ExplanationChecker.EQ;
+        values[k] = v;
+      }
+    }
+    verify(checker.checkClause(clauseSources, xs, kinds, values, n, what));
   }
 
   // per constraint class: reasons, generic reasons and atoms in them, then the same for failures
@@ -9153,9 +9192,15 @@ public final class LcgSolver implements ExternalPropagator {
    * its own explanation, and the negated solver literal extra unless 0. Returns a false literal of
    * the clause, whose reason is the clause.
    */
-  private int conflict(EntryList atoms, int extra) {
+  private int conflict(EntryList atoms, int extra, Constraint failedBy) {
     numPending = 0;
     failed = true;
+    if (checker != null) {
+      clauseSources.clear();
+      if (failedBy != null) {
+        clauseSources.add(failedBy);
+      }
+    }
     int seen = nextStamp();
     if (entryStamp.length < trail.size()) {
       entryStamp = Arrays.copyOf(entryStamp, Math.max(trail.size(), 2 * entryStamp.length));
@@ -9221,6 +9266,9 @@ public final class LcgSolver implements ExternalPropagator {
     }
     if (size < clause.length) {
       clause = Arrays.copyOf(clause, size);
+    }
+    if (checker != null) {
+      checkClause(clause, "conflict clause");
     }
     if (clause.length == 0) {
       // the explanations, stronger than propagation at the root, prove the model unsatisfiable:
@@ -9443,6 +9491,9 @@ public final class LcgSolver implements ExternalPropagator {
     }
     EntryList reason = reasonEntries;
     reason.clear();
+    if (checker != null) {
+      clauseSources.clear();
+    }
     liftBefore = sat.trailPosition(lit);
     int extra;
     try {
@@ -9466,6 +9517,9 @@ public final class LcgSolver implements ExternalPropagator {
     }
     if (extra != 0) {
       clause[clause.length - 1] = -extra;
+    }
+    if (checker != null) {
+      checkClause(clause, "reason clause");
     }
     reasons++;
     reasonLiterals += clause.length;
