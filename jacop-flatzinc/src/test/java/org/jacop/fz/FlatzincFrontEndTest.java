@@ -9781,4 +9781,36 @@ class FlatzincFrontEndTest {
     assertEquals(2, out.split("----------", -1).length - 1, out);
     assertFalse(out.contains("o = true;"), out);
   }
+
+  @Test
+  void untouchedOutputVariablesAreLabelledInTheirOrder() throws IOException {
+    // the output variables that no constraint touches were collected in a hash set, so the order in
+    // which -a enumerated them followed identity hash codes; it is the order of the outputs again
+    StringBuilder model = new StringBuilder("var bool: b0;\nvar 1..2: x :: output_var;\n");
+    for (int i = 0; i < 3; i++) {
+      model.append("var 1..2: p").append(i).append(";\n");
+    }
+    for (int i = 0; i < 6; i++) {
+      model.append("var 1..2: u").append(i).append(" :: output_var;\n");
+    }
+    model.append(
+        "constraint int_ne_reif(p0,p1,b0);\nconstraint int_ne_reif(p0,p2,b0);\n"
+            + "constraint int_ne_reif(p1,p2,b0);\nconstraint int_ne(x,p2);\n"
+            + "solve :: int_search([x], input_order, indomain_min, complete) satisfy;\n");
+    StringBuilder expected = new StringBuilder();
+    for (int x = 1; x <= 2; x++) {
+      for (int k = 0; k < 64; k++) {
+        expected.append("x = ").append(x).append(";\n");
+        for (int i = 0; i < 6; i++) {
+          expected.append("u").append(i).append(" = ").append(1 + (k >> (5 - i) & 1)).append(";\n");
+        }
+        expected.append("----------\n");
+      }
+    }
+    expected.append("==========\n");
+    for (int round = 0; round < 3; round++) {
+      String out = run(model.toString(), "-a", "--lcg", "off")[0];
+      assertTrue(out.contains(expected), out);
+    }
+  }
 }

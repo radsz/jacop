@@ -10815,7 +10815,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       clauseVars.addAll(Arrays.asList(clause[0]));
       clauseVars.addAll(Arrays.asList(clause[1]));
     }
-    Set<Var> outputs = new HashSet<>();
+    Set<Var> outputs = new LinkedHashSet<>();
     Collections.addAll(outputs, ints);
     Collections.addAll(outputs, bools);
     Collections.addAll(outputs, sets);
