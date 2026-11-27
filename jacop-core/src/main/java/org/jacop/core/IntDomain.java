@@ -1096,6 +1096,32 @@ public abstract class IntDomain extends Domain {
   }
 
   /**
+   * Tells the recorder of the variable's store, if any, that the values of an interval are about to
+   * be removed; see {@link DomainChangeRecorder#removingInterval}.
+   *
+   * @param v the variable of this domain
+   * @param min the first value of the interval
+   * @param max the last value of the interval
+   */
+  protected static void removingInterval(Var v, int min, int max) {
+    if (v instanceof IntVar x) {
+      x.removingInterval(min, max);
+    }
+  }
+
+  /**
+   * Tells the recorder of the variable's store, if any, that the change the variable reports next
+   * moves only its bounds; see {@link DomainChangeRecorder#changingBounds}.
+   *
+   * @param v the variable of this domain
+   */
+  protected static void changingBounds(Var v) {
+    if (v instanceof IntVar x) {
+      x.changingBounds();
+    }
+  }
+
+  /**
    * It updates the domain according to the minimum value and stamp value. It informs the variable
    * of a change if it occurred.
    *
