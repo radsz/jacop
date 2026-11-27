@@ -31,7 +31,6 @@
 package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -61,6 +60,12 @@ class MznlibGlobalsTest {
 
   private static final String DIR = "src/test/fz/mznlib/";
   private static final String SEPARATOR = "----------";
+
+  /**
+   * The models without solution: in hook_cost_regular_holes the costs of the four accepted words
+   * (-4, -2, 8, 10, by enumeration of a, b and e) all lie in holes of the cost's domain.
+   */
+  private static final Set<String> UNSATISFIABLE = Set.of("hook_cost_regular_holes");
 
   @ParameterizedTest
   @ValueSource(
@@ -131,7 +136,8 @@ class MznlibGlobalsTest {
     Set<String> nativeSolutions = solveAll(DIR + model + ".fzn");
     Set<String> decompSolutions = solveAll(DIR + model + "-decomp.fzn");
 
-    assertFalse(nativeSolutions.isEmpty(), model + " has no solutions");
+    assertEquals(
+        !UNSATISFIABLE.contains(model), !nativeSolutions.isEmpty(), model + " has no solutions");
     assertEquals(decompSolutions, nativeSolutions, model);
   }
 
@@ -186,10 +192,12 @@ class MznlibGlobalsTest {
     List<String> printed =
         Arrays.stream(result.split(SEPARATOR))
             .map(String::strip)
-            .filter(s -> !s.isEmpty() && !s.startsWith("=========="))
+            .filter(s -> !s.isEmpty() && !s.startsWith("=====") && !s.startsWith("%"))
             .toList();
+    // an enumeration ends with ==========, or =====UNSATISFIABLE===== when there is no solution
     assertTrue(
-        result.strip().endsWith("=========="), fzn + " is not enumerated completely:\n" + result);
+        result.strip().endsWith(printed.isEmpty() ? "=====UNSATISFIABLE=====" : "=========="),
+        fzn + " is not enumerated completely:\n" + result);
     Set<String> solutions = new TreeSet<>(printed);
     assertEquals(printed.size(), solutions.size(), fzn + " prints a solution twice:\n" + result);
     return solutions;
