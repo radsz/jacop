@@ -3761,14 +3761,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // and activity branching (CHANGELOG 510). amaze2 2012-07-04, 06-29 and 03-08 found no
       // solution in 300 s on some seeds and are solved in 28 to 125 s; 28 instances where no
       // solution comes early, 240 s, two seeds: solved 25 -> 29, total time 8,486 -> 7,416 s.
-      // Not for satisfaction under the default search of a model without an annotation (jacop
-      // #942), which none of the 28 was: the XCSP CSPs PegSolitaireTable-english-3-3-0 and
-      // SportsScheduling-dummy-14, solved in 20 and 71 s with its turns, were unsolved in 30 and
-      // 90 s without them
-      lcg.setAnnotationDrop(
-          annotatedSearch == null && costVar == null
-              ? 0
-              : Long.parseLong(options.freeConfig("lcg-annotation-drop", "50000")));
+      // Also for the default search of a satisfaction model without an annotation: 119 XCSP CSPs
+      // that reach 30,000 conflicts or stay unsolved, 90 s, seeds 1 and 2, decided 223 -> 230,
+      // total time 4,674 -> 4,298 s (AlmostMagic, ChainReaction, MagicSquare-sum, Primes and
+      // PegSolitaireTable gain, Rostering-00-14-35 loses one run); jacop #942 had turned it off
+      // there on single seeds of PegSolitaireTable-english-3-3-0 and SportsScheduling-dummy-14
+      lcg.setAnnotationDrop(Long.parseLong(options.freeConfig("lcg-annotation-drop", "50000")));
       if (!LcgSolver.CHAIN_LIMIT_SET) {
         // short bound-literal chains (CHANGELOG 311): multi-agent-graph-coverage proofs about 2x
         // faster, two paired 600 s rounds 6/0 and 4/2 families better/worse with one more proof;
