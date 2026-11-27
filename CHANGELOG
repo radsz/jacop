@@ -9539,7 +9539,7 @@ Version 5.0 (unreleased)
    -Dorg.jacop.lp.subsetCardinalities=false turns the merge off,
    org.jacop.lp.subsetCardinalityLength (default 5) bounds the clauses.
 
-521. Lazy clause generation under a fixed search on an optimisation model
+527. Lazy clause generation under a fixed search on an optimisation model
    first runs the annotation's search without learning for 0.5 % of the
    time limit, at most a second, and LCG then gets three times as long,
    at least a second. When LCG has not reached that search's best cost by
@@ -9563,7 +9563,26 @@ Version 5.0 (unreleased)
    -Dorg.jacop.fz.diffnPairs=0 the pairs (diffnPairsDensity sets the
    density). -s prints fixedFirst=decided, lcg, cp or cp-lcg.
 
-522. The clausal compilation of satisfaction models (entry 489) leaves
+528. Lazy clause generation records the atoms of a domain change from what
+   the domain reports of it instead of comparing a shadow copy of the
+   domain's runs with the new domain (option B of the LCG cost per
+   conflict study, osolpro #685). IntervalDomain, SmallDenseDomain and
+   LazyBitSetDomain tell the DomainChangeRecorder whether a narrowing moved
+   only the bounds (changingBounds), removed one value (removingValue) or
+   an interval (removingInterval); AtomicTrail then writes the bound atoms
+   from the old bounds and the != atoms of the values inside the new
+   bounds that it has not yet recorded, and keeps no runs, so a backtrack
+   restores only the bounds and the size. The atoms are the same as
+   before, so the search is the same. In a JFR profile under --lcg the
+   shadow share falls from 7.0 to 3.2 % (tower), 4.5 to 2.2 %
+   (ghoulomb) and 5.1 to 4.1 % (valve-network). Wide-quick (62
+   instances) at 240 s with -f: total 2,858 -> 2,779 s and 2,834 ->
+   2,658 s in two rounds, 52 -> 53 solved; default search 4,540 ->
+   4,534 s. -Djacop.lcg.directChanges=false restores the shadow diff;
+   -Djacop.lcg.checkDirect=true keeps the shadows and throws when the
+   two recordings disagree on any change (testing only).
+
+529. The clausal compilation of satisfaction models (entry 489) leaves
    models with a difference x - y = d (a linear equality of three terms
    with coefficients of both signs) over more than 3 values to lazy clause
    generation (-Dorg.jacop.fz.clausal.sumDomain, default 3). It fires on
@@ -9573,7 +9592,7 @@ Version 5.0 (unreleased)
    CostasArray-15..18 (XCSP 2022): 2,417 -> 1,262 s; costas-array 17
    314-389 -> 61-84 s, CostasArray-16 and -17 lose 11-48 s.
 
-523. CountValues (global_cardinality with variable counts) bounds the sum
+530. CountValues (global_cardinality with variable counts) bounds the sum
    of the counters of every set of at least two classes (counted values
    and the rest, up to six classes) by the variables that may take a class
    of the set and those that can take only classes of it, the Hall-set
@@ -9587,6 +9606,82 @@ Version 5.0 (unreleased)
    consistency checker now finds CountValues bounds(Z) consistent at every
    node (111 of 35,753 nodes missed it). The 25 FlatZinc test models with
    count_values: same search or same results, total time 202 -> 201 s.
+
+531. The JaLP presolve finds dominated columns over propagated dual bounds
+   (E. D. Andersen and K. D. Andersen, "Presolving in linear
+   programming", Mathematical Programming 71 (1995) 221-245, section 3.5;
+   the implied dual row bounds of HiGHS). Before, only a column singleton
+   without an upper or lower bound bounded the dual of its row. Now every
+   column without one gives a linear inequality over the duals whose
+   activity bounds tighten them, in rounds. A column bound that its rows
+   imply also counts as absent (the bound of a column singleton within
+   the row's limit, of other columns beyond a margin), when it is implied
+   only from bounds that stay. The dominated columns are found over the
+   true costs, and weakly dominated ones (reduced cost possibly 0) are
+   fixed too when no dual bound came from them. The pass limit of the
+   presolve counts only the passes in which the rows and columns change,
+   so that rules found one at a time no longer keep the later ones out
+   (scrs8: 258 aggregations had never run). Over the 687 LPs of the LP
+   bench, 73 presolve smaller and 1 larger: woodw 5,344 -> 4,066 columns
+   (HiGHS 4,083), irp 19,370 -> 19,013 (HiGHS 19,035). At 120 s, 0 wrong
+   answers, 649 instead of 648 solved and a total of 6,866 -> 6,747 s
+   (satellites2-40 from the time limit to 23 s).
+   -Dorg.jacop.jalp.presolveDualBounds=false,
+   -Dorg.jacop.jalp.presolveImpliedFree=false and
+   -Dorg.jacop.jalp.presolveWeakDominated=false turn the parts off.
+
+532. The JaLP presolve fixes a parallel column of another cost when its
+   twin can take up any move of it without a bound (HiGHS
+   detectParallelRowsAndCols): with column k lambda times column j,
+   x_j + lambda t and x_k - t keep every row, so the cheaper direction
+   drives one of them to its bound. Before, parallel columns were merged
+   only when their costs had the ratio of their entries. sgpf5y6:
+   58,528 -> 40,841 columns (HiGHS 39,029). With entry 524, the excess of
+   JaLP's presolved sizes over HiGHS's on the LP bench falls from 211,938
+   to 162,586 rows and columns, and the presolve changes the root LP of
+   15 of the 88 wide-set runs that reach JaLP; at 240 s, two rounds
+   against develop: fixed search 0.997 and 0.998 of the total time, -f
+   1.005 and 0.982, the same instances solved.
+   -Dorg.jacop.jalp.presolveParallelDominated=false turns it off.
+
+533. The JaLP presolve can remove dependent equations (Andersen and
+   Andersen 1995, section 3.6; HiGHS removeDependentEquations): the
+   equations with their right-hand sides are factorized as the columns of
+   a matrix, and one left without a pivot is a combination of the others
+   with the same right-hand side. eq_eq20 20 -> 7 rows, qap10 1,820 ->
+   1,547 (HiGHS 1,548), nug08-3rd 19,728 -> 18,261 (HiGHS 18,268). It is
+   off by default: on the 147 LPs of the LP bench where it removes rows,
+   the simplex took 7.6 % longer at 120 s (2,085 -> 2,244 s; dano3 44k ->
+   72k pivots after one row went, pds-100 lost).
+   -Dorg.jacop.jalp.presolveDependent=true turns it on.
+
+534. The linear relaxation of an objective tries all linearized rows of the
+   model's constraints (big-M rows of reifications and implications, the
+   sides of min and max, ...) up to 8,000 of them
+   (-Dorg.jacop.lp.trialRows), not only a share of twice the linear rows
+   plus 100, and keeps the extra rows in search, where three pivot limits
+   used to drop them, when they raise the root bound over the domain of
+   the objective at least as much as the rows before them and at least
+   double it (-Dorg.jacop.lp.raiseKeeps=false turns that off). As in
+   CP-SAT's linearization level 2, which adds the linear relaxation of
+   every linearizable constraint (L. Perron, F. Didier and S. Gay, "The
+   CP-SAT-LP solver", CP 2023, LIPIcs 280). MiniZinc Challenge 2017
+   routing-flexible GCM_0005: root bound 10,509 -> 46,529 (optimum
+   76,514; CP-SAT 11 s, 214 s with linearization_level:0); at 600 s with
+   default search GCM_0005 and GCM_0006 are proved in 215 and 292 s
+   (before not proved), GCM_0007 314 -> 263 s. wide-quick at 240 s: total
+   time 0.997 (default search) and 1.008 (-f) before the doubling rule,
+   the same instances solved.
+
+535. FlatZinc parsing and set-up of big models are faster, with the same
+   parse tree. The hot syntactic lookaheads of the FlatZinc grammar
+   (array literal, set literal, array access, packed integer element) are
+   token-kind checks instead of lookahead scans, and three detector passes
+   (DisjunctiveListsDiffer, LinearIndexElement, CountStepCostBound) return
+   at once when the model has none of the constraint kinds they read.
+   Same parse tree on all 4,856 FlatZinc test and PB models. PB 2016
+   simp-nonunif-100_100.10 set-up 29.1 -> 26.0 s (median of 3); wide-quick
+   at 240 s total 1.006 (noise), PB5 at 600 s total 0.986.
 
 Version 4.11
 =============

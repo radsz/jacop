@@ -38,6 +38,8 @@ import java.util.Set;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.MaxSimple;
+import org.jacop.constraints.MinSimple;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -54,16 +56,20 @@ import org.junit.jupiter.api.Test;
 class NearRowsTest {
 
   private final boolean saved = LinearRelaxation.nearRowsOn;
+  private final int savedTrialRows = LinearRelaxation.trialRows;
 
   @AfterEach
   void restore() {
     LinearRelaxation.nearRowsOn = saved;
+    LinearRelaxation.trialRows = savedTrialRows;
   }
 
   // n stores and facilities, fixed cost f; the root bound of its relaxation, and the cost of the
   // best solution with one facility open (an upper bound of the optimum)
   private static double[] rootBound(int n, int f, int seed, boolean near) {
     LinearRelaxation.nearRowsOn = near;
+    // only the share of the given rows is tried, as when the candidates are over trialRows
+    LinearRelaxation.trialRows = 0;
     Random rnd = new Random(seed);
     Store store = new Store();
     int[][] c = new int[n][n];
@@ -125,5 +131,54 @@ class NearRowsTest {
       assertThat(near[0]).as("seed %d", seed).isGreaterThan(dense[0] + 1);
       assertThat(near[0]).as("seed %d", seed).isLessThanOrEqualTo(near[1]);
     }
+  }
+
+  /**
+   * A path from 0 to d through n free points, each leg as long as max - min of its ends (as the
+   * pipe legs of routing-flexible): the bound d needs the rows of every max and min, 4 (n + 1)
+   * candidates over n + 2 rows of the model, more than the share of twice the model's rows. They
+   * are all tried, raise the root bound from 0 to d, and stay in search.
+   */
+  @Test
+  void allLinearizedRowsOfAPathGiveItsLength() {
+    assertThat(pathBound(0)).isLessThan(999.0);
+    assertThat(pathBound(8_000)).isGreaterThanOrEqualTo(1_000 - 1e-6);
+  }
+
+  // the root bound of the path, with up to trial candidate rows all tried
+  private static double pathBound(int trial) {
+    LinearRelaxation.trialRows = trial;
+    int n = 150;
+    int d = 1_000;
+    Store store = new Store();
+    IntVar[] x = new IntVar[n + 2];
+    x[0] = new IntVar(store, "x0", 0, 0);
+    x[n + 1] = new IntVar(store, "x" + (n + 1), d, d);
+    for (int i = 1; i <= n; i++) {
+      x[i] = new IntVar(store, "x" + i, -2 * d, 2 * d);
+    }
+    IntVar[] legs = new IntVar[n + 2];
+    int[] weights = new int[n + 2];
+    for (int i = 0; i <= n; i++) {
+      IntVar hi = new IntVar(store, "hi" + i, -2 * d, 2 * d);
+      IntVar lo = new IntVar(store, "lo" + i, -2 * d, 2 * d);
+      store.impose(new MaxSimple(x[i], x[i + 1], hi));
+      store.impose(new MinSimple(x[i], x[i + 1], lo));
+      legs[i] = new IntVar(store, "l" + i, 0, 4 * d);
+      store.impose(new LinearInt(new IntVar[] {legs[i], hi, lo}, new int[] {1, -1, 1}, "==", 0));
+      weights[i] = 1;
+    }
+    IntVar total = new IntVar(store, "total", 0, 10_000_000);
+    legs[n + 1] = total;
+    weights[n + 1] = -1;
+    store.impose(new LinearInt(legs, weights, "==", 0));
+    assertThat(store.consistency()).isTrue();
+    LinearRelaxation r =
+        LinearRelaxation.of(
+            store, total, false, List.of(), Set.of(), LinearRelaxation.Simplex.DENSE);
+    assertThat(r).isNotNull();
+    store.impose(r);
+    assertThat(store.consistency()).isTrue();
+    return r.rootBound;
   }
 }
