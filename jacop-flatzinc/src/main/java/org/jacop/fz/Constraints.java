@@ -540,7 +540,7 @@ public class Constraints implements ParserTreeConstants {
 
       // a cyclic distance min(|e|, c - |e|) also as |e + c * k|, which a bound narrows
       if (CyclicDistanceDetector.enabled() && options.proof() == null) {
-        CyclicDistanceDetector cyclic = new CyclicDistanceDetector(support);
+        CyclicDistanceDetector cyclic = new CyclicDistanceDetector(support, replaced);
         Set<SimpleNode> distances = cyclic.detect(astTree);
         if (!distances.isEmpty()) {
           replaced = new HashSet<>(replaced);
