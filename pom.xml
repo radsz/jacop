@@ -82,6 +82,8 @@
         <checkstyle.config.location>resources/checkstyle.xml</checkstyle.config.location>
         <dependency.locations.enabled>false</dependency.locations.enabled>
         <maven.surefire.version>3.5.4</maven.surefire.version>
+        <!-- a failing test runs once more; -Dsurefire.rerunFailingTestsCount=0 shows every failure -->
+        <surefire.rerunFailingTestsCount>1</surefire.rerunFailingTestsCount>
         <maven.surefire.report.version>3.5.4</maven.surefire.report.version>
         <maven.javadoc.version>3.12.0</maven.javadoc.version>
         <maven.source.version>3.4.0</maven.source.version>
@@ -1903,7 +1905,7 @@ setup to run configuration. -->
                          Mockito's inline mock maker is loaded as an agent at start up, since the
                          JDK warns about (and will refuse) agents attached while running -->
                     <argLine>@{argLine} -Xss100m -javaagent:${org.mockito:mockito-core:jar}</argLine>
-                    <rerunFailingTestsCount>1</rerunFailingTestsCount>
+                    <rerunFailingTestsCount>${surefire.rerunFailingTestsCount}</rerunFailingTestsCount>
                     <includes>
                         <include>**/IntDomainTest.java</include>
                         <include>**/CdclSolverTest.java</include>
