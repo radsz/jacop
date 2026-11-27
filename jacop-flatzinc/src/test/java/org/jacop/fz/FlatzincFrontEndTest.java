@@ -10765,4 +10765,29 @@ class FlatzincFrontEndTest {
     String none = model.replace(" :: output_var", "");
     assertEquals("----------\n==========\n", run(none, "-n", "3", "-cs", "--lcg", "off")[0]);
   }
+
+  @Test
+  void annotationOverAPrintedIntegerOfABooleanKeepsNoOutputKey() throws IOException {
+    // e is printed and is bool2int of b, which stands for e in the search: the annotation names
+    // only a printed variable, yet every solution kept a key and the statistics had the counters
+    String model =
+        """
+        var 0..1: e :: output_var;
+        var bool: b;
+        var 0..1: x :: output_var;
+        constraint bool2int(b,e);
+        solve :: int_search([e],input_order,indomain_min,complete) satisfy;
+        """;
+    for (String presolve : new String[] {"off", "on"}) {
+      String[] out =
+          run(model, "-a", "-s", "--search-statistics", "--lcg", "off", "--presolve", presolve);
+      assertTrue(
+          out[0].contains(
+              "e = 0;\nx = 0;\n----------\ne = 0;\nx = 1;\n----------\ne = 1;\nx = 0;\n"
+                  + "----------\ne = 1;\nx = 1;\n----------\n"),
+          out[0]);
+      assertTrue(out[0].contains("\n==========\n"), out[0]);
+      assertFalse(out[0].contains("peakOutputKeys"), out[0]);
+    }
+  }
 }

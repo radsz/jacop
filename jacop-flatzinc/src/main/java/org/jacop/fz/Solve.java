@@ -11031,9 +11031,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private Set<Var> searchedPrinted(List<Var> printed) {
     Set<Var> searched = Collections.newSetFromMap(new IdentityHashMap<>());
     for (Var v : printed) {
-      Var copy = presolve == null ? v : presolve.get(v);
-      if (copy != null) {
-        searched.add(copy);
+      // and the variable that a printed variable is an alias of (bool2int, int_eq), which the
+      // annotation names in its place: it has the printed value
+      Var alias = v instanceof IntVar x ? output.getAlias(x) : v;
+      for (Var w : alias == v ? List.of(v) : List.of(v, alias)) {
+        Var copy = presolve == null ? w : presolve.get(w);
+        if (copy != null) {
+          searched.add(copy);
+        }
       }
     }
     return searched;
