@@ -235,4 +235,15 @@ class FloatDomainOperationsTest {
       assertThat(empty.isEmpty()).isTrue();
     }
   }
+
+  @Test
+  void intersectOfAnEmptyFloatDomainIsANewDomain() {
+    // an empty receiver returned itself, so changing the result changed the receiver
+    FloatIntervalDomain empty = new FloatIntervalDomain();
+    FloatDomain result = empty.intersect(1.0, 2.0);
+    assertThat(result).isNotSameAs(empty);
+    assertThat(result.isEmpty()).isTrue();
+    result.unionAdapt(1.0, 1.5);
+    assertThat(empty.isEmpty()).isTrue();
+  }
 }

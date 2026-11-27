@@ -1250,7 +1250,8 @@ public class FloatIntervalDomain extends FloatDomain {
     FloatIntervalDomain temp = new FloatIntervalDomain(size);
 
     if (size == 0) {
-      return this;
+      // a new empty domain, as for no common value: the caller may change the result in place
+      return temp;
     }
 
     int pointer1 = 0;
