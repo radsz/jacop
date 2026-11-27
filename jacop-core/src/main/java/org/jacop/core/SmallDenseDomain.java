@@ -779,6 +779,8 @@ public class SmallDenseDomain extends IntDomain {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
 
+      v.changingBounds();
+
       v.domainHasChanged(GROUND);
 
     } else {
@@ -789,6 +791,8 @@ public class SmallDenseDomain extends IntDomain {
       result.max = value;
       result.singleton = true;
       result.size = 1;
+
+      v.changingBounds();
 
       installAndNotify(result, storeLevel, v);
     }
@@ -867,6 +871,7 @@ public class SmallDenseDomain extends IntDomain {
       if (ASSERTS_ENABLED && checkInvariants() != null) {
         throw new IllegalStateException(String.valueOf(checkInvariants()));
       }
+      changingBounds(v);
       v.domainHasChanged(singleton ? GROUND : boundEvent(minChanged, maxChanged));
       return;
     }
@@ -893,6 +898,7 @@ public class SmallDenseDomain extends IntDomain {
     if (ASSERTS_ENABLED && result.minBound < min) {
       throw new IllegalStateException(String.valueOf(DOMAIN_UPDATE_INCORRECT));
     }
+    changingBounds(v);
     installAndNotifyWithEvent(result, storeLevel, this.minBound, this.max, v);
   }
 
@@ -1082,6 +1088,7 @@ public class SmallDenseDomain extends IntDomain {
 
   @Override
   public void inComplement(int storeLevel, Var v, int minComplement, int maxComplement) {
+    removingInterval(v, minComplement, maxComplement);
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
