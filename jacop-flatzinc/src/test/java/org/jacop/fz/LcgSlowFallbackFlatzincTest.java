@@ -279,6 +279,24 @@ class LcgSlowFallbackFlatzincTest {
   }
 
   @Test
+  void slowLcgGoingDeepBetweenConflictsIsKept() {
+    // cable_tree_wiring A073 (MiniZinc Challenge 2020): 809 conflicts, 477,188 decisions, 7
+    // solutions and 23,956 learnt literals in 57.0 s at the check of a 600 s run
+    assertTrue(new Solve.DeepDescents(100, 50, 200).holds(809, 477_188, 7, 23_956, 57.0));
+    // warehouse olil4 (2026): 111 decisions per conflict, but learnt clauses of 10,539 literals
+    assertFalse(new Solve.DeepDescents(100, 50, 200).holds(1_416, 157_320, 23, 14_924_176, 59.5));
+    // rect-euler EU_combined (2026), which gains from the hand-over: 76 decisions per conflict
+    assertFalse(new Solve.DeepDescents(100, 50, 200).holds(5_343, 406_301, 10, 160_290, 23.8));
+    // unit-commitment L12 (2023): deep descents that end in solutions, not conflicts
+    assertFalse(new Solve.DeepDescents(100, 50, 200).holds(126, 3_982_469, 1_074, 3_780, 23.8));
+    // celar graph11 (2013): 405 decisions per conflict, but 127 conflicts/s
+    assertFalse(new Solve.DeepDescents(100, 50, 200).holds(3_026, 1_226_000, 168, 90_780, 23.8));
+    // no conflict yet; 0 turns the rule off
+    assertFalse(new Solve.DeepDescents(100, 50, 200).holds(0, 100_000, 0, 0, 23.1));
+    assertFalse(new Solve.DeepDescents(0, 50, 200).holds(809, 477_188, 7, 23_956, 57.0));
+  }
+
+  @Test
   void theWindowSeesSolutionsFoundBeforeTheFirstCheck() {
     long s = 1_000_000_000L;
     int noCost = Integer.MAX_VALUE;
@@ -397,6 +415,21 @@ class LcgSlowFallbackFlatzincTest {
     // the optimum, which LCG alone proves in about 2 s
     assertTrue(handed.contains("=========="), handed);
     assertEquals(-798, lastCost(handed), handed);
+  }
+
+  @Test
+  void weakLearningKeptWhenTheBoundNearlyClosedTheGap() {
+    // MiniZinc Challenge 2025 hitori h14-1 (maximised, so negated) at the check of 600 s: the core
+    // phase raised the bound from 1468 to 578 with 572 found, 99 % of the gap; kept, LCG proves 572
+    assertTrue(Solve.closesShare(-1468, -578, -572, 0.95));
+    // FBDk07: 15 to 103 with 130 found (77 %), proved by search without learning
+    assertFalse(Solve.closesShare(15, 103, 130, 0.95));
+    // hitori h20-2: 3568 to 1709 with 1590 found (94 %)
+    assertFalse(Solve.closesShare(-3568, -1709, -1590, 0.95));
+    // community-detection: no raise; no solution; a share above 1 turns it off
+    assertFalse(Solve.closesShare(-10, -10, -6, 0.95));
+    assertFalse(Solve.closesShare(-1468, -578, Integer.MAX_VALUE, 0.95));
+    assertFalse(Solve.closesShare(-1468, -572, -572, 1.01));
   }
 
   @Test
@@ -613,28 +646,24 @@ class LcgSlowFallbackFlatzincTest {
   }
 
   @Test
-  void defaultSearchOfSatisfactionKeepsItsTurns() throws IOException {
+  void satisfactionWithoutAnnotationDropsTheDefaultSearchsTurns() throws IOException {
     // lazy clause generation is under test: the model is not compiled to clauses
-    ClausalOff.run(this::defaultSearchOfSatisfactionKeepsItsTurnsBody);
+    ClausalOff.run(this::satisfactionWithoutAnnotationDropsTheDefaultSearchsTurnsBody);
   }
 
-  private void defaultSearchOfSatisfactionKeepsItsTurnsBody() throws IOException {
-    // #942: under -f the annotation's runs are dropped after 5 conflicts without a
-    // solution when the model has a search annotation, not the default search of a satisfaction
-    // model without one, with or without -f (the XCSP CSPs PegSolitaireTable-english-3-3-0 and
-    // SportsScheduling-dummy-14 were lost by dropping it)
+  private void satisfactionWithoutAnnotationDropsTheDefaultSearchsTurnsBody() throws IOException {
+    // under -f the turns of the search are dropped after 5 conflicts without a solution, those of
+    // a search annotation and those of the default search of a satisfaction model without one: 119
+    // XCSP CSPs at 90 s on two seeds decided 223 -> 230 with the drop (AlmostMagic-06-100,
+    // ChainReaction-60-085, MagicSquare-sum-14, Primes-20-40-3-5 lost without it)
     String annotated = pigeonsInputOrder();
     String withAnnotation = runAnnotationDrop(annotated, "-f");
     assertTrue(withAnnotation.contains("=====UNSATISFIABLE====="), withAnnotation);
     assertTrue(withAnnotation.contains("lcgAnnotationDropped=1"), withAnnotation);
     String plain = annotated.substring(0, annotated.indexOf("solve ")) + "solve satisfy;\n";
-    for (String mode : new String[] {"-f", "--lcg"}) {
-      String without = runAnnotationDrop(plain, mode);
-      assertTrue(without.contains("=====UNSATISFIABLE====="), without);
-      assertTrue(without.contains("restarts="), without);
-      assertFalse(without.contains("restarts=0\n"), mode + "\n" + without);
-      assertTrue(without.contains("lcgAnnotationDropped=0"), mode + "\n" + without);
-    }
+    String without = runAnnotationDrop(plain, "-f");
+    assertTrue(without.contains("=====UNSATISFIABLE====="), without);
+    assertTrue(without.contains("lcgAnnotationDropped=1"), without);
   }
 
   private String runAnnotationDrop(String model, String mode) throws IOException {
@@ -697,6 +726,56 @@ class LcgSlowFallbackFlatzincTest {
   }
 
   @Test
+  void fixedOptimisationTastesTheSearchWithoutLearning() throws IOException {
+    // fixed search of an optimisation model before its first solution tastes the search without
+    // learning as satisfaction does; kept, it proves the model has no solution, or finds and
+    // proves the optimum
+    String pigeons = pigeonsInputOrder().replace(" satisfy;", " minimize p1;");
+    String out = runFixed(pigeons, "lcg-fixed-at=0.0001,lcg-fixed-ratio=-1");
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+    assertTrue(out.contains("lcgFixedTaste=cp"), out);
+    // with -a, as the MiniZinc Challenge runs optimisation: the improving solutions
+    out = runFixed(pigeonOutside(), "lcg-fixed-at=0.0001,lcg-fixed-ratio=-1", "-a");
+    assertTrue(out.contains("=========="), out);
+    assertTrue(out.contains("lcgFixedTaste=cp"), out);
+    assertTrue(out.contains("p1 = 10;"), out);
+  }
+
+  // the pigeons of pigeonsInputOrder, the first also allowed in a 10th hole, minimising the first
+  // pigeon's hole: in input order every hole of the first pigeon below 10 leaves 9 pigeons in 8
+  // holes, so the only solutions, at the optimum 10, come after them
+  private static String pigeonOutside() {
+    int n = 10;
+    StringBuilder decl = new StringBuilder();
+    StringBuilder cons = new StringBuilder();
+    StringBuilder nonZero = new StringBuilder();
+    StringBuilder ps = new StringBuilder();
+    for (int v = 1 - n; v <= n - 1; v++) {
+      if (v != 0) {
+        nonZero.append(nonZero.isEmpty() ? "" : ",").append(v);
+      }
+    }
+    for (int i = 1; i <= n; i++) {
+      decl.append("var 1..").append(i == 1 ? n : n - 1).append(": p").append(i);
+      decl.append(":: output_var;\n");
+      ps.append(i == 1 ? "" : ",").append('p').append(i);
+    }
+    for (int i = 1; i <= n; i++) {
+      for (int j = i + 1; j <= n; j++) {
+        String d = "d" + i + "_" + j;
+        decl.append("var {").append(nonZero).append("}: ").append(d).append(";\n");
+        cons.append("constraint int_lin_eq([1,-1,-1],[p").append(i).append(",p").append(j);
+        cons.append(",").append(d).append("],0);\n");
+      }
+    }
+    return decl.toString()
+        + cons
+        + "solve :: int_search(["
+        + ps
+        + "], input_order, indomain_min, complete) minimize p1;\n";
+  }
+
+  @Test
   void fixedSatisfactionGoesOnWithLcgAfterTheTaste() throws IOException {
     // never kept: the search without learning stops after the taste and LCG, given back its
     // solver, proves the model unsatisfiable
@@ -706,26 +785,20 @@ class LcgSlowFallbackFlatzincTest {
     assertTrue(out.contains("lcgFixedTaste=lcg"), out);
   }
 
-  private String runFixed(String model, String config) throws IOException {
+  private String runFixed(String model, String config, String... extra) throws IOException {
     Path fzn = tmp.resolve("fixed.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);
-    String[] args = {
-      "--lcg",
-      "-s",
-      "--search-statistics",
-      "--lp",
-      "off",
-      "-t",
-      "30000",
-      "--free-config",
-      config,
-      fzn.toString()
+    String[] options = {
+      "--lcg", "-s", "--search-statistics", "--lp", "off", "-t", "30000", "--free-config", config
     };
+    List<String> args = new ArrayList<>(List.of(options));
+    args.addAll(List.of(extra));
+    args.add(fzn.toString());
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     PrintStream originalOut = System.out;
     try (PrintStream capture = new PrintStream(out, true, StandardCharsets.UTF_8)) {
       System.setOut(capture);
-      new Fz2jacop().callMain(args);
+      new Fz2jacop().callMain(args.toArray(new String[0]));
     } finally {
       System.setOut(originalOut);
     }
