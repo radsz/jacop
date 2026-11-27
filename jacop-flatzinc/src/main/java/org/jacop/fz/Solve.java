@@ -3817,7 +3817,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // and gbac, but lose first solutions on scheduling models (cargo, linear-to-program, p1f) that
     // the other two find
     LcgSolver.Branching branching =
-        LcgSolver.Branching.valueOf(options.freeConfig("lcg-branching", "alternate").toUpperCase());
+        LcgSolver.Branching.valueOf(
+            options.freeConfig("lcg-branching", "alternate").toUpperCase(Locale.ROOT));
     boolean literalsOnly =
         branching == LcgSolver.Branching.LITERALS || branching == LcgSolver.Branching.AUTO;
     String interleave = options.freeConfig("interleave", literalsOnly ? "none" : "restart");

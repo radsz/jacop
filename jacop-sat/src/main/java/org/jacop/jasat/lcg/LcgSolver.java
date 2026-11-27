@@ -46,6 +46,7 @@ import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -379,7 +380,8 @@ public final class LcgSolver implements ExternalPropagator {
   public static final long AUTO_CONFLICTS = 1000;
 
   private Branching branching =
-      Branching.valueOf(System.getProperty("jacop.lcg.branching", "activity").toUpperCase());
+      Branching.valueOf(
+          System.getProperty("jacop.lcg.branching", "activity").toUpperCase(Locale.ROOT));
   // whether decisions are on the most active variable, now
   private boolean activityBranching = branching == Branching.ACTIVITY;
   private long runs; // restarts so far, for the turns of Branching.ALTERNATE

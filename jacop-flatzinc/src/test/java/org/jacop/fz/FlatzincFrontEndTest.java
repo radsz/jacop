@@ -59,6 +59,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -10972,5 +10973,25 @@ class FlatzincFrontEndTest {
     return out.lines()
         .filter(l -> !(l.startsWith("%%%mzn-stat:") && l.matches("(?i).*(time|mem).*=.*")))
         .collect(java.util.stream.Collectors.joining("\n"));
+  }
+
+  @Test
+  void lazyClauseGenerationRunsUnderATurkishDefaultLocale() throws IOException {
+    // the branching name "activity" upper-cased in the Turkish locale is "ACT\u0130V\u0130TY"
+    // (dotted capital I), which is no Branching constant: every LCG run stopped with an error
+    String model =
+        "var 1..10: x :: output_var;\nvar 1..10: y :: output_var;\n"
+            + "constraint int_lin_le([1, 1], [x, y], 12);\nconstraint int_ne(x, y);\n"
+            + "solve maximize x;\n";
+    Locale locale = Locale.getDefault();
+    try {
+      Locale.setDefault(Locale.forLanguageTag("tr-TR"));
+      for (String free : new String[] {"-s", "-f"}) {
+        String out = run(model, "--lcg", "on", free)[0];
+        assertTrue(out.contains("x = 10;\ny = 1;\n----------\n=========="), out);
+      }
+    } finally {
+      Locale.setDefault(locale);
+    }
   }
 }
