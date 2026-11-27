@@ -623,6 +623,8 @@ class RevisedDualSimplexTest {
       RevisedDualSimplex lp = new RevisedDualSimplex(cols, vals, lo, hi, cost, true);
       lp.setExact(true);
       lp.setPresolve(presolve);
+      // the dual bounds would fix a column first
+      lp.presolveDualBounds = false;
       lp.setBounds(0, 0, 10);
       lp.setBounds(1, 0, 5);
       lp.setBounds(2, 0, 5);
@@ -657,6 +659,24 @@ class RevisedDualSimplexTest {
     assertThat(p.stuffing()).isZero();
     assertThat(p.impliedRows()).isZero();
     assertThat(p.ops()).isEqualTo(before);
+    // x + y >= 1 with x, y in [0, 5]: the duals are y >= 0 and nothing bounds them above, so no
+    // column is dominated
+    double inf = Double.POSITIVE_INFINITY;
+    Presolve q =
+        new Presolve(
+            2,
+            new int[][] {{0, 1}},
+            new double[][] {{1, 1}},
+            new int[][] {{0}, {0}},
+            new double[][] {{1}, {1}},
+            new int[] {1, 1},
+            new double[] {1, 2},
+            new double[] {1, 2},
+            new double[] {0, 0, 1},
+            new double[] {5, 5, inf});
+    before = q.ops();
+    assertThat(q.dualDominatedColumns()).isZero();
+    assertThat(q.ops()).isEqualTo(before);
   }
 
   @Test
@@ -675,6 +695,8 @@ class RevisedDualSimplexTest {
               true);
       lp.setExact(true);
       lp.setPresolve(presolve);
+      // the dual bounds would fix a column first
+      lp.presolveDualBounds = false;
       for (int j = 0; j < 6; j++) {
         lp.setBounds(j, 0, inf);
       }
@@ -736,6 +758,148 @@ class RevisedDualSimplexTest {
     assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
     assertThat(lp.presolveReductions()[Presolve.DOMINATED_COLUMN]).isEqualTo(1);
     assertThat(lp.objective()).isCloseTo(4, org.assertj.core.data.Offset.offset(1e-9));
+  }
+
+  @Test
+  void dualBoundsPropagateOverColumnsWithMoreEntries() {
+    // s + 2x >= 1 and s + x + t >= 2, all >= 0, x <= 1, costs s 1, x 4, t 1: s without an upper
+    // bound gives y0 + y1 <= 1 and so y0 <= 1 (y1 >= 0), t gives y1 <= 1, so the reduced cost of x
+    // is at least 4 - 2 - 1 > 0 and x = 0 in every optimum; the column singleton t alone (the
+    // rule before) leaves y0 unbounded. min 2 (s = 2)
+    double inf = Double.POSITIVE_INFINITY;
+    for (boolean presolve : new boolean[] {false, true}) {
+      RevisedDualSimplex lp =
+          new RevisedDualSimplex(
+              new int[][] {{0, 1}, {0, 1, 2}},
+              new double[][] {{1, 2}, {1, 1, 1}},
+              new double[] {1, 2},
+              new double[] {inf, inf},
+              new double[] {1, 4, 1},
+              true);
+      lp.setExact(true);
+      lp.setPresolve(presolve);
+      lp.setBounds(0, 0, inf);
+      lp.setBounds(1, 0, 1);
+      lp.setBounds(2, 0, inf);
+      assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      assertThat(lp.objective()).isCloseTo(2, org.assertj.core.data.Offset.offset(1e-9));
+      if (presolve) {
+        assertThat(lp.presolveReductions()[Presolve.DOMINATED_COLUMN]).isPositive();
+      }
+    }
+  }
+
+  @Test
+  void columnSingletonsWithBoundsTheirRowsImplyBoundTheDuals() {
+    // three set partitioning rows s + x + u = 1, t + x + v = 1, w + u + v = 1 over [0, 1]: each
+    // row implies the upper bound of its column singleton (s, t, w, cost 1), so y_i <= 1, and x
+    // (cost 5, in two rows) is dominated; u and v (cost 1) are only weakly dominated by the
+    // singletons and stay or go with the others. min 2
+    for (boolean presolve : new boolean[] {false, true}) {
+      RevisedDualSimplex lp =
+          new RevisedDualSimplex(
+              new int[][] {{0, 3, 4}, {1, 3, 5}, {2, 4, 5}},
+              new double[][] {{1, 1, 1}, {1, 1, 1}, {1, 1, 1}},
+              new double[] {1, 1, 1},
+              new double[] {1, 1, 1},
+              new double[] {1, 1, 1, 5, 1, 1},
+              true);
+      lp.setExact(true);
+      lp.setPresolve(presolve);
+      for (int j = 0; j < 6; j++) {
+        lp.setBounds(j, 0, 1);
+      }
+      assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      assertThat(lp.objective()).isCloseTo(2, org.assertj.core.data.Offset.offset(1e-9));
+      if (presolve) {
+        assertThat(lp.presolveReductions()[Presolve.DOMINATED_COLUMN]).isPositive();
+      }
+    }
+  }
+
+  @Test
+  void equationTheOtherEquationsImplyIsRemoved() {
+    // x + y + 2z = 3 and y + z + w = 2 give x + 2y + 3z + w = 5, the third equation; with 6 on its
+    // right-hand side the equations have no solution. min x + y + z + w over [0, 4]
+    for (double third : new double[] {5, 6}) {
+      for (boolean presolve : new boolean[] {false, true}) {
+        RevisedDualSimplex lp =
+            new RevisedDualSimplex(
+                new int[][] {{0, 1, 2}, {1, 2, 3}, {0, 1, 2, 3}},
+                new double[][] {{1, 1, 2}, {1, 1, 1}, {1, 2, 3, 1}},
+                new double[] {3, 2, third},
+                new double[] {3, 2, third},
+                new double[] {1, 1, 1, 1},
+                true);
+        lp.setExact(true);
+        lp.setPresolve(presolve);
+        lp.presolveDependent = true;
+        for (int j = 0; j < 4; j++) {
+          lp.setBounds(j, 0, 4);
+        }
+        int status = lp.solve(100);
+        if (third == 6) {
+          assertThat(status).isEqualTo(RevisedDualSimplex.INFEASIBLE);
+          continue;
+        }
+        assertThat(status).isEqualTo(RevisedDualSimplex.OPTIMAL);
+        // z = 1.5 and w = 0.5
+        assertThat(lp.objective()).isCloseTo(2, org.assertj.core.data.Offset.offset(1e-9));
+        if (presolve) {
+          assertThat(lp.presolveReductions()[Presolve.DEPENDENT_ROW]).isEqualTo(1);
+        }
+      }
+    }
+  }
+
+  @Test
+  void parallelColumnThatADearerOneCanReplaceFixesIt() {
+    // y = 2x in every row, x >= 0 without upper bound costs 1 and y in [0, 3] costs 3 > 2 * 1: x up
+    // by 2t and y down by t keep the rows and save t, so y = 0 in every optimum. min x + 3y + z
+    // with x + 2y + z >= 4 and 2x + 4y - z <= 6, z in [0, 1]: x = 3, z = 1, 4
+    double inf = Double.POSITIVE_INFINITY;
+    for (boolean presolve : new boolean[] {false, true}) {
+      RevisedDualSimplex lp =
+          new RevisedDualSimplex(
+              new int[][] {{0, 1, 2}, {0, 1, 2}},
+              new double[][] {{1, 2, 1}, {2, 4, -1}},
+              new double[] {4, -inf},
+              new double[] {inf, 6},
+              new double[] {1, 3, 1},
+              true);
+      lp.setExact(true);
+      lp.setPresolve(presolve);
+      lp.presolveDualBounds = false;
+      lp.setBounds(0, 0, inf);
+      lp.setBounds(1, 0, 3);
+      lp.setBounds(2, 0, 1);
+      assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      assertThat(lp.objective()).isCloseTo(4, org.assertj.core.data.Offset.offset(1e-9));
+      if (presolve) {
+        assertThat(lp.presolveReductions()[Presolve.DOMINATED_COLUMN]).isEqualTo(1);
+      }
+    }
+  }
+
+  @Test
+  void weaklyDominatedColumnIsFixedAtItsBound() {
+    // x + y <= 4 and x + 2y >= 1 with x, y >= 0, costs x 0, y 1, and z (cost 0, no upper bound)
+    // in the first row only: its reduced cost -y0 is at least 0 over the dual bound the row gives
+    // (y0 <= 0), not more, so z is weakly dominated and fixed at 0. min 0
+    double inf = Double.POSITIVE_INFINITY;
+    Presolve p =
+        new Presolve(
+            3,
+            new int[][] {{0, 1, 2}, {0, 1}},
+            new double[][] {{1, 1, 1}, {1, 2}},
+            new int[][] {{0, 1}, {0, 1}, {0}},
+            new double[][] {{1, 1}, {1, 2}, {1}},
+            new int[] {2, 2, 1},
+            new double[] {0, 1, 0},
+            new double[] {0, 1, 0},
+            new double[] {0, 0, 0, -inf, 1},
+            new double[] {inf, inf, inf, 4, inf});
+    assertThat(p.dualDominatedColumns()).isPositive();
   }
 
   @Test
@@ -844,7 +1008,8 @@ class RevisedDualSimplexTest {
     // the chunks of the chunked solves, apart so that they leave the problems as they were
     Random chunks = new Random(29);
     Random parallels = new Random(31);
-    int[] reductions = new int[12];
+    Random dependents = new Random(37);
+    int[] reductions = new int[13];
     int runs = Integer.getInteger("jalp.test.runs", 3000) / 3;
     int reduced = 0;
     int optimal = 0;
@@ -884,6 +1049,9 @@ class RevisedDualSimplexTest {
         }
         n = p.cost.length;
       }
+      if (withParallels && dependents.nextInt(3) == 0) {
+        addDependentEquation(p, dependents);
+      }
       if (rnd.nextInt(4) > 0) {
         feasibleAround(p);
       }
@@ -894,11 +1062,13 @@ class RevisedDualSimplexTest {
       String what = "run " + run + " presolved";
       RevisedDualSimplex lp = p.simplex(scale);
       lp.setPresolve(true);
+      lp.presolveDependent = true;
       assertThat(solveAndCheck(p, lp, scale, what)).as(what).isEqualTo(status);
       // a solve in short chunks, as the root solve of LinearRelaxation makes, goes on with the
       // reduced problem; a query in between takes the basis postsolved from it
       RevisedDualSimplex chunked = p.simplex(scale);
       chunked.setPresolve(true);
+      chunked.presolveDependent = true;
       for (int k = 0;
           k < 100_000 && chunked.solve(1 + chunks.nextInt(3)) == RevisedDualSimplex.LIMIT;
           k++) {
@@ -944,6 +1114,55 @@ class RevisedDualSimplexTest {
     assertThat(byBounds).isGreaterThan(runs / 100);
     // every kind of reduction was made, parallel rows and columns too
     assertThat(reductions).as(java.util.Arrays.toString(reductions)).doesNotContain(0);
+  }
+
+  // two rows with two or more entries made equations, and a combination of them with the
+  // combination of their right-hand sides
+  private static void addDependentEquation(Lp p, Random rnd) {
+    int m = p.rowLo.length;
+    if (m < 2) {
+      return;
+    }
+    int i = rnd.nextInt(m);
+    int k = rnd.nextInt(m - 1);
+    if (k >= i) {
+      k++;
+    }
+    if (p.cols[i].length < 2 || p.cols[k].length < 2) {
+      return;
+    }
+    for (int r : new int[] {i, k}) {
+      double b = 0;
+      if (p.rowLo[r] > -INF) {
+        b = p.rowLo[r];
+      } else if (p.rowHi[r] < INF) {
+        b = p.rowHi[r];
+      }
+      p.rowLo[r] = b;
+      p.rowHi[r] = b;
+    }
+    double lambda = (rnd.nextBoolean() ? 1 : -1) * (1 + rnd.nextInt(3));
+    double mu = (rnd.nextBoolean() ? 1 : -1) * (1 + rnd.nextInt(3));
+    java.util.TreeMap<Integer, Double> row = new java.util.TreeMap<>();
+    for (int e = 0; e < p.cols[i].length; e++) {
+      row.merge(p.cols[i][e], lambda * p.vals[i][e], Double::sum);
+    }
+    for (int e = 0; e < p.cols[k].length; e++) {
+      row.merge(p.cols[k][e], mu * p.vals[k][e], Double::sum);
+    }
+    row.values().removeIf(v -> v == 0);
+    if (row.size() < 2) {
+      return;
+    }
+    p.cols = java.util.Arrays.copyOf(p.cols, m + 1);
+    p.vals = java.util.Arrays.copyOf(p.vals, m + 1);
+    p.cols[m] = row.keySet().stream().mapToInt(Integer::intValue).toArray();
+    p.vals[m] = row.values().stream().mapToDouble(Double::doubleValue).toArray();
+    double b = lambda * p.rowLo[i] + mu * p.rowLo[k];
+    p.rowLo = java.util.Arrays.copyOf(p.rowLo, m + 1);
+    p.rowHi = java.util.Arrays.copyOf(p.rowHi, m + 1);
+    p.rowLo[m] = b;
+    p.rowHi[m] = b;
   }
 
   // a multiple of a row with two or more entries, with bounds that are a multiple of the row's

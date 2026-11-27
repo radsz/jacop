@@ -388,7 +388,8 @@ final class DualReductions implements Rule {
    * the objective lets it follow the expression on the improving side.
    */
   private Constraint objectiveDefinition(List<Constraint> live) {
-    if (objective == null || objective.singleton()) {
+    // an exempt objective has constraints the store does not hold (clauses posted later)
+    if (objective == null || objective.singleton() || exempt.contains(objective)) {
       return null;
     }
     Constraint definition = null;

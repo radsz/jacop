@@ -750,6 +750,46 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Fixes to 0 the variables of a covering objective that another variable dominates; see {@link
+   * CoveringDominance}.
+   *
+   * @param node the solve item.
+   */
+  private void coveringDominance(ASTSolveItem node) {
+    if (!(node.jjtGetChild(node.jjtGetNumChildren() - 1) instanceof ASTSolveKind kind)) {
+      return;
+    }
+    int k = getKind(kind.getKind());
+    if (k == 0 || !(kind.jjtGetChild(0) instanceof ASTSolveExpr expr)) {
+      return;
+    }
+    IntVar objective = objectiveVariable(expr);
+    if (objective == null) {
+      return;
+    }
+    long start = timer.getCpuTime();
+    CoveringDominance.Outcome o =
+        CoveringDominance.run(store, sat.collectedClauses(), objective, k == 2);
+    if (o == null) {
+      return;
+    }
+    boolean ok = store.consistency();
+    if (options.searchStatistics() && o.fixed() > 0) {
+      IO.println(
+          "%%%mzn-stat: coveringCandidates="
+              + o.candidates()
+              + "\n%%%mzn-stat: coveringFixed="
+              + o.fixed()
+              + "\n%%%mzn-stat: coveringTime="
+              + (timer.getCpuTime() - start) / 1_000_000_000.0
+              + "\n%%%mzn-stat-end");
+    }
+    if (!ok) {
+      throw Store.failException;
+    }
+  }
+
   /** Whether the search annotation, or one of those it sequences, branches on set variables. */
   private static boolean branchesOnSets(SimpleNode node) {
     if (node instanceof ASTAnnotation a && SET_SEARCH.equals(a.getAnnId())) {
@@ -1005,6 +1045,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     } else if (objective != null && store.consistency()) {
       imposeObjective(objective, store, store::impose, Constraint::removeConstraint);
+    }
+
+    if (CoveringDominance.enabled() && opt.proof() == null && store.consistency()) {
+      coveringDominance(node);
     }
 
     if (dominanceOn() && store.consistency()) {
@@ -1552,6 +1596,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.tableClauses
             + "\n%%%mzn-stat: lpNearRows="
             + r.nearRows
+            + "\n%%%mzn-stat: lpFoldedColumns="
+            + r.foldedColumns
             + "\n%%%mzn-stat: lpRestartSolves="
             + r.restartSolves
             + "\n%%%mzn-stat: lpRootRecuts="
@@ -4450,6 +4496,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     for (Var v : declaredVariables()) {
       if (v instanceof IntVar x && !x.singleton()) {
         x.domain.in(store.level, x, x.min(), x.min());
+        if (!diveConsistency()) {
+          return false;
+        }
+      }
+    }
+    // and the set variables, which no clause covers either, to their least sets
+    DefaultSearchVars declared = new DefaultSearchVars(dictionary);
+    declared.defaultVars();
+    for (SetVar s : declared.getSetVars()) {
+      if (!s.singleton()) {
+        s.domain.inValue(store.level, s, s.dom().glb());
         if (!diveConsistency()) {
           return false;
         }

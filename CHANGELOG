@@ -9607,7 +9607,73 @@ Version 5.0 (unreleased)
    node (111 of 35,753 nodes missed it). The 25 FlatZinc test models with
    count_values: same search or same results, total time 202 -> 201 s.
 
-528. FlatZinc parsing and set-up of big models are faster, with the same
+531. The JaLP presolve finds dominated columns over propagated dual bounds
+   (E. D. Andersen and K. D. Andersen, "Presolving in linear
+   programming", Mathematical Programming 71 (1995) 221-245, section 3.5;
+   the implied dual row bounds of HiGHS). Before, only a column singleton
+   without an upper or lower bound bounded the dual of its row. Now every
+   column without one gives a linear inequality over the duals whose
+   activity bounds tighten them, in rounds. A column bound that its rows
+   imply also counts as absent (the bound of a column singleton within
+   the row's limit, of other columns beyond a margin), when it is implied
+   only from bounds that stay. The dominated columns are found over the
+   true costs, and weakly dominated ones (reduced cost possibly 0) are
+   fixed too when no dual bound came from them. The pass limit of the
+   presolve counts only the passes in which the rows and columns change,
+   so that rules found one at a time no longer keep the later ones out
+   (scrs8: 258 aggregations had never run). Over the 687 LPs of the LP
+   bench, 73 presolve smaller and 1 larger: woodw 5,344 -> 4,066 columns
+   (HiGHS 4,083), irp 19,370 -> 19,013 (HiGHS 19,035). At 120 s, 0 wrong
+   answers, 649 instead of 648 solved and a total of 6,866 -> 6,747 s
+   (satellites2-40 from the time limit to 23 s).
+   -Dorg.jacop.jalp.presolveDualBounds=false,
+   -Dorg.jacop.jalp.presolveImpliedFree=false and
+   -Dorg.jacop.jalp.presolveWeakDominated=false turn the parts off.
+
+532. The JaLP presolve fixes a parallel column of another cost when its
+   twin can take up any move of it without a bound (HiGHS
+   detectParallelRowsAndCols): with column k lambda times column j,
+   x_j + lambda t and x_k - t keep every row, so the cheaper direction
+   drives one of them to its bound. Before, parallel columns were merged
+   only when their costs had the ratio of their entries. sgpf5y6:
+   58,528 -> 40,841 columns (HiGHS 39,029). With entry 524, the excess of
+   JaLP's presolved sizes over HiGHS's on the LP bench falls from 211,938
+   to 162,586 rows and columns, and the presolve changes the root LP of
+   15 of the 88 wide-set runs that reach JaLP; at 240 s, two rounds
+   against develop: fixed search 0.997 and 0.998 of the total time, -f
+   1.005 and 0.982, the same instances solved.
+   -Dorg.jacop.jalp.presolveParallelDominated=false turns it off.
+
+533. The JaLP presolve can remove dependent equations (Andersen and
+   Andersen 1995, section 3.6; HiGHS removeDependentEquations): the
+   equations with their right-hand sides are factorized as the columns of
+   a matrix, and one left without a pivot is a combination of the others
+   with the same right-hand side. eq_eq20 20 -> 7 rows, qap10 1,820 ->
+   1,547 (HiGHS 1,548), nug08-3rd 19,728 -> 18,261 (HiGHS 18,268). It is
+   off by default: on the 147 LPs of the LP bench where it removes rows,
+   the simplex took 7.6 % longer at 120 s (2,085 -> 2,244 s; dano3 44k ->
+   72k pivots after one row went, pds-100 lost).
+   -Dorg.jacop.jalp.presolveDependent=true turns it on.
+
+534. The linear relaxation of an objective tries all linearized rows of the
+   model's constraints (big-M rows of reifications and implications, the
+   sides of min and max, ...) up to 8,000 of them
+   (-Dorg.jacop.lp.trialRows), not only a share of twice the linear rows
+   plus 100, and keeps the extra rows in search, where three pivot limits
+   used to drop them, when they raise the root bound over the domain of
+   the objective at least as much as the rows before them and at least
+   double it (-Dorg.jacop.lp.raiseKeeps=false turns that off). As in
+   CP-SAT's linearization level 2, which adds the linear relaxation of
+   every linearizable constraint (L. Perron, F. Didier and S. Gay, "The
+   CP-SAT-LP solver", CP 2023, LIPIcs 280). MiniZinc Challenge 2017
+   routing-flexible GCM_0005: root bound 10,509 -> 46,529 (optimum
+   76,514; CP-SAT 11 s, 214 s with linearization_level:0); at 600 s with
+   default search GCM_0005 and GCM_0006 are proved in 215 and 292 s
+   (before not proved), GCM_0007 314 -> 263 s. wide-quick at 240 s: total
+   time 0.997 (default search) and 1.008 (-f) before the doubling rule,
+   the same instances solved.
+
+535. FlatZinc parsing and set-up of big models are faster, with the same
    parse tree. The hot syntactic lookaheads of the FlatZinc grammar
    (array literal, set literal, array access, packed integer element) are
    token-kind checks instead of lookahead scans, and three detector passes
@@ -9617,7 +9683,30 @@ Version 5.0 (unreleased)
    simp-nonunif-100_100.10 set-up 29.1 -> 26.0 s (median of 3); wide-quick
    at 240 s total 1.006 (noise), PB5 at 600 s total 0.986.
 
-531. Lazy clause generation no longer shrinks learnt clauses to one
+531. Covering models: column dominance at presolve (CoveringDominance). A 0/1
+   variable with a cost of at least 0 in a minimized objective that occurs
+   only in the objective and positively in clauses is fixed to 0 when
+   another such variable of no higher cost is in all its clauses (the column
+   reduction of set covering: R. S. Garfinkel and G. L. Nemhauser, "Integer
+   Programming", Wiley 1972, chapter 8; C. Toregas and C. ReVelle, "Binary
+   logic solutions to a class of location problem", Geographical Analysis
+   5, 1973; CP-SAT finds such pairs in its var_domination presolve). It
+   reads the objective through the block sums of lazy clause generation and
+   runs under it, without proof logging, when at least 100 variables are
+   dominated (org.jacop.fz.coveringDominance.min); -s prints coveringFixed. The
+   linear relaxation takes the columns fixed at the root as constants when
+   at least 1000 are fixed, and leaves out rows of constants; -s prints
+   lpFoldedColumns. pdc.r (Pseudo-Boolean Competition 2016, 6,904 covering
+   clauses over 19,021 variables): 16,053 columns fixed, root bound 15 ->
+   88.5, optimum 94 proved in 17-21 s, before 97 found in 120 s.
+   600 s, the 20 instances where either part fires: total -f 3,887 ->
+   3,307 s (pdc.r not proved -> 26 s), default 3,377 -> 3,814 s, which is
+   one instance, fir09_area_opers, now outside the rule and proved or not
+   by the base as well.
+   -Dorg.jacop.fz.coveringDominance=false and -Dorg.jacop.lp.foldFixed=0
+   turn them off.
+
+536. Lazy clause generation no longer shrinks learnt clauses to one
    literal per lower decision level (all-UIP shrinking, M. Fleury and
    A. Biere, "Efficient all-UIP learned clause minimization", SAT 2021;
    it stays on in the pure SAT solver). Under LCG the literals of a lower

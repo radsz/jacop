@@ -37,6 +37,7 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import org.jacop.core.AffineView;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -206,10 +207,10 @@ final class ValuesCliques {
       link(position, ne.x, ne.y, adjacent, edges);
     } else if (c instanceof XplusYeqZ s) {
       // z = x + y: z differs from x when y cannot be 0, and from y when x cannot be 0
-      if (!root(s.y).contains(0)) {
+      if (!holds(s.y, 0)) {
         link(position, s.z, s.x, adjacent, edges);
       }
-      if (!root(s.x).contains(0)) {
+      if (!holds(s.x, 0)) {
         link(position, s.z, s.y, adjacent, edges);
       }
     } else if (c instanceof XplusCeqZ s) {
@@ -217,7 +218,7 @@ final class ValuesCliques {
         link(position, s.x, s.z, adjacent, edges);
       }
     } else if (c instanceof Distance s) {
-      if (!root(s.z).contains(0)) {
+      if (!holds(s.z, 0)) {
         link(position, s.x, s.y, adjacent, edges);
       }
     } else if (c instanceof Alldistinct a) {
@@ -261,7 +262,13 @@ final class ValuesCliques {
     return d;
   }
 
+  // whether v is in the root domain of t; the domain of a view holds no values of its own, so a
+  // view reads the root domain of its base
   private static boolean holds(IntVar t, long v) {
+    if (t instanceof AffineView view) {
+      long u = v - view.offset();
+      return u % view.factor() == 0 && holds(view.base(), u / view.factor());
+    }
     return v >= IntDomain.MIN_INT && v <= IntDomain.MAX_INT && root(t).contains((int) v);
   }
 

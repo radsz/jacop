@@ -59,8 +59,8 @@ import org.jacop.fz.SimpleNode;
  * FindBigHorizontalLinearOverlap} in OR-Tools {@code cp_model_presolve.cc}): every row in turn
  * takes the largest common proportional sub-sum it shares with another row, and the factoring
  * repeats while it finds one. The sub-sum must have at least {@code
- * org.jacop.fz.linearOverlap.minSize} (4) terms. Rows {@code int_lin_eq}, {@code int_lin_le},
- * {@code int_lin_ne} take part, and their reified and half-reified forms with {@code
+ * org.jacop.fz.linearOverlap.minSize} (4, at least 2) terms. Rows {@code int_lin_eq}, {@code
+ * int_lin_le}, {@code int_lin_ne} take part, and their reified and half-reified forms with {@code
  * -Dorg.jacop.fz.linearOverlap.reified=true}. On by default, {@code
  * -Dorg.jacop.fz.linearOverlap=false} turns it off.
  *
@@ -72,7 +72,10 @@ import org.jacop.fz.SimpleNode;
  */
 public class LinearOverlapDetector implements ParserTreeConstants {
 
-  static final int MIN_SIZE = Integer.getInteger("org.jacop.fz.linearOverlap.minSize", 4);
+  // at least two terms: a sub-sum of one term only renames it, and its new variable was renamed
+  // again, without end
+  static final int MIN_SIZE =
+      Math.max(2, Integer.getInteger("org.jacop.fz.linearOverlap.minSize", 4));
 
   /** Variables in more rows than this are not used to find the partner rows (as CP-SAT). */
   static final int MAX_OCCURRENCES = Integer.getInteger("org.jacop.fz.linearOverlap.maxOcc", 200);
