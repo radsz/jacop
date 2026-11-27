@@ -10809,4 +10809,23 @@ class FlatzincFrontEndTest {
       assertTrue(out.contains("----------"), out);
     }
   }
+
+  @Test
+  void valuePrecedenceWithTheModelsLexLeaderComparesItsVariablesFirst() throws IOException {
+    // the model's own lex-leader constraint of the exchange of (x1, c) with (w1, d) compares the
+    // counts first, which swapping the values 1 and 2 moves: with it the precedence chain over
+    // x1, w1 (x1 = 1) left no solution of x1 = 2, the only one
+    String model =
+        "var 1..2: x1 :: output_var;\nvar 1..2: w1 :: output_var;\n"
+            + "var 0..1: c1;\nvar 0..1: c2;\nvar 0..1: d1;\nvar 0..1: d2;\n"
+            + "constraint jacop_gcc([x1], [c1, c2], 1);\n"
+            + "constraint jacop_gcc([w1], [d1, d2], 1);\n"
+            + "constraint int_ne(x1, w1);\n"
+            + "constraint jacop_lex_lesseq_int([c1, d1, c2, d2, x1, w1], [d1, c1, d2, c2, w1, x1]);\n"
+            + "solve satisfy;\n";
+    for (String lcg : new String[] {"on", "off"}) {
+      String out = run(model, "--symmetry", "on", "--lcg", lcg)[0];
+      assertTrue(out.contains("x1 = 2;\nw1 = 1;\n----------"), out);
+    }
+  }
 }

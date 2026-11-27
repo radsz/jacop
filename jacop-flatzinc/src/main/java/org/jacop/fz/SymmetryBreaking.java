@@ -509,6 +509,8 @@ final class SymmetryBreaking implements ParserTreeConstants {
   private long deadline = Long.MAX_VALUE;
   // whether the lex-leader keeps the largest solution of an orbit instead of the smallest
   private boolean largest;
+  // the order whose first variables the precedence chains must be, or null
+  private List<IntVar> leading;
 
   // the exchanges of values broken by ConditionalValueSwaps
   private int swaps;
@@ -771,7 +773,15 @@ final class SymmetryBreaking implements ParserTreeConstants {
         }
       }
     }
-    ValueOutcome values = breakValueSymmetries(valueItems, goal, minimize, ranked, maxNanos / 2);
+    // with lex-leader constraints of the model the chains must compare the first variables of
+    // their order
+    leading = modelLex != null ? ranked : null;
+    ValueOutcome values;
+    try {
+      values = breakValueSymmetries(valueItems, goal, minimize, ranked, maxNanos / 2);
+    } finally {
+      leading = null;
+    }
     if (modelLex != null && values.posted() == 0) {
       modelLex = null;
       ranked = plainRanked;
@@ -2688,6 +2698,9 @@ final class SymmetryBreaking implements ParserTreeConstants {
     }
     List<IntVar> first = new ArrayList<>();
     int posted = 0;
+    // the chains, posted once all are known
+    List<IntVar[]> chainVars = new ArrayList<>();
+    List<int[]> chains = new ArrayList<>();
     for (int k = 0; k < spaces.size(); k++) {
       int[] vertices = valueVertices[k];
       int[] values = spaces.get(k).values.toIntArray();
@@ -2726,15 +2739,26 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
       IntVar[] xs = spaces.get(k).anchors().toArray(new IntVar[0]);
       for (int[] c : classes) {
-        int[] chain = Arrays.stream(c).map(i -> values[i]).sorted().toArray();
-        SeqPrecedeChain precede = new SeqPrecedeChain(xs, chain);
-        precede.setDegreeWeight(0);
-        store.impose(precede);
-        canonicalizer.precedence(precede, xs, chain);
-        note("precede" + Arrays.toString(chain), xs);
-        posted++;
+        chainVars.add(xs);
+        chains.add(Arrays.stream(c).map(i -> values[i]).sorted().toArray());
       }
       first.addAll(spaces.get(k).anchors());
+    }
+    if (leading != null
+        && (leading.size() < first.size() || !sameVars(leading.subList(0, first.size()), first))) {
+      // the model's lex-leader constraints compare other variables first, which a value
+      // permutation may move (the counts of a gcc): the chains could keep no solution with them
+      return new ValueOutcome(List.of(), 0, result.complete());
+    }
+    for (int c = 0; c < chains.size(); c++) {
+      IntVar[] xs = chainVars.get(c);
+      int[] chain = chains.get(c);
+      SeqPrecedeChain precede = new SeqPrecedeChain(xs, chain);
+      precede.setDegreeWeight(0);
+      store.impose(precede);
+      canonicalizer.precedence(precede, xs, chain);
+      note("precede" + Arrays.toString(chain), xs);
+      posted++;
     }
     return new ValueOutcome(first, posted, result.complete());
   }
