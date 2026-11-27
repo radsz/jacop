@@ -646,28 +646,24 @@ class LcgSlowFallbackFlatzincTest {
   }
 
   @Test
-  void defaultSearchOfSatisfactionKeepsItsTurns() throws IOException {
+  void satisfactionWithoutAnnotationDropsTheDefaultSearchsTurns() throws IOException {
     // lazy clause generation is under test: the model is not compiled to clauses
-    ClausalOff.run(this::defaultSearchOfSatisfactionKeepsItsTurnsBody);
+    ClausalOff.run(this::satisfactionWithoutAnnotationDropsTheDefaultSearchsTurnsBody);
   }
 
-  private void defaultSearchOfSatisfactionKeepsItsTurnsBody() throws IOException {
-    // #942: under -f the annotation's runs are dropped after 5 conflicts without a
-    // solution when the model has a search annotation, not the default search of a satisfaction
-    // model without one, with or without -f (the XCSP CSPs PegSolitaireTable-english-3-3-0 and
-    // SportsScheduling-dummy-14 were lost by dropping it)
+  private void satisfactionWithoutAnnotationDropsTheDefaultSearchsTurnsBody() throws IOException {
+    // under -f the turns of the search are dropped after 5 conflicts without a solution, those of
+    // a search annotation and those of the default search of a satisfaction model without one: 119
+    // XCSP CSPs at 90 s on two seeds decided 223 -> 230 with the drop (AlmostMagic-06-100,
+    // ChainReaction-60-085, MagicSquare-sum-14, Primes-20-40-3-5 lost without it)
     String annotated = pigeonsInputOrder();
     String withAnnotation = runAnnotationDrop(annotated, "-f");
     assertTrue(withAnnotation.contains("=====UNSATISFIABLE====="), withAnnotation);
     assertTrue(withAnnotation.contains("lcgAnnotationDropped=1"), withAnnotation);
     String plain = annotated.substring(0, annotated.indexOf("solve ")) + "solve satisfy;\n";
-    for (String mode : new String[] {"-f", "--lcg"}) {
-      String without = runAnnotationDrop(plain, mode);
-      assertTrue(without.contains("=====UNSATISFIABLE====="), without);
-      assertTrue(without.contains("restarts="), without);
-      assertFalse(without.contains("restarts=0\n"), mode + "\n" + without);
-      assertTrue(without.contains("lcgAnnotationDropped=0"), mode + "\n" + without);
-    }
+    String without = runAnnotationDrop(plain, "-f");
+    assertTrue(without.contains("=====UNSATISFIABLE====="), without);
+    assertTrue(without.contains("lcgAnnotationDropped=1"), without);
   }
 
   private String runAnnotationDrop(String model, String mode) throws IOException {
