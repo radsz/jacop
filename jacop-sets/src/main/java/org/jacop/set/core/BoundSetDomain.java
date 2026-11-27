@@ -296,7 +296,10 @@ public class BoundSetDomain extends SetDomain {
     }
 
     lubDomain = lubDomain.union(domain.lub());
-    glbDomain = glbDomain.intersect(domain.glb());
+    IntDomain glb = glbDomain.intersect(domain.glb());
+    // an empty intersection may be a shared empty domain, which a later change of the glb at the
+    // same level would change for every domain
+    glbDomain = glb.isEmpty() ? new IntervalDomain() : glb;
     this.cardDomain = new IntervalDomain(glbDomain.getSize(), lubDomain.getSize());
   }
 

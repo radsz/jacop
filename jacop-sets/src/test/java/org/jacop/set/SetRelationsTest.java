@@ -36,6 +36,7 @@ import org.jacop.constraints.Not;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
+import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
 import org.jacop.set.constraints.AeqS;
 import org.jacop.set.constraints.AinB;
@@ -228,5 +229,19 @@ class SetRelationsTest {
       d.unionAdapt(v, v);
     }
     return d;
+  }
+
+  @Test
+  void addingASetDomainKeepsTheSharedEmptyDomainEmpty() {
+    // the glb of {} .. {1..5} (an empty small dense domain) meets the interval glb of the added
+    // domain in the shared SmallDenseDomain.emptyDomain, which the next glb change at the same
+    // level filled
+    Store store = new Store();
+    SetVar v = new SetVar(store, "v", new BoundSetDomain(1, 5));
+    v.addDom(new BoundSetDomain(new IntervalDomain(), new IntervalDomain(7, 8)));
+    v.domain.inGlb(0, v, 2);
+    assertThat(v.domain.glb().eq(dom(2))).isTrue();
+    assertThat(SmallDenseDomain.emptyDomain.isEmpty()).isTrue();
+    assertThat(new SmallDenseDomain(5, 6).intersect(new IntervalDomain(10, 10)).isEmpty()).isTrue();
   }
 }
