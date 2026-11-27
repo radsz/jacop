@@ -9584,4 +9584,25 @@ class FlatzincFrontEndTest {
     String out = run(model, "--lcg", "off")[0];
     assertTrue(out.contains("=====UNSATISFIABLE====="), out);
   }
+
+  @Test
+  void zeroSumKeepsAnOutputSumWhenAllSolutionsAreSearched() throws IOException {
+    // s = x + y is used otherwise only by b -> s <= 0, so the zero-sum detection dropped the sum
+    // and gave the output s its value from x and y when printing; all solutions are told apart by
+    // the printed variables, of which s was then none, so -a printed s = 0 only
+    String model =
+        "var 0..2: x;\n"
+            + "var 0..1: y;\n"
+            + "var 0..3: s :: output_var;\n"
+            + "var bool: b;\n"
+            + "var bool: c;\n"
+            + "constraint int_lin_eq([1,1,-1],[x,y,s],0);\n"
+            + "constraint int_le_imp(s,0,b);\n"
+            + "constraint bool_clause([b,c],[]);\n"
+            + "solve satisfy;\n";
+    String out = run(model, "-a")[0];
+    for (int v = 0; v <= 3; v++) {
+      assertTrue(out.contains("s = " + v + ";\n"), out);
+    }
+  }
 }
