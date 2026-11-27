@@ -1738,6 +1738,13 @@ public class LinearRelaxation extends Constraint
                 + first
                 + (bySparse && leading.isEmpty() ? encoded : 0)
             : Long.MAX_VALUE;
+    if (objective != null) {
+      // up to trialRows candidates are all tried: the linearized rows of a model of few linear
+      // rows are many, and a share of them alone raised nothing (routing-flexible GCM_0005 of the
+      // Challenge 2017: 490 of 6,726 rows tried, root bound 10,509; all of them 46,529, optimum
+      // 76,514, and fixed search proves it in 116 s instead of 603 s)
+      share = Math.max(share, Math.min(candidates.size(), trialRows));
+    }
     List<LinearForm> tail = CLAUSE_ROWS ? new ArrayList<>() : null;
     if (!fitsSimplex(localForms, candidates, simplex, auto, share, own, further, tail)
         && objective != null) {
@@ -2527,6 +2534,16 @@ public class LinearRelaxation extends Constraint
   // the dense simplex is chosen for relaxations below this many rows, the sparse one from it on,
   // when the dense one is asked for; -1 keeps the dense one whatever the size
   private static final int SPARSE_ROWS = Integer.getInteger("org.jacop.lp.sparseRows", 100);
+
+  // the most candidate rows of an objective's relaxation that are all tried at the first solve,
+  // whatever the share of the given rows (org.jacop.lp.trialRows), as CP-SAT's linearization level
+  // 2 relaxes every linearizable constraint (L. Perron, F. Didier and S. Gay, "The CP-SAT-LP
+  // solver", CP 2023); package-private for the tests
+  static int trialRows = Integer.getInteger("org.jacop.lp.trialRows", 8_000);
+
+  // whether extra rows that raise the root bound at least as much as the given rows stay in search
+  private static final boolean RAISE_KEEPS =
+      !FALSE.equals(System.getProperty("org.jacop.lp.raiseKeeps"));
 
   // the most clause rows of tables over all tables; more give none
   private static final int MAX_TABLE_CLAUSES =
@@ -6835,7 +6852,8 @@ public class LinearRelaxation extends Constraint
       droppedPivots += lp.pivots();
       lp = full;
       allRowsInSimplex(m + k);
-      extraCarry = carriesBound(status, before, m, keptStatus);
+      extraCarry =
+          carriesBound(status, before, m, keptStatus) || raisesBound(status, before, keptStatus);
       searchProbation =
           OPTIMISATION_PROBATION > 0
               && objective != null
@@ -6868,6 +6886,27 @@ public class LinearRelaxation extends Constraint
     double with = lp.value(0);
     return keptStatus == LpSolver.OPTIMAL
         && (maximize ? integerBound(with) < domain : integerBound(with) > domain);
+  }
+
+  // whether the extra rows kept raise the root bound over the domain of the objective at least as
+  // much as the rows before them and at least double it: they are the relaxation then, and pivot
+  // limits in search do not drop them (GCM_0005: 10,509 -> 46,529 over the domain bound 10,509;
+  // dropped after three limits, the optimum took 290 s more)
+  private boolean raisesBound(int status, double before, int keptStatus) {
+    if (!RAISE_KEEPS
+        || objective == null
+        || status != LpSolver.OPTIMAL
+        || keptStatus != LpSolver.OPTIMAL
+        || Double.isNaN(before)) {
+      return false;
+    }
+    double domain = maximize ? objective.max() : objective.min();
+    double with = lp.value(0);
+    double base = maximize ? domain - before : before - domain;
+    double gain = maximize ? before - with : with - before;
+    // a bound raised from 0 is no evidence that the rows pay their cost in search (mapping
+    // mesh_star_mpeg: 0 -> 87.6 of 515, kept rows 1.5-3x slower with -f)
+    return gain >= Math.max(1, Math.max(base, Math.abs(before)));
   }
 
   // whether the relaxation without the extra rows is at most the row of the objective
