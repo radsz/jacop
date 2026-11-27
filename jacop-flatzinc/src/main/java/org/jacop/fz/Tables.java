@@ -664,8 +664,27 @@ public class Tables {
    * @return true if it is shown harmless
    */
   boolean clampsHarmless(IntVar objective, long low, long high) {
-    return clampedBounds != null && clampedBounds.harmless(objective, low, high);
+    IntVar loadedObjective = objective;
+    if (objective != null && loadedVariables != null) {
+      loadedObjective = loadedVariables.get(objective);
+      if (loadedObjective == null) {
+        return false;
+      }
+    }
+    return clampedBounds != null && clampedBounds.harmless(loadedObjective, low, high);
   }
+
+  // the variable of the loaded model a variable of this copy (mapTo) stands for
+  private IntVar loaded(IntVar v) {
+    if (loadedVariables == null) {
+      return v;
+    }
+    IntVar w = loadedVariables.get(v);
+    return w != null ? w : v;
+  }
+
+  // for a copy made by mapTo after presolve: the variables of the loaded model, by their copies
+  private IdentityHashMap<IntVar, IntVar> loadedVariables;
 
   /**
    * Tells whether the rows of the model keep every narrowed domain within JaCoP's range, so that an
@@ -1039,6 +1058,22 @@ public class Tables {
     t.indexDisjunctions = indexDisjunctions == null ? null : indexDisjunctions.copy(map);
     t.objectiveScale = objectiveScale;
     t.scaledIdents.addAll(scaledIdents);
+    // the narrowing of declared domains cuts values off the model, whatever store is searched: a
+    // completed search of the copy proves neither unsatisfiability nor optimality either
+    t.clampedDomains.addAll(clampedDomains);
+    t.floatDomainsNarrowed = floatDomainsNarrowed;
+    t.constantBeyondRange = constantBeyondRange;
+    // the reasoning over the rows of the loaded model, asked about the loaded objective
+    t.clampedBounds = clampedBounds;
+    if (clampedBounds != null) {
+      t.loadedVariables = new IdentityHashMap<>();
+      variableTable.forEach((k, v) -> t.loadedVariables.put(map.get(v), loaded(v)));
+      aliasTable.forEach(
+          (k, v) -> {
+            t.loadedVariables.put(map.get(k), loaded(k));
+            t.loadedVariables.put(map.get(v), loaded(v));
+          });
+    }
     t.numberBoolVariables = numberBoolVariables;
     t.numberFloatVariables = numberFloatVariables;
     t.numberSetVariables = numberSetVariables;

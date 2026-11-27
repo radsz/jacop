@@ -11073,4 +11073,28 @@ class FlatzincFrontEndTest {
     String max = run(model + "solve maximize n4;\n")[0];
     assertTrue(max.endsWith("n = array1d(1..3, [0, 1, 2]);\n----------\n==========\n"), max);
   }
+
+  @Test
+  void presolveKeepsTheNarrowingOfUndeclaredBoundsOutOfTheOptimalityClaim() throws IOException {
+    // k = 1 needs y = x * x >= 536800000 with x mod 5 = 3: x = 23173 gives y = 536987929, beyond
+    // JaCoP's range, so the narrowed search finds only k = 0. The copy of the tables made for the
+    // presolved store dropped the record of the narrowing, and k = 0 was printed with ==========
+    String model =
+        "var 0..30000: x :: output_var;\nvar int: y;\nvar 0..4: r;\nvar 0..1: k :: output_var;\n"
+            + "var bool: b;\nconstraint int_times(x,x,y);\n"
+            + "constraint int_le_reif(536800000,y,b);\nconstraint bool2int(b,k);\n"
+            + "constraint int_mod(x,5,r);\nconstraint int_eq(r,3);\nsolve maximize k;\n";
+    for (String presolve : List.of("off", "on")) {
+      String out = run(model, "--presolve", presolve)[0];
+      assertTrue(out.contains("k = 0;\n----------\n"), out);
+      assertFalse(out.contains("=========="), "--presolve " + presolve + ":\n" + out);
+    }
+    // a narrowing that the rows show harmless still lets presolve prove the optimum
+    String bounded =
+        "var int: y :: output_var;\nvar 0..10: x :: output_var;\nvar 0..10: z :: output_var;\n"
+            + "constraint int_lin_le([1,-1],[x,y],0);\nconstraint int_lin_le([1,-1],[z,y],-3);\n"
+            + "constraint int_lin_le([-1,-1],[x,z],-12);\nsolve minimize y;\n";
+    String out = run(bounded, "--presolve", "on")[0];
+    assertTrue(out.contains("y = 8;") && out.endsWith("----------\n==========\n"), out);
+  }
 }
