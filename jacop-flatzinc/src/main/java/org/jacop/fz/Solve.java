@@ -4509,15 +4509,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private final ArrayDeque<long[]> lcgBounds = new ArrayDeque<>();
   // the bound on the objective when the check of LCG's speed started
   private long lcgStartBound;
-  // set when LCG with a solution was kept for its deep descents ({@link #deepDescents})
+  // set when LCG with a solution was kept for its deep descents ({@link DeepDescents})
   private boolean lcgSlowDeep;
-  // lcg-slow-depth: decisions per conflict at which a slow LCG with a solution is kept
-  private double slowDepth;
-  // lcg-slow-depth-rate: the rule of lcg-slow-depth holds below this many conflicts per second
-  private double slowDepthRate;
-  // lcg-slow-depth-length: the rule of lcg-slow-depth holds only for learnt clauses this short on
-  // average
-  private double slowDepthLength;
+  // lcg-slow-depth, lcg-slow-depth-rate and lcg-slow-depth-length
+  private DeepDescents slowDeep = new DeepDescents(0, 0, 0);
   // set when LCG free search gave way without a solution, for making too few conflicts
   private volatile boolean lcgSlowUnsolved;
   // the checks of LCG's speed that found it slow but let it go on, because it made progress
@@ -4623,9 +4618,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     lcgBoundGain = Double.parseDouble(options.freeConfig("lcg-slow-bound-gain", "0.0005"));
     double unsolvedRate = Double.parseDouble(options.freeConfig("lcg-slow-unsolved", "30"));
     double perLiteral = Double.parseDouble(options.freeConfig("lcg-slow-literal", "5"));
-    slowDepth = Double.parseDouble(options.freeConfig("lcg-slow-depth", "100"));
-    slowDepthRate = Double.parseDouble(options.freeConfig("lcg-slow-depth-rate", "50"));
-    slowDepthLength = Double.parseDouble(options.freeConfig("lcg-slow-depth-length", "200"));
+    slowDeep =
+        new DeepDescents(
+            Double.parseDouble(options.freeConfig("lcg-slow-depth", "100")),
+            Double.parseDouble(options.freeConfig("lcg-slow-depth-rate", "50")),
+            Double.parseDouble(options.freeConfig("lcg-slow-depth-length", "200")));
     if (costVar == null) {
       // fixed search backtracks the annotation's decisions about one level a conflict whatever
       // learning cuts, so the probe cannot tell; on the 53 satisfaction instances of the wide set
@@ -5206,36 +5203,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (now < lcgRegularCheck) {
       return !hopelessLcg(solver, now, unsolvedOnly);
     }
-    if (options.debug() && !lcgCheckPrinted) {
-      lcgCheckPrinted = true;
-      IO.println(
-          "%% LCG speed check: "
-              + solver.sat().conflicts
-              + " conflicts, "
-              + solver.sat().decisions
-              + " decisions in "
-              + String.format(Locale.ROOT, "%.1f", (now - lcgStart) / 1e9)
-              + " s, "
-              + (solutionFound ? "with" : "without")
-              + " a solution");
-    }
+    printSpeedCheck(solver, now);
     // LCG gives way only with a solution to hand over: without one, the check is made again until
     // LCG has one or is no longer slow. cutstock type16 TEST9 found its first solution with LCG at
     // 37 s and none without
     if (tooLateForFreeSearch(solver)) {
       return false;
     }
-    boolean weak = false;
-    if (solver.sat().conflicts
-        >= slowRate(solver.sat().conflicts, solver.sat().learntLiterals, rate, perLiteral)
-            * (now - lcgStart)
-            / 1e9) {
-      // fast enough; it still gives way when learning cuts the tree too little to pay for its cost
-      // per node, and it stopped making progress
-      weak = !unsolvedOnly && optimisationLearningCutsLittle(solver, now) && solutionFound;
-      if (!weak || "report".equals(options.freeConfig("lcg-opt-probe", "on"))) {
-        return false;
-      }
+    int speed = lcgSpeed(solver, now, rate, perLiteral, unsolvedOnly);
+    if (speed == LCG_FAST) {
+      return false;
     }
     long cost = bestPrintedCost.get();
     costs.addLast(new long[] {now, cost});
@@ -5245,33 +5222,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (solutionFound && unsolvedOnly) {
       // fixed search keeps LCG once it has a solution
       return false;
-    } else if (solutionFound
-        && deepDescents(
-            solver.sat().conflicts,
-            solver.sat().decisions,
-            solver.solutions,
-            solver.sat().learntLiterals,
-            (now - lcgStart) / 1e9,
-            slowDepth,
-            slowDepthRate,
-            slowDepthLength)) {
-      lcgSlowDeep = true;
-      return false;
     } else if (solutionFound) {
-      long before = lcgCostAt(now - stallNanos, costs.peekFirst()[1]);
-      long raised =
-          boundGained(now, stallNanos, lcgBoundGain, cost) ? lcgBoundRaised : Long.MIN_VALUE;
-      if (stillProgressing(now, stallNanos, gain, raised, before, cost)) {
-        lcgSlowDeferred++;
-      } else if (coresRising(now)) {
-        lcgSlowCoreKeeps++;
-      } else {
-        lcgWeak = weak;
-        lcgSlow = true;
-        sliceInsteadOfHandOver();
-        solver.stop();
-        return false;
-      }
+      return keepSlowLcg(
+          solver, now, stallNanos, gain, cost, costs.peekFirst()[1], speed == LCG_WEAK);
     } else if ((solver.sat().conflicts < unsolvedRate * (now - lcgStart) / 1e9
             || !unsolvedOnly && unsolvedLate(now))
         && !keptForCores(now)) {
@@ -5322,52 +5275,139 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return true;
   }
 
+  // prints the first check of LCG's speed under -debug
+  private void printSpeedCheck(LcgSolver solver, long now) {
+    if (options.debug() && !lcgCheckPrinted) {
+      lcgCheckPrinted = true;
+      IO.println(
+          "%% LCG speed check: "
+              + solver.sat().conflicts
+              + " conflicts, "
+              + solver.sat().decisions
+              + " decisions in "
+              + String.format(Locale.ROOT, "%.1f", (now - lcgStart) / 1e9)
+              + " s, "
+              + (solutionFound ? "with" : "without")
+              + " a solution");
+    }
+  }
+
+  // the outcomes of lcgSpeed
+  private static final int LCG_FAST = 0;
+  private static final int LCG_SLOW = 1;
+  private static final int LCG_WEAK = 2;
+
   /**
-   * Whether LCG with a solution makes few conflicts only because it goes deep between them, and is
-   * kept whatever its rate: at least lcg-slow-depth decisions per conflict on average (default 100;
-   * 0 = off), and more conflicts than solutions, so that its long descents end mostly in conflicts
-   * it learns from. Free search without learning takes far longer for each descent there: on
-   * cable_tree_wiring A073 (MiniZinc Challenge 2020, 38,808 reified comparisons) LCG made 16
-   * conflicts/s with about 1,000 decisions per conflict and gave way at 74 s of 600; search without
-   * learning made about 80 failures/s and ended at 304-335M, while LCG kept proved the optimum
-   * 225,905,728 in 318-329 s (OR-Tools free search: 342 s). Of the 48 optimisation instances of the
-   * wide set that reach the check at 240 s, 6 go 100 or more decisions deep: celar graph11,
-   * ihtc-2024-kletzander i09 and rcpsp-wet-diverse j60 end better with LCG kept; unit-commitment
-   * L12 goes 31,600 deep but finds a solution 45 better at almost every descent (1,074 solutions
-   * against 126 conflicts at the check) and ends at 1,598M instead of 1.49M when kept, so it still
-   * gives way; rect-euler, which gains from the hand-over, makes 76 decisions per conflict. The
-   * learnt clauses must also be short, at most lcg-slow-depth-length literals on average (default
-   * 200), so that what LCG learns at each conflict prunes much: warehouse olil4 (MiniZinc Challenge
-   * 2026), the only instance of the wide set where the rule fired without this limit (-f, 600 s),
-   * goes 110-140 decisions deep but learns clauses of about 10,000 literals from its global
-   * cardinality failures, and kept it ended at 59,606-69,660 instead of 52,729-53,714 (3 seeds).
-   * When the rule fires, A073 learns clauses of 30 literals on average, ihtc i09 35 and
-   * rcpsp-wet-diverse j60 6.
+   * Classifies LCG's speed at a check.
    *
-   * @param conflicts the conflicts of LCG so far
-   * @param decisions the decisions of LCG so far
-   * @param solutions the solutions of LCG so far
-   * @param learntLiterals the literals of the clauses LCG learnt so far
-   * @param seconds the time of LCG so far
-   * @param depth lcg-slow-depth, 0 = off
+   * @return LCG_SLOW below the slow rate; LCG_WEAK when fast enough but learning cuts the tree too
+   *     little to pay for its cost per node (it still gives way when it stopped making progress);
+   *     LCG_FAST otherwise
+   */
+  private int lcgSpeed(
+      LcgSolver solver, long now, double rate, double perLiteral, boolean unsolvedOnly) {
+    if (solver.sat().conflicts
+        < slowRate(solver.sat().conflicts, solver.sat().learntLiterals, rate, perLiteral)
+            * (now - lcgStart)
+            / 1e9) {
+      return LCG_SLOW;
+    }
+    boolean weak = !unsolvedOnly && optimisationLearningCutsLittle(solver, now) && solutionFound;
+    return !weak || "report".equals(options.freeConfig("lcg-opt-probe", "on"))
+        ? LCG_FAST
+        : LCG_WEAK;
+  }
+
+  /**
+   * Decides on a slow (or weak) LCG with a solution: it is kept when it goes deep between its
+   * conflicts ({@link DeepDescents}), still makes progress in the stall window, or its core-guided
+   * phase keeps finding cores; otherwise it gives way to search without learning.
+   *
+   * @param firstCost the best cost at the oldest check in the stall window
+   * @param weak true if LCG is fast enough but learning cuts too little
+   * @return false, since the check is not made again once LCG is kept for its depth or gives way;
+   *     true if it is to be made again
+   */
+  private boolean keepSlowLcg(
+      LcgSolver solver,
+      long now,
+      long stallNanos,
+      double gain,
+      long cost,
+      long firstCost,
+      boolean weak) {
+    if (slowDeep.holds(
+        solver.sat().conflicts,
+        solver.sat().decisions,
+        solver.solutions,
+        solver.sat().learntLiterals,
+        (now - lcgStart) / 1e9)) {
+      lcgSlowDeep = true;
+      return false;
+    }
+    long before = lcgCostAt(now - stallNanos, firstCost);
+    long raised =
+        boundGained(now, stallNanos, lcgBoundGain, cost) ? lcgBoundRaised : Long.MIN_VALUE;
+    if (stillProgressing(now, stallNanos, gain, raised, before, cost)) {
+      lcgSlowDeferred++;
+    } else if (coresRising(now)) {
+      lcgSlowCoreKeeps++;
+    } else {
+      lcgWeak = weak;
+      lcgSlow = true;
+      sliceInsteadOfHandOver();
+      solver.stop();
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * The rule that keeps a slow LCG with a solution that makes few conflicts only because it goes
+   * deep between them, and is kept whatever its rate: at least lcg-slow-depth decisions per
+   * conflict on average (default 100; 0 = off), and more conflicts than solutions, so that its long
+   * descents end mostly in conflicts it learns from. Free search without learning takes far longer
+   * for each descent there: on cable_tree_wiring A073 (MiniZinc Challenge 2020, 38,808 reified
+   * comparisons) LCG made 16 conflicts/s with about 1,000 decisions per conflict and gave way at 74
+   * s of 600; search without learning made about 80 failures/s and ended at 304-335M, while LCG
+   * kept proved the optimum 225,905,728 in 318-329 s (OR-Tools free search: 342 s). Of the 48
+   * optimisation instances of the wide set that reach the check at 240 s, 6 go 100 or more
+   * decisions deep: celar graph11, ihtc-2024-kletzander i09 and rcpsp-wet-diverse j60 end better
+   * with LCG kept; unit-commitment L12 goes 31,600 deep but finds a solution 45 better at almost
+   * every descent (1,074 solutions against 126 conflicts at the check) and ends at 1,598M instead
+   * of 1.49M when kept, so it still gives way; rect-euler, which gains from the hand-over, makes 76
+   * decisions per conflict. The learnt clauses must also be short, at most lcg-slow-depth-length
+   * literals on average (default 200), so that what LCG learns at each conflict prunes much:
+   * warehouse olil4 (MiniZinc Challenge 2026), the only instance of the wide set where the rule
+   * fired without this limit (-f, 600 s), goes 110-140 decisions deep but learns clauses of about
+   * 10,000 literals from its global cardinality failures, and kept it ended at 59,606-69,660
+   * instead of 52,729-53,714 (3 seeds). When the rule fires, A073 learns clauses of 30 literals on
+   * average, ihtc i09 35 and rcpsp-wet-diverse j60 6.
+   *
+   * @param depth lcg-slow-depth, the decisions per conflict from which the rule holds, 0 = off
    * @param rate lcg-slow-depth-rate, the conflicts per second below which the rule holds
    * @param length lcg-slow-depth-length, the longest average learnt clause for which the rule holds
-   * @return true if LCG goes deep enough between conflicts to be kept
    */
-  static boolean deepDescents(
-      long conflicts,
-      long decisions,
-      long solutions,
-      long learntLiterals,
-      double seconds,
-      double depth,
-      double rate,
-      double length) {
-    return depth > 0
-        && conflicts > solutions
-        && decisions >= depth * conflicts
-        && conflicts < rate * seconds
-        && learntLiterals <= length * conflicts;
+  record DeepDescents(double depth, double rate, double length) {
+
+    /**
+     * Whether LCG goes deep enough between its conflicts to be kept.
+     *
+     * @param conflicts the conflicts of LCG so far
+     * @param decisions the decisions of LCG so far
+     * @param solutions the solutions of LCG so far
+     * @param learntLiterals the literals of the clauses LCG learnt so far
+     * @param seconds the time of LCG so far
+     * @return true if LCG is to be kept
+     */
+    boolean holds(
+        long conflicts, long decisions, long solutions, long learntLiterals, double seconds) {
+      return depth > 0
+          && conflicts > solutions
+          && decisions >= depth * conflicts
+          && conflicts < rate * seconds
+          && learntLiterals <= length * conflicts;
+    }
   }
 
   // the best cost printed before each solution of LCG that improved it, with the time of that
@@ -6975,6 +7015,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IO.println("%%%mzn-stat: lcgUnsolvedSlices=" + lcgUnsolvedSlices);
       IO.println("%%%mzn-stat: lcgSlowUnsolved=" + lcgSlowUnsolved);
     }
+    if (lcgSlowDeep) {
+      // LCG made too few conflicts but went deep between them, so it was kept
+      IO.println("%%%mzn-stat: lcgSlowDeep=true");
+    }
   }
 
   private void printLcgStatistics(boolean interrupted) {
@@ -7029,10 +7073,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         if (lcgSlowCoreKeeps > 0) {
           // LCG made too few conflicts but its core-guided phase kept finding cores
           IO.println("%%%mzn-stat: lcgSlowCoreKeeps=" + lcgSlowCoreKeeps);
-        }
-        if (lcgSlowDeep) {
-          // LCG made too few conflicts but went deep between them, so it was kept
-          IO.println("%%%mzn-stat: lcgSlowDeep=true");
         }
       }
     }
