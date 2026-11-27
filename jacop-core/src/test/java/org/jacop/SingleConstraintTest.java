@@ -14962,4 +14962,26 @@ class SingleConstraintTest extends TestHelper {
     assertThat(new SmallDenseDomain(5, 6).intersect(new IntervalDomain(10, 10)).isEmpty()).isTrue();
   }
 
+  @Test
+  void binaryBitTableOverARefilledTupleArrayTakesItsNewPairs() {
+    // the bit-sets were shared by the identity of the tuple array: a second table given the same
+    // array filled with other pairs took the bit-sets of the first pairs
+    int[][] tuples = {{1, 1}, {2, 2}};
+    Store first = new Store();
+    IntVar x = new IntVar(first, "x", 1, 3);
+    IntVar y = new IntVar(first, "y", 1, 3);
+    first.impose(new BinaryBitTable(x, y, tuples));
+    assertThat(first.consistency()).isTrue();
+    tuples[0][1] = 2;
+    tuples[1][1] = 1;
+    Store second = new Store();
+    IntVar u = new IntVar(second, "u", 1, 3);
+    IntVar w = new IntVar(second, "w", 1, 3);
+    second.impose(new BinaryBitTable(u, w, tuples));
+    assertThat(second.consistency()).isTrue();
+    second.setLevel(1);
+    u.domain.in(1, u, 1, 1);
+    assertThat(second.consistency()).isTrue();
+    assertThat(w.value()).isEqualTo(2);
+  }
 }
