@@ -819,6 +819,41 @@ class RevisedDualSimplexTest {
   }
 
   @Test
+  void equationTheOtherEquationsImplyIsRemoved() {
+    // x + y + 2z = 3 and y + z + w = 2 give x + 2y + 3z + w = 5, the third equation; with 6 on its
+    // right-hand side the equations have no solution. min x + y + z + w over [0, 4]
+    double inf = Double.POSITIVE_INFINITY;
+    for (double third : new double[] {5, 6}) {
+      for (boolean presolve : new boolean[] {false, true}) {
+        RevisedDualSimplex lp =
+            new RevisedDualSimplex(
+                new int[][] {{0, 1, 2}, {1, 2, 3}, {0, 1, 2, 3}},
+                new double[][] {{1, 1, 2}, {1, 1, 1}, {1, 2, 3, 1}},
+                new double[] {3, 2, third},
+                new double[] {3, 2, third},
+                new double[] {1, 1, 1, 1},
+                true);
+        lp.setExact(true);
+        lp.setPresolve(presolve);
+        for (int j = 0; j < 4; j++) {
+          lp.setBounds(j, 0, 4);
+        }
+        int status = lp.solve(100);
+        if (third == 6) {
+          assertThat(status).isEqualTo(RevisedDualSimplex.INFEASIBLE);
+          continue;
+        }
+        assertThat(status).isEqualTo(RevisedDualSimplex.OPTIMAL);
+        // z = 1.5 and w = 0.5
+        assertThat(lp.objective()).isCloseTo(2, org.assertj.core.data.Offset.offset(1e-9));
+        if (presolve) {
+          assertThat(lp.presolveReductions()[Presolve.DEPENDENT_ROW]).isEqualTo(1);
+        }
+      }
+    }
+  }
+
+  @Test
   void weaklyDominatedColumnIsFixedAtItsBound() {
     // x + y <= 4 and x + 2y >= 1 with x, y >= 0, costs x 0, y 1, and z (cost 0, no upper bound)
     // in the first row only: its reduced cost -y0 is at least 0 over the dual bound the row gives
@@ -945,7 +980,8 @@ class RevisedDualSimplexTest {
     // the chunks of the chunked solves, apart so that they leave the problems as they were
     Random chunks = new Random(29);
     Random parallels = new Random(31);
-    int[] reductions = new int[12];
+    Random dependents = new Random(37);
+    int[] reductions = new int[13];
     int runs = Integer.getInteger("jalp.test.runs", 3000) / 3;
     int reduced = 0;
     int optimal = 0;
@@ -984,6 +1020,9 @@ class RevisedDualSimplexTest {
           addParallelColumn(p, parallels);
         }
         n = p.cost.length;
+      }
+      if (withParallels && dependents.nextInt(3) == 0) {
+        addDependentEquation(p, dependents);
       }
       if (rnd.nextInt(4) > 0) {
         feasibleAround(p);
@@ -1045,6 +1084,50 @@ class RevisedDualSimplexTest {
     assertThat(byBounds).isGreaterThan(runs / 100);
     // every kind of reduction was made, parallel rows and columns too
     assertThat(reductions).as(java.util.Arrays.toString(reductions)).doesNotContain(0);
+  }
+
+  // two rows with two or more entries made equations, and a combination of them with the
+  // combination of their right-hand sides
+  private static void addDependentEquation(Lp p, Random rnd) {
+    int m = p.rowLo.length;
+    if (m < 2) {
+      return;
+    }
+    int i = rnd.nextInt(m);
+    int k = rnd.nextInt(m - 1);
+    if (k >= i) {
+      k++;
+    }
+    if (p.cols[i].length < 2 || p.cols[k].length < 2) {
+      return;
+    }
+    for (int r : new int[] {i, k}) {
+      double b = p.rowLo[r] != -INF ? p.rowLo[r] : p.rowHi[r] != INF ? p.rowHi[r] : 0;
+      p.rowLo[r] = b;
+      p.rowHi[r] = b;
+    }
+    double lambda = (rnd.nextBoolean() ? 1 : -1) * (1 + rnd.nextInt(3));
+    double mu = (rnd.nextBoolean() ? 1 : -1) * (1 + rnd.nextInt(3));
+    java.util.TreeMap<Integer, Double> row = new java.util.TreeMap<>();
+    for (int e = 0; e < p.cols[i].length; e++) {
+      row.merge(p.cols[i][e], lambda * p.vals[i][e], Double::sum);
+    }
+    for (int e = 0; e < p.cols[k].length; e++) {
+      row.merge(p.cols[k][e], mu * p.vals[k][e], Double::sum);
+    }
+    row.values().removeIf(v -> v == 0);
+    if (row.size() < 2) {
+      return;
+    }
+    p.cols = java.util.Arrays.copyOf(p.cols, m + 1);
+    p.vals = java.util.Arrays.copyOf(p.vals, m + 1);
+    p.cols[m] = row.keySet().stream().mapToInt(Integer::intValue).toArray();
+    p.vals[m] = row.values().stream().mapToDouble(Double::doubleValue).toArray();
+    double b = lambda * p.rowLo[i] + mu * p.rowLo[k];
+    p.rowLo = java.util.Arrays.copyOf(p.rowLo, m + 1);
+    p.rowHi = java.util.Arrays.copyOf(p.rowHi, m + 1);
+    p.rowLo[m] = b;
+    p.rowHi[m] = b;
   }
 
   // a multiple of a row with two or more entries, with bounds that are a multiple of the row's

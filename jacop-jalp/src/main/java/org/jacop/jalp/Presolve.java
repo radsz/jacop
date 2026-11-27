@@ -103,6 +103,7 @@ final class Presolve {
   static final byte AGGREGATED_COLUMN = 9;
   static final byte STUFFED_COLUMN = 10;
   static final byte IMPLIED_ROW = 11;
+  static final byte DEPENDENT_ROW = 12;
 
   // entries of parallel rows or columns, and costs of parallel columns, that differ by more than
   // this, relative, from the multiple are not parallel
@@ -151,6 +152,15 @@ final class Presolve {
   // whether weakly dominated columns are fixed too (org.jacop.jalp.presolveWeakDominated)
   private static final boolean DUAL_WEAK_RULE =
       Boolean.parseBoolean(System.getProperty("org.jacop.jalp.presolveWeakDominated", "true"));
+
+  // whether equations that the other equations imply are removed (org.jacop.jalp.presolveDependent)
+  private static final boolean DEPENDENT_RULE =
+      Boolean.parseBoolean(System.getProperty("org.jacop.jalp.presolveDependent", "true"));
+
+  // the most entries of the equations the search for dependent ones factorizes
+  // (org.jacop.jalp.dependentEntries)
+  private static final int DEPENDENT_ENTRIES =
+      Integer.getInteger("org.jacop.jalp.dependentEntries", 1_000_000);
 
   // the rounds of the propagation of the dual bounds
   private static final int DUAL_ROUNDS = 8;
@@ -396,6 +406,10 @@ final class Presolve {
       if (found == 0) {
         break;
       }
+    }
+    if (DEPENDENT_RULE && dependentEquations() > 0 && !passes()) {
+      provedInfeasible = true;
+      return false;
     }
     if (rowsLeft == m && colsLeft == n && !relaxed) {
       return false;
@@ -1025,6 +1039,83 @@ final class Presolve {
     return moved;
   }
 
+  // dependent equations (Andersen and Andersen, section 3.6; HiGHS removeDependentEquations): the
+  // equations with their right-hand sides, as the columns of a matrix over the columns of the
+  // problem and one row for the right-hand side, are factorized, and an equation left without a
+  // pivot is a combination of the others with the same right-hand side, so the problem without it
+  // has the same solutions. An equation that is a combination of the others with another
+  // right-hand side keeps its pivot (the problem is infeasible and the simplex proves it). The
+  // postsolve is that of a dropped row: its dual is 0. A search that removes nothing charges no
+  // work, as in stuffing().
+  // The number of rows removed
+  int dependentEquations() {
+    int q = 0;
+    long entries = 0;
+    for (int i = 0; i < m; i++) {
+      if (rowAlive[i] && rowLo[i] == rowHi[i] && rowCount[i] > 0) {
+        q++;
+        entries += rowCount[i] + 1;
+      }
+    }
+    if (q < 2 || entries > DEPENDENT_ENTRIES) {
+      return 0;
+    }
+    int[] pos = new int[n];
+    int k = 0;
+    for (int j = 0; j < n; j++) {
+      pos[j] = colAlive[j] ? k++ : -1;
+    }
+    int rhsRow = k;
+    int size = Math.max(k + 1, q);
+    int[] eq = new int[q];
+    int[][] colIdx = new int[size][];
+    double[][] colVal = new double[size][];
+    int[] colLen = new int[size];
+    int c = 0;
+    for (int i = 0; i < m; i++) {
+      if (!rowAlive[i] || rowLo[i] != rowHi[i] || rowCount[i] == 0) {
+        continue;
+      }
+      int[] idx = rIdx[i];
+      double[] val = rVal[i];
+      int[] ci = new int[rowCount[i] + 1];
+      double[] cv = new double[rowCount[i] + 1];
+      int len = 0;
+      for (int e = 0; e < rLen[i]; e++) {
+        int j = idx[e];
+        if (colAlive[j] && val[e] != 0 && len < rowCount[i]) {
+          ci[len] = pos[j];
+          cv[len++] = val[e];
+        }
+      }
+      if (rowLo[i] != 0) {
+        ci[len] = rhsRow;
+        cv[len++] = rowLo[i];
+      }
+      eq[c] = i;
+      colIdx[c] = ci;
+      colVal[c] = cv;
+      colLen[c++] = len;
+    }
+    for (; c < size; c++) {
+      colIdx[c] = new int[0];
+      colVal[c] = new double[0];
+    }
+    BasisLu lu = new BasisLu(size, colIdx, colVal, colLen);
+    int found = 0;
+    for (int p : lu.replacedPos) {
+      if (p < q) {
+        record(DEPENDENT_ROW, eq[p], -1);
+        removeRow(eq[p]);
+        found++;
+      }
+    }
+    if (found > 0) {
+      ops += entries + lu.ops + lu.build;
+    }
+    return found;
+  }
+
   // the dominated column is removed at value v
   private void dominated(int j, double v) {
     fixColumn(j, v);
@@ -1386,7 +1477,7 @@ final class Presolve {
    * @return the counts
    */
   int[] counts() {
-    int[] c = new int[12];
+    int[] c = new int[13];
     for (int t = 0; t < records; t++) {
       c[kind[t]]++;
     }
@@ -1405,7 +1496,8 @@ final class Presolve {
     "dominatedcol",
     "aggregatedcol",
     "stuffedcol",
-    "impliedrow"
+    "impliedrow",
+    "dependentrow"
   };
 
   // writes the reductions to the trace (org.jacop.jalp.trace)
@@ -2604,7 +2696,7 @@ final class Presolve {
           value[j] = fixedAt[j];
           upper[j] = fixedAt[j] == givenHi[j] && givenHi[j] != givenLo[j];
           break;
-        case DROP_ROW, IMPLIED_ROW:
+        case DROP_ROW, IMPLIED_ROW, DEPENDENT_ROW:
           basic[n + i] = true;
           y[i] = 0;
           break;
