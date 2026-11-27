@@ -10174,4 +10174,19 @@ class FlatzincFrontEndTest {
       assertTrue(out.contains(expected), presolve + ": " + out);
     }
   }
+
+  @Test
+  void hexadecimalAndOctalIntLiteralsAreReadAsTheirValues() throws IOException {
+    // FlatZinc int literals may be 0x hexadecimal or 0o octal; declared domains read them, but a
+    // literal in a constraint argument was parsed as decimal and rejected as outside the range
+    String model =
+        "var 0..0x1F: x :: output_var;\n"
+            + "constraint int_lin_le([0x2],[x],0o12);\n"
+            + "constraint int_ne(x,0x5);\n"
+            + "constraint int_ne(x,0o4);\n"
+            + "constraint int_le(-0x1,x);\n"
+            + "solve maximize x;\n";
+    String out = run(model)[0];
+    assertTrue(out.contains("x = 3;\n----------\n=========="), out);
+  }
 }

@@ -217,6 +217,11 @@ public class Parser {
 	try {
 	    return Integer.parseInt(t.image);
 	} catch (NumberFormatException e) {
+	    // 0x hexadecimal and 0o octal literals, which parseInt does not read
+	    BigInteger v = bigLiteral(t.image);
+	    if (v.bitLength() < 32) {
+		return v.intValue();
+	    }
 	    throw new ParseException("integer literal " + t.image + " at line " + t.beginLine
 				     + ", column " + t.beginColumn
 				     + " is outside the 32-bit integer range supported by JaCoP");
