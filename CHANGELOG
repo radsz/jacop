@@ -9588,6 +9588,19 @@ Version 5.0 (unreleased)
    node (111 of 35,753 nodes missed it). The 25 FlatZinc test models with
    count_values: same search or same results, total time 202 -> 201 s.
 
+527. Fixed search on an optimisation model that has no solution yet
+   tastes the annotation's search without learning, as fixed
+   satisfaction does (entry 492), also with -a: lazy clause generation
+   stops at lcg-fixed-at of the time limit, the search without learning
+   runs for lcg-fixed-share of that time, and the one further in the
+   annotation's tree goes on (a solution found in the taste keeps the
+   search without learning). Before, LCG without a solution gave way only
+   below 30 conflicts/s. Sampson.s10.k3 (MiniZinc Challenge 2017
+   community-detection, input_order on the communities): LCG makes about
+   3,000 conflicts/s and found 8 in 600 s; now the optimum 10 is proved in
+   88 s. On the 13 wide-set optimisation instances without a solution
+   after 55 s of fixed search, 600 s: total 7,276 -> 6,763 s, none worse.
+
 Version 4.11
 =============
 
