@@ -60,6 +60,7 @@ import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.XmulYeqZSaturated;
 import org.jacop.constraints.Xor;
+import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.table.BinaryBitTable;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -317,6 +318,52 @@ class MutationGapsTest {
     IntVar[] list = rnd.nextInt(4) == 0 ? withLast(x, m) : x;
     Constraint c = isMax ? new Max(list, m) : new Min(list, m);
     return new Instance(store, c, withLast(x, m));
+  }
+
+  /**
+   * An item that only one bin can take is out of every other bin for one reason, that bin's: the
+   * reason no longer repeats it for each removed bin (steelmillslab 2019: 8,000 atoms over 60
+   * bins).
+   */
+  @Test
+  void binpackingItemNeededByOneBinHasOneReason() {
+    Store store = new Store();
+    int bins = 20;
+    IntVar[] load = new IntVar[bins];
+    load[0] = new IntVar(store, "l0", 0, 10);
+    for (int i = 1; i < bins; i++) {
+      load[i] = new IntVar(store, "l" + i, 0, 30);
+    }
+    IntVar[] item = new IntVar[9];
+    int[] w = new int[9];
+    item[0] = new IntVar(store, "a", 0, bins - 1);
+    w[0] = 10;
+    for (int k = 1; k < item.length; k++) {
+      item[k] = new IntVar(store, "b" + k, 1, bins - 1);
+      w[k] = 3;
+    }
+    AtomicTrail trail = new AtomicTrail(store);
+    Binpacking c = new Binpacking(item, load, w);
+    store.impose(c);
+    assertTrue(store.consistency());
+    store.setLevel(store.level + 1);
+    load[0].domain.inMin(store.level, load[0], 10);
+    assertTrue(store.consistency());
+    assertEquals(0, item[0].value());
+    ExplanationChecker checker = new ExplanationChecker(trail);
+    int explained = 0;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.reason(e) != c || trail.variable(e) != item[0]) {
+        continue;
+      }
+      EntryList reason = new EntryList();
+      assertTrue(c.explain(trail, e, reason), trail.atomString(e));
+      assertNull(checker.checkReason(e, reason), trail.atomString(e));
+      // the load of bin 0 and the eight items kept out of it, not 19 copies of them
+      assertTrue(reason.size() <= 9, trail.atomString(e) + ": " + reason.size() + " atoms");
+      explained++;
+    }
+    assertTrue(explained > 0);
   }
 
   @Test

@@ -80,7 +80,10 @@ import org.jacop.presolve.InferredCumulatives;
  * {@link CumulativeUnary} with optional tasks, task {@code t} present when {@code m_t = v}, as the
  * unary resource with optional activities studied by P. Vilím, R. Barták and O. Čepek, "Extension
  * of O(n log n) filtering algorithms for the unary resource constraint to optional activities",
- * Constraints 10(4), 2005, 403-425. {@code org.jacop.fz.optionalUnary=false} turns this off.
+ * Constraints 10(4), 2005, 403-425. {@code org.jacop.fz.optionalUnary=false} turns this off. A task
+ * whose assignment variable has more than {@code org.jacop.fz.optionalUnary.options} (4) values is
+ * left out: with many machines, as in test scheduling, it is present on each with a small chance
+ * and the resources only cost time.
  *
  * <p>Setting the system property {@code org.jacop.fz.disjunctiveCliques} to false turns the
  * detection off.
@@ -369,10 +372,18 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
           // the tasks are known to the cliques, which order them by the precedences
           cliques.task(p.from, p.lag);
           cliques.task(q.from, q.lag);
-          optionals.add(new Optional(new Job(p.from, p.lag), new Job(q.from, q.lag), x, y));
+          if (fewOptions(x) && fewOptions(y)) {
+            optionals.add(new Optional(new Job(p.from, p.lag), new Job(q.from, q.lag), x, y));
+          }
         }
       }
     }
+  }
+
+  // a task that may run on many machines is present on each with a small chance, so the unary
+  // resources on its machines prune little until it is assigned, but cost their per-node filtering
+  private static boolean fewOptions(IntVar assignment) {
+    return assignment.getSize() <= Integer.getInteger("org.jacop.fz.optionalUnary.options", 4);
   }
 
   /**

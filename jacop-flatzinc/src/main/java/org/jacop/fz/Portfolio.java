@@ -165,8 +165,10 @@ final class Portfolio {
 
   private static final String UNSATISFIABLE = "=====UNSATISFIABLE=====";
 
-  // floats are solved in one thread: their precision and derivatives are kept in static fields
-  private static final Pattern FLOAT_VAR = Pattern.compile("\\bvar\\s+(float\\b|-?\\d+\\.\\d)");
+  // floats are solved in one thread: their precision and derivatives are kept in static fields; a
+  // float literal has a fraction or an exponent (1e0..2e0 is a float range too)
+  private static final Pattern FLOAT_VAR =
+      Pattern.compile("\\bvar\\s+(float\\b|-?\\d+(\\.\\d|[eE]))");
 
   private static final ThreadLocal<OutputStream> CAPTURE = new ThreadLocal<>();
 

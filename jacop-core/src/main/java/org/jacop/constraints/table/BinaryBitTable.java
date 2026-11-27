@@ -133,6 +133,13 @@ public class BinaryBitTable extends Constraint
   private static final Map<int[][], Map<String, Masks>> SHARED = new WeakHashMap<>();
 
   /**
+   * The pairs each tuple array of SHARED held when its bit-sets were built: an array filled again
+   * for the next table (the same object with other pairs) must not get the bit-sets of the old
+   * pairs.
+   */
+  private static final Map<int[][], int[]> SHARED_PAIRS = new WeakHashMap<>();
+
+  /**
    * Creates the table.
    *
    * @param x the first variable
@@ -172,6 +179,11 @@ public class BinaryBitTable extends Constraint
   private static Masks masks(int[][] tuples, int xBase, int xSpan, int yBase, int ySpan) {
     String key = xBase + ":" + xSpan + ":" + yBase + ":" + ySpan;
     synchronized (SHARED) {
+      int[] pairs = SHARED_PAIRS.get(tuples);
+      if (pairs == null || !samePairs(pairs, tuples)) {
+        SHARED.remove(tuples);
+        SHARED_PAIRS.put(tuples, pairsOf(tuples));
+      }
       Map<String, Masks> byRange = SHARED.computeIfAbsent(tuples, t -> new java.util.HashMap<>());
       Masks m = byRange.get(key);
       if (m == null) {
@@ -199,6 +211,27 @@ public class BinaryBitTable extends Constraint
       }
       return m;
     }
+  }
+
+  private static int[] pairsOf(int[][] tuples) {
+    int[] pairs = new int[2 * tuples.length];
+    for (int i = 0; i < tuples.length; i++) {
+      pairs[2 * i] = tuples[i][0];
+      pairs[2 * i + 1] = tuples[i][1];
+    }
+    return pairs;
+  }
+
+  private static boolean samePairs(int[] pairs, int[][] tuples) {
+    if (pairs.length != 2 * tuples.length) {
+      return false;
+    }
+    for (int i = 0; i < tuples.length; i++) {
+      if (pairs[2 * i] != tuples[i][0] || pairs[2 * i + 1] != tuples[i][1]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override

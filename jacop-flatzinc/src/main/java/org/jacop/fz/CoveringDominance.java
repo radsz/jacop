@@ -123,6 +123,8 @@ final class CoveringDominance {
     cost.put(objective, maximize ? -1L : 1L);
     ArrayDeque<IntVar> open = new ArrayDeque<>();
     open.add(objective);
+    List<IntVar> expanded = new ArrayList<>();
+    List<long[]> ranges = new ArrayList<>();
     while (!open.isEmpty()) {
       IntVar y = open.poll();
       Long scale = cost.get(y);
@@ -155,6 +157,19 @@ final class CoveringDominance {
       }
       definitions.add(definition);
       cost.remove(y);
+      // the values the definition gives y over the domains of its other variables
+      long lo = form.c();
+      long hi = form.c();
+      for (int i = 0; i < form.vars().length; i++) {
+        IntVar v = form.vars()[i];
+        if (v != y) {
+          long w = form.weights()[i];
+          lo -= Math.max(w * v.min(), w * v.max());
+          hi -= Math.min(w * v.min(), w * v.max());
+        }
+      }
+      expanded.add(y);
+      ranges.add(a == 1 ? new long[] {lo, hi} : new long[] {-hi, -lo});
       // a y + sum w v = c, so y = (c - sum w v) / a and scale * y = -scale * a * sum w v + ...
       for (int i = 0; i < form.vars().length; i++) {
         IntVar v = form.vars()[i];
@@ -167,6 +182,18 @@ final class CoveringDominance {
         }
       }
       if (definitions.size() > 100_000) {
+        return null;
+      }
+    }
+    // a swap moves the objective towards its optimum and the variables defined on the way either
+    // way: they must be in no other constraint, and their domains must not cut what their
+    // definitions give (such as a lower bound of a minimized objective above the least cost)
+    for (int i = 0; i < expanded.size(); i++) {
+      IntVar y = expanded.get(i);
+      long[] range = ranges.get(i);
+      boolean lowOk = y == objective && maximize || y.min() <= range[0];
+      boolean highOk = y == objective && !maximize || y.max() >= range[1];
+      if (!lowOk || !highOk || y.dom().noIntervals() != 1 || !onlyIn(store, y, definitions)) {
         return null;
       }
     }

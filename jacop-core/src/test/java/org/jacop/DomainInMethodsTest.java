@@ -32,13 +32,17 @@ package org.jacop;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -48,6 +52,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -72,20 +77,73 @@ class DomainInMethodsTest {
     prepareMethod = this.getClass().getMethod(name, int[].class);
   }
 
-  private IntDomain dom(int... intervals) throws Exception {
-    return (IntDomain) prepareMethod.invoke(this, new Object[] {intervals});
+  // the domains made since the last verification, with their bounds when they were made
+  private final List<IntDomain> made = new ArrayList<>();
+  private final List<int[]> madeBounds = new ArrayList<>();
+
+  private IntDomain made(IntDomain d) {
+    made.add(d);
+    madeBounds.add(new int[] {d.min(), d.max()});
+    return d;
   }
 
+  private IntDomain dom(int... intervals) throws Exception {
+    return made((IntDomain) prepareMethod.invoke(this, new Object[] {intervals}));
+  }
+
+  /**
+   * Verifies the one event of a change. A change of the minimum only (or of the maximum only) may
+   * be reported as MIN_EVENT (MAX_EVENT) instead of BOUND, so for an expected BOUND a directional
+   * event is accepted when a domain made since the last verification changed that bound only.
+   */
   private void verifyEvent(int event) {
-    verify(v).domainHasChanged(event);
+    ArgumentCaptor<Integer> reported = ArgumentCaptor.forClass(Integer.class);
+    verify(v).domainHasChanged(reported.capture());
+    int actual = reported.getValue();
+    if (event == IntDomain.BOUND
+        && (actual == IntDomain.MIN_EVENT || actual == IntDomain.MAX_EVENT)) {
+      boolean minOnly = false;
+      boolean maxOnly = false;
+      // a domain changed at a later level than its stamp is replaced by a new one in the variable
+      for (int i = 0; i < 2 * made.size(); i++) {
+        IntDomain d = i < made.size() ? made.get(i) : v.domain;
+        if (d == null || d.isEmpty()) {
+          continue;
+        }
+        int[] before = madeBounds.get(i % made.size());
+        boolean minUp = d.min() > before[0];
+        boolean maxDown = d.max() < before[1];
+        minOnly |= minUp && d.max() == before[1];
+        maxOnly |= maxDown && d.min() == before[0];
+      }
+      assertThat(actual == IntDomain.MIN_EVENT ? minOnly : maxOnly)
+          .as(
+              "event "
+                  + actual
+                  + " for a change of "
+                  + (minOnly ? "the minimum only" : maxOnly ? "the maximum only" : "both bounds"))
+          .isTrue();
+    } else {
+      assertThat(actual).isEqualTo(event);
+    }
     clearInvocations(v);
+    v.domain = null;
+    made.clear();
+    madeBounds.clear();
+  }
+
+  // a SmallDenseDomain checks under jacop.asserts.enabled that the variable's new domain lies
+  // within the argument, so the mocked variable returns its domain
+  private void stubDom(IntDomain d) {
+    lenient().when(v.dom()).thenReturn(d);
   }
 
   private void verifyNoEvent() {
-    verify(v, never()).domainHasChanged(IntDomain.ANY);
-    verify(v, never()).domainHasChanged(IntDomain.BOUND);
-    verify(v, never()).domainHasChanged(IntDomain.GROUND);
+    verify(v, never()).domainHasChanged(anyInt());
     clearInvocations(v);
+    v.domain = null;
+    made.clear();
+    madeBounds.clear();
   }
 
   /**
@@ -127,7 +185,7 @@ class DomainInMethodsTest {
     for (int i = 2; i < intervals.length; i += 2) {
       d.addDom(new IntervalDomain(intervals[i], intervals[i + 1]));
     }
-    return d;
+    return made(d);
   }
 
   private IntDomain sddDom(int... intervals) {
@@ -135,7 +193,7 @@ class DomainInMethodsTest {
     for (int i = 2; i < intervals.length; i += 2) {
       d.addDom(new SmallDenseDomain(intervals[i], intervals[i + 1]));
     }
-    return d;
+    return made(d);
   }
 
   // =========================================================================
@@ -1664,6 +1722,7 @@ class DomainInMethodsTest {
 
     d = sddDom(1, 10);
     d.setStamp(100);
+    stubDom(d);
     d.in(100, v, intervalDom(3, 7));
     assertThat(d).hasToString("{3..7}");
     verifyEvent(IntDomain.BOUND);
@@ -1675,6 +1734,7 @@ class DomainInMethodsTest {
 
     d = sddDom(1, 10);
     d.setStamp(100);
+    stubDom(d);
     d.in(100, v, intervalDom(1, 3, 8, 10));
     assertThat(d).hasToString("{1..3, 8..10}");
     verifyEvent(IntDomain.ANY);
@@ -1686,6 +1746,7 @@ class DomainInMethodsTest {
 
     d = sddDom(1, 10);
     d.setStamp(100);
+    stubDom(d);
     d.in(100, v, intervalDom(5, 5));
     assertThat(d).hasToString("5");
     verifyEvent(IntDomain.GROUND);
@@ -1922,17 +1983,20 @@ class DomainInMethodsTest {
 
     d = sddDom(1, 10);
     d.setStamp(100);
+    stubDom(d);
     d.in(100, v, intervalDom(3, 5, 8, 10));
     assertThat(d).hasToString("{3..5, 8..10}");
     verifyEvent(IntDomain.BOUND);
 
     d = sddDom(1, 10);
     d.setStamp(100);
+    stubDom(d);
     d.in(100, v, intervalDom(5, 5));
     assertThat(d).hasToString("5");
     verifyEvent(IntDomain.GROUND);
 
     d = sddDom(1, 10);
+    stubDom(d);
     d.in(100, v, intervalDom(1, 10));
     verifyNoEvent();
 
