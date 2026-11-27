@@ -10415,4 +10415,33 @@ class FlatzincFrontEndTest {
       assertThrows(ModelTimeOut.class, () -> detector.detect(tree));
     }
   }
+
+  @Test
+  void coveringDominanceKeepsTheLowerBoundOfTheObjective() throws IOException {
+    // 120 columns of costs 1..120 in one clause: every column but the first is dominated by it, so
+    // column dominance fixed 119 of them to 0, although the cost must be at least 5 (its domain,
+    // or a constraint): only the column of cost 1 was left, and the model was unsatisfiable
+    StringBuilder decl = new StringBuilder();
+    StringBuilder cons = new StringBuilder();
+    StringJoiner xs = new StringJoiner(",");
+    StringJoiner ys = new StringJoiner(",");
+    StringJoiner cs = new StringJoiner(",");
+    for (int i = 0; i < 120; i++) {
+      decl.append("var bool: x").append(i).append(";\nvar 0..1: y").append(i).append(";\n");
+      cons.append("constraint bool2int(x").append(i).append(",y").append(i).append(");\n");
+      xs.add("x" + i);
+      ys.add("y" + i);
+      cs.add(Integer.toString(i + 1));
+    }
+    cons.append("constraint bool_clause([").append(xs).append("],[]);\n");
+    cons.append("constraint int_lin_eq([%s,-1],[%s,cost],0);\n".formatted(cs, ys));
+    String inDomain = decl + "var 5..100000: cost :: output_var;\n" + cons;
+    String byConstraint =
+        decl + "var 0..100000: cost :: output_var;\n" + cons + "constraint int_le(5,cost);\n";
+    for (String model : List.of(inDomain, byConstraint)) {
+      String out = run(model + "solve minimize cost;\n", "--lcg", "on")[0];
+      assertTrue(out.contains("cost = 5;\n----------\n=========="), out);
+    }
+  }
+
 }
