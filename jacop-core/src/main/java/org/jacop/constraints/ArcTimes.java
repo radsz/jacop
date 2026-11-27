@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.VarMap;
+import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -98,7 +99,9 @@ public class ArcTimes extends Constraint
   private final int[] pass;
   private final int[] passHeads;
   private int headCount;
-  private boolean all = true;
+  // the first call checks every node, again when its level is removed: a change of a successor
+  // variable alone queues no node
+  private final InitOnce all = new InitOnce();
 
   // the node whose successors all came too late in the last failure, or -1
   private int failed = -1;
@@ -203,8 +206,7 @@ public class ArcTimes extends Constraint
   public void consistency(Store store) {
     failed = -1;
     try {
-      if (all) {
-        all = false;
+      if (all.begin(store)) {
         for (int v = 0; v < n; v++) {
           check(store, v);
         }

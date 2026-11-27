@@ -265,6 +265,7 @@ public class VariablesParameters implements ParserTreeConstants {
   void generateParameters(SimpleNode node, Tables table) {
 
     initContext(table);
+    declaredOnce(node, table);
 
     int type = getType(node);
 
@@ -304,6 +305,7 @@ public class VariablesParameters implements ParserTreeConstants {
   void generateVariables(SimpleNode node, Tables table, Store store) {
 
     initContext(table);
+    declaredOnce(node, table);
     boolean outputVar = false;
 
     int type = getType(node);
@@ -544,7 +546,18 @@ public class VariablesParameters implements ParserTreeConstants {
     return ((ASTVarDeclItem) node).getHighIndex() - ((ASTVarDeclItem) node).getLowIndex() + 1;
   }
 
+  // FlatZinc declares each identifier once; a second declaration of x made a second variable that
+  // was printed as x too, or replaced the first in the tables
+  private static void declaredOnce(SimpleNode node, Tables table) {
+    String ident = ((ASTVarDeclItem) node).getIdent();
+    if (table.isIdentifier(ident)) {
+      throw new IllegalArgumentException(
+          "Symbol \"" + ident + "\" is declared more than once; execution aborted");
+    }
+  }
+
   void generateArray(SimpleNode node, Tables table, Store store) {
+    declaredOnce(node, table);
     if (((ASTVarDeclItem) node).getKind() == 2) {
       generateArrayVariables(node, table, store);
     } else if (((ASTVarDeclItem) node).getKind() == 3) {
@@ -654,6 +667,43 @@ public class VariablesParameters implements ParserTreeConstants {
       default:
         throw new IllegalArgumentException(
             "Not supported type in array parameter; compilation aborted.");
+    }
+    checkArrayVariablesSize(node, table, ident, outputArray);
+  }
+
+  // the value of an array of variables has the length of its declaration, and output_array the
+  // same number of elements: a model that differs was solved and printed with the value's length
+  private void checkArrayVariablesSize(
+      SimpleNode node, Tables table, String ident, boolean outputArray) {
+    int size = computeArraySize(node);
+    Object[] value = table.variableArrayTable.get(ident);
+    if (value == null) {
+      value = table.variableFloatArrayTable.get(ident);
+    }
+    if (value == null) {
+      value = table.setVariableArrayTable.get(ident);
+    }
+    if (value != null && value.length != size) {
+      throw new IllegalArgumentException(
+          "Different size declaration and initialization of variable array "
+              + ident
+              + "; compilation aborted.");
+    }
+    if (outputArray) {
+      long cells = 1;
+      for (IntDomain d : indexBounds) {
+        cells *= d.getSize();
+      }
+      if (cells != size) {
+        throw new IllegalArgumentException(
+            "Index sets of "
+                + OUTPUT_ARRAY
+                + " of "
+                + ident
+                + " do not have its "
+                + size
+                + " elements; execution aborted");
+      }
     }
   }
 

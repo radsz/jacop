@@ -65,12 +65,12 @@ public final class BlockSearch implements PivotRule {
       start = 0;
     }
     Arc next = null;
-    int minimumCost = 0;
+    long minimumCost = 0;
     int i = start;
     int inBlock = 0;
     for (int scanned = 0; scanned < m; scanned++) {
       Arc arc = network.lower[i];
-      int reducedCost = arc.reducedCost();
+      long reducedCost = arc.reducedCost();
       if (minimumCost > reducedCost) {
         minimumCost = reducedCost;
         next = arc;

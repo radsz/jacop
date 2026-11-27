@@ -233,7 +233,8 @@ public class AgreementCountDetector {
   private void linear(ASTConstElem node, boolean positive) {
     int[] a = support.getIntArray((SimpleNode) node.jjtGetChild(0));
     IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(1));
-    if (a == null || a.length != 2 || v.length != 2 || a[0] == 0 || a[0] != -a[1]) {
+    // -a[1] in long: [MIN_VALUE, MIN_VALUE] weighs x + y, not x - y
+    if (a == null || a.length != 2 || v.length != 2 || a[0] == 0 || a[0] != -(long) a[1]) {
       return;
     }
     if (support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2)) != 0) {

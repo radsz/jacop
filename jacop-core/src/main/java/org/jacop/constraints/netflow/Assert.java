@@ -462,7 +462,7 @@ public class Assert {
         continue;
       }
 
-      int reduced = arc.reducedCost();
+      long reduced = arc.reducedCost();
 
       if (arc.capacity > 0 && reduced < 0) {
         s.append("\n").append(arc);

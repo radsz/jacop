@@ -987,6 +987,13 @@ public class SmallDenseDomain extends IntDomain {
 
       IntervalDomain input = (IntervalDomain) domain;
 
+      if (input.size > 0 && (input.min() < MIN_INT || input.max() > MAX_INT)) {
+        // a set of values built from parameters, such as Integer.MAX_VALUE, reaches beyond the
+        // range: the distances between its intervals can exceed an int
+        in(storeLevel, v, windowBits(input));
+        return;
+      }
+
       int i = findFirstOverlappingInterval(input, 0);
 
       if (i == input.size) {

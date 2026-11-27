@@ -380,6 +380,15 @@ public final class FreeSearch {
     }
     int startLevel = store.level;
     boolean exhausted = false;
+    // propagation stops at the deadline too: one call of consistency() can run for minutes when
+    // bounds converge a step per pass (x = y and x < y over floats moves one ulp per pass)
+    long previousDeadline = store.getConsistencyDeadline();
+    boolean ownDeadline =
+        deadline != Long.MAX_VALUE && (previousDeadline == 0 || deadline < previousDeadline);
+    if (ownDeadline) {
+      store.setConsistencyDeadline(deadline);
+    }
+    boolean cut = false;
     try {
       // changes made at the root stay in a level of their own, removed at the end
       store.setLevel(startLevel + 1);
@@ -417,6 +426,15 @@ public final class FreeSearch {
       }
       store.removeLevel(rootLevel);
       store.setLevel(startLevel);
+      cut = store.isConsistencyDeadlinePassed();
+      if (ownDeadline) {
+        store.setConsistencyDeadline(previousDeadline);
+      }
+    }
+    if (cut) {
+      // a failure at the deadline proves nothing: the search was stopped, not exhausted
+      limitReached = true;
+      exhausted = false;
     }
     if (exhausted) {
       return solutions > 0 ? Status.OPTIMAL : Status.UNSATISFIABLE;
@@ -699,6 +717,10 @@ public final class FreeSearch {
    * positive one ends the nogoods of the path, a negative one gives no nogood.
    */
   private void learnNogoods(int depth) {
+    if (store.isConsistencyDeadlinePassed()) {
+      // the branches that failed at the deadline were not refuted
+      return;
+    }
     int positives = 0;
     try {
       for (int i = 0; i < depth; i++) {
@@ -1040,6 +1062,7 @@ public final class FreeSearch {
     if ((failLimit > 0 && failures >= failLimit)
         // the clock is read at every node: one node can take seconds when propagation is costly
         || System.currentTimeMillis() > deadline
+        || store.isConsistencyDeadlinePassed()
         || (virtualClock && clock() > limitDeadline)) {
       limitReached = true;
       return true;

@@ -34,7 +34,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
@@ -135,9 +134,10 @@ public class ArgMin extends AbstractArgMinMax implements Copyable<ArgMin> {
     }
   }
 
+  // the bounds start beyond every domain, so that a variable at the end of the range has a position
   private int[] findLbUbPosForMin() {
-    int lb = IntDomain.MAX_INT;
-    int ub = IntDomain.MAX_INT;
+    int lb = Integer.MAX_VALUE;
+    int ub = Integer.MAX_VALUE;
     int pos = -1;
     for (int i = 0; i < list.length; i++) {
       int vDomMin = list[i].dom().min();
@@ -154,7 +154,7 @@ public class ArgMin extends AbstractArgMinMax implements Copyable<ArgMin> {
   }
 
   private int[] findLbPosForMin() {
-    int lb = IntDomain.MAX_INT;
+    int lb = Integer.MAX_VALUE;
     int pos = -1;
     for (ValueEnumeration e = extremeIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
       int i = e.nextElement() - 1 - indexOffset;
