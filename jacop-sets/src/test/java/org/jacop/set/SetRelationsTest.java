@@ -244,4 +244,19 @@ class SetRelationsTest {
     assertThat(SmallDenseDomain.emptyDomain.isEmpty()).isTrue();
     assertThat(new SmallDenseDomain(5, 6).intersect(new IntervalDomain(10, 10)).isEmpty()).isTrue();
   }
+
+  @Test
+  void settingADomainTakesNoBoundsOfTheGivenDomain() {
+    // setDomain kept the glb and lub objects of the given domain, so a change of v at the same
+    // level changed the domain of b too
+    Store store = new Store();
+    SetVar b = new SetVar(store, "b", new BoundSetDomain(new IntervalDomain(), dom(1, 2, 3, 4, 5)));
+    SetVar v = new SetVar(store, "v", new BoundSetDomain(new IntervalDomain(), dom(1, 2, 3, 4, 5)));
+    v.setDomain(b.dom());
+    v.domain.inGlb(0, v, 2);
+    v.domain.inLubComplement(0, v, 5);
+    assertThat(v.domain.glb().eq(dom(2))).isTrue();
+    assertThat(b.domain.glb().isEmpty()).isTrue();
+    assertThat(b.domain.lub().eq(dom(1, 2, 3, 4, 5))).isTrue();
+  }
 }
