@@ -89,7 +89,6 @@ import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.lp.FeasibilityPump;
 import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.constraints.lp.TimeIndexedBound;
-import org.jacop.core.AffineView;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -221,6 +220,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   Tables output;
   // the derivation of the searched store, or null when the loaded store is searched
   Derivation presolve;
+  // the variables that no constraint touched before presolve, in the searched store (presolve
+  // maps them), and whether a variable of the default search, or one that is not output, was
+  // touched then: what the search labels last does not depend on what presolve removed
+  private Set<Var> untouchedBeforePresolve = Set.of();
+  private boolean touchedBeforePresolve;
+  private boolean touchedHiddenBeforePresolve;
   // the symmetry breaking that ran, or null: its constraints, which the model does not imply, may
   // differ between portfolio threads, so learnt clauses go only to threads that posted the same
   private SymmetryBreaking symmetry;
@@ -1040,6 +1045,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     ObjectivePresolve objective = objectiveRule(node);
     // the last reader of the variable and constraint items
     releaseModelItems(node);
+    recordUntouched();
     if (opt.presolve() != Options.Presolve.OFF) {
       presolve(node, objective);
       if (sat.collecting() && !opt.lcg()) {
@@ -1957,6 +1963,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       case DERIVED -> {
         VarMap map = completeMap(d);
         dictionary = dictionary.mapTo(map);
+        Set<Var> untouched = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (Var v : untouchedBeforePresolve) {
+          Var copy = d.get(v);
+          if (copy != null) {
+            untouched.add(copy);
+          }
+        }
+        untouchedBeforePresolve = untouched;
         if (objectiveCosts != null) {
           // the cost variables of the objective rule are made in the loaded store
           objectiveCosts = map.get(objectiveCosts);
@@ -9236,15 +9250,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
-   * The variables of the free search that no constraint touches, in the store or among the clauses
-   * kept for the LCG solver, and that are not the objective; none when no other variable is left.
+   * The variables of the free search that no constraint of the model touches, before presolve (as
+   * {@link #untouchedOutputs}) or among the clauses kept for the LCG solver, and that are not the
+   * objective; none when no other variable is left.
    */
   private Set<Var> untouchedFreeVars(DefaultSearchVars searchVars, Var costVar) {
-    Set<Var> clauseVars = new HashSet<>();
-    for (IntVar[][] clause : sat.collectedClauses()) {
-      clauseVars.addAll(Arrays.asList(clause[0]));
-      clauseVars.addAll(Arrays.asList(clause[1]));
-    }
+    Set<Var> clauseVars = clauseVariables();
     List<Var> all = new ArrayList<>(Arrays.asList(searchVars.getSetVars()));
     all.addAll(Arrays.asList(searchVars.getIntVars()));
     all.addAll(Arrays.asList(searchVars.getBoolVars()));
@@ -9256,7 +9267,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           && v != costVar
           && v != costVariable
           && v != objectiveVariable
-          && v.dom().sizeConstraints() == 0
+          && untouchedBeforePresolve.contains(v)
           && !clauseVars.contains(v)) {
         untouched.add(v);
       } else if (!v.singleton()) {
@@ -10880,61 +10891,98 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
-   * Returns the given output variables that no constraint touches, in the store or among the
-   * clauses kept for the LCG solver, and that are not the objective; or none when no variable
-   * outside them is left for the completion search, which then cannot fail. With allVariables the
-   * given variables are all the variables of the search, and none are returned when none of them is
-   * touched. A view of another variable (presolve's affine substitution) is touched through that
-   * variable, and the base of a view through the view: the completion fixes them.
+   * Returns the given output variables that no constraint of the model touches, in the loaded store
+   * before presolve or among the clauses kept for the LCG solver, and that are not the objective;
+   * or none when no variable outside them was touched, so that the completion search cannot fail.
+   * With allVariables the given variables are all the variables of the search, and none are
+   * returned when no variable of the default search was touched. The decision is taken on the model
+   * before presolve, so that presolve, which removes constraints, and the linear relaxation imposed
+   * after it, which spans what is left, do not change the order of the search; constraints imposed
+   * after presolve are implied by the model or keep an optimum, so the untouched variables still
+   * take any value. A view and the base of a view come from an equation of the model, which touched
+   * both.
    */
   private Set<Var> untouchedOutputs(
       IntVar[] ints, BooleanVar[] bools, SetVar[] sets, FloatVar[] floats, boolean allVariables) {
+    if (!(allVariables ? touchedBeforePresolve : touchedHiddenBeforePresolve)) {
+      return Set.of();
+    }
+    Set<Var> clauseVars = clauseVariables();
+    Set<Var> untouched = new LinkedHashSet<>();
+    for (Var[] vars : List.<Var[]>of(ints, bools, sets, floats)) {
+      for (Var v : vars) {
+        if (!v.singleton()
+            && v != costVariable
+            && untouchedBeforePresolve.contains(v)
+            && !clauseVars.contains(v)) {
+          untouched.add(v);
+        }
+      }
+    }
+    return untouched;
+  }
+
+  /** The variables of the clauses kept for the SAT or LCG solver. */
+  private Set<Var> clauseVariables() {
     Set<Var> clauseVars = new HashSet<>();
     for (IntVar[][] clause : sat.collectedClauses()) {
       clauseVars.addAll(Arrays.asList(clause[0]));
       clauseVars.addAll(Arrays.asList(clause[1]));
     }
-    Set<Var> outputs = new LinkedHashSet<>();
-    Collections.addAll(outputs, ints);
-    Collections.addAll(outputs, bools);
-    Collections.addAll(outputs, sets);
-    Collections.addAll(outputs, floats);
-    // the variables the completion search labels
-    DefaultSearchVars allVars = new DefaultSearchVars(dictionary);
-    allVars.defaultVars();
-    List<Var> rest = new ArrayList<>(Arrays.asList(allVars.getIntVars()));
-    rest.addAll(Arrays.asList(allVars.getBoolVars()));
-    rest.addAll(Arrays.asList(allVars.getSetVars()));
-    rest.addAll(Arrays.asList(allVars.getFloatVars()));
-    // the base variables of views, which a constraint on a view touches
-    Set<Var> bases = new HashSet<>();
-    for (Var v : rest) {
-      if (v instanceof AffineView view) {
-        bases.add(view.base());
-      }
-    }
-    boolean hidden = false;
-    for (Var v : rest) {
-      hidden |=
-          !v.singleton()
-              && (allVariables || !outputs.contains(v))
-              && (v.dom().sizeConstraints() > 0 || clauseVars.contains(v));
-    }
-    if (!hidden) {
-      return Set.of();
-    }
-    Set<Var> untouched = new LinkedHashSet<>();
-    for (Var v : outputs) {
-      if (!v.singleton()
-          && v != costVariable
-          && !(v instanceof AffineView)
-          && !bases.contains(v)
+    return clauseVars;
+  }
+
+  /**
+   * Records, before presolve, the variables that no constraint and no kept clause touches, and
+   * whether a variable of the default search, or one of them that is not output, is touched and not
+   * fixed. With presolve on the searched store has lost constraints that the model has, and a
+   * variable they touched would otherwise be labelled last with presolve and not without it.
+   */
+  private void recordUntouched() {
+    Set<Var> clauseVars = clauseVariables();
+    Set<Var> untouched = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (int i = 0; i < store.size(); i++) {
+      Var v = store.vars[i];
+      if (v != null
+          && !v.singleton()
           && v.dom().sizeConstraints() == 0
           && !clauseVars.contains(v)) {
         untouched.add(v);
       }
     }
-    return untouched;
+    untouchedBeforePresolve = untouched;
+    DefaultSearchVars outputVars = new DefaultSearchVars(dictionary);
+    outputVars.outputVars();
+    Set<Var> outputs = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (Var[] vars :
+        List.<Var[]>of(
+            outputVars.getIntVars(),
+            outputVars.getBoolVars(),
+            outputVars.getSetVars(),
+            outputVars.getFloatVars())) {
+      Collections.addAll(outputs, vars);
+    }
+    // the variables of the default search, which the completion search labels
+    List<Var> all = new ArrayList<>(dictionary.defaultSearchVariables);
+    all.addAll(dictionary.defaultSearchSetVariables);
+    all.addAll(dictionary.defaultSearchFloatVariables);
+    for (List<Var[]> arrays :
+        List.of(
+            dictionary.defaultSearchArrays,
+            dictionary.defaultSearchSetArrays,
+            dictionary.defaultSearchFloatArrays)) {
+      for (Var[] vars : arrays) {
+        Collections.addAll(all, vars);
+      }
+    }
+    touchedBeforePresolve = false;
+    touchedHiddenBeforePresolve = false;
+    for (Var v : all) {
+      if (!v.singleton() && !untouched.contains(v)) {
+        touchedBeforePresolve = true;
+        touchedHiddenBeforePresolve |= !outputs.contains(v);
+      }
+    }
   }
 
   /**
