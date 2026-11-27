@@ -363,6 +363,9 @@ public class Store {
   /** The prefix of any variable which was noname. */
   protected String variableIdPrefix = "_";
 
+  // the variables of this store given a generated id so far
+  private int generatedIds;
+
   /**
    * Variables for accumulated failure count (AFC) for constraints. constraintAfcManagement- opens
    * AFC menagement decay- decay factor allConstraints- all constraints in the store
@@ -1198,6 +1201,18 @@ public class Store {
    */
   public String getVariableIdPrefix() {
     return variableIdPrefix;
+  }
+
+  /**
+   * It gives an id to a variable created without one: the prefix of {@link #getVariableIdPrefix()}
+   * followed by the number of such variables of this store. The number counts in this store, not in
+   * the JVM, so that a model gets the same ids, and the same order of the variables sorted by id,
+   * however many models the JVM solved before.
+   *
+   * @return an id unused in this store.
+   */
+  public String generatedVariableId() {
+    return freshVariableId(variableIdPrefix + ++generatedIds);
   }
 
   /**

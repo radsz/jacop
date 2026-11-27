@@ -10954,4 +10954,23 @@ class FlatzincFrontEndTest {
       }
     }
   }
+
+  @Test
+  void aModelSolvedTwiceInOneJvmSearchesTheSameTree() throws IOException {
+    // the ids of variables created without one counted in the JVM, and LCG orders the Boolean
+    // variables by id: the second run in the same JVM took 41 nodes and another solution, the
+    // first 46, as every run of its own JVM
+    String model = Files.readString(Path.of("src/test/fz/mznlib", "hook_cumulatives_opt.fzn"));
+    String[] args = {"-f", "-s", "--lcg", "on", "--symmetry", "on"};
+    String first = withoutTimes(run(model, args)[0]);
+    for (int k = 0; k < 3; k++) {
+      assertEquals(first, withoutTimes(run(model, args)[0]));
+    }
+  }
+
+  private static String withoutTimes(String out) {
+    return out.lines()
+        .filter(l -> !(l.startsWith("%%%mzn-stat:") && l.matches("(?i).*(time|mem).*=.*")))
+        .collect(java.util.stream.Collectors.joining("\n"));
+  }
 }
