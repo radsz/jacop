@@ -569,8 +569,11 @@ public class LinearRelaxation extends Constraint
   private static final int EXTRA_SPARSE_ROWS = 1;
 
   // whether the extra rows carry the bound of the relaxation: without them it does not cut the
-  // domain of the objective
+  // domain of the objective, or they at least double the bound it gives
   private boolean extraCarry;
+  // whether the extra rows carry the bound because without them it does not cut the domain of the
+  // objective (bindsBound): only those move to the sparse simplex
+  private boolean extraBinds;
   // the call at which the extra rows were added
   private long extraCall;
   // the failures of the relaxation before the extra rows were added
@@ -5348,13 +5351,13 @@ public class LinearRelaxation extends Constraint
    * thousands of columns gets only tens of them, so that nearly every solve stops at its limit
    * (scpa1 of the OR-Library set covering, 300 clauses over 3,000 columns: 311 x 3,312 entries, 19
    * pivots a call, 32 of 33 solves at the limit). The sparse simplex costs its nonzeros per pivot,
-   * a seventh of the tableau there. Only for extra rows that carry the bound (extraCarry), as in
+   * a seventh of the tableau there. Only for extra rows that give the bound (extraBinds), as in
    * sparseTrial. {@code -Dorg.jacop.lp.extraSparse=false} turns the move off.
    */
   private void moveExtraToSparse() {
     if (!EXTRA_SPARSE
         || simplex != Simplex.DENSE
-        || !extraCarry
+        || !extraBinds
         || WORK / Math.max(1, lp.pivotWork()) >= EXTRA_SPARSE_PIVOTS) {
       return;
     }
@@ -6926,7 +6929,8 @@ public class LinearRelaxation extends Constraint
 
   // whether the extra rows kept carry the bound: they give it or raise it at least twofold
   private boolean carriesBound(int status, double before, int given, int keptStatus) {
-    return bindsBound(status, before, given, keptStatus) || raisesBound(status, before, keptStatus);
+    extraBinds = bindsBound(status, before, given, keptStatus);
+    return extraBinds || raisesBound(status, before, keptStatus);
   }
 
   // whether the extra rows kept give the bound: the relaxation without them is optimal at a bound
@@ -7808,6 +7812,7 @@ public class LinearRelaxation extends Constraint
     c.keepExtra = !keptExtraForms.isEmpty();
     c.keepEncodings = keepEncodings;
     c.extraCarry = extraCarry;
+    c.extraBinds = extraBinds;
     c.searchProbation = searchProbation;
     c.refutation = refutation;
     for (CapacityCuts cc : capacity) {
