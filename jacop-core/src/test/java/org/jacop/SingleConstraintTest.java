@@ -14816,4 +14816,38 @@ class SingleConstraintTest extends TestHelper {
       assertThat(search.getSolutionListener().solutionsNo()).as("view " + view).isEqualTo(18);
     }
   }
+
+  // Knapsack kept the critical item and the optimal profit of the relaxation computed by a
+  // consistency that failed one level up: after the backtrack a direct second consistency call
+  // bounded the profit by the capacity 7 of the failed level and removed the solution 1, 1, 2 of
+  // capacity 8 and profit 7.
+  @Test
+  void knapsackRecomputesTheRelaxationAfterABacktrackedFailure() {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 1);
+    IntVar x1 = new IntVar(store, "x1", 1, 1);
+    IntVar x2 = new IntVar(store, "x2", 0, 2);
+    IntVar capacity = new IntVar(store, "capacity", 4, 8);
+    capacity.domain.inComplement(0, capacity, 6);
+    IntVar profit = new IntVar(store, "profit", 5, 10);
+    Knapsack knapsack =
+        new Knapsack(
+                new int[] {2, 3, 1},
+                new int[] {3, 1, 2},
+                new IntVar[] {x0, x1, x2},
+                capacity,
+                profit)
+            .dynamicProgramming(false);
+    store.impose(knapsack);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    capacity.domain.in(1, capacity, 7, 7);
+    assertThat(store.consistency()).isFalse();
+    store.removeLevel(1);
+    store.setLevel(0);
+    store.setLevel(1);
+    knapsack.consistency(store);
+    assertThat(store.consistency()).isTrue();
+    assertThat(profit.domain.contains(7)).as(profit.toString()).isTrue();
+  }
 }
