@@ -5292,6 +5292,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  // lcgSlowDeferred as counted by the search thread
+  private int lcgSlowDeferrals;
+  // lcg-opt-probe=report: the probe of weak learning only reports
+  private static final String OPT_PROBE_REPORT = "report";
   // the outcomes of lcgSpeed
   private static final int LCG_FAST = 0;
   private static final int LCG_SLOW = 1;
@@ -5313,7 +5317,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return LCG_SLOW;
     }
     boolean weak = !unsolvedOnly && optimisationLearningCutsLittle(solver, now) && solutionFound;
-    return !weak || "report".equals(options.freeConfig("lcg-opt-probe", "on"))
+    return !weak || OPT_PROBE_REPORT.equals(options.freeConfig("lcg-opt-probe", "on"))
         ? LCG_FAST
         : LCG_WEAK;
   }
@@ -5349,7 +5353,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     long raised =
         boundGained(now, stallNanos, lcgBoundGain, cost) ? lcgBoundRaised : Long.MIN_VALUE;
     if (stillProgressing(now, stallNanos, gain, raised, before, cost)) {
-      lcgSlowDeferred++;
+      // counted by the search thread, published to the volatile read by the statistics
+      lcgSlowDeferrals++;
+      lcgSlowDeferred = lcgSlowDeferrals;
     } else if (coresRising(now)) {
       lcgSlowCoreKeeps++;
     } else {
