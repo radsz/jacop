@@ -686,7 +686,7 @@ final class BinpackingExplanation {
     // an excluded item heavier than the room left below hi would put the load above hi anyway, and
     // one heavier than the room below the load's maximum above that maximum, which the reason then
     // cites: steelmillslab 2019 cites the maximum instead of up to 100 excluded orders
-    long room = Math.min(hi, (long) lmax) - base;
+    long room = Math.min(hi, lmax) - base;
     boolean aboveMax = false;
     for (int k = 0; k < bins.length; k++) {
       if (k == skip) {
