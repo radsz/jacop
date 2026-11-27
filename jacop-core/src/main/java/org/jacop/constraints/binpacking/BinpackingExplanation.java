@@ -52,12 +52,14 @@ import org.jacop.lcg.EntryList;
  *   <li>the loads sum to the weight of all items, so the bounds of the other loads bound a load,
  *       and a failure when the only loads they leave are holes;
  *   <li>an item is not in a bin when it would overload it with a few packed items, or when another
- *       bin cannot reach its smallest load without it;
+ *       bin cannot reach its smallest load without it; a bound of the item over several bins uses
+ *       that other bin's reason once;
  *   <li>otherwise the loads a bin can take are its packed weight plus the subset sums of its
  *       candidate items. They are computed exactly by a bitset when the sums are small, and by the
  *       NoSum of Shaw (2004) otherwise; the reason is the packed and excluded items and the bounds
  *       and holes of the load that the reachable sums hit. Excluded items too heavy to reach the
- *       values explained are left out of it;
+ *       values explained are left out of it, and so are those too heavy for the load's maximum,
+ *       which the reason then cites;
  *   <li>a failure of the bin-count bound is explained by the bounds of the item variables and the
  *       largest loads of the bins, after dropping the items that the bound does not need. *
  *   <li>with the cardinality rules (card variables, or {@link Binpacking#cardinalityReasoning}),
@@ -256,6 +258,11 @@ final class BinpackingExplanation {
         if (m > minBin) {
           trail.addLowerBound(x, entry, out); // the bins below m
         }
+        if (k >= 0
+            && v - (long) Math.max(minBin, m) > 1
+            && neededElsewhere(k, x, Math.max(minBin, m), v - 1L, out)) {
+          return true;
+        }
         for (long u = Math.max(minBin, m); u < v && u <= lastBin; u++) {
           if (!notIn(k, x, (int) u, out)) {
             return false;
@@ -268,6 +275,11 @@ final class BinpackingExplanation {
         if (m < lastBin) {
           trail.addUpperBound(x, entry, out); // the bins above m
         }
+        if (k >= 0
+            && (long) Math.min(lastBin, m) - v > 1
+            && neededElsewhere(k, x, v + 1L, Math.min(lastBin, m), out)) {
+          return true;
+        }
         for (long u = Math.min(lastBin, m); u > v && u >= minBin; u--) {
           if (!notIn(k, x, (int) u, out)) {
             return false;
@@ -279,6 +291,29 @@ final class BinpackingExplanation {
         return notIn(k, x, v, out);
       }
     }
+  }
+
+  /**
+   * Explains that item k, whose bin variable is x, is in none of the bins from..to (bin numbers) by
+   * one bin that cannot reach its smallest load without k: then k is in no other bin, and one
+   * reason replaces a reason per bin (steelmillslab 2019: 100 bins and reasons of 8,000 atoms, the
+   * same bin's reason repeated for each). When that bin is itself among from..to, its own reason is
+   * added. Returns false, with nothing added, when no bin needs k or that bin has no reason of its
+   * own.
+   */
+  private boolean neededElsewhere(int k, IntVar x, long from, long to, EntryList out) {
+    int mark = out.size();
+    for (int i2 = 0; i2 < load.length; i2++) {
+      if (status(i2, k) != EXCLUDED && underloaded(i2, k, 0, out)) {
+        long u = (long) i2 + minBin;
+        if (u < from || u > to || notIn(k, x, (int) u, out)) {
+          return true;
+        }
+        out.truncate(mark);
+        return false;
+      }
+    }
+    return false;
   }
 
   // the code of a counted item of weight 0 (see zeroSkip), or -1
@@ -648,12 +683,11 @@ final class BinpackingExplanation {
         needMax = b > lmax;
       }
     }
-    if (needMin) {
-      trail.addLowerBound(l, position, out);
-    }
-    if (needMax) {
-      trail.addUpperBound(l, position, out);
-    }
+    // an excluded item heavier than the room left below hi would put the load above hi anyway, and
+    // one heavier than the room below the load's maximum above that maximum, which the reason then
+    // cites: steelmillslab 2019 cites the maximum instead of up to 100 excluded orders
+    long room = Math.min(hi, (long) lmax) - base;
+    boolean aboveMax = false;
     for (int k = 0; k < bins.length; k++) {
       if (k == skip) {
         continue;
@@ -662,9 +696,18 @@ final class BinpackingExplanation {
       if (s == FIXED) {
         addPacked(k, out);
       } else if (s == EXCLUDED && weights[k] <= hi - base) {
-        // an excluded item heavier than that would put the load above hi anyway
-        addExcluded(i, k, out);
+        if (weights[k] > room) {
+          aboveMax = true;
+        } else {
+          addExcluded(i, k, out);
+        }
       }
+    }
+    if (needMin) {
+      trail.addLowerBound(l, position, out);
+    }
+    if (needMax || aboveMax) {
+      trail.addUpperBound(l, position, out);
     }
     return true;
   }
