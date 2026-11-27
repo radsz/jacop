@@ -1744,13 +1744,7 @@ public class LinearRelaxation extends Constraint
                 + first
                 + (bySparse && leading.isEmpty() ? encoded : 0)
             : Long.MAX_VALUE;
-    if (objective != null) {
-      // up to trialRows candidates are all tried: the linearized rows of a model of few linear
-      // rows are many, and a share of them alone raised nothing (routing-flexible GCM_0005 of the
-      // Challenge 2017: 490 of 6,726 rows tried, root bound 10,509; all of them 46,529, optimum
-      // 76,514, and fixed search proves it in 116 s instead of 603 s)
-      share = Math.max(share, Math.min(candidates.size(), trialRows));
-    }
+    share = trialShare(share, candidates.size(), objective);
     List<LinearForm> tail = CLAUSE_ROWS ? new ArrayList<>() : null;
     if (!fitsSimplex(localForms, candidates, simplex, auto, share, own, further, tail)
         && objective != null) {
@@ -2550,6 +2544,19 @@ public class LinearRelaxation extends Constraint
   // whether extra rows that raise the root bound at least as much as the given rows stay in search
   private static final boolean RAISE_KEEPS =
       !FALSE.equals(System.getProperty("org.jacop.lp.raiseKeeps"));
+
+  // the share of an objective's relaxation: up to trialRows candidates are all tried. The
+  // linearized rows of a model of few linear rows are many, and a share of them alone raised
+  // nothing (routing-flexible GCM_0005 of the Challenge 2017: 490 of 6,726 rows tried, root bound
+  // 10,509; all of them 46,529, optimum 76,514, and fixed search proves it in 116 s instead of
+  // 603 s)
+  private static long trialShare(long share, int candidates, IntVar objective) {
+    if (objective == null) {
+      return share;
+    }
+    long trial = Math.min(candidates, trialRows);
+    return trial > share ? trial : share;
+  }
 
   // the most clause rows of tables over all tables; more give none
   private static final int MAX_TABLE_CLAUSES =
@@ -6898,8 +6905,7 @@ public class LinearRelaxation extends Constraint
       droppedPivots += lp.pivots();
       lp = full;
       allRowsInSimplex(m + k);
-      extraCarry =
-          carriesBound(status, before, m, keptStatus) || raisesBound(status, before, keptStatus);
+      extraCarry = carriesBound(status, before, m, keptStatus);
       searchProbation =
           OPTIMISATION_PROBATION > 0
               && objective != null
@@ -6918,10 +6924,15 @@ public class LinearRelaxation extends Constraint
     return status;
   }
 
-  // whether the extra rows kept carry the bound: the relaxation without them is optimal at a bound
+  // whether the extra rows kept carry the bound: they give it or raise it at least twofold
+  private boolean carriesBound(int status, double before, int given, int keptStatus) {
+    return bindsBound(status, before, given, keptStatus) || raisesBound(status, before, keptStatus);
+  }
+
+  // whether the extra rows kept give the bound: the relaxation without them is optimal at a bound
   // that does not cut the domain of the objective, and with them it is infeasible or cuts it
   // (set covering: the objective row alone is bounded by 0, the clauses make it 246.8 on scpa1)
-  private boolean carriesBound(int status, double before, int given, int keptStatus) {
+  private boolean bindsBound(int status, double before, int given, int keptStatus) {
     if (!baseBoundsNothing(status, before, given)) {
       return false;
     }
