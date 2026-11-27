@@ -1736,6 +1736,10 @@ public final class XcspReader {
       FznVar j = ec.var(idx.get(1));
       m.restrict(i, Dom.range(startRow, (long) startRow + rows.size() - 1));
       m.restrict(j, Dom.range(startCol, (long) startCol + cols - 1));
+      if (m.inconsistent) {
+        // an index has no value in its range, and the domains of i and j were left as they were
+        return;
+      }
       if (allConstant(flat) && (long) i.dom.size() * j.dom.size() <= TABLE_ELEMENT_LIMIT) {
         // a constant matrix is a table on (i, j, value), domain consistent as MiniZinc posts it
         matrixTable(flat, cols, i, startRow, j, startCol, v, cond);

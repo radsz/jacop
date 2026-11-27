@@ -9539,7 +9539,7 @@ Version 5.0 (unreleased)
    -Dorg.jacop.lp.subsetCardinalities=false turns the merge off,
    org.jacop.lp.subsetCardinalityLength (default 5) bounds the clauses.
 
-521. Lazy clause generation under a fixed search on an optimisation model
+527. Lazy clause generation under a fixed search on an optimisation model
    first runs the annotation's search without learning for 0.5 % of the
    time limit, at most a second, and LCG then gets three times as long,
    at least a second. When LCG has not reached that search's best cost by
@@ -9563,7 +9563,7 @@ Version 5.0 (unreleased)
    -Dorg.jacop.fz.diffnPairs=0 the pairs (diffnPairsDensity sets the
    density). -s prints fixedFirst=decided, lcg, cp or cp-lcg.
 
-527. Lazy clause generation records the atoms of a domain change from what
+528. Lazy clause generation records the atoms of a domain change from what
    the domain reports of it instead of comparing a shadow copy of the
    domain's runs with the new domain (option B of the LCG cost per
    conflict study, osolpro #685). IntervalDomain, SmallDenseDomain and
@@ -9581,6 +9581,31 @@ Version 5.0 (unreleased)
    4,534 s. -Djacop.lcg.directChanges=false restores the shadow diff;
    -Djacop.lcg.checkDirect=true keeps the shadows and throws when the
    two recordings disagree on any change (testing only).
+
+529. The clausal compilation of satisfaction models (entry 489) leaves
+   models with a difference x - y = d (a linear equality of three terms
+   with coefficients of both signs) over more than 3 values to lazy clause
+   generation (-Dorg.jacop.fz.clausal.sumDomain, default 3). It fires on
+   Costas arrays, NonTransitiveDice and Primes (already over the clause
+   limit) of the 211 XCSP models the compilation took. At 600 s with -f,
+   four runs each, total over costas-array 17 (MZNC 2011) and
+   CostasArray-15..18 (XCSP 2022): 2,417 -> 1,262 s; costas-array 17
+   314-389 -> 61-84 s, CostasArray-16 and -17 lose 11-48 s.
+
+530. CountValues (global_cardinality with variable counts) bounds the sum
+   of the counters of every set of at least two classes (counted values
+   and the rest, up to six classes) by the variables that may take a class
+   of the set and those that can take only classes of it, the Hall-set
+   reasoning of the flow model of global cardinality (J.-C. Regin,
+   "Generalized arc consistency for global cardinality constraint", AAAI
+   1996). Each counter of the set gets the bounds the others leave, and a
+   set at a bound takes or loses the variables it may take. Before, a
+   counter could keep a bound that needs more variables than the values
+   it shares them with leave: x0 in {0, 1, 3}, x1 in 0..3, x2 in 2..3,
+   x3 in 0..1, at least one 0 among them left three 1s possible. The
+   consistency checker now finds CountValues bounds(Z) consistent at every
+   node (111 of 35,753 nodes missed it). The 25 FlatZinc test models with
+   count_values: same search or same results, total time 202 -> 201 s.
 
 Version 4.11
 =============
