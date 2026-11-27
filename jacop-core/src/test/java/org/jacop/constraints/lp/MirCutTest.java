@@ -472,4 +472,55 @@ class MirCutTest {
       return found ? search.getCostValue() : Long.MIN_VALUE;
     }
   }
+
+  /**
+   * A cap of 0 or 1 ({@code -Dorg.jacop.lp.cutWeight=0}) either drops the cut or keeps it valid
+   * (before: at 0 the divisor doubled until it wrapped to a negative one, the scaled cut was turned
+   * around, and models with a linear relaxation were reported unsatisfiable).
+   */
+  @Test
+  void cutsCappedAtTheSmallestWeightsStayValid() {
+    Random rnd = new Random(17);
+    for (int run = 0; run < 5000; run++) {
+      int n = 2 + rnd.nextInt(3);
+      long[] c = new long[n];
+      long[] lo = new long[n];
+      long[] hi = new long[n];
+      double[] value = new double[n];
+      for (int j = 0; j < n; j++) {
+        c[j] = rnd.nextInt(4) == 0 ? 0 : rnd.nextInt(2001) - 1000L;
+        lo[j] = rnd.nextInt(7) - 3L;
+        hi[j] = lo[j] + rnd.nextInt(5);
+        value[j] = lo[j] + rnd.nextDouble() * ((double) hi[j] - lo[j]);
+      }
+      long b = rnd.nextInt(3001) - 1500L;
+      MirCut full = MirCut.of(c, b, value, lo, hi);
+      if (full == null) {
+        continue;
+      }
+      for (long cap : new long[] {0, 1}) {
+        MirCut cut = MirCut.capped(full, cap, value, lo, hi);
+        if (cut == null) {
+          continue;
+        }
+        long[] p = lo.clone();
+        while (p != null) {
+          long row = 0;
+          for (int j = 0; j < n; j++) {
+            row += c[j] * p[j];
+          }
+          if (row <= b) {
+            long lhs = 0;
+            for (int k = 0; k < cut.columns.length; k++) {
+              lhs += cut.weights[k] * p[cut.columns[k]];
+            }
+            assertThat(lhs)
+                .as("run %d cap %d cut %s at %s", run, cap, cut, java.util.Arrays.toString(p))
+                .isLessThanOrEqualTo(cut.rhs);
+          }
+          p = next(p, lo, hi);
+        }
+      }
+    }
+  }
 }

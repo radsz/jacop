@@ -31,11 +31,13 @@
 package org.jacop.search.ls;
 
 import java.time.Duration;
+import java.util.AbstractCollection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -326,7 +328,7 @@ public final class LocalSearch {
     patienceMillis = b.patienceMillis;
     substituted = Collections.newSetFromMap(new IdentityHashMap<>());
     substituted.addAll(b.substituted);
-    extra = b.extra;
+    extra = IndexedConstraints.of(b.extra);
     jump = b.jump;
     permutations = b.permutations;
     scheduling = b.scheduling;
@@ -4499,6 +4501,42 @@ public final class LocalSearch {
      */
     public LocalSearch build() {
       return new LocalSearch(this);
+    }
+  }
+
+  /**
+   * The extra constraints in their order, with a set for {@code contains}: they are the clauses of
+   * the SAT solver, and the substitution of defined variables asks for each constraint of the store
+   * whether it is one of them, a pass over a list each time (MiniZinc Challenge 2026 atp-stage2
+   * instance9-stage2, 64,000 clauses: 12 s before local search started).
+   */
+  private static final class IndexedConstraints extends AbstractCollection<Constraint> {
+    private final List<Constraint> list;
+    private final Set<Constraint> set = Collections.newSetFromMap(new IdentityHashMap<>());
+
+    // the constraints indexed, or null for none
+    static IndexedConstraints of(Collection<? extends Constraint> constraints) {
+      return constraints == null ? null : new IndexedConstraints(constraints);
+    }
+
+    private IndexedConstraints(Collection<? extends Constraint> constraints) {
+      list = new ArrayList<>(constraints);
+      set.addAll(list);
+    }
+
+    @Override
+    public Iterator<Constraint> iterator() {
+      return Collections.unmodifiableList(list).iterator();
+    }
+
+    @Override
+    public int size() {
+      return list.size();
+    }
+
+    @Override
+    public boolean contains(Object o) {
+      return set.contains(o);
     }
   }
 }

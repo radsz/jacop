@@ -250,6 +250,13 @@ public class Options {
                 lcg-slow-literal=<conflicts per second> (with lcg-slow-rate: the slow rate is
                 at least this many conflicts per second per literal of an average learnt
                 clause, default 5; 0 = off),
+                lcg-slow-depth=<decisions> (with lcg-slow-rate: LCG with a solution that
+                makes at least this many decisions per conflict and more conflicts than
+                solutions is kept at any rate, default 100; 0 = off),
+                lcg-slow-depth-rate=<conflicts per second> (lcg-slow-depth holds only below
+                this many conflicts per second, default 50),
+                lcg-slow-depth-length=<literals> (lcg-slow-depth holds only while the learnt
+                clauses have at most this many literals on average, default 200),
                 lcg-slow-at=<share> (share of the time limit at which lcg-slow-rate is
                 checked, default 0.1),
                 lcg-slow-unsolved=<conflicts per second> (with --lcg and an objective: LCG
@@ -303,8 +310,7 @@ public class Options {
                 activity branching, before and after a first solution; defaults 1 and 6),
                 lcg-annotation-drop=<n> (with --lcg and an annotation: after n conflicts without a
                 solution the turns of the annotation are dropped and the literals and activity
-                branching take turns; default 50000, 0 never; not for satisfaction models without
-                a search annotation),
+                branching take turns; default 50000, 0 never),
                 lcg-chain-limit=<n> (with --lcg: linked bound literals per variable past which
                 short reasons on its new bounds are used once, not kept, so its chain
                 [x >= v] -> [x >= u] stops growing; default 64, a huge value turns it off),

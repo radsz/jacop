@@ -58,7 +58,7 @@ import org.jacop.fz.SimpleNode;
  * merge them, and a model that calls the function once per item gets one copy per item, each with
  * its three constraints to wake. The copies become aliases of the first one and their three
  * constraints are skipped. A copy is merged only when c occurs in no other constraint and neither z
- * nor c is an output variable.
+ * nor c is an output variable or an alias, or declared equal to another variable.
  *
  * <p>Setting the system property {@code org.jacop.fz.partialCopies} to false turns the merging off.
  *
@@ -146,7 +146,8 @@ public class PartialCopyDetector implements ParserTreeConstants {
           || occurrences.get(ci.c()) != 2
           || z.singleton()
           || support.dictionary.isOutput(z)
-          || support.dictionary.isOutput(ci.c())) {
+          || support.dictionary.isOutput(ci.c())
+          || aliased.contains(ci.c())) {
         continue;
       }
       Key key = new Key(v.x(), v.b(), ci.k());

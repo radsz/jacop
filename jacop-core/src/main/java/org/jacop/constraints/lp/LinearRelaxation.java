@@ -281,7 +281,7 @@ public class LinearRelaxation extends Constraint
 
   // the most pivots of the first solve, which has the root budget instead of the pivot limit: a
   // root LP that stops at the limit gives neither a bound nor cuts; not final, so that tests can
-  // make a root solve stop at it
+  // make a root solve stop at it; a root solve takes 5 pivots at least
   static int rootPivots = Integer.getInteger("org.jacop.lp.rootPivots", 20_000);
 
   // the tableau entries earned by each call of consistency, up to WORK; a solve spends the entries
@@ -428,6 +428,12 @@ public class LinearRelaxation extends Constraint
    * since they did not fit the dense tableau; 0 when that did not happen.
    */
   public int nearRows;
+
+  /**
+   * Statistics: the columns fixed at the root that the rows took as constants, and the rows of
+   * constants left out (org.jacop.lp.foldFixed).
+   */
+  public int foldedColumns;
 
   /**
    * The value encodings that went ahead of the other extra rows, which did not all fit the share of
@@ -1569,6 +1575,11 @@ public class LinearRelaxation extends Constraint
       localForms = substitute(localForms, substituted, objective);
       tag(tags, localForms, "substituted");
     }
+    int[] folded = new int[1];
+    if (FOLD_FIXED && store.level == 0 && fixedColumns(localForms, relaxed) >= FOLD_FIXED_MIN) {
+      localForms = foldFixed(localForms, tags, objective, folded);
+      relaxed = foldFixed(relaxed, tags, objective, folded);
+    }
     if (LINEARIZE) {
       if (objective != null) {
         List<LinearForm> cliques =
@@ -1827,6 +1838,7 @@ public class LinearRelaxation extends Constraint
     }
     LinearRelaxation r = new LinearRelaxation(localForms, further, objective, maximize, simplex);
     r.nearRows = nearRows;
+    r.foldedColumns = folded[0];
     r.bySize = auto && simplex == Simplex.SPARSE;
     r.large = large && simplex == Simplex.SPARSE;
     // the encodings that chose the sparse simplex are the model's rows as well: the solves in
@@ -2529,6 +2541,12 @@ public class LinearRelaxation extends Constraint
     return Arrays.copyOfRange(distance, forms.size(), all.size());
   }
 
+  // the rows take the columns fixed at the root as constants when at least this many distinct
+  // columns are fixed (org.jacop.lp.foldFixed, 0 turns it off)
+  private static final int FOLD_FIXED_MIN = Integer.getInteger("org.jacop.lp.foldFixed", 1000);
+
+  private static final boolean FOLD_FIXED = FOLD_FIXED_MIN > 0;
+
   // the rows over the terms of the objective that do not fit the dense tableau are all taken by
   // the sparse simplex (not final: a test hook)
   static boolean nearRowsOn =
@@ -2820,6 +2838,84 @@ public class LinearRelaxation extends Constraint
     }
     // the share of the others is full: the rows with a share of their own may still come
     return own.isEmpty() && tail == null ? FAIL_ROW : SKIP_ROW;
+  }
+
+  // the distinct columns of the rows fixed at the root
+  private static int fixedColumns(List<LinearForm> forms, List<LinearForm> others) {
+    Set<IntVar> fixed = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (List<LinearForm> list : List.of(forms, others)) {
+      for (LinearForm f : list) {
+        for (IntVar v : f.vars()) {
+          if (v.singleton()) {
+            fixed.add(v);
+          }
+        }
+      }
+    }
+    return fixed.size();
+  }
+
+  // the rows with the columns fixed at the root taken as constants, when many of them are: column
+  // dominance of a covering model fixes most of its columns before the relaxation is built
+  // (pdc.r of the pseudo-Boolean competition: 16,053 of 19,021 columns fixed to 0 left in the
+  // objective's row made the tableau too large for the dense simplex, the sparse share kept 440
+  // of its 6,904 clause rows and the root bound stayed 15; folded, the bound is 88.5, optimum 94)
+  private static List<LinearForm> foldFixed(
+      List<LinearForm> forms, Map<LinearForm, String> tags, IntVar objective, int[] folded) {
+    List<LinearForm> result = new ArrayList<>(forms.size());
+    for (LinearForm f : forms) {
+      int fixed = 0;
+      for (IntVar v : f.vars()) {
+        fixed += v.singleton() ? 1 : 0;
+      }
+      if (fixed == f.vars().length
+          && fixed > 0
+          && !Arrays.asList(f.vars()).contains(objective)
+          && holds(f)) {
+        // a row of constants, such as the block sum of fixed columns: true at the root
+        folded[0] += fixed;
+        continue;
+      }
+      if (fixed == 0 || fixed >= f.vars().length - 1) {
+        result.add(f);
+        continue;
+      }
+      IntVar[] vars = new IntVar[f.vars().length - fixed];
+      long[] weights = new long[vars.length];
+      long c = f.c();
+      int n = 0;
+      for (int k = 0; k < f.vars().length; k++) {
+        IntVar v = f.vars()[k];
+        if (v.singleton()) {
+          c -= f.weights()[k] * v.value();
+        } else {
+          vars[n] = v;
+          weights[n++] = f.weights()[k];
+        }
+      }
+      LinearForm g = new LinearForm(vars, weights, c, f.relation());
+      String tag = tags.get(f);
+      if (tag != null) {
+        tags.put(g, tag);
+      }
+      result.add(g);
+      folded[0] += fixed;
+    }
+    return result;
+  }
+
+  // whether a row over fixed columns holds
+  private static boolean holds(LinearForm f) {
+    long sum = 0;
+    for (int k = 0; k < f.vars().length; k++) {
+      sum += f.weights()[k] * f.vars()[k].value();
+    }
+    return switch (f.relation()) {
+      case LinearForm.EQ -> sum == f.c();
+      case LinearForm.LE -> sum <= f.c();
+      case LinearForm.GE -> sum >= f.c();
+      default -> false;
+    };
   }
 
   /**
@@ -3950,7 +4046,7 @@ public class LinearRelaxation extends Constraint
     }
     int limit =
         calls == 1 || restarting
-            ? (int) Math.clamp(ROOT_WORK / size, 5, rootPivots)
+            ? (int) Math.clamp(ROOT_WORK / size, 5, Math.max(5, rootPivots))
             : (int) Math.clamp(WORK / size, 5, pivotLimit);
     if (refutation) {
       limit = Math.min(limit, clauseRefutation ? CLAUSE_REFUTATION_PIVOTS : REFUTATION_PIVOTS);
@@ -4201,7 +4297,7 @@ public class LinearRelaxation extends Constraint
       for (int j = 0; j < lp.columns(); j++) {
         setBounds(without, j);
       }
-      int st = rootSolve(without, rootPivots, rootWork());
+      int st = rootSolve(without, Math.max(5, rootPivots), rootWork());
       LpSources.Stat stat = sources.of(e.getKey());
       if (st == LpSolver.OPTIMAL) {
         double v = without.value(0);
@@ -4997,7 +5093,7 @@ public class LinearRelaxation extends Constraint
   // pivots of its root solve, since a round stopped at the limit is dropped and the refutation
   // then fails (php-exit: 4,454 pivots in all)
   private int roundPivots(long size) {
-    int pivots = Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, rootPivots);
+    int pivots = Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, Math.max(5, rootPivots));
     return pseudoObjective ? Math.max(pivots, REFUTATION_PIVOTS) : pivots;
   }
 
@@ -5083,7 +5179,7 @@ public class LinearRelaxation extends Constraint
         lp.setBounds(0, sentMin[0], sentMax[0]);
       }
       long size = Math.max(1, lp.pivotWork());
-      int status = rootSolvePool(Math.clamp(ROOT_WORK / size, 5, rootPivots));
+      int status = rootSolvePool(Math.clamp(ROOT_WORK / size, 5, Math.max(5, rootPivots)));
       if (status != LpSolver.OPTIMAL) {
         return status;
       }
@@ -5335,7 +5431,7 @@ public class LinearRelaxation extends Constraint
       setBounds(s, j);
     }
     long size = Math.max(1, s.pivotWork());
-    int status = rootSolve(s, Math.clamp(ROOT_WORK / size, 5, rootPivots), rootWork());
+    int status = rootSolve(s, Math.clamp(ROOT_WORK / size, 5, Math.max(5, rootPivots)), rootWork());
     double before = lp.value(0);
     if (status != LpSolver.OPTIMAL
         || Math.abs(s.value(0) - before) > 1e-6 * (1 + Math.abs(before))) {
@@ -7101,7 +7197,7 @@ public class LinearRelaxation extends Constraint
       setBounds(full, j);
     }
     long size = Math.max(1, full.pivotWork());
-    int pivots = Math.clamp(ROOT_WORK / size, 5, rootPivots);
+    int pivots = Math.clamp(ROOT_WORK / size, 5, Math.max(5, rootPivots));
     boolean keep;
     // the pivots and nanoseconds of the solve at the bounds of the start of the search, which cap
     // the solve at the current bounds after it (Long.MAX_VALUE without it)

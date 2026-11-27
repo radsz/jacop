@@ -430,8 +430,19 @@ public final class CountStepCostBound {
     for (int j = 0; j < m; j++) {
       caps[j] = counted.get(j).step.count.max();
     }
+    // the least weighted cost of the counts from j on, which bounds what they add (costs may be
+    // negative)
+    long[] rest = new long[m + 1];
+    for (int j = m - 1; j >= 0; j--) {
+      Counted k = counted.get(j);
+      long least = Long.MAX_VALUE;
+      for (long cost : k.step.cost) {
+        least = Math.min(least, k.weight * cost);
+      }
+      rest[j] = rest[j + 1] + least;
+    }
     long[] best = {Long.MAX_VALUE};
-    search(0, 0, caps, counted, adjacency, count, best);
+    search(0, 0, caps, counted, adjacency, count, best, rest);
     return best[0] == Long.MAX_VALUE ? Long.MIN_VALUE : best[0];
   }
 
@@ -458,8 +469,9 @@ public final class CountStepCostBound {
       List<Counted> counted,
       int[][] adjacency,
       int[] count,
-      long[] best) {
-    if (cost >= best[0] || checks >= MAX_CHECKS) {
+      long[] best,
+      long[] rest) {
+    if (cost + rest[j] >= best[0] || checks >= MAX_CHECKS) {
       return;
     }
     checks++;
@@ -479,7 +491,7 @@ public final class CountStepCostBound {
         continue;
       }
       caps[j] = Math.min(max, s.limit[i]);
-      search(j + 1, cost + k.weight * s.cost[i], caps, counted, adjacency, count, best);
+      search(j + 1, cost + k.weight * s.cost[i], caps, counted, adjacency, count, best, rest);
     }
     caps[j] = max;
     if (checks >= MAX_CHECKS) {
