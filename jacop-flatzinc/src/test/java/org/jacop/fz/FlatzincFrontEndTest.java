@@ -10541,4 +10541,27 @@ class FlatzincFrontEndTest {
       assertTrue(out.contains("x = 0;\n"), out);
     }
   }
+
+  @Test
+  void clausalModelImposesNoValueTheStoreGaveADroppedVariable() throws IOException {
+    // the forced intension table detection drops x and its literals b3, b4, b10 with the group of
+    // x; the channel of the implications b3 -> x = -1, b10 -> x = 1 stays over them, a component
+    // that the component split fixes to x = -1, b3 = b10 = 0, which the CNF of the whole model
+    // then imposed: b3 \/ b4 and b4 <-> x = 1 made it unsatisfiable, and the model was UNSAT
+    String model =
+        "var {-1, 1}: x;\nvar bool: b3;\nvar bool: b4;\nvar bool: b5 :: output_var;\n"
+            + "var bool: b6 :: output_var;\nvar bool: b8 :: output_var;\nvar bool: b10;\n"
+            + "var bool: o :: output_var = b5;\n"
+            + "constraint int_eq_imp(x, -1, b3);\nconstraint int_eq_reif(x, 1, b4);\n"
+            + "constraint bool_clause([b3, b4], []);\nconstraint int_ne_reif(x, -1, b6);\n"
+            + "constraint bool_xor(b5, b6, b8);\nconstraint int_eq_imp(x, 1, b10);\n"
+            + "solve satisfy;\n";
+    System.setProperty("org.jacop.fz.intensionTable", "force");
+    try {
+      String out = run(model, "--lcg", "on")[0];
+      assertTrue(out.contains("----------"), out);
+    } finally {
+      System.clearProperty("org.jacop.fz.intensionTable");
+    }
+  }
 }

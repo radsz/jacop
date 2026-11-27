@@ -4460,7 +4460,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    *     rejected, and the model is then solved as without the compilation
    */
   private boolean executeClausalSearch(ClausalModel cnf) {
-    CdclSolver solver = cnf.solver();
+    // the variables the detectors dropped: the store may have fixed them to values that are not
+    // those of a solution of the clauses
+    Set<Var> dropped = new HashSet<>(dictionary.unusedVariables);
+    CdclSolver solver = cnf.solver(dropped);
     if (options.debug()) {
       FzConsole.println("% clausal model: " + cnf.numVars() + " variables solved by JaSAT");
     }
@@ -4485,7 +4488,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         return false;
       }
       assert propagated() : "executeClausalSearch opens a level with propagation queued";
-      if (!cnf.fix(store, solver) || !diveConsistency() || !fixRest() || !clausesHold()) {
+      if (!cnf.fix(store, solver, dropped) || !diveConsistency() || !fixRest() || !clausesHold()) {
         // not a solution of the store: a compilation error, reported, and solved without it; a
         // check stopped at the time-out rejects nothing, and the search then times out
         if (!store.isConsistencyCut()) {
