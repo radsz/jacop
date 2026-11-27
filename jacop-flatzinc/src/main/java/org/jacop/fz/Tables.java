@@ -156,6 +156,20 @@ public class Tables {
   // a satisfaction model over small domains compiled into one CNF, which Solve gives to JaSAT
   public org.jacop.fz.constraints.ClausalModel clausalModel;
 
+  /**
+   * The constraints of the sequences that the sequence detector posts over windows that stay
+   * posted: each is equivalent to its windows, so a model of clauses leaves them out.
+   */
+  public final java.util.Set<org.jacop.constraints.Constraint> windowSequences =
+      java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+
+  /**
+   * The lex-leader constraints of symmetry breaking, each as the pairs {x, y} of vectors it orders
+   * by x lexicographically at most y, so that a model of clauses can give them to JaSAT as clauses.
+   */
+  public final Map<org.jacop.constraints.Constraint, List<IntVar[][]>> lexPairs =
+      new java.util.IdentityHashMap<>();
+
   // variables the detectors add for redundant constraints, which follow from the model's own: the
   // search of lazy clause generation branches on them last
   final ArrayList<Var> auxiliaryVariables = new ArrayList<>();

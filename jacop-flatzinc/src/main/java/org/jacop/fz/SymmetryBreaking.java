@@ -540,6 +540,15 @@ final class SymmetryBreaking implements ParserTreeConstants {
   private final String schreierSims =
       System.getProperty("org.jacop.fz.symmetry.schreierSims", "on");
 
+  // the columns of a lex chain as the pairs of consecutive columns it orders
+  private void recordChain(LexChain chain, IntVar[][] columns) {
+    List<IntVar[][]> pairs = new ArrayList<>(columns.length);
+    for (int c = 0; c + 1 < columns.length; c++) {
+      pairs.add(new IntVar[][] {columns[c], columns[c + 1]});
+    }
+    dictionary.lexPairs.put(chain, pairs);
+  }
+
   SymmetryBreaking(Store store, Tables dictionary) {
     this.store = store;
     this.dictionary = dictionary;
@@ -913,6 +922,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
       LexChain chain = new LexChain(columns);
       chain.setDegreeWeight(0);
       store.impose(chain);
+      recordChain(chain, columns);
       canonicalizer.chain(chain, columns);
       note("chain", columns);
       orbitopes++;
@@ -928,6 +938,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
       LexChain chain = new LexChain(columns);
       chain.setDegreeWeight(0);
       store.impose(chain);
+      recordChain(chain, columns);
       canonicalizer.chain(chain, columns);
       note("chain", columns);
       orbitopes++;
@@ -976,6 +987,8 @@ final class SymmetryBreaking implements ParserTreeConstants {
       // added constraints do not change the static degrees that variable selections read
       lex.setDegreeWeight(0);
       store.impose(lex);
+      dictionary.lexPairs.put(
+          lex, List.<IntVar[][]>of(descending ? new IntVar[][] {y, x} : new IntVar[][] {x, y}));
       canonicalizer.lex(
           lex,
           x,

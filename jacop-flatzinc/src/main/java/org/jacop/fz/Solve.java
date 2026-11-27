@@ -250,6 +250,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   // a variable of the pure clause model fixed by its complement symmetry
   private boolean pureComplementFixed;
+
+  // the linear constraints and the lex-leader pairs the pure clause model took as clauses
+  private int pureShaped;
+
+  private int pureLexPairs;
   int lcgStatus;
 
   // the linear relaxation (--lp), or null
@@ -3557,11 +3562,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (refutation != null) {
         ignored.add(refutation);
       }
+      ignored.addAll(dictionary.windowSequences);
       if (!refuteAtRoot()) {
         return false;
       }
       PureClauseModel cnf =
-          PureClauseModel.of(store, sat.collectedClauses(), ignored, this::declaredVariables);
+          PureClauseModel.of(
+              store, sat.collectedClauses(), ignored, dictionary.lexPairs, this::declaredVariables);
       if (cnf != null) {
         return executePureClauseSearch(cnf);
       }
@@ -4406,6 +4413,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private boolean executePureClauseSearch(PureClauseModel cnf) {
     pureSat = cnf.solver;
+    pureShaped = cnf.shapedConstraints;
+    pureLexPairs = cnf.lexPairs;
     pureComplementFixed = cnf.complementFixed != 0;
     if (options.debug()) {
       FzConsole.println("% pure clause model: " + cnf.numVars() + " variables solved by JaSAT");
@@ -6984,6 +6993,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         IO.println("%%%mzn-stat: clausalModel=true");
       } else if (pureSat != null) {
         IO.println("%%%mzn-stat: pureClauseModel=true");
+        IO.println("%%%mzn-stat: pureClauseShaped=" + pureShaped);
+        IO.println("%%%mzn-stat: pureClauseLexPairs=" + pureLexPairs);
         if (pureComplementFixed) {
           IO.println("%%%mzn-stat: complementSymmetry=true");
         }
