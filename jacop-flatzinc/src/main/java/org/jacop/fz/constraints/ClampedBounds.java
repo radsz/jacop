@@ -30,6 +30,9 @@
 
 package org.jacop.fz.constraints;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -41,6 +44,7 @@ import java.util.Set;
 import java.util.function.Function;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.fz.ASTConstElem;
 import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.Node;
@@ -115,6 +119,17 @@ public final class ClampedBounds {
   private static final int HULL = 7;
   private static final int POW = 8;
 
+  // the float variables int2float makes equal to an integer variable, by the integer's id
+  private final Map<FloatVar, Integer> intImages = new IdentityHashMap<>();
+  // the float rows as read: {coefficients, terms (FloatVar or Double), rhs, kind}, resolved once
+  // every int2float is known
+  private final List<Object[]> floatRowsRead = new ArrayList<>();
+  // float rows over integer images: sum(a * x) <= b (both directions when equal), exact values
+  private final List<BigDecimal[]> floatCoefficients = new ArrayList<>();
+  private final List<int[]> floatRowVars = new ArrayList<>();
+  private final List<BigDecimal> floatRhs = new ArrayList<>();
+  private final BitSet floatEqual = new BitSet();
+
   // the reified equalities of the model: each control variable maps to the pairs of variables
   // whose equality it reifies, read to bound a variable that an if-then-else makes equal to one of
   // several values
@@ -150,6 +165,9 @@ public final class ClampedBounds {
       }
     }
     support.forEachConstraint(astTree, node -> collect(support, node));
+    for (Object[] row : floatRowsRead) {
+      floatRow((double[]) row[0], (Object[]) row[1], (Double) row[2], (Boolean) row[3]);
+    }
     for (IntVar[][] ite : trueIfThenElses) {
       chosenValue(ite[0], ite[1]);
     }
@@ -379,6 +397,28 @@ public final class ClampedBounds {
             functions.add(new long[] {ELEMENT_CONST, id(c), 0, x.length});
           }
         }
+        case "int2float" -> {
+          IntVar x = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+          ASTScalarFlatExpr y = (ASTScalarFlatExpr) node.jjtGetChild(1);
+          FloatVar f = y.getType() == 2 ? support.dictionary.getFloatVariable(y.getIdent()) : null;
+          if (f != null && !intImages.containsKey(f)) {
+            intImages.put(f, id(x));
+          }
+        }
+        case "float_lin_le", "float_lin_lt", "float_lin_eq" -> {
+          // read without creating variables for the constants; a strict row is read as a <= row
+          double[] a = support.getFloatArray((SimpleNode) node.jjtGetChild(0));
+          Object[] terms = floatTerms(support, (SimpleNode) node.jjtGetChild(1));
+          ASTScalarFlatExpr rhs = (ASTScalarFlatExpr) node.jjtGetChild(2);
+          // a literal or a parameter (getFloat of an unknown array element gives no value)
+          double b =
+              rhs.getType() == 5
+                  ? rhs.getFloat()
+                  : rhs.getType() == 2 ? support.dictionary.getFloat(rhs.getIdent()) : Double.NaN;
+          if (a != null && terms != null && a.length == terms.length) {
+            floatRowsRead.add(new Object[] {a, terms, b, "float_lin_eq".equals(name)});
+          }
+        }
         case "bool2int" -> {
           IntVar z = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
           functions.add(new long[] {ELEMENT_CONST, id(z), 0, 1});
@@ -390,6 +430,134 @@ public final class ClampedBounds {
     } catch (RuntimeException _) {
       // a form this reading does not cover: no bound is taken from it
     }
+  }
+
+  // the terms of a float array argument, each a FloatVar or a Double constant; null for a form
+  // this reading does not cover
+  private static Object[] floatTerms(Support support, SimpleNode node) {
+    if (node instanceof ASTScalarFlatExpr e) {
+      FloatVar[] array =
+          e.getType() == 2 ? support.dictionary.getVariableFloatArray(e.getIdent()) : null;
+      return array == null ? null : Arrays.copyOf(array, array.length, Object[].class);
+    }
+    Object[] terms = new Object[node.jjtGetNumChildren()];
+    for (int i = 0; i < terms.length; i++) {
+      if (!(node.jjtGetChild(i) instanceof ASTScalarFlatExpr e)) {
+        return null;
+      }
+      switch (e.getType()) {
+        case 5 -> terms[i] = e.getFloat();
+        case 2 -> {
+          FloatVar v = support.dictionary.getFloatVariable(e.getIdent());
+          terms[i] = v != null ? v : (Object) support.dictionary.getFloat(e.getIdent());
+        }
+        case 3 -> {
+          FloatVar[] array = support.dictionary.getVariableFloatArray(e.getIdent());
+          if (array == null || e.getInt() < 0 || e.getInt() >= array.length) {
+            return null;
+          }
+          terms[i] = array[e.getInt()];
+        }
+        default -> {
+          return null;
+        }
+      }
+    }
+    return terms;
+  }
+
+  // keeps a float row whose every term is a constant or the image of an integer variable
+  private void floatRow(double[] a, Object[] terms, double b, boolean eq) {
+    if (!Double.isFinite(b)) {
+      return;
+    }
+    BigDecimal rhs = new BigDecimal(b);
+    List<BigDecimal> c = new ArrayList<>();
+    List<Integer> x = new ArrayList<>();
+    for (int i = 0; i < a.length; i++) {
+      if (!Double.isFinite(a[i])) {
+        return;
+      }
+      if (a[i] == 0) {
+        continue;
+      }
+      Integer image = terms[i] instanceof FloatVar f ? intImages.get(f) : null;
+      if (terms[i] instanceof Double d && Double.isFinite(d)) {
+        rhs = rhs.subtract(new BigDecimal(a[i]).multiply(new BigDecimal(d)));
+      } else if (image != null) {
+        c.add(new BigDecimal(a[i]));
+        x.add(image);
+      } else {
+        return; // a float variable of its own: its bounds are not read
+      }
+    }
+    floatCoefficients.add(c.toArray(new BigDecimal[0]));
+    floatRowVars.add(x.stream().mapToInt(Integer::intValue).toArray());
+    floatRhs.add(rhs);
+    floatEqual.set(floatRhs.size() - 1, eq);
+  }
+
+  // the slack a bound from a float row is widened by, relative to the magnitudes summed: the rows
+  // hold the doubles written for decimal constants, and float propagation accepts values within
+  // its precision of a bound
+  private static final BigDecimal SLACK = new BigDecimal("1e-6");
+  private static final BigDecimal BIG_INF = BigDecimal.valueOf(INF);
+
+  // bound propagation over the float rows: each integer x of a row with coefficient a gets
+  // a * x <= b - (min of the other terms), widened outwards; false when some bounds cross
+  private boolean propagateFloatRows(long[] lo, long[] hi, boolean[] changed) {
+    for (int r = 0; r < floatRhs.size(); r++) {
+      BigDecimal[] c = floatCoefficients.get(r);
+      int[] x = floatRowVars.get(r);
+      for (int direction = 0; direction < (floatEqual.get(r) ? 2 : 1); direction++) {
+        // direction 1 reads the equal row as -sum(a * x) <= -b
+        BigDecimal b = direction == 0 ? floatRhs.get(r) : floatRhs.get(r).negate();
+        for (int i = 0; i < x.length; i++) {
+          BigDecimal ai = direction == 0 ? c[i] : c[i].negate();
+          BigDecimal others = BigDecimal.ZERO;
+          BigDecimal magnitude = b.abs();
+          boolean finite = true;
+          for (int j = 0; j < x.length && finite; j++) {
+            if (j == i) {
+              continue;
+            }
+            BigDecimal aj = direction == 0 ? c[j] : c[j].negate();
+            long v = aj.signum() > 0 ? lo[x[j]] : hi[x[j]];
+            if (v <= -INF || v >= INF) {
+              finite = false;
+            } else {
+              BigDecimal term = aj.multiply(BigDecimal.valueOf(v));
+              others = others.add(term);
+              magnitude = magnitude.add(term.abs());
+            }
+          }
+          if (!finite) {
+            continue;
+          }
+          // ai * x <= b - others + slack
+          BigDecimal bound = b.subtract(others).add(SLACK.multiply(magnitude.add(BigDecimal.ONE)));
+          if (ai.signum() > 0) {
+            // rounded up, then down to an integer: never below the exact bound's floor
+            BigDecimal q = bound.divide(ai, new MathContext(40, RoundingMode.CEILING));
+            BigDecimal f = q.setScale(0, RoundingMode.FLOOR);
+            if (f.compareTo(BIG_INF) < 0) {
+              changed[0] |= lower(hi, x[i], f.max(BIG_INF.negate()).longValue());
+            }
+          } else {
+            // dividing by a negative coefficient turns the bound into a lower one
+            BigDecimal q = bound.divide(ai, new MathContext(40, RoundingMode.FLOOR));
+            BigDecimal f = q.setScale(0, RoundingMode.CEILING);
+            if (f.compareTo(BIG_INF.negate()) > 0) {
+              changed[0] |= raise(lo, x[i], f.min(BIG_INF).longValue());
+            }
+          }
+          if (lo[x[i]] > hi[x[i]]) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
   }
 
   private long[] withArgs(int kind, IntVar z, IntVar[] x) {
@@ -723,7 +891,8 @@ public final class ClampedBounds {
         }
       }
       boolean[] functionChanged = {false};
-      if (!propagateFunctions(lo, hi, functionChanged)) {
+      if (!propagateFunctions(lo, hi, functionChanged)
+          || !propagateFloatRows(lo, hi, functionChanged)) {
         return false;
       }
       if (!changed && !functionChanged[0]) {

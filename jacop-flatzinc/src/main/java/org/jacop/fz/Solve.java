@@ -10602,6 +10602,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         || dictionary.onlyObjectiveWorseSideClamped(objectiveVariable, minimize)) {
       return true;
     }
+    if (dictionary.clampsCutNoSolution()) {
+      // the rows keep every narrowed variable within the range: no solution was cut off
+      return true;
+    }
     if (!(objectiveVariable instanceof IntVar objective)) {
       return false;
     }

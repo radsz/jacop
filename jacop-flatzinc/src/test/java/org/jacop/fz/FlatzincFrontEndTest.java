@@ -11097,4 +11097,44 @@ class FlatzincFrontEndTest {
     String out = run(bounded, "--presolve", "on")[0];
     assertTrue(out.contains("y = 8;") && out.endsWith("----------\n==========\n"), out);
   }
+
+  @Test
+  void floatRowsOverImagesOfIntegersBoundTheirNarrowedDomains() throws IOException {
+    // mip3: B, C and D are declared var int and bounded only by float rows over their int2float
+    // images; the optimum 36 was printed without ==========
+    String mip3 =
+        "var int: B :: output_var;\nvar int: C :: output_var;\nvar int: D :: output_var;\n"
+            + "var float: fb;\nvar float: fc;\nvar float: fd;\nvar float: obj;\n"
+            + "constraint int2float(D,fd);\nconstraint int2float(B,fb);\nconstraint int2float(C,fc);\n"
+            + "constraint float_lin_le([2.0,2.0,1.0],[fc,fb,fd],30.0);\n"
+            + "constraint float_lin_le([2.0,1.5,3.0],[fc,fb,fd],25.0);\n"
+            + "constraint float_lin_le([1.0,2.0,1.0],[fc,fb,fd],20.0);\n"
+            + "constraint int_le(0,B);\nconstraint int_le(0,C);\nconstraint int_le(0,D);\n"
+            + "constraint float_lin_eq([1.0,3.0,3.0,-1.0],[fc,fb,fd,obj],0.0);\n"
+            + "solve maximize obj;\n";
+    String out = run(mip3)[0];
+    assertTrue(out.endsWith("B = 8;\nC = 0;\nD = 4;\n----------\n==========\n"), out);
+    // rows that bound x only beyond the range, or not at all, prove nothing: x = 600000000,
+    // unbounded, x + fz <= 10 with fz a float variable of its own, a reified row
+    String x = "var int: x :: output_var;\nvar float: fx;\nconstraint int2float(x,fx);\n";
+    for (String rows :
+        List.of(
+            "constraint int_le(0,x);\nconstraint float_lin_le([2.0],[fx],1.2e9);\n",
+            "constraint float_lin_le([-1.0],[fx],5.0);\n",
+            "var float: fz;\nconstraint int_le(0,x);\n"
+                + "constraint float_lin_le([1.0,1.0],[fx,fz],10.0);\n",
+            "var bool: b;\nconstraint int_le(0,x);\n"
+                + "constraint float_lin_le_reif([1.0],[fx],10.0,b);\n")) {
+      for (String presolve : List.of("off", "on")) {
+        String o = run(x + rows + "solve maximize x;\n", "--presolve", presolve)[0];
+        assertFalse(o.contains("=========="), rows + o);
+      }
+    }
+    assertTrue(
+        run(
+            x
+                + "constraint int_le(0,x);\nconstraint float_lin_le([1.0],[fx],10.5);\n"
+                + "solve maximize x;\n")[0]
+            .endsWith("x = 10;\n----------\n==========\n"));
+  }
 }
