@@ -9930,4 +9930,22 @@ class FlatzincFrontEndTest {
       assertTrue(out.contains("x = " + v + ";\n"), out);
     }
   }
+
+  @Test
+  void allSolutionsUnderPresolveEnumerateAnOutputThatIsTheBaseOfAView() throws IOException {
+    // presolve substitutes y = 2 * x, so the hidden y is a view of the output x, and x itself has
+    // no constraint; x was labelled below the completion search, which fixes y and so x and stops
+    // at its first solution, so b = 1 (y <= 2) printed x = 0 only and x = 1 was lost
+    String model =
+        "var 0..2: x :: output_var;\n"
+            + "var 0..4: y;\n"
+            + "var bool: b;\n"
+            + "constraint int_lin_eq([2,-1],[x,y],0);\n"
+            + "constraint int_le_reif(y,2,b);\n"
+            + "solve :: bool_search([b],input_order,indomain_max,complete) satisfy;\n";
+    String out = run(model, "-a", "--presolve", "on", "--lcg", "off")[0];
+    for (int v = 0; v <= 2; v++) {
+      assertTrue(out.contains("x = " + v + ";\n"), out);
+    }
+  }
 }

@@ -10878,7 +10878,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * outside them is left for the completion search, which then cannot fail. With allVariables the
    * given variables are all the variables of the search, and none are returned when none of them is
    * touched. A view of another variable (presolve's affine substitution) is touched through that
-   * variable: the completion fixes it.
+   * variable, and the base of a view through the view: the completion fixes them.
    */
   private Set<Var> untouchedOutputs(
       IntVar[] ints, BooleanVar[] bools, SetVar[] sets, FloatVar[] floats, boolean allVariables) {
@@ -10899,6 +10899,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     rest.addAll(Arrays.asList(allVars.getBoolVars()));
     rest.addAll(Arrays.asList(allVars.getSetVars()));
     rest.addAll(Arrays.asList(allVars.getFloatVars()));
+    // the base variables of views, which a constraint on a view touches
+    Set<Var> bases = new HashSet<>();
+    for (Var v : rest) {
+      if (v instanceof AffineView view) {
+        bases.add(view.base());
+      }
+    }
     boolean hidden = false;
     for (Var v : rest) {
       hidden |=
@@ -10914,6 +10921,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (!v.singleton()
           && v != costVariable
           && !(v instanceof AffineView)
+          && !bases.contains(v)
           && v.dom().sizeConstraints() == 0
           && !clauseVars.contains(v)) {
         untouched.add(v);
