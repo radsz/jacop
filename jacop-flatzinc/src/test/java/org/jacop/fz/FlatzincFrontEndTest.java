@@ -11019,4 +11019,22 @@ class FlatzincFrontEndTest {
     assertTrue(out.contains("%%%mzn-stat: objective=493\n"), out);
   }
 
+  @Test
+  void amongAHugeSetIsCompiledWithoutListingTheSet() throws IOException {
+    // the clausal compiler of LCG listed the set's 10^9 values: out of memory, =====UNKNOWN=====
+    String model =
+        "var 0..3: x :: output_var;\nvar 0..3: y;\nvar 0..1: n;\n"
+            + "constraint jacop_among([x, y], 0..1000000000, n);\nsolve satisfy;\n";
+    assertTrue(run(model, "--lcg", "on")[0].endsWith("=====UNSATISFIABLE=====\n"));
+    // the set's values in the variables' domains count
+    String some =
+        "var 0..3: x :: output_var;\nvar 0..3: y :: output_var;\nvar 0..2: n;\n"
+            + "constraint jacop_among([x, y], {1, 3, 5, 1000000000}, n);\n"
+            + "constraint int_eq(n, 2);\nsolve satisfy;\n";
+    assertEquals(
+        solveAll(some),
+        new TreeSet<>(solveAllInOrder(some, "--lcg", "on")),
+        "LCG -a against the default");
+    assertEquals(4, solveAll(some).size());
+  }
 }
