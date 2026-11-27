@@ -10717,4 +10717,31 @@ class FlatzincFrontEndTest {
       }
     }
   }
+
+  @Test
+  void lateCountDominanceKeepsTheOptimumOfTheSymmetryBreakingOrder() throws IOException {
+    // three identical tasks on one machine, of which one can be on time: the dominance rule of
+    // LateCount kept the first task on time whenever another one was, and the lex-leader
+    // constraints of the symmetric tasks (s1 >= s2 >= s3 under indomain_max, s3 <= s2 <= s1 in the
+    // order of the annotation) put another one first: no schedule with one task on time remained,
+    // and the optimum 2 became 3
+    String head =
+        "var 0..10: s1 :: output_var;\nvar 0..10: s2 :: output_var;\nvar 0..10: s3 :: output_var;\n"
+            + "var bool: b1;\nvar bool: b2;\nvar bool: b3;\nvar 0..1: y1;\nvar 0..1: y2;\n"
+            + "var 0..1: y3;\nvar 0..3: z :: output_var;\n"
+            + "constraint jacop_cumulative([s1,s2,s3],[2,2,2],[1,1,1],1);\n"
+            + "constraint int_le_reif(1, s1, b1);\nconstraint int_le_reif(1, s2, b2);\n"
+            + "constraint int_le_reif(1, s3, b3);\nconstraint bool2int(b1, y1);\n"
+            + "constraint bool2int(b2, y2);\nconstraint bool2int(b3, y3);\n"
+            + "constraint int_lin_eq([1,1,1,-1],[y1,y2,y3,z],0);\n";
+    for (String search :
+        new String[] {
+          "int_search([s1,s2,s3], input_order, indomain_max, complete)",
+          "int_search([s3,s2,s1], input_order, indomain_min, complete)"
+        }) {
+      String model = head + "solve :: " + search + " minimize z;\n";
+      String out = run(model, "--symmetry", "on")[0];
+      assertTrue(out.contains("z = 2;\n----------\n=========="), out);
+    }
+  }
 }

@@ -112,6 +112,8 @@ public class LateCount extends Constraint
   private final int[] releases;
   private final int[] dominant;
   private final int[] dominated;
+  // whether the rule orders tasks with the same parameters by their index
+  private final boolean ties;
 
   // per position of order: the processing left after the origin of the run
   private final long[] eff;
@@ -171,7 +173,7 @@ public class LateCount extends Constraint
    * @param late the bound on the number of late tasks.
    */
   public LateCount(IntVar[] starts, int[] durations, int[] dues, IntVar late) {
-    this(starts, durations, dues, null, late, null);
+    this(starts, durations, dues, null, late, null, true);
   }
 
   /**
@@ -193,7 +195,28 @@ public class LateCount extends Constraint
    * @param dominance true to enforce the dominance rule.
    */
   public LateCount(IntVar[] starts, int[] durations, int[] dues, IntVar late, boolean dominance) {
-    this(starts, durations, dues, null, late, dominance ? releases(starts) : null);
+    this(starts, durations, dues, late, dominance, true);
+  }
+
+  /**
+   * It constructs a late count constraint on a unary resource with the dominance rule of {@link
+   * #LateCount(IntVar[], int[], int[], IntVar, boolean)}, where ties may be left out: between two
+   * tasks with the same duration, release date and due date the rule keeps the first one on time,
+   * an order of its own that symmetry breaking constraints of another order on the same tasks
+   * contradict (with lex-leader constraints s3 &lt;= s2 &lt;= s1 on three identical tasks of which
+   * one is on time, no schedule with one task late remained). Without ties the rule only compares
+   * tasks that no symmetry exchanges, and it keeps the optimal schedules of every symmetry class.
+   *
+   * @param starts the start of each task.
+   * @param durations the duration of each task, at least 0.
+   * @param dues the due date of each task: it is late if its start plus duration exceeds it.
+   * @param late the bound on the number of late tasks.
+   * @param dominance true to enforce the dominance rule.
+   * @param ties false to leave out the dominance between tasks with the same parameters.
+   */
+  public LateCount(
+      IntVar[] starts, int[] durations, int[] dues, IntVar late, boolean dominance, boolean ties) {
+    this(starts, durations, dues, null, late, dominance ? releases(starts) : null, ties);
   }
 
   private static int[] releases(IntVar[] starts) {
@@ -227,7 +250,7 @@ public class LateCount extends Constraint
    * @param late the bound on the weight of the late tasks.
    */
   public LateCount(IntVar[] starts, int[] durations, int[] dues, int[] weights, IntVar late) {
-    this(starts, durations, dues, checkedWeights(weights, starts), late, null);
+    this(starts, durations, dues, checkedWeights(weights, starts), late, null, true);
   }
 
   // the weights, null when all are 1
@@ -246,7 +269,13 @@ public class LateCount extends Constraint
   }
 
   private LateCount(
-      IntVar[] starts, int[] durations, int[] dues, int[] weights, IntVar late, int[] releases) {
+      IntVar[] starts,
+      int[] durations,
+      int[] dues,
+      int[] weights,
+      IntVar late,
+      int[] releases,
+      boolean ties) {
 
     if (starts == null
         || durations == null
@@ -298,6 +327,7 @@ public class LateCount extends Constraint
     this.low = new long[n];
     this.root = new long[n];
     this.releases = releases == null ? null : Arrays.copyOf(releases, n);
+    this.ties = ties;
     int[][] pairs = releases == null ? new int[2][0] : dominancePairs(this.releases);
     this.dominant = pairs[0];
     this.dominated = pairs[1];
@@ -469,7 +499,7 @@ public class LateCount extends Constraint
         if (pi > pj || ai > aj || bi < bj) {
           continue;
         }
-        if (pi == pj && ai == aj && bi == bj && i > j) {
+        if (pi == pj && ai == aj && bi == bj && (i > j || !ties)) {
           continue;
         }
         if (count == from.length) {
@@ -1124,6 +1154,6 @@ public class LateCount extends Constraint
 
   @Override
   public LateCount copy(VarMap map) {
-    return new LateCount(map.get(starts), durations, dues, weights, map.get(late), releases);
+    return new LateCount(map.get(starts), durations, dues, weights, map.get(late), releases, ties);
   }
 }
