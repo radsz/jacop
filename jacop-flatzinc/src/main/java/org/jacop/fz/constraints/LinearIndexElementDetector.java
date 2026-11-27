@@ -174,7 +174,9 @@ public class LinearIndexElementDetector extends ModelRewrite {
     if (definitions.isEmpty()) {
       return;
     }
-    for (ASTConstElem c : all) {
+    // the skipped constraints count too: the detectors that replaced them posted constraints over
+    // their variables (an all-different of int_ne cliques), which still read the index
+    for (ASTConstElem c : FzItems.constraints(astTree, Set.of())) {
       for (int k = 0; k < c.jjtGetNumChildren(); k++) {
         occur((SimpleNode) c.jjtGetChild(k), c, definitions, elements, other);
       }

@@ -750,6 +750,46 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Fixes to 0 the variables of a covering objective that another variable dominates; see {@link
+   * CoveringDominance}.
+   *
+   * @param node the solve item.
+   */
+  private void coveringDominance(ASTSolveItem node) {
+    if (!(node.jjtGetChild(node.jjtGetNumChildren() - 1) instanceof ASTSolveKind kind)) {
+      return;
+    }
+    int k = getKind(kind.getKind());
+    if (k == 0 || !(kind.jjtGetChild(0) instanceof ASTSolveExpr expr)) {
+      return;
+    }
+    IntVar objective = objectiveVariable(expr);
+    if (objective == null) {
+      return;
+    }
+    long start = timer.getCpuTime();
+    CoveringDominance.Outcome o =
+        CoveringDominance.run(store, sat.collectedClauses(), objective, k == 2);
+    if (o == null) {
+      return;
+    }
+    boolean ok = store.consistency();
+    if (options.searchStatistics() && o.fixed() > 0) {
+      IO.println(
+          "%%%mzn-stat: coveringCandidates="
+              + o.candidates()
+              + "\n%%%mzn-stat: coveringFixed="
+              + o.fixed()
+              + "\n%%%mzn-stat: coveringTime="
+              + (timer.getCpuTime() - start) / 1_000_000_000.0
+              + "\n%%%mzn-stat-end");
+    }
+    if (!ok) {
+      throw Store.failException;
+    }
+  }
+
   /** Whether the search annotation, or one of those it sequences, branches on set variables. */
   private static boolean branchesOnSets(SimpleNode node) {
     if (node instanceof ASTAnnotation a && SET_SEARCH.equals(a.getAnnId())) {
@@ -1005,6 +1045,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     } else if (objective != null && store.consistency()) {
       imposeObjective(objective, store, store::impose, Constraint::removeConstraint);
+    }
+
+    if (CoveringDominance.enabled() && opt.proof() == null && store.consistency()) {
+      coveringDominance(node);
     }
 
     if (dominanceOn() && store.consistency()) {
@@ -1552,6 +1596,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.tableClauses
             + "\n%%%mzn-stat: lpNearRows="
             + r.nearRows
+            + "\n%%%mzn-stat: lpFoldedColumns="
+            + r.foldedColumns
             + "\n%%%mzn-stat: lpRestartSolves="
             + r.restartSolves
             + "\n%%%mzn-stat: lpRootRecuts="
@@ -4080,7 +4126,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       slowCheck = null;
     }
     if (fixedTasteDue && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch(lcg)) {
-      return tasteFixedWithoutLearning();
+      return tasteFixedWithoutLearning(costVar);
     }
     if (lcgSliceDue && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch(lcg)) {
       return alternateWithoutLearning();
@@ -4455,6 +4501,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         }
       }
     }
+    // and the set variables, which no clause covers either, to their least sets
+    DefaultSearchVars declared = new DefaultSearchVars(dictionary);
+    declared.defaultVars();
+    for (SetVar s : declared.getSetVars()) {
+      if (!s.singleton()) {
+        s.domain.inValue(store.level, s, s.dom().glb());
+        if (!diveConsistency()) {
+          return false;
+        }
+      }
+    }
     return true;
   }
 
@@ -4629,7 +4686,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // fixed search backtracks the annotation's decisions about one level a conflict whatever
       // learning cuts, so the probe cannot tell; on the 53 satisfaction instances of the wide set
       // at 240 s it lost 2 instances and 9 % of the time there
-      return unsolvedOnly ? fixedSatisfactionTaste(lcg) : satisfactionProbe(lcg);
+      return unsolvedOnly ? fixedSatisfactionTaste(lcg, false) : satisfactionProbe(lcg);
+    }
+    if (unsolvedOnly && !CdclSolver.VIRTUAL_CLOCK) {
+      // fixed optimisation without a solution tastes the search without learning as fixed
+      // satisfaction does: before its first solution it is the same search for any solution. The
+      // checks below run in a thread, the taste from the solver's alarm
+      fixedSatisfactionTaste(lcg, true);
     }
     if (rate <= 0 || options.getTimeOut() <= 0) {
       return null;
@@ -4723,19 +4786,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * the failures of the search without learning by about 10 % at a 15th of its nodes per second: n
    * = 16 takes 229 s with LCG and 9 s without learning. On the 37 such instances of costas-array
    * and the wide set at 600 s: solved 30 to 33, total time 5,383 to 3,875 s; where LCG goes on
-   * (black-hole, solbat, oocsp, nmseq) the taste costs 5 to 13 s.
+   * (black-hole, solbat, oocsp, nmseq) the taste costs 5 to 13 s. Fixed optimisation without a
+   * solution tastes the same way, its search before the first solution being one for any solution,
+   * and a solution found in the taste keeps the search without learning: on Sampson.s10.k3
+   * (MiniZinc Challenge 2017 community-detection, input_order on the vertices' communities) LCG
+   * makes about 3,000 conflicts/s and finds no solution in 1200 s, while the search without
+   * learning proves the optimum in 56 s.
    *
    * @param solver the LCG solver
+   * @param optimisation true under an objective, where -a and -n ask for improving solutions rather
+   *     than for several solutions
    * @return null; the taste runs from an alarm of the solver, in its search
    */
-  private Thread fixedSatisfactionTaste(LcgSolver solver) {
+  private Thread fixedSatisfactionTaste(LcgSolver solver, boolean optimisation) {
     double at = Double.parseDouble(options.freeConfig("lcg-fixed-at", "0.05"));
     if (at < 0
         || options.getTimeOut() <= 0
         || restartCalculator != null
         || fixedLabel == null
-        || options.getAll()
-        || options.getNumberSolutions() > 1
+        || (options.getAll() || options.getNumberSolutions() > 1) && !optimisation
         || !fixedTreeOrder()) {
       if (options.debug()) {
         IO.println(
@@ -4857,7 +4926,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * with the clauses of the store, for as long as LCG ran; it goes on to the end when it got
    * further in the tree than LCG by lcg-fixed-ratio, otherwise LCG goes on.
    */
-  private boolean tasteFixedWithoutLearning() {
+  private boolean tasteFixedWithoutLearning(Var costVar) {
     fixedTasteDue = false;
     CdclSolver sat = lcg.sat();
     double share = Double.parseDouble(options.freeConfig("lcg-fixed-share", "0.25"));
@@ -4878,8 +4947,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             if (!decided[0] && System.currentTimeMillis() >= tasteEnd) {
               decided[0] = true;
               fixedTasteCpProgress = fixedTreePosition();
-              // a negative ratio keeps it whatever the positions (for tests)
-              keep[0] = ratio < 0 || fixedTasteCpProgress > ratio * lcgPosition;
+              // a negative ratio keeps it whatever the positions (for tests); under an objective
+              // a solution LCG did not find keeps it too, as the positions after it compare no
+              // longer
+              keep[0] =
+                  ratio < 0 || fixedTasteCpProgress > ratio * lcgPosition || numberSolutions > 0;
               if (!keep[0]) {
                 label.setTimeOutMilliseconds(0);
                 if (label.childSearches != null) {
@@ -4921,7 +4993,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       for (IntVar[][] clause : this.sat.collectedClauses()) {
         store.impose(new BoolClause(clause[0], clause[1]));
       }
-      found = executeNonRestartSearch(label, fixedSelect, null, fixedSolveType);
+      found = executeNonRestartSearch(label, fixedSelect, costVar, fixedSolveType);
     } finally {
       label.setConsistencyListener(previous);
       store.removeLevel(root + 1);
@@ -4949,7 +5021,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return false;
     }
     label.timeOutOccured = false;
-    lcgStatus = lcg.solve();
+    lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
     return numberSolutions > 0;
   }
 

@@ -135,6 +135,11 @@ public class NoGood extends Constraint {
       log.debug("Start {}", this);
     }
 
+    if (alwaysSatisfied) {
+      // impose left it out: a variable listed with two values makes the no-good hold always
+      return;
+    }
+
     if (firstWatch == secondWatch) {
       handleSameWatchSpecialCase(store);
       return;
