@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.FailException;
@@ -447,7 +448,7 @@ public class Fz2jacop {
                 - TimeUnit.HOURS.toMillis(hr)
                 - TimeUnit.MINUTES.toMillis(min)
                 - TimeUnit.SECONDS.toMillis(sec));
-    System.out.printf("%n%%%%%%mzn-stat: time=%.3f ", execTime / 1000.0);
+    System.out.printf(Locale.ROOT, "%n%%%%%%mzn-stat: time=%.3f ", execTime / 1000.0);
     if (hr == 0) {
       if (min == 0) {
         IO.println();

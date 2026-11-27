@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.InterDistance;
@@ -674,7 +675,7 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
                 + ", uses "
                 + Arrays.toString(inf.use())
                 + ", capacity bound "
-                + String.format("%.1f", inf.bound()));
+                + String.format(Locale.ROOT, "%.1f", inf.bound()));
       }
       support.implied(() -> support.delayedConstraints.add(c));
       if (inf.unary()) {

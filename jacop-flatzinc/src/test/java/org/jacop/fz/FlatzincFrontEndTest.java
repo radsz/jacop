@@ -10994,4 +10994,18 @@ class FlatzincFrontEndTest {
       Locale.setDefault(locale);
     }
   }
+
+  @Test
+  void statisticsPrintTheirTimeWithADecimalPointInEveryDefaultLocale() throws IOException {
+    // the time statistic was formatted in the default locale: "time=0,170" in Polish or German
+    String model = "var 1..3: x :: output_var;\nconstraint int_ne(x, 2);\nsolve satisfy;\n";
+    Locale locale = Locale.getDefault();
+    try {
+      Locale.setDefault(Locale.forLanguageTag("pl-PL"));
+      String out = run(model, "-s")[0];
+      assertTrue(Pattern.compile("%%%mzn-stat: time=[0-9]+\\.[0-9]{3} ").matcher(out).find(), out);
+    } finally {
+      Locale.setDefault(locale);
+    }
+  }
 }
