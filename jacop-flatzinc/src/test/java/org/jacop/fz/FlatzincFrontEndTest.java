@@ -121,6 +121,29 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void argumentsParseWithTokenKindLookahead() throws IOException {
+    // the parser picks set literals, array accesses and packed int array elements by token kinds,
+    // which replaced syntactic lookaheads; each form of argument still reads as before
+    String fzn =
+        """
+        var 1..5: x:: output_var;
+        var 1..5: y:: output_var;
+        array [1..2] of var 1..5: a = [x, y];
+        var bool: b;
+        constraint set_in(x, {1, 3, 5});
+        constraint set_in(y, 2..4);
+        constraint int_lt(a[1], a[2]);
+        constraint int_lin_le([1, -1], [x, 4], 0);
+        constraint int_lin_le([1, 1, 1], [x, y, 0], 9);
+        constraint bool_clause([b], []);
+        solve satisfy;
+        """;
+
+    assertEquals(
+        Set.of("x = 1; y = 2;", "x = 1; y = 3;", "x = 1; y = 4;", "x = 3; y = 4;"), solveAll(fzn));
+  }
+
+  @Test
   void valueChoiceIndomainIsAscendingOrderWithoutWarning() throws IOException {
     // indomain is the MiniZinc value choice "assign values in ascending order"; it was searched as
     // indomain_min but reported on stderr as a not implemented value choice
@@ -2420,6 +2443,44 @@ class FlatzincFrontEndTest {
     assertTrue(!out.contains("does not support"), out);
     String proof = Files.readString(Path.of(prefix + ".pbp"), StandardCharsets.UTF_8);
     assertTrue(proof.contains("conclusion BOUNDS 4 4"), proof);
+  }
+
+  @Test
+  void fixedTasteUnderProofKeepsLcg() throws IOException {
+    // 24 queens in the annotation's order. Under --proof the fixed-search taste stopped LCG after
+    // 1 ms, its search returned and closed the proof, and LCG went on after a taste it did not keep
+    // (ratio 10^6): the next proof step threw "Stream closed". Under --proof LCG keeps the search.
+    int n = 24;
+    StringBuilder fzn = new StringBuilder();
+    StringBuilder q = new StringBuilder();
+    for (int i = 0; i < n; i++) {
+      fzn.append("var 1..").append(n).append(": q").append(i).append(":: output_var;\n");
+      q.append(i == 0 ? "" : ",").append('q').append(i);
+    }
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        fzn.append("constraint int_ne(q").append(i).append(",q").append(j).append(");\n");
+        fzn.append("constraint int_lin_ne([1,-1],[q").append(i).append(",q").append(j);
+        fzn.append("],").append(j - i).append(");\n");
+        fzn.append("constraint int_lin_ne([1,-1],[q").append(i).append(",q").append(j);
+        fzn.append("],").append(i - j).append(");\n");
+      }
+    }
+    fzn.append("solve :: int_search([").append(q).append("],input_order,indomain_min,complete)");
+    fzn.append(" satisfy;\n");
+    String prefix = tmp.resolve("taste").toString();
+    String out =
+        run(
+            fzn.toString(),
+            "--proof",
+            prefix,
+            "-t",
+            "60000",
+            "--free-config",
+            "lcg-fixed-at=0.00001,lcg-fixed-ratio=1000000,lcg-fixed-share=0.001")[0];
+    assertTrue(out.contains("----------"), out);
+    String proof = Files.readString(Path.of(prefix + ".pbp"), StandardCharsets.UTF_8);
+    assertTrue(proof.contains("conclusion SAT"), proof);
   }
 
   @Test

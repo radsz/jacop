@@ -2220,6 +2220,7 @@ public class IntervalDomain extends IntDomain {
         put(bounds, 0, min, firstMax);
       }
       clearIntervalsFrom(remaining);
+      changingBounds(v);
       notifyInPlaceBoundChange(v, MIN_EVENT);
       return;
     }
@@ -2239,6 +2240,8 @@ public class IntervalDomain extends IntDomain {
     while (p < size) {
       move(copy, out++, bounds, p++);
     }
+
+    changingBounds(v);
 
     installArrayResult(copy, out, storeLevel, v, MIN_EVENT);
   }
@@ -2270,6 +2273,7 @@ public class IntervalDomain extends IntDomain {
         put(bounds, pointer, lastMin, max);
       }
       clearIntervalsFrom(pointer + 1);
+      changingBounds(v);
       notifyInPlaceBoundChange(v, MAX_EVENT);
       return;
     }
@@ -2287,6 +2291,8 @@ public class IntervalDomain extends IntDomain {
     } else {
       put(copy, out++, ivMin, ivMax);
     }
+
+    changingBounds(v);
 
     installArrayResult(copy, out, storeLevel, v, MAX_EVENT);
   }
@@ -2345,6 +2351,8 @@ public class IntervalDomain extends IntDomain {
       put(copy, out, a, b);
       out++;
     }
+
+    changingBounds(v);
 
     installArrayResult(copy, out, storeLevel, v, boundEvent(min > bounds[0], max < currentMax));
   }
@@ -2455,6 +2463,8 @@ public class IntervalDomain extends IntDomain {
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
     }
+
+    v.changingBounds();
 
     v.domainHasChanged(GROUND);
   }
@@ -2769,6 +2779,7 @@ public class IntervalDomain extends IntDomain {
 
   @Override
   public void inComplement(int storeLevel, Var v, int min, int max) {
+    removingInterval(v, min, max);
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));

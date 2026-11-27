@@ -91,6 +91,14 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   private int[] shadowSize = new int[0];
   private IntVar removing; // the variable and value of the last removingValue call
   private int removingValue;
+  private IntVar changingBounds; // the variable of the last changingBounds call
+  private IntVar removingInterval; // the variable and interval of the last removingInterval call
+  private int removingMin;
+  private int removingMax;
+  // the atoms of a change found by directAtoms: kinds and values
+  private int[] directKind = new int[16];
+  private int[] directValue = new int[16];
+  private int numDirect;
   private int[] shadowMin = new int[0];
   private int[] shadowMax = new int[0];
   private int[] rootMin = new int[0];
@@ -172,6 +180,24 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   static final boolean CHECK_SHADOW = Boolean.getBoolean("jacop.lcg.checkShadow");
 
   /**
+   * Whether the atoms of a change are written from what the domain reports of it ({@link
+   * DomainChangeRecorder#changingBounds}, {@link DomainChangeRecorder#removingValue}, {@link
+   * DomainChangeRecorder#removingInterval}) and the trail's own removed values, without a shadow of
+   * the domain's runs ({@code -Djacop.lcg.directChanges}). A change that moves only the bounds then
+   * costs no walk over the holes, and a backtrack no update of the runs.
+   */
+  static final boolean DIRECT =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.directChanges", "true"));
+
+  // keeps the shadows and compares the atoms of every change with those the direct recording
+  // would write (testing only)
+  static final boolean CHECK_DIRECT = Boolean.getBoolean("jacop.lcg.checkDirect");
+
+  // whether this trail records directly, and whether it compares the direct atoms with its shadows
+  private boolean direct = DIRECT && !CHECK_DIRECT;
+  private boolean checkingDirect = CHECK_DIRECT;
+
+  /**
    * Intersects the domain of x with d, as {@code x.domain.in} does, but while a trail records the
    * changes and x has more than {@link #HOLE_LIMIT} values only with d's bounds. Every value
    * removed between the bounds is a {@code !=} atom with its own literals, so copying a sparse
@@ -236,6 +262,24 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   /** Records the store's changes again after {@link #suspend}. */
   public void resume() {
     store.domainChangeRecorder = this;
+  }
+
+  /**
+   * Keeps shadows of the domains and checks at every change that the atoms written from the
+   * domain's report are the atoms of the shadow diff, as {@code -Djacop.lcg.checkDirect} does
+   * (testing only). It must be called before any change is recorded.
+   */
+  void checkDirectChanges() {
+    if (size > 0) {
+      throw new IllegalStateException("changes were recorded already");
+    }
+    direct = false;
+    checkingDirect = true;
+    for (int i = 0; i < root.length; i++) {
+      if (root[i] != null) {
+        setShadow(i, root[i]);
+      }
+    }
   }
 
   /**
@@ -319,7 +363,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     shadowMin[i] = min;
     shadowMax[i] = max;
     shadowSize[i] = d.getSize();
-    if (d.getSize() == (long) max - min + 1) {
+    if (d.getSize() == (long) max - min + 1 || direct) {
       numRuns[i] = 0;
       return;
     }
@@ -348,11 +392,168 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   }
 
   @Override
+  public void changingBounds(IntVar x) {
+    changingBounds = x;
+  }
+
+  @Override
+  public void removingInterval(IntVar x, int min, int max) {
+    removingInterval = x;
+    removingMin = min;
+    removingMax = max;
+  }
+
+  @Override
   public void domainChanged(IntVar x, int event) {
+    // what the domain told of this change; a report of another variable is stale
+    boolean value = removing == x;
+    boolean boundsOnly = changingBounds == x;
+    boolean interval = removingInterval == x;
+    changingBounds = null;
+    removingInterval = null;
+    if (direct) {
+      removing = null;
+      int i = slot(x);
+      IntDomain now = x.dom();
+      directAtoms(i, now, value, boundsOnly, interval);
+      for (int k = 0; k < numDirect; k++) {
+        add(x, i, directKind[k], directValue[k]);
+      }
+      shadowMin[i] = now.min();
+      shadowMax[i] = now.max();
+      shadowSize[i] = now.getSize();
+      return;
+    }
+    if (checkingDirect) {
+      int i = slot(x);
+      directAtoms(i, x.dom(), value, boundsOnly, interval);
+      int first = size;
+      if (INCREMENTAL_SHADOW) {
+        domainChangedIncremental(x);
+      } else {
+        domainChangedCopy(x);
+      }
+      checkDirect(x, first);
+      return;
+    }
     if (INCREMENTAL_SHADOW) {
       domainChangedIncremental(x);
       return;
     }
+    domainChangedCopy(x);
+  }
+
+  // testing only: throws when the entries from first on differ from the atoms directAtoms found
+  private void checkDirect(IntVar x, int first) {
+    boolean ok = size - first == numDirect;
+    for (int k = 0; ok && k < numDirect; k++) {
+      ok = kind[first + k] == directKind[k] && value[first + k] == directValue[k];
+    }
+    if (!ok) {
+      StringBuilder b = new StringBuilder("direct atoms of " + x.id() + " " + x.dom() + ":");
+      for (int k = 0; k < numDirect; k++) {
+        b.append(' ').append(directKind[k]).append('/').append(directValue[k]);
+      }
+      b.append(" shadow atoms:");
+      for (int e = first; e < size; e++) {
+        b.append(' ').append(kind[e]).append('/').append(value[e]);
+      }
+      throw new IllegalStateException(b.toString());
+    }
+  }
+
+  /**
+   * Finds the atoms of a change of variable i, whose domain is now {@code now}, without a shadow of
+   * its runs: the bounds moved past shadowMin and shadowMax, then the values between the new bounds
+   * that are in the root domain, not in {@code now} and not removed by an entry yet, in increasing
+   * order, as the shadow diff writes them. What the domain reported narrows the search for those
+   * values: none after a change of the bounds only, the reported value, or the reported interval. A
+   * report is trusted only when the counts agree: with the bounds unchanged, the domain lost
+   * shadowSize - size values.
+   */
+  private void directAtoms(
+      int i, IntDomain now, boolean value, boolean boundsOnly, boolean interval) {
+    numDirect = 0;
+    int min = now.min();
+    int max = now.max();
+    int size = now.getSize();
+    boolean sameBounds = min == shadowMin[i] && max == shadowMax[i];
+    int lost = shadowSize[i] - size;
+    if (value
+        && sameBounds
+        && lost == 1
+        && removingValue > min
+        && removingValue < max
+        && !now.contains(removingValue)) {
+      pushDirect(NE, removingValue);
+      return;
+    }
+    if (min > shadowMin[i]) {
+      pushDirect(GE, min);
+    }
+    if (max < shadowMax[i]) {
+      pushDirect(LE, max);
+    }
+    if (boundsOnly || size == (long) max - min + 1) {
+      return;
+    }
+    int expected = sameBounds ? lost : -1;
+    int bounds = numDirect;
+    if (interval && sameBounds) {
+      directHoles(i, now, Math.max(removingMin, min + 1), Math.min(removingMax, max - 1), expected);
+      if (numDirect - bounds == expected) {
+        return;
+      }
+      numDirect = bounds;
+    }
+    directHoles(i, now, min + 1, max - 1, expected);
+  }
+
+  // adds the values of [lo, hi] in the root domain of variable i, not in now and not removed by an
+  // entry, until expected of them are found (all when expected is negative)
+  private void directHoles(int i, IntDomain now, int lo, int hi, int expected) {
+    IntDomain r = root[i];
+    int bounds = numDirect;
+    int u = lo;
+    while (u <= hi) {
+      if (now.contains(u)) {
+        u = now.runEnd(u) + 1;
+        continue;
+      }
+      int next = now.nextValue(u);
+      int end = next > u ? Math.min(next - 1, hi) : hi;
+      while (u <= end) {
+        if (!r.contains(u)) {
+          int n = r.nextValue(u);
+          if (n <= u) {
+            return;
+          }
+          u = n;
+          continue;
+        }
+        if (removals.get(i, u) < 0) {
+          pushDirect(NE, u);
+          if (numDirect - bounds == expected) {
+            return;
+          }
+        }
+        u++;
+      }
+    }
+  }
+
+  private void pushDirect(int k, int v) {
+    if (numDirect == directKind.length) {
+      directKind = Arrays.copyOf(directKind, 2 * numDirect);
+      directValue = Arrays.copyOf(directValue, 2 * numDirect);
+    }
+    directKind[numDirect] = k;
+    directValue[numDirect] = v;
+    numDirect++;
+  }
+
+  // the variant of domainChanged that copies the domain into the shadow after every change
+  private void domainChangedCopy(IntVar x) {
     int i = slot(x);
     IntDomain now = x.dom();
     int min = now.min();
@@ -541,6 +742,18 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
 
   private static int[] ensure(int[] a, int n) {
     return n <= a.length ? a : Arrays.copyOf(a, 2 * n);
+  }
+
+  // undoes a bound atom of kind k of variable i, the last one of its entries, on shadowMin or
+  // shadowMax
+  private void undoBounds(int i, int k) {
+    if (k == GE) {
+      int b = 2 * i;
+      shadowMin[i] = numBounds[b] > 0 ? value[bounds[b][numBounds[b] - 1]] : rootMin[i];
+    } else if (k == LE) {
+      int b = 2 * i + 1;
+      shadowMax[i] = numBounds[b] > 0 ? value[bounds[b][numBounds[b] - 1]] : rootMax[i];
+    }
   }
 
   // undoes the atom (kind k, value v) of variable i, the last one of its entries, on the shadow
@@ -734,6 +947,10 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
 
   @Override
   public void removeLevelLate(int removedLevel) {
+    // a report whose change failed is no report of a later change
+    removing = null;
+    changingBounds = null;
+    removingInterval = null;
     if (size > 0 && level[size - 1] >= removedLevel) {
       epoch++;
     }
@@ -748,7 +965,10 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
         removals.remove(i, value[size]);
         numHoles[i]--;
       }
-      if (INCREMENTAL_SHADOW) {
+      if (direct) {
+        undoBounds(i, kind[size]);
+        shadowSize[i] = sizeBefore[size];
+      } else if (INCREMENTAL_SHADOW) {
         undoShadow(i, kind[size], value[size]);
         shadowSize[i] = sizeBefore[size];
         if (CHECK_SHADOW && !deferring && (last[i] < 0 || level[last[i]] < removedLevel)) {
