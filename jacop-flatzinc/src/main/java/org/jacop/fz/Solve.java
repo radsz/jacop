@@ -5379,6 +5379,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return lcgCoreRoseAt != Long.MIN_VALUE && now - lcgCoreRoseAt <= lcgCoreWindow;
   }
 
+  /**
+   * Whether the core-guided phase of LCG has found a core. Its cores raise the lower bound by
+   * propagation under assumptions, with few conflicts or none, so the conflict rate of the early
+   * check says nothing of its progress, and a phase that found a core is left to the regular check,
+   * which also weighs the bound it raised. On XCSP 2022 MultiAgentPathFinding-table-g32-p10-a20 the
+   * phase raised the bound from 20 to 277 in 12 cores and 2 conflicts by 6 s; the early check (2
+   * conflicts in 21 s) stopped LCG and free search without learning ended at 1,379 or worse, while
+   * LCG kept proves the optimum 426 in about 100 s.
+   */
+  private static boolean coresFound(LcgSolver solver) {
+    CoreSearch core = solver.coreSearch();
+    return core != null && core.cores > 0;
+  }
+
   // coresRising, counted as a check that kept LCG
   private boolean keptForCores(long now) {
     if (!coresRising(now)) {
@@ -5506,6 +5520,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         || (solutionFound && unsolvedOnly)
         || tooLateForFreeSearch(solver)
         || keptForCores(now)
+        || coresFound(solver)
         || maxSat != null) {
       // a MaxSAT model is proved by the core-guided phase, which starts after a share of the time:
       // LCG on Security-CPS test61 (MaxSAT Evaluation 2021) made no conflict in its first second,
