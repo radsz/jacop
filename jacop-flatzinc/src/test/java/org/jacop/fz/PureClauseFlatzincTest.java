@@ -226,8 +226,7 @@ class PureClauseFlatzincTest {
   // of three and x -> y and z (2 x - y - z <= 0); with windows, also y[i] + y[i+1] + y[i+2] <= 1
   // over the first eight variables, which the sequence detector posts as one sequence too, and with
   // wide, at most 4 of 9 variables, 126 clauses, more than lazy clause generation takes. Each row
-  // is
-  // {relation (-1 le, 0 eq, 1 ge), rhs, weights...}
+  // holds its relation (-1 for le, 0 for eq, 1 for ge), its right-hand side and its weights
   private static List<long[]> rows(long seed, boolean windows, boolean wide) {
     Random random = new Random(seed);
     List<long[]> rows = new ArrayList<>();

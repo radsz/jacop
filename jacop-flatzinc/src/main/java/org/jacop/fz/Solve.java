@@ -8068,15 +8068,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     long improvedAt = started;
     // the fewest falsified hard clauses so far, and when they were reached
     int fewestHard = Integer.MAX_VALUE;
-    long hardAt = started;
-    int[] hintValues = null;
     boolean jasat = !"0".equals(options.freeConfig("maxsat-sat", "1"));
+    long hardAt = hardSince(jasat, started);
+    int[] hintValues = null;
     while (!stopped[0]) {
       long now = System.currentTimeMillis();
       if (now > deadline
           || (best == Long.MAX_VALUE
               && now - started > feasiblePatience
-              && (jasat || now - hardAt > (now - started) / 2))
+              && now - hardAt > (now - started) / 2)
           || (best < Long.MAX_VALUE
               && now - started > 200
               && now - improvedAt > (now - started) / 2)) {
@@ -8089,46 +8089,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       if (ls.lowestFalsifiedHard() < fewestHard) {
         fewestHard = ls.lowestFalsifiedHard();
-        hardAt = System.currentTimeMillis();
+        hardAt = hardSince(jasat, System.currentTimeMillis());
       }
       if (ls.falsifiedHard() == 0 && ls.cost() == 0) {
         break;
       }
     }
-    if (best == Long.MAX_VALUE && !stopped[0] && jasat) {
-      // no assignment of the hard clauses by the patience: JaSAT looks for one in the rest of the
-      // budget, and the search goes on from it for at least 200 ms, until it finds nothing better
-      // in the last half of the time since, and for at most half the time it searched before
-      // (hanoi5 of the PB competition 2016: the search reached no assignment of its 13,383 hard
-      // clauses in 7 to 15 s, JaSAT finds one of the optimal cost in 0.7 s; on mqc-10tree of the
-      // MaxSAT Evaluation 2024 the search went on for 4 s from the JaSAT start of cost 123 and
-      // ended far from the optimum 2, which the solver then found in 1 s)
-      long sat = System.currentTimeMillis();
-      boolean[] start = deadline <= sat ? null : model.hardModel(deadline - sat);
-      long from = System.currentTimeMillis();
-      maxSatSatMillis = from - sat;
-      if (start != null) {
-        ls.start(start);
-        best = ls.bestCost();
-        improvedAt = from;
-        while (!stopped[0]) {
-          long now = System.currentTimeMillis();
-          if (now > deadline
-              || now - from > (from - started) / 2
-              || now - from > 200 && now - improvedAt > (now - from) / 2) {
-            break;
-          }
-          long found = ls.run(100_000, () -> stopped[0] || System.currentTimeMillis() > deadline);
-          if (found < best) {
-            best = found;
-            improvedAt = System.currentTimeMillis();
-          }
-          if (ls.cost() == 0) {
-            break;
-          }
-        }
-      }
-    }
+    best = jasatStart(model, ls, stopped, started, deadline, best, jasat);
     if (best < Long.MAX_VALUE && model.cost(best) < bestPrintedCost.get()) {
       int[] values = canonical(model.values(ls.bestAssignment()));
       long expected = model.cost(best);
@@ -8159,6 +8126,58 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + (best == Long.MAX_VALUE ? "" : "\n%%%mzn-stat: maxsatBest=" + model.cost(best)));
     }
     return hintValues == null ? null : new Hint(hintedVariables(), hintValues);
+  }
+
+  // the JaSAT start when the local search reached no assignment of the hard clauses (best is
+  // Long.MAX_VALUE) and jasat is on; returns the best cost of the local search
+  private long jasatStart(
+      MaxSatModel model,
+      MaxSatLocalSearch ls,
+      boolean[] stopped,
+      long started,
+      long deadline,
+      long bestSoFar,
+      boolean jasat) {
+    if (bestSoFar != Long.MAX_VALUE || stopped[0] || !jasat) {
+      return bestSoFar;
+    }
+    // no assignment of the hard clauses by the patience: JaSAT looks for one in the rest of the
+    // budget, and the search goes on from it for at least 200 ms, until it finds nothing better
+    // in the last half of the time since, and for at most half the time it searched before
+    // (hanoi5 of the PB competition 2016: the search reached no assignment of its 13,383 hard
+    // clauses in 7 to 15 s, JaSAT finds one of the optimal cost in 0.7 s; on mqc-10tree of the
+    // MaxSAT Evaluation 2024 the search went on for 4 s from the JaSAT start of cost 123 and
+    // ended far from the optimum 2, which the solver then found in 1 s)
+    long asked = System.currentTimeMillis();
+    boolean[] start = deadline <= asked ? null : model.hardModel(deadline - asked);
+    long from = System.currentTimeMillis();
+    maxSatSatMillis = from - asked;
+    if (start == null) {
+      return bestSoFar;
+    }
+    ls.start(start);
+    long best = ls.bestCost();
+    long improvedAt = from;
+    long now = from;
+    while (!stopped[0]
+        && ls.cost() != 0
+        && now <= deadline
+        && now - from <= (from - started) / 2
+        && (now - from <= 200 || now - improvedAt <= (now - from) / 2)) {
+      long found = ls.run(100_000, () -> stopped[0] || System.currentTimeMillis() > deadline);
+      if (found < best) {
+        best = found;
+        improvedAt = System.currentTimeMillis();
+      }
+      now = System.currentTimeMillis();
+    }
+    return best;
+  }
+
+  // the time the fewest falsified hard clauses fell, or long before when JaSAT takes over at the
+  // patience, so that the local search stops there
+  private static long hardSince(boolean jasat, long now) {
+    return jasat ? Long.MIN_VALUE / 4 : now;
   }
 
   /**

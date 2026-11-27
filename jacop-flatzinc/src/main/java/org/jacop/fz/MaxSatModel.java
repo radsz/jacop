@@ -185,6 +185,44 @@ final class MaxSatModel {
     return x.min() >= 0 && x.max() <= 1;
   }
 
+  // the clauses with those of the rows over 0/1 variables that are a few clauses
+  // (PureClauseModel.clausesOf) and no alias or negation, which it adds to used: as x + y <= 1
+  // between cost terms in the PB competition's hanoi5, their clauses are hard. Taken for redundant
+  // rows on the cost, they were left to the store, and the search, blind to the 1,931 rows, ran for
+  // its whole share (8 s of a 60 s run, 30 s of a 600 s one) on assignments of cost 1,810 that the
+  // store rejected, below the optimum 1,931
+  private static List<IntVar[][]> withShapedRows(
+      List<IntVar[][]> clauses, Map<Constraint, LinearForm> forms, Set<Constraint> used) {
+    List<IntVar[][]> all = new ArrayList<>(clauses);
+    for (Map.Entry<Constraint, LinearForm> e : forms.entrySet()) {
+      List<IntVar[][]> shaped =
+          used.contains(e.getKey()) || link(e.getValue())
+              ? null
+              : PureClauseModel.clausesOf(e.getKey());
+      if (shaped != null) {
+        all.addAll(shaped);
+        used.add(e.getKey());
+      }
+    }
+    return all;
+  }
+
+  // x - y = 0 or x + y = 1 over 0/1 variables (also with both signs flipped): an alias or a
+  // negation
+  private static boolean link(LinearForm f) {
+    if (f.relation() != LinearForm.EQ
+        || f.vars().length != 2
+        || !binary(f.vars()[0])
+        || !binary(f.vars()[1])
+        || Math.abs(f.weights()[0]) != 1
+        || Math.abs(f.weights()[1]) != 1) {
+      return false;
+    }
+    long w0 = f.weights()[0];
+    long w1 = f.weights()[1];
+    return w0 == -w1 && f.c() == 0 || w0 == w1 && f.c() == w0;
+  }
+
   /**
    * Reads the model as MaxSAT.
    *
@@ -310,7 +348,7 @@ final class MaxSatModel {
     Map<IntVar, Integer> index = new IdentityHashMap<>();
     List<IntVar> vars = new ArrayList<>();
     List<int[]> links = new ArrayList<>();
-    List<IntVar[][]> hardClauses = new ArrayList<>(clauses);
+    clauses = withShapedRows(clauses, forms, used);
     for (Map.Entry<Constraint, LinearForm> e : forms.entrySet()) {
       if (used.contains(e.getKey())) {
         continue;
@@ -335,16 +373,6 @@ final class MaxSatModel {
           continue;
         }
       }
-      // a row over 0/1 variables that is a few clauses (PureClauseModel.clausesOf), as x + y <= 1
-      // between cost terms in the PB competition's hanoi5: its clauses are hard. Taken for a
-      // redundant row on the cost, it was left to the store, and the search, blind to the 1,931
-      // rows, ran for its whole share (8 s of a 60 s run, 30 s of a 600 s one) on assignments of
-      // cost 1,810 that the store rejected, below the optimum 1,931
-      List<IntVar[][]> shaped = PureClauseModel.clausesOf(e.getKey());
-      if (shaped != null) {
-        hardClauses.addAll(shaped);
-        continue;
-      }
       boolean redundant = true;
       for (IntVar z : f.vars()) {
         if (!z.singleton() && z != cost && !defined.contains(z) && !terms.containsKey(z)) {
@@ -356,7 +384,7 @@ final class MaxSatModel {
       }
     }
     List<int[]> hard = new ArrayList<>();
-    for (IntVar[][] clause : hardClauses) {
+    for (IntVar[][] clause : clauses) {
       List<Integer> lits = new ArrayList<>();
       boolean sat = false;
       for (int s = 0; s < 2 && !sat; s++) {
