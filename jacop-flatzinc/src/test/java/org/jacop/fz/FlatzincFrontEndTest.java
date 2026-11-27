@@ -9695,4 +9695,28 @@ class FlatzincFrontEndTest {
     assertTrue(out.contains("b = false;\no1 = true;\no2 = true;\n"), out);
     assertTrue(out.contains("b = true;\no1 = false;\no2 = false;\n"), out);
   }
+
+  @Test
+  void indexFunctionClausesKeepALiteralThatADeclarationEquates() throws IOException {
+    // q -> i - y <= -1 cannot hold (i >= 0 > y + 1), so the clause p \/ q forces p and q is
+    // false; the clause was unfolded over the values of k and its comparisons were not posted,
+    // which left q free although the output o is declared equal to it: -a printed o = true too
+    String model =
+        "var 1..3: k :: output_var;\n"
+            + "var bool: e;\n"
+            + "var 0..1: i;\n"
+            + "var -2..-1: y;\n"
+            + "var bool: p;\n"
+            + "var bool: q;\n"
+            + "var bool: o :: output_var = q;\n"
+            + "constraint int_eq_reif(k,1,e);\n"
+            + "constraint bool2int(e,i);\n"
+            + "constraint int_le_imp(i,0,p);\n"
+            + "constraint int_lin_le_imp([1,-1],[i,y],-1,q);\n"
+            + "constraint bool_clause([p,q],[]);\n"
+            + "solve satisfy;\n";
+    String out = run(model, "-a")[0];
+    assertEquals(2, out.split("----------", -1).length - 1, out);
+    assertFalse(out.contains("o = true;"), out);
+  }
 }

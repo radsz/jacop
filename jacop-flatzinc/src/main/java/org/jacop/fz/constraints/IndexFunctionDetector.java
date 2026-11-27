@@ -311,6 +311,7 @@ public class IndexFunctionDetector implements ParserTreeConstants {
           || c == null
           || occurrences.getOrDefault(b, 0) != 2
           || support.dictionary.isOutput(b)
+          || support.dictionary.isDeclaredEqual(b)
           || replaced.contains(c.node())) {
         return;
       }
