@@ -58,6 +58,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.DoubleUnaryOperator;
 import java.util.function.IntFunction;
@@ -4654,13 +4655,24 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     slowCheckFrom = Long.MIN_VALUE;
     // the best cost printed at each check, to measure the gain over the last window
     ArrayDeque<long[]> costs = new ArrayDeque<>();
+    BooleanSupplier once =
+        () ->
+            slowLcgCheckOnce(
+                solver, rate, perLiteral, unsolvedRate, unsolvedOnly, stallNanos, gain, costs);
+    return startSlowLcgChecks(solver, once, wait);
+  }
+
+  /**
+   * Runs the checks of {@link #slowLcgCheck}: the first after wait milliseconds, then every 500 ms
+   * while a check asks for the next one.
+   */
+  private Thread startSlowLcgChecks(LcgSolver solver, BooleanSupplier once, long wait) {
     if (CdclSolver.VIRTUAL_CLOCK) {
       // the checks run in the search, at times of its work, so that a run repeats
       Runnable[] check = new Runnable[1];
       check[0] =
           () -> {
-            if (slowLcgCheckOnce(
-                solver, rate, perLiteral, unsolvedRate, unsolvedOnly, stallNanos, gain, costs)) {
+            if (once.getAsBoolean()) {
               solver.sat().setAlarm(solver.sat().now() + 500_000_000L, check[0]);
             }
           };
@@ -4672,15 +4684,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             () -> {
               try {
                 Thread.sleep(wait);
-                while (slowLcgCheckOnce(
-                    solver,
-                    rate,
-                    perLiteral,
-                    unsolvedRate,
-                    unsolvedOnly,
-                    stallNanos,
-                    gain,
-                    costs)) {
+                while (once.getAsBoolean()) {
                   Thread.sleep(500);
                 }
               } catch (InterruptedException _) {
@@ -4854,6 +4858,66 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
+   * Decides the taste of {@link #tasteFixedWithoutLearning} after the consistency at the end of its
+   * time: the search without learning goes on when it got further in the tree than LCG by the ratio
+   * (or found a solution), otherwise it stops.
+   */
+  private final class FixedTasteListener implements ConsistencyListener {
+    private final DepthFirstSearch<T> label;
+    private final ConsistencyListener previous;
+    private final long tasteEnd;
+    private final double ratio;
+    private final double lcgPosition;
+    private boolean decided;
+    private boolean keep;
+
+    FixedTasteListener(
+        DepthFirstSearch<T> label,
+        ConsistencyListener previous,
+        long tasteEnd,
+        double ratio,
+        double lcgPosition) {
+      this.label = label;
+      this.previous = previous;
+      this.tasteEnd = tasteEnd;
+      this.ratio = ratio;
+      this.lcgPosition = lcgPosition;
+    }
+
+    @Override
+    public boolean executeAfterConsistency(boolean consistent) {
+      boolean c = previous == null ? consistent : previous.executeAfterConsistency(consistent);
+      if (!decided && System.currentTimeMillis() >= tasteEnd) {
+        decided = true;
+        fixedTasteCpProgress = fixedTreePosition();
+        // a negative ratio keeps it whatever the positions (for tests); under an objective a
+        // solution LCG did not find keeps it too, as the positions after it compare no longer
+        keep = ratio < 0 || fixedTasteCpProgress > ratio * lcgPosition || numberSolutions > 0;
+        if (!keep) {
+          label.setTimeOutMilliseconds(0);
+          if (label.childSearches != null) {
+            // the completion of the variables the annotation leaves stops too
+            for (Search<? extends Var> child : label.childSearches) {
+              child.setTimeOutMilliseconds(0);
+            }
+          }
+        }
+      }
+      return c;
+    }
+
+    @Override
+    public void setChildrenListeners(ConsistencyListener[] children) {
+      // no children
+    }
+
+    @Override
+    public void setChildrenListeners(ConsistencyListener child) {
+      // no children
+    }
+  }
+
+  /**
    * Runs the taste of {@link #fixedSatisfactionTaste}: the annotation's search without learning,
    * with the clauses of the store, for as long as LCG ran; it goes on to the end when it got
    * further in the tree than LCG by lcg-fixed-ratio, otherwise LCG goes on.
@@ -4868,45 +4932,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     long tasteEnd = System.currentTimeMillis() + tasteMillis;
     DepthFirstSearch<T> label = fixedLabel;
     ConsistencyListener previous = label.getConsistencyListener();
-    boolean[] decided = {false};
-    boolean[] keep = {false};
-    label.setConsistencyListener(
-        new ConsistencyListener() {
-          @Override
-          public boolean executeAfterConsistency(boolean consistent) {
-            boolean c =
-                previous == null ? consistent : previous.executeAfterConsistency(consistent);
-            if (!decided[0] && System.currentTimeMillis() >= tasteEnd) {
-              decided[0] = true;
-              fixedTasteCpProgress = fixedTreePosition();
-              // a negative ratio keeps it whatever the positions (for tests); under an objective
-              // a solution LCG did not find keeps it too, as the positions after it compare no
-              // longer
-              keep[0] =
-                  ratio < 0 || fixedTasteCpProgress > ratio * lcgPosition || numberSolutions > 0;
-              if (!keep[0]) {
-                label.setTimeOutMilliseconds(0);
-                if (label.childSearches != null) {
-                  // the completion of the variables the annotation leaves stops too
-                  for (Search<? extends Var> child : label.childSearches) {
-                    child.setTimeOutMilliseconds(0);
-                  }
-                }
-              }
-            }
-            return c;
-          }
-
-          @Override
-          public void setChildrenListeners(ConsistencyListener[] children) {
-            // no children
-          }
-
-          @Override
-          public void setChildrenListeners(ConsistencyListener child) {
-            // no children
-          }
-        });
+    FixedTasteListener taste =
+        new FixedTasteListener(label, previous, tasteEnd, ratio, lcgPosition);
+    label.setConsistencyListener(taste);
     if (options.debug()) {
       IO.println(
           "%% LCG stopped after "
@@ -4932,7 +4960,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       store.setLevel(root);
       giveBack.run();
     }
-    fixedTasteOutcome = keep[0] || !decided[0] ? 2 : 1;
+    fixedTasteOutcome = taste.keep || !taste.decided ? 2 : 1;
     if (options.debug()) {
       IO.println(
           "%% search without learning at position "
