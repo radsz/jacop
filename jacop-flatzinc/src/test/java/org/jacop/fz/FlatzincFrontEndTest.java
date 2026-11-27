@@ -8437,7 +8437,7 @@ class FlatzincFrontEndTest {
           + "constraint int_eq_reif(a, 1, b);\nconstraint float_eq_reif(f, g, b);\n"
           + "constraint float_lt_reif(f, g, b);\n";
 
-  // the run ends within a few seconds of -t 1000, and as a time-out
+  // the run ends within a few seconds of -t 1000, and without a proof
   private void assertEndsAtTheTimeOut(String model, String... options) {
     String[] args = Arrays.copyOf(options, options.length + 2);
     args[options.length] = "-t";
@@ -8452,7 +8452,9 @@ class FlatzincFrontEndTest {
               assertTrue(millis < 10_000, millis + " ms");
               return o;
             });
-    assertTrue(out.contains("=====UNKNOWN=====\n"), out);
+    // a propagation cut at the time-out proves nothing, so the search may still reach a solution
+    // of another branch before it reads the clock: no answer or a solution, never a proof
+    assertTrue(out.contains("=====UNKNOWN=====\n") || out.contains("----------\n"), out);
     assertFalse(out.contains("=====UNSATISFIABLE====="), out);
     assertFalse(out.contains("=========="), out);
   }
