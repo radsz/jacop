@@ -149,6 +149,10 @@ public class LinearIndexElementDetector extends ModelRewrite {
    * @param skipped constraint nodes that are not posted.
    */
   public void detect(SimpleNode astTree, Set<SimpleNode> skipped) {
+    // only elements group under an index: without one the pass finds nothing
+    if (!support.hasConstraint(astTree, ELEMENTS)) {
+      return;
+    }
     List<ASTConstElem> all = FzItems.constraints(astTree, skipped);
     Map<IntVar, List<ConstElement>> elements = new IdentityHashMap<>();
     List<IntVar> order = new ArrayList<>();

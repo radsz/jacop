@@ -121,6 +121,29 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void argumentsParseWithTokenKindLookahead() throws IOException {
+    // the parser picks set literals, array accesses and packed int array elements by token kinds,
+    // which replaced syntactic lookaheads; each form of argument still reads as before
+    String fzn =
+        """
+        var 1..5: x:: output_var;
+        var 1..5: y:: output_var;
+        array [1..2] of var 1..5: a = [x, y];
+        var bool: b;
+        constraint set_in(x, {1, 3, 5});
+        constraint set_in(y, 2..4);
+        constraint int_lt(a[1], a[2]);
+        constraint int_lin_le([1, -1], [x, 4], 0);
+        constraint int_lin_le([1, 1, 1], [x, y, 0], 9);
+        constraint bool_clause([b], []);
+        solve satisfy;
+        """;
+
+    assertEquals(
+        Set.of("x = 1; y = 2;", "x = 1; y = 3;", "x = 1; y = 4;", "x = 3; y = 4;"), solveAll(fzn));
+  }
+
+  @Test
   void valueChoiceIndomainIsAscendingOrderWithoutWarning() throws IOException {
     // indomain is the MiniZinc value choice "assign values in ascending order"; it was searched as
     // indomain_min but reported on stderr as a not implemented value choice
