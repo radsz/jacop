@@ -3713,8 +3713,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         lcgStatus = CdclSolver.SAT;
         return true;
       }
-      lcgLastCost = ls.getCostValue();
-      int lsCost = ls.getCostValue();
+      // local search may end on a solution worse than the best one it printed (j3033_2: 682
+      // after 493), which is the incumbent's cost, of the objective statistic and of the bound
+      int lsCost = Math.min(ls.getCostValue(), bestPrintedCost.get());
+      lcgLastCost = lsCost;
       lcg.setSharedBound(() -> worker == null ? lsCost : Math.min(lsCost, worker.sharedBound()));
     } else if (freeFirstValues != null && (scheduled == null || freeFirstCost <= scheduledCost)) {
       // the best solution of free search without learning, which ran first

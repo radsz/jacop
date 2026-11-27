@@ -11008,4 +11008,15 @@ class FlatzincFrontEndTest {
       Locale.setDefault(locale);
     }
   }
+
+  @Test
+  void freeSearchPrintsTheObjectiveOfTheBestSolutionAfterLocalSearch() throws IOException {
+    // local search printed makespans 499 and 493 and then ended on a worse schedule, whose cost
+    // 682 LCG took as its incumbent: the solution printed was 493, the objective statistic 682
+    String model = Files.readString(Path.of("src/test/fz/regression/rcpsp_j3033_2.fzn"));
+    String out = run(model, "--lcg", "on", "-f", "-s", "-t", "20000")[0];
+    assertTrue(out.contains("objective = 493;\n") && out.contains("----------\n=========="), out);
+    assertTrue(out.contains("%%%mzn-stat: objective=493\n"), out);
+  }
+
 }
