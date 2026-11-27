@@ -1923,7 +1923,7 @@ class FlatzincFrontEndTest {
         fzn,
         "var 0..9: x :: output_var;\nvar 0..9: y;\nconstraint int_lt(x, y);\nsolve minimize y;\n",
         StandardCharsets.UTF_8);
-    Options opt = new Options(new String[] {"-t", "10000", fzn.toString()});
+    Options opt = new Options(new String[] {"-t", "3000", fzn.toString()});
     PrintStream originalOut = System.out;
     try (PrintStream capture =
             new PrintStream(new ByteArrayOutputStream(), true, StandardCharsets.UTF_8);
@@ -9812,5 +9812,60 @@ class FlatzincFrontEndTest {
       String out = run(model.toString(), "-a", "--lcg", "off")[0];
       assertTrue(out.contains(expected), out);
     }
+  }
+
+  @Test
+  void constantRestartsThatRepeatTheirRunEnd() throws IOException {
+    // restart_constant without learning ran the same run again and again: the default search takes
+    // the same decisions in each run, so a tree larger than the limit was never searched to its end
+    // (UNKNOWN under -t, no end without it); the limit now grows when a run repeats the last one
+    String unsat =
+        "var bool: b0 :: output_var;\n"
+            + "var bool: b1;\n"
+            + "var bool: b2;\n"
+            + "var bool: b3 :: output_var;\n"
+            + "var bool: b4;\n"
+            + "var 0..1: x0;\n"
+            + "var {0,2,3}: x1 :: output_var;\n"
+            + "var {1,3}: u :: output_var;\n"
+            + "var bool: al :: output_var = b4;\n"
+            + "constraint bool_clause([],[b4,b3]);\n"
+            + "constraint bool_clause([],[b4,b2]);\n"
+            + "constraint bool_clause([],[b4,b1]);\n"
+            + "constraint bool_clause([],[b3,b2]);\n"
+            + "constraint bool_clause([],[b3,b1]);\n"
+            + "constraint bool_clause([],[b2,b1]);\n"
+            + "constraint bool_clause([b4,b3,b2,b1],[]);\n"
+            + "constraint bool_clause([b1],[b4,b0]);\n"
+            + "constraint bool_lin_eq([1,2,2],[b4,b1,b2],3);\n"
+            + "constraint bool_lin_eq([3,3,1,3],[b3,b0,b1,b2],3);\n"
+            + "solve :: restart_constant(16) satisfy;\n";
+    String out =
+        run(
+            unsat,
+            "--lcg",
+            "off",
+            "--lp",
+            "off",
+            "--presolve",
+            "off",
+            "--symmetry",
+            "off",
+            "-t",
+            "10000")[0];
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+    String optimum =
+        "var bool: b0;\n"
+            + "var bool: b1 :: output_var;\n"
+            + "var bool: b2;\n"
+            + "var 2..2: u :: output_var;\n"
+            + "var bool: ub :: output_var;\n"
+            + "var set of 0..0: us :: output_var;\n"
+            + "var 0.0..2.5: uf :: output_var;\n"
+            + "constraint bool_xor(b1,b0,b0);\n"
+            + "constraint array_bool_or([b0],b0);\n"
+            + "solve :: restart_constant(1) maximize b1;\n";
+    out = run(optimum, "--lcg", "off", "-t", "3000")[0];
+    assertTrue(out.contains("b1 = false;\n") && out.contains("----------\n=========="), out);
   }
 }

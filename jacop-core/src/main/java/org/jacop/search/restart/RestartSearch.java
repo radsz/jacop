@@ -190,7 +190,13 @@ public class RestartSearch<T extends Var> {
         restartsLimitReached = true;
         break;
       }
+      boolean repeated = repeatsLastRun(result || solutionsInRun > 0);
       calculator.newLimit();
+      if (repeated) {
+        // the same run again would follow the same path to the same cut, and the search never
+        // ends: the limit grows until the tree of the run fits in it
+        calculator.setFailLimit(Math.min(2 * calculator.getFailLimit() + 1, Long.MAX_VALUE / 4));
+      }
 
       if (restart) {
         numberRestarts++;
@@ -209,7 +215,53 @@ public class RestartSearch<T extends Var> {
     }
   }
 
+  /**
+   * Whether the run that just ended repeated the one before: a constant limit cut both without a
+   * solution after as many nodes and wrong decisions. A search that takes the same decisions in
+   * each run, as one without weights or random values does, then never gets past the cut.
+   *
+   * @param solution whether the run found a solution.
+   * @return true if the limit of the next run must grow.
+   */
+  private boolean repeatsLastRun(boolean solution) {
+    long[] work = work();
+    long nodes = work[0] - workBefore[0];
+    long wrong = work[1] - workBefore[1];
+    if (solution
+        || hook != null
+        || rarVars != null
+        || !(calculator instanceof ConstantCalculator)
+        || !calculator.pointsExhausted()) {
+      lastCutNodes = -1;
+      return false;
+    }
+    boolean same = nodes == lastCutNodes && wrong == lastCutWrong;
+    lastCutNodes = nodes;
+    lastCutWrong = wrong;
+    return same;
+  }
+
+  // the nodes and wrong decisions of the last run that a constant limit cut, or -1
+  private long lastCutNodes = -1;
+  private long lastCutWrong = -1;
+  // the nodes and wrong decisions of the searches before the current run
+  private long[] workBefore = new long[2];
+
+  @SuppressWarnings("unchecked")
+  private long[] work() {
+    long nodes = 0;
+    long wrong = 0;
+    DepthFirstSearch<T> ns = search;
+    while (ns != null) {
+      nodes += ns.getNodes();
+      wrong += ns.getWrongDecisions();
+      ns = ns.childSearches == null ? null : (DepthFirstSearch<T>) ns.childSearches[0];
+    }
+    return new long[] {nodes, wrong};
+  }
+
   private boolean runOneRestartIteration() {
+    workBefore = work();
     fixedInRun = 0;
     solutionsInRun = 0;
     if (rarVars != null || hook != null) {
