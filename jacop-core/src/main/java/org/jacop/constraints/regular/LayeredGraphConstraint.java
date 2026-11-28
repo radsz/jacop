@@ -30,6 +30,7 @@
 
 package org.jacop.constraints.regular;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -1084,7 +1085,11 @@ public abstract class LayeredGraphConstraint extends Constraint
     final int inBits;
     // the domains of the levels the graph was built over and the rest of the key it is shared by
     private final IntDomain[] domains;
+    // the key without its first object, which is held weakly: BUILT_GRAPHS keeps the graphs by
+    // that object as a weak key, and a strong reference from a graph kept every shared graph and
+    // its arrays for the life of the JVM (24 MB more per run of 50 regular constraints in one JVM)
     private final Object[] key;
+    private final WeakReference<Object> firstKey;
     private LayeredGraphExplanation.Graph explanation;
     private final Map<Store, SearchScratch> scratches = new WeakHashMap<>();
     // the edges on a path last computed, over the domains they were computed over
@@ -1099,7 +1104,11 @@ public abstract class LayeredGraphConstraint extends Constraint
     BuiltGraph(LayeredGraphDescription description, IntDomain[] domains, Object[] key) {
       this.description = description;
       this.domains = domains;
-      this.key = key;
+      this.key = key.clone();
+      this.firstKey = new WeakReference<>(key.length > 0 ? key[0] : null);
+      if (key.length > 0) {
+        this.key[0] = null;
+      }
       levels = domains.length;
       final int[] edge = description.edges;
       final int described = description.size;
@@ -1307,7 +1316,10 @@ public abstract class LayeredGraphConstraint extends Constraint
       if (otherKey.length != key.length || otherDomains.length != domains.length) {
         return false;
       }
-      for (int i = 0; i < key.length; i++) {
+      if (key.length > 0 && otherKey[0] != firstKey.get()) {
+        return false;
+      }
+      for (int i = 1; i < key.length; i++) {
         if (otherKey[i] != key[i]) {
           return false;
         }

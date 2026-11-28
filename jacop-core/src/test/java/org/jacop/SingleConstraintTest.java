@@ -15041,4 +15041,36 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     assertThat(x[0].singleton(1) && x[1].singleton(2) && x[5].singleton(2)).isTrue();
   }
+
+  @Test
+  void sharedRegularGraphsAreReleasedWithTheirAutomaton() throws InterruptedException {
+    // the static cache of shared graphs is keyed weakly by the automaton, but each graph held its
+    // key: every graph built in a JVM stayed (24 MB per run of 50 regular constraints in process)
+    java.lang.ref.WeakReference<Fsm> released = sharedRegularImposed();
+    for (int i = 0; i < 50 && released.get() != null; i++) {
+      System.gc();
+      Thread.sleep(10);
+    }
+    assertThat(released.get()).isNull();
+  }
+
+  private static java.lang.ref.WeakReference<Fsm> sharedRegularImposed() {
+    Fsm fsm = new Fsm();
+    FsmState a = new FsmState();
+    FsmState b = new FsmState();
+    fsm.allStates.add(a);
+    fsm.allStates.add(b);
+    fsm.initState = a;
+    fsm.finalStates.add(b);
+    a.addTransition(new FsmTransition(new IntervalDomain(1, 2), b));
+    b.addTransition(new FsmTransition(new IntervalDomain(1, 1), a));
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, 2);
+    }
+    store.impose(new Regular(fsm, x).shareGraph());
+    assertThat(store.consistency()).isTrue();
+    return new java.lang.ref.WeakReference<>(fsm);
+  }
 }
