@@ -6721,6 +6721,30 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    *
    * @return the bins of the packing and the objective, or null
    */
+  // the last bin packing met over the constraints of the cost and of the variables they share
+  // with it, searched from the end, so that a variable shared by many of them is read once: the
+  // cost of a schedule with 16,000 rows on it read the 16,000 rows of the cost from each of them,
+  // for seconds past the time-out
+  static Binpacking binPackingNear(IntVar cost) {
+    List<Constraint> near = cost.dom().constraints();
+    Set<Var> read = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (int i = near.size() - 1; i >= 0; i--) {
+      Var[] args = near.get(i).arguments().toArray(new Var[0]);
+      for (int a = args.length - 1; a >= 0; a--) {
+        if (!(args[a] instanceof IntVar x) || !read.add(x)) {
+          continue;
+        }
+        List<Constraint> of = x.dom().constraints();
+        for (int k = of.size() - 1; k >= 0; k--) {
+          if (of.get(k) instanceof Binpacking b) {
+            return b;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   private Hint binCompletionHint(Var costVar) {
     if (!(costVar instanceof IntVar cost)
         || !minimize
@@ -6728,16 +6752,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         || "off".equals(options.freeConfig("bin-completion", "on"))) {
       return null;
     }
-    Binpacking packing = null;
-    for (Constraint c : cost.dom().constraints()) {
-      for (Var v : c.arguments()) {
-        for (Constraint d : v instanceof IntVar x ? x.dom().constraints() : List.<Constraint>of()) {
-          if (d instanceof Binpacking b) {
-            packing = b;
-          }
-        }
-      }
-    }
+    Binpacking packing = binPackingNear(cost);
     if (packing == null) {
       return null;
     }

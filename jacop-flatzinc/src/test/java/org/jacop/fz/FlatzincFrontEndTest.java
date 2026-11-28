@@ -11439,4 +11439,23 @@ class FlatzincFrontEndTest {
       assertEquals(!late, out.contains("%%%mzn-stat: lpCalls="), out);
     }
   }
+
+  @Test
+  void theBinPackingOfTheCostIsFoundInLinearTime() {
+    // the hint of bin completion read the constraints of the cost from every constraint on it:
+    // 16,000 rows s_i + d_i <= makespan took 4.4 s past -t 1000 under -f
+    Store store = new Store();
+    IntVar cost = new IntVar(store, "cost", 0, 10);
+    for (int i = 0; i < 40_000; i++) {
+      store.impose(new org.jacop.constraints.XlteqY(new IntVar(store, 0, 10), cost));
+    }
+    assertTimeoutPreemptively(Duration.ofSeconds(5), () -> assertNull(Solve.binPackingNear(cost)));
+    IntVar[] items = {new IntVar(store, 0, 2), new IntVar(store, 0, 2)};
+    IntVar[] loads = {new IntVar(store, 0, 9), new IntVar(store, 0, 9), new IntVar(store, 0, 9)};
+    org.jacop.constraints.binpacking.Binpacking packing =
+        new org.jacop.constraints.binpacking.Binpacking(items, loads, new int[] {3, 4});
+    store.impose(packing);
+    store.impose(new org.jacop.constraints.XlteqY(items[0], cost));
+    assertSame(packing, Solve.binPackingNear(cost));
+  }
 }
