@@ -11580,6 +11580,27 @@ class FlatzincFrontEndTest {
   }
 
   /**
+   * -a under free search (a model without annotation, no LCG) deepens the stack of the search by a
+   * refuted value per solution, and after each solution FreeSearch.skipUnprojected scanned the
+   * whole stack: the 200,000 solutions of one variable took 68 s (50,000: 4.6 s), quadratic, and 1
+   * s with --default-search input. The variable outside the output is still not enumerated.
+   */
+  @Test
+  void allSolutionsOfFreeSearchOverOneVariableTakeLinearTime() {
+    String[] out =
+        assertTimeoutPreemptively(
+            Duration.ofSeconds(30),
+            () ->
+                run(
+                    "var 1..200000: x :: output_var;\nvar 1..1000: y;\nsolve satisfy;\n",
+                    "-a",
+                    "--lcg",
+                    "off"));
+    assertEquals(200_000, out[0].split("----------", -1).length - 1);
+    assertTrue(out[0].endsWith("x = 200000;\n----------\n==========\n"), out[0].substring(0, 100));
+  }
+
+  /**
    * A run killed by SIGTERM without -s (MiniZinc and the competition scripts end a solver so at the
    * time limit) printed nothing, although without -a the solutions it found are kept back to be
    * printed at its end: it now prints what the watchdog prints at the time-out, the kept solution
