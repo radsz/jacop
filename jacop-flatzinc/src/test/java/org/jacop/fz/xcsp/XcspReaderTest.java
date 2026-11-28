@@ -729,4 +729,36 @@ class XcspReaderTest {
     String out = competitionOutput(xml);
     assertTrue(out.contains("s SATISFIABLE") && out.contains("<values> 0 </values>"), out);
   }
+
+  /**
+   * The tuples of a table over symbolic variables hold symbols: the letters were dropped as
+   * separators, so supports became a table without rows (unsatisfiable) and conflicts were
+   * entailed.
+   */
+  @Test
+  void symbolicTablesReadTheirSymbols() throws IOException {
+    String vars =
+        "<var id=\"p\" type=\"symbolic\"> r g b </var><var id=\"q\" type=\"symbolic\"> g b </var>";
+    String supports =
+        "<instance format=\"XCSP3\" type=\"CSP\"><variables>"
+            + vars
+            + "</variables><constraints><extension><list> p q </list><supports> (r,g)(g,b) </supports>"
+            + "</extension><intension> eq(p,g) </intension></constraints></instance>";
+    String out = competitionOutput(supports);
+    assertTrue(out.contains("s SATISFIABLE") && out.contains("<values> g b </values>"), out);
+    String conflicts =
+        "<instance format=\"XCSP3\" type=\"CSP\"><variables>"
+            + vars
+            + "</variables><constraints><extension><list> p q </list><conflicts> (r,*)(g,g)(b,*) </conflicts>"
+            + "</extension></constraints></instance>";
+    out = competitionOutput(conflicts);
+    assertTrue(out.contains("s SATISFIABLE") && out.contains("<values> g b </values>"), out);
+    String unary =
+        "<instance format=\"XCSP3\" type=\"CSP\"><variables>"
+            + vars
+            + "</variables><constraints><extension><list> p </list><conflicts> r g </conflicts>"
+            + "</extension></constraints></instance>";
+    out = competitionOutput(unary);
+    assertTrue(out.contains("s SATISFIABLE") && out.contains("<values> b "), out);
+  }
 }

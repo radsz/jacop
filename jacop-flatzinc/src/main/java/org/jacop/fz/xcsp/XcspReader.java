@@ -264,13 +264,13 @@ public final class XcspReader {
   }
 
   // reads the current element and its subtree
-  private static Elem elem(XMLStreamReader r) throws XMLStreamException {
+  private Elem elem(XMLStreamReader r) throws XMLStreamException {
     Elem e = new Elem(r.getLocalName());
     for (int i = 0; i < r.getAttributeCount(); i++) {
       e.attrs.put(r.getAttributeLocalName(i), r.getAttributeValue(i));
     }
     if (e.name.equals("supports") || e.name.equals("conflicts")) {
-      Table t = new Table(e.name.equals("conflicts"));
+      Table t = new Table(e.name.equals("conflicts"), symbols);
       while (true) {
         int ev = r.next();
         if (ev == XMLStreamConstants.CHARACTERS
