@@ -32,6 +32,7 @@ package org.jacop.examples.floats;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -40,7 +41,7 @@ class ExampleBasedTest {
   private static final int TIMEOUT_MS = 15_000;
 
   @Test
-  @Timeout(TIMEOUT_MS)
+  @Timeout(value = TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
   void testWilkinson() {
     Wilkinson example = new Wilkinson();
 
@@ -48,7 +49,7 @@ class ExampleBasedTest {
   }
 
   @Test
-  @Timeout(TIMEOUT_MS)
+  @Timeout(value = TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
   void testRosenbrock() {
     Rosenbrock example = new Rosenbrock();
 
@@ -56,7 +57,7 @@ class ExampleBasedTest {
   }
 
   @Test
-  @Timeout(TIMEOUT_MS)
+  @Timeout(value = TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
   void testMinCostFlow() {
     MinCostFlow example = new MinCostFlow();
 
@@ -64,7 +65,7 @@ class ExampleBasedTest {
   }
 
   @Test
-  @Timeout(TIMEOUT_MS)
+  @Timeout(value = TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
   void testCircleIntersection() {
     CircleIntersection example = new CircleIntersection();
 
@@ -72,7 +73,7 @@ class ExampleBasedTest {
   }
 
   @Test
-  @Timeout(TIMEOUT_MS)
+  @Timeout(value = TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
   void testCyclohexane() {
     Cyclohexane example = new Cyclohexane();
 
@@ -80,7 +81,7 @@ class ExampleBasedTest {
   }
 
   @Test
-  @Timeout(TIMEOUT_MS)
+  @Timeout(value = TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
   void testSixHumpCamelFunction() {
     SixHumpCamelFunction example = new SixHumpCamelFunction();
 
@@ -88,7 +89,7 @@ class ExampleBasedTest {
   }
 
   @Test
-  @Timeout(TIMEOUT_MS)
+  @Timeout(value = TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
   void testCurveFitting() {
     CurveFitting example = new CurveFitting();
 
@@ -96,7 +97,7 @@ class ExampleBasedTest {
   }
 
   @Test
-  @Timeout(TIMEOUT_MS)
+  @Timeout(value = TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
   void testTinyTSP() {
     TinyTsp example = new TinyTsp();
 
@@ -104,7 +105,7 @@ class ExampleBasedTest {
   }
 
   @Test
-  @Timeout(TIMEOUT_MS)
+  @Timeout(value = TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
   void testSinCosExample() {
     SinCosExample example = new SinCosExample();
 
@@ -112,7 +113,7 @@ class ExampleBasedTest {
   }
 
   @Test
-  @Timeout(TIMEOUT_MS)
+  @Timeout(value = TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
   void testTanExample() {
     TanExample example = new TanExample();
 
@@ -120,7 +121,7 @@ class ExampleBasedTest {
   }
 
   @Test
-  @Timeout(TIMEOUT_MS)
+  @Timeout(value = TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
   void testLaplace() {
     Laplace example = new Laplace();
 
@@ -128,7 +129,7 @@ class ExampleBasedTest {
   }
 
   @Test
-  @Timeout(TIMEOUT_MS)
+  @Timeout(value = TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
   void testMarkov() {
     Markov example = new Markov();
 
@@ -136,7 +137,7 @@ class ExampleBasedTest {
   }
 
   @Test
-  @Timeout(TIMEOUT_MS)
+  @Timeout(value = TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
   void testLoan() {
     Loan example = new Loan();
 

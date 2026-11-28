@@ -264,13 +264,13 @@ public final class XcspReader {
   }
 
   // reads the current element and its subtree
-  private static Elem elem(XMLStreamReader r) throws XMLStreamException {
+  private Elem elem(XMLStreamReader r) throws XMLStreamException {
     Elem e = new Elem(r.getLocalName());
     for (int i = 0; i < r.getAttributeCount(); i++) {
       e.attrs.put(r.getAttributeLocalName(i), r.getAttributeValue(i));
     }
     if (e.name.equals("supports") || e.name.equals("conflicts")) {
-      Table t = new Table(e.name.equals("conflicts"));
+      Table t = new Table(e.name.equals("conflicts"), symbols);
       while (true) {
         int ev = r.next();
         if (ev == XMLStreamConstants.CHARACTERS
@@ -1217,9 +1217,10 @@ public final class XcspReader {
   }
 
   private void allDifferent(Elem c, List<Expr> args, int rest) {
-    List<Expr> except = list(c, "except", args, rest);
     List<Elem> lists = c.all("list");
     Elem matrix = c.child("matrix");
+    // the except of several lists holds tuples, read below
+    List<Expr> except = lists.size() > 1 ? null : list(c, "except", args, rest);
     if (matrix != null) {
       List<List<Expr>> rows = matrix(matrix, args, rest);
       for (List<Expr> row : rows) {
@@ -1245,7 +1246,7 @@ public final class XcspReader {
         cols = row.size();
         flat.addAll(row);
       }
-      if (except == null || except.isEmpty()) {
+      if (c.child("except") == null || c.child("except").trimmed().isEmpty()) {
         m.constraint("jacop_all_different_lists(" + array(flat) + "," + lists.size() + ")");
       } else {
         String e = c.child("except").trimmed();
@@ -2623,21 +2624,18 @@ public final class XcspReader {
       } else {
         List<Expr> xs = mainList(e, null, 0);
         List<Expr> coeffs = list(e, "coeffs", null, 0);
+        // every type takes the terms c_i x_i
+        List<Expr> terms = new ArrayList<>();
+        for (int i = 0; i < xs.size(); i++) {
+          terms.add(coeffs == null ? xs.get(i) : Expr.op("mul", coeffs.get(i), xs.get(i)));
+        }
         switch (t) {
           case "sum" -> value = sumOf(xs, coeffs);
-          case "maximum", "minimum" -> {
-            List<Expr> terms = new ArrayList<>();
-            for (int i = 0; i < xs.size(); i++) {
-              terms.add(coeffs == null ? xs.get(i) : Expr.op("mul", coeffs.get(i), xs.get(i)));
-            }
-            value =
-                ec.lin(Expr.op(t.equals("maximum") ? "max" : "min", terms.toArray(new Expr[0])));
-          }
-          case "nValues" -> value = nValuesOf(xs, null);
-          case "product" -> {
-            List<Expr> terms = new ArrayList<>(xs);
-            value = ec.lin(Expr.op("mul", terms.toArray(new Expr[0])));
-          }
+          case "maximum", "minimum" ->
+              value =
+                  ec.lin(Expr.op(t.equals("maximum") ? "max" : "min", terms.toArray(new Expr[0])));
+          case "nValues" -> value = nValuesOf(terms, null);
+          case "product" -> value = ec.lin(Expr.op("mul", terms.toArray(new Expr[0])));
           default -> throw new XcspException("objective of type " + t);
         }
       }

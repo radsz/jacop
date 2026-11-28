@@ -206,10 +206,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   final boolean printSearchInfo = false;
   final SatTranslation sat;
   final NumberFormat nf = NumberFormat.getInstance(Locale.of("en"));
-  public StringBuffer lastSolution;
+  // the best solution found without -a, printed when the run ends; volatile, since the shutdown
+  // hook and the watchdog print it from their own threads while the search goes on
+  public volatile StringBuffer lastSolution;
 
-  // held while the answer of the run is printed, by the search or by the shutdown hook (SIGTERM
-  // with -s), which runs while the search goes on: whichever comes first prints the answer
+  // held while the answer of the run is printed, by the search or by the shutdown hook (SIGTERM),
+  // which runs while the search goes on: whichever comes first prints the answer
   private final Object answerLock = new Object();
   private boolean answered;
 
@@ -231,6 +233,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // the symmetry breaking that ran, or null: its constraints, which the model does not imply, may
   // differ between portfolio threads, so learnt clauses go only to threads that posted the same
   private SymmetryBreaking symmetry;
+  // the variables covering dominance fixed to 0: like symmetry breaking it keeps only some optima,
+  // so a thread whose symmetry search ran out of time and posted nothing does not share clauses
+  // learnt under it with threads that posted lex-leader constraints
+  private int coveringFixed;
   Options options;
   int initNumberConstraints;
   Timer timer;
@@ -796,6 +802,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (o == null) {
       return;
     }
+    coveringFixed = o.fixed();
     boolean ok = store.consistency();
     if (options.searchStatistics() && o.fixed() > 0) {
       IO.println(
@@ -1070,14 +1077,27 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       imposeObjective(objective, store, store::impose, Constraint::removeConstraint);
     }
 
+    // the bounds and nogoods below are optional: none starts once the time-out has passed, since
+    // the search after them stops at once (on 500 variable elements at -t 2000 the dominance
+    // nogoods, the cost network and the linear relaxation took a second past it); the search still
+    // gets its moment, in which a first solution may come
+    if (opt.timeOutPassed()) {
+      return;
+    }
     if (CoveringDominance.enabled() && opt.proof() == null && store.consistency()) {
       coveringDominance(node);
     }
 
+    if (opt.timeOutPassed()) {
+      return;
+    }
     if (dominanceOn() && store.consistency()) {
       dominanceNogoods(node);
     }
 
+    if (opt.timeOutPassed()) {
+      return;
+    }
     if (dictionary.costNetwork != null) {
       if (opt.presolve() == Options.Presolve.OFF && store.consistency()) {
         costNetworkBound(node);
@@ -1085,18 +1105,30 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       dictionary.costNetwork = null;
     }
 
+    if (opt.timeOutPassed()) {
+      return;
+    }
     if (ObjectiveBlockBound.on() && opt.proof() == null) {
       objectiveBlockBound(node);
     }
 
+    if (opt.timeOutPassed()) {
+      return;
+    }
     if (opt.lp()) {
       imposeLinearRelaxation(node);
     }
 
+    if (opt.timeOutPassed()) {
+      return;
+    }
     if (costNetworkBound != null) {
       imposeCostNetworkBound();
     }
 
+    if (opt.timeOutPassed()) {
+      return;
+    }
     if (DecompositionBound.on() && opt.proof() == null) {
       decompositionBound(node);
     }
@@ -2662,6 +2694,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       probability = s.probability;
       return true;
     }
+    if (PRIORITY_SEARCH.equals(s.searchType) && s.vars().length == 0) {
+      // a priority search over no variable has nothing to search, as for a single annotation
+      return true;
+    }
     if (s.searchType.endsWith("_search")) {
       ns.add(s);
       return true;
@@ -3655,6 +3691,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       scheduled = functionalHint(c, worker);
       tabuHint = scheduled;
     }
+    if (options.timeOutPassed()) {
+      // the probes and hints above took the time: setting up the solver for a search that stops at
+      // once took seconds more on large models (the clauses of its graphs, LNS, the core-guided
+      // phase); the run ends as a time-out with the solutions found so far
+      label.timeOutOccured = true;
+      return numberSolutions > 0;
+    }
     lcg = new LcgSolver(store);
     lcg.setSeed(options.getRandomSeed());
     lcg.setUnusedVariables(dictionary.unusedVariables);
@@ -3708,8 +3751,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         lcgStatus = CdclSolver.SAT;
         return true;
       }
-      lcgLastCost = ls.getCostValue();
-      int lsCost = ls.getCostValue();
+      // local search may end on a solution worse than the best one it printed (j3033_2: 682
+      // after 493), which is the incumbent's cost, of the objective statistic and of the bound
+      int lsCost = Math.min(ls.getCostValue(), bestPrintedCost.get());
+      lcgLastCost = lsCost;
       lcg.setSharedBound(() -> worker == null ? lsCost : Math.min(lsCost, worker.sharedBound()));
     } else if (freeFirstValues != null && (scheduled == null || freeFirstCost <= scheduledCost)) {
       // the best solution of free search without learning, which ran first
@@ -3812,7 +3857,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // and gbac, but lose first solutions on scheduling models (cargo, linear-to-program, p1f) that
     // the other two find
     LcgSolver.Branching branching =
-        LcgSolver.Branching.valueOf(options.freeConfig("lcg-branching", "alternate").toUpperCase());
+        LcgSolver.Branching.valueOf(
+            options.freeConfig("lcg-branching", "alternate").toUpperCase(Locale.ROOT));
     boolean literalsOnly =
         branching == LcgSolver.Branching.LITERALS || branching == LcgSolver.Branching.AUTO;
     String interleave = options.freeConfig("interleave", literalsOnly ? "none" : "restart");
@@ -4134,10 +4180,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     try {
       lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
     } finally {
-      // -n or --gap stops the search by throwing from the solution listener: the check would go on
+      // -n or --gap stops the search by throwing from the solution listener: the checks would go on
       // after the run, printing and keeping the solver
       if (slowCheck != null) {
         slowCheck.interrupt();
+      }
+      if (firstCheck != null) {
+        firstCheck.interrupt();
       }
     }
     if (lpProbing) {
@@ -4150,7 +4199,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       printProbeStatistics(lcg);
     }
     if (firstCheck != null) {
-      firstCheck.interrupt();
       firstCheck = null;
     }
     if (slowCheck != null) {
@@ -6679,6 +6727,30 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    *
    * @return the bins of the packing and the objective, or null
    */
+  // the last bin packing met over the constraints of the cost and of the variables they share
+  // with it, searched from the end, so that a variable shared by many of them is read once: the
+  // cost of a schedule with 16,000 rows on it read the 16,000 rows of the cost from each of them,
+  // for seconds past the time-out
+  static Binpacking binPackingNear(IntVar cost) {
+    List<Constraint> near = cost.dom().constraints();
+    Set<Var> read = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (int i = near.size() - 1; i >= 0; i--) {
+      Var[] args = near.get(i).arguments().toArray(new Var[0]);
+      for (int a = args.length - 1; a >= 0; a--) {
+        if (!(args[a] instanceof IntVar x) || !read.add(x)) {
+          continue;
+        }
+        List<Constraint> of = x.dom().constraints();
+        for (int k = of.size() - 1; k >= 0; k--) {
+          if (of.get(k) instanceof Binpacking b) {
+            return b;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   private Hint binCompletionHint(Var costVar) {
     if (!(costVar instanceof IntVar cost)
         || !minimize
@@ -6686,16 +6758,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         || "off".equals(options.freeConfig("bin-completion", "on"))) {
       return null;
     }
-    Binpacking packing = null;
-    for (Constraint c : cost.dom().constraints()) {
-      for (Var v : c.arguments()) {
-        for (Constraint d : v instanceof IntVar x ? x.dom().constraints() : List.<Constraint>of()) {
-          if (d instanceof Binpacking b) {
-            packing = b;
-          }
-        }
-      }
-    }
+    Binpacking packing = binPackingNear(cost);
     if (packing == null) {
       return null;
     }
@@ -7453,7 +7516,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         names.putIfAbsent(x, name);
       }
     }
-    String added = symmetry == null ? "" : symmetry.added(names::get);
+    String added = sharedModel(names);
     if (added == null) {
       return;
     }
@@ -7465,6 +7528,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         && !lcg.setSharedTree(worker.sharedTree(), added, modelVariableNames()::get)) {
       FzConsole.printlnErr("%% portfolio: this thread cannot join the split search");
     }
+  }
+
+  /**
+   * What this thread adds to the model of the portfolio, as {@link SymmetryBreaking#added} names
+   * it, followed by the covering dominance fixings, or null when a constraint has a variable with
+   * no name.
+   */
+  private String sharedModel(Map<IntVar, String> names) {
+    String added = symmetry == null ? "" : symmetry.added(names::get);
+    if (added != null && coveringFixed > 0) {
+      added += "covering" + coveringFixed + ";";
+    }
+    return added;
   }
 
   // the probes of dichotomic bound search (lcg-bisect), when it ran
@@ -8151,7 +8227,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         Long.parseLong(
             options.freeConfig("sgs-lns", Long.toString(Math.max(1000, 20L * ps.tasks()))));
     if (slice > 0) {
-      lns.setProposer(ps.starts(), incumbent -> ps.improve(incumbent, slice));
+      // the slice stops at the time-out too; under a virtual clock its budget alone ends it
+      boolean wall = !CdclSolver.VIRTUAL_CLOCK && !FreeSearch.VIRTUAL_CLOCK;
+      lns.setProposer(
+          ps.starts(),
+          incumbent -> ps.improve(incumbent, slice, () -> wall && options.timeOutPassed()));
     }
   }
 
@@ -9742,7 +9822,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return null;
     }
     Map<IntVar, String> names = modelVariableNames();
-    String added = symmetry == null ? "" : symmetry.added(names::get);
+    String added = sharedModel(names);
     org.jacop.jasat.lcg.SharedTree tree = worker.dfsTree();
     if (added == null || !tree.join(added)) {
       FzConsole.printlnErr("%% portfolio: this thread cannot join the split search");
@@ -10581,6 +10661,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         || dictionary.onlyObjectiveWorseSideClamped(objectiveVariable, minimize)) {
       return true;
     }
+    if (dictionary.clampsCutNoSolution()) {
+      // the rows keep every narrowed variable within the range: no solution was cut off
+      return true;
+    }
     if (!(objectiveVariable instanceof IntVar objective)) {
       return false;
     }
@@ -10715,7 +10799,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         interrupted,
         result,
         label.timeOutOccured,
-        COMPLETE.equals(si.exploration()) && (rs == null || !rs.restartsLimitReached()));
+        // a seq_search below a priority_search applies the LDS or credit of its own sub-searches
+        COMPLETE.equals(si.exploration())
+            && !heuristicSeqSearch
+            && (rs == null || !rs.restartsLimitReached()));
 
     if (options.getStatistics()) {
       int[] stats = gatherSingleSearchStats();
@@ -11624,24 +11711,35 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (!sat.collectedClauses().isEmpty()) {
       postCollectedClauses();
       if (!rootConsistency()) {
-        IO.println(clampedDomainsHideSolutions() ? "=====UNKNOWN=====" : "=====UNSATISFIABLE=====");
+        printAnswer(
+            () ->
+                IO.println(
+                    clampedDomainsHideSolutions()
+                        ? "=====UNKNOWN====="
+                        : "=====UNSATISFIABLE====="));
         throw new TrivialSolution();
       }
     }
     printSolution();
 
-    if (lastSolution != null) {
-      helperSolutionPrinter(lastSolution.toString());
-    }
+    // as the end of a search, the answer is printed once, by this or by the shutdown hook
+    printAnswer(
+        () -> {
+          if (lastSolution != null) {
+            helperSolutionPrinter(lastSolution.toString());
+          }
 
-    if ((options.getAll() || costVariable != null)
-        && (costVariable != null ? clampedDomainsKeepOptimum() : !clampedDomainsCutSolutions())) {
-      IO.println(SEPARATOR_LINE);
-    }
+          if ((options.getAll() || costVariable != null)
+              && (costVariable != null
+                  ? clampedDomainsKeepOptimum()
+                  : !clampedDomainsCutSolutions())) {
+            IO.println(SEPARATOR_LINE);
+          }
 
-    if (options.getStatistics()) {
-      IO.println(buildTrivialSolutionStatsLine());
-    }
+          if (options.getStatistics()) {
+            IO.println(buildTrivialSolutionStatsLine());
+          }
+        });
     throw new TrivialSolution();
   }
 

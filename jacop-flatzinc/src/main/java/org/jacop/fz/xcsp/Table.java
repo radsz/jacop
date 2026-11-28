@@ -29,6 +29,7 @@
 package org.jacop.fz.xcsp;
 
 import java.util.Arrays;
+import java.util.Map;
 
 /**
  * The tuples of an XCSP3 {@code supports} or {@code conflicts} element, parsed from the text as it
@@ -71,8 +72,17 @@ final class Table {
   private boolean inTuple;
   private int tupleStart;
 
+  // the numbers of the symbols of symbolic variables, or null
+  private final Map<String, Integer> symbols;
+
   Table(boolean negative) {
+    this(negative, null);
+  }
+
+  /** A table whose tuples may hold the given symbols, read as their numbers. */
+  Table(boolean negative, Map<String, Integer> symbols) {
     this.negative = negative;
+    this.symbols = symbols;
   }
 
   /** A positive table holding the given cells. */
@@ -111,13 +121,14 @@ final class Table {
   void feed(char[] text, int start, int length) {
     for (int i = start; i < start + length; i++) {
       char c = text[i];
+      // numbers, ranges, infinities and symbols; anything else separates them
       if (c >= '0' && c <= '9'
           || c == '-'
           || c == '+'
           || c == '.'
-          || c == 'i'
-          || c == 'n'
-          || c == 'f') {
+          || c == '_'
+          || c >= 'a' && c <= 'z'
+          || c >= 'A' && c <= 'Z') {
         if (tokenLength == token.length) {
           throw new XcspException("number too long in table");
         }
@@ -157,6 +168,10 @@ final class Table {
     }
     if (t.equals("-inf")) {
       return Long.MIN_VALUE;
+    }
+    Integer symbol = symbols != null ? symbols.get(t) : null;
+    if (symbol != null) {
+      return symbol;
     }
     try {
       return Long.parseLong(t.startsWith("+") ? t.substring(1) : t);

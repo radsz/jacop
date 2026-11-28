@@ -38,7 +38,6 @@ import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.search.ConsistencyListener;
 import org.jacop.search.CostVariableHandler;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.PrioritySearch;
@@ -119,9 +118,7 @@ public class RestartSearch<T extends Var> {
       }
 
       // add calculator & do not assign solutions
-      ConsistencyListener cs = ns.getConsistencyListener();
-      ns.setConsistencyListener(calculator);
-      ns.consistencyListener.setChildrenListeners(cs);
+      ns.setConsistencyListener(calculator.on(ns.getConsistencyListener()));
       ns.setAssignSolution(false);
       ns.setPrintInfo(false);
       lastNotNullSearch = ns;

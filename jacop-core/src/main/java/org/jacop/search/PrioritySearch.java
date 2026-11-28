@@ -673,9 +673,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
           addRestartCalculator(prioritySearch.search.get(2 * i), calc);
         }
       } else {
-        ConsistencyListener consist = dfs.getConsistencyListener();
-        dfs.setConsistencyListener(calc);
-        dfs.consistencyListener.setChildrenListeners(consist);
+        dfs.setConsistencyListener(calc.on(dfs.getConsistencyListener()));
       }
     }
   }

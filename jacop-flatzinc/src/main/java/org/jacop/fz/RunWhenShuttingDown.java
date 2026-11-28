@@ -51,11 +51,25 @@ public class RunWhenShuttingDown extends Thread {
     // the search may print its answer at the same time: only one of them prints
     parser.solver.printAnswer(
         () -> {
+          if (!parser.options.getStatistics()) {
+            // a run killed without -s (SIGTERM from MiniZinc at its time limit): what the
+            // watchdog prints at the time-out, the kept solution or UNKNOWN, without statistics
+            StringBuffer kept = parser.solver.lastSolution;
+            if (!parser.options.getAll() && kept != null) {
+              parser.solver.helperSolutionPrinter(kept.toString());
+            } else if (parser.solver.numberSolutions == 0) {
+              IO.println("=====UNKNOWN=====");
+            }
+            IO.println("%% =====TIME-OUT=====");
+            return;
+          }
           if (!parser.options.getAll() && parser.solver.lastSolution != null) {
             parser.solver.helperSolutionPrinter(parser.solver.lastSolution.toString());
           }
 
           parser.solver.printStatisticsIterrupt();
         });
+    // the JVM ends when the hooks have run: the answer must not stay in a buffer
+    System.out.flush();
   }
 }

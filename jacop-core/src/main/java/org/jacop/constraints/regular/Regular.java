@@ -114,6 +114,7 @@ public class Regular extends LayeredGraphConstraint implements Copyable<Regular>
     final int[] buffer = new int[stateNumber];
     reachable[0] = new int[] {fsm.initState.id};
     for (int level = 0; level < levels; level++) {
+      graph.checkDeadline();
       IntDomain varDom = list[level].dom();
       int count = 0;
       for (int sId : reachable[level]) {
@@ -152,6 +153,7 @@ public class Regular extends LayeredGraphConstraint implements Copyable<Regular>
       node[levels][i] = i;
     }
     for (int level = levels - 1; level >= 0; level--) {
+      graph.checkDeadline();
       int[] next = reachable[level + 1];
       for (int i = 0; i < next.length; i++) {
         nodeOfState[next[i]] = node[level + 1][i];

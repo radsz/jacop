@@ -30,6 +30,9 @@
 
 package org.jacop.fz.constraints;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -41,6 +44,7 @@ import java.util.Set;
 import java.util.function.Function;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.fz.ASTConstElem;
 import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.Node;
@@ -115,6 +119,17 @@ public final class ClampedBounds {
   private static final int HULL = 7;
   private static final int POW = 8;
 
+  // the float variables int2float makes equal to an integer variable, by the integer's id
+  private final Map<FloatVar, Integer> intImages = new IdentityHashMap<>();
+  // the float rows as read: {coefficients, terms (FloatVar or Double), rhs, kind}, resolved once
+  // every int2float is known
+  private final List<Object[]> floatRowsRead = new ArrayList<>();
+  // float rows over integer images: sum(a * x) <= b (both directions when equal), exact values
+  private final List<BigDecimal[]> floatCoefficients = new ArrayList<>();
+  private final List<int[]> floatRowVars = new ArrayList<>();
+  private final List<BigDecimal> floatRhs = new ArrayList<>();
+  private final BitSet floatEqual = new BitSet();
+
   // the reified equalities of the model: each control variable maps to the pairs of variables
   // whose equality it reifies, read to bound a variable that an if-then-else makes equal to one of
   // several values
@@ -150,6 +165,9 @@ public final class ClampedBounds {
       }
     }
     support.forEachConstraint(astTree, node -> collect(support, node));
+    for (Object[] row : floatRowsRead) {
+      floatRow((double[]) row[0], (Object[]) row[1], (Double) row[2], (Boolean) row[3]);
+    }
     for (IntVar[][] ite : trueIfThenElses) {
       chosenValue(ite[0], ite[1]);
     }
@@ -371,6 +389,38 @@ public final class ClampedBounds {
             }
           }
         }
+        case "jacop_count_values" -> {
+          // each counter counts some of the variables: it lies within 0..n
+          IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+          IntVar[] counter = support.getVarArray((SimpleNode) node.jjtGetChild(2));
+          for (IntVar c : counter) {
+            functions.add(new long[] {ELEMENT_CONST, id(c), 0, x.length});
+          }
+        }
+        case "int2float" -> {
+          IntVar x = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+          ASTScalarFlatExpr y = (ASTScalarFlatExpr) node.jjtGetChild(1);
+          FloatVar f = y.getType() == 2 ? support.dictionary.getFloatVariable(y.getIdent()) : null;
+          if (f != null && !intImages.containsKey(f)) {
+            intImages.put(f, id(x));
+          }
+        }
+        case "float_lin_le", "float_lin_lt", "float_lin_eq" -> {
+          // read without creating variables for the constants; a strict row is read as a <= row
+          double[] a = support.getFloatArray((SimpleNode) node.jjtGetChild(0));
+          Object[] terms = floatTerms(support, (SimpleNode) node.jjtGetChild(1));
+          ASTScalarFlatExpr bound = (ASTScalarFlatExpr) node.jjtGetChild(2);
+          // a literal or a parameter (getFloat of an unknown array element gives no value)
+          double b = Double.NaN;
+          if (bound.getType() == 5) {
+            b = bound.getFloat();
+          } else if (bound.getType() == 2) {
+            b = support.dictionary.getFloat(bound.getIdent());
+          }
+          if (a != null && terms != null && a.length == terms.length) {
+            floatRowsRead.add(new Object[] {a, terms, b, "float_lin_eq".equals(name)});
+          }
+        }
         case "bool2int" -> {
           IntVar z = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
           functions.add(new long[] {ELEMENT_CONST, id(z), 0, 1});
@@ -382,6 +432,134 @@ public final class ClampedBounds {
     } catch (RuntimeException _) {
       // a form this reading does not cover: no bound is taken from it
     }
+  }
+
+  // the terms of a float array argument, each a FloatVar or a Double constant; null for a form
+  // this reading does not cover
+  private static Object[] floatTerms(Support support, SimpleNode node) {
+    if (node instanceof ASTScalarFlatExpr e) {
+      FloatVar[] array =
+          e.getType() == 2 ? support.dictionary.getVariableFloatArray(e.getIdent()) : null;
+      return array == null ? null : Arrays.copyOf(array, array.length, Object[].class);
+    }
+    Object[] terms = new Object[node.jjtGetNumChildren()];
+    for (int i = 0; i < terms.length; i++) {
+      if (!(node.jjtGetChild(i) instanceof ASTScalarFlatExpr e)) {
+        return null;
+      }
+      switch (e.getType()) {
+        case 5 -> terms[i] = e.getFloat();
+        case 2 -> {
+          FloatVar v = support.dictionary.getFloatVariable(e.getIdent());
+          terms[i] = v != null ? v : (Object) support.dictionary.getFloat(e.getIdent());
+        }
+        case 3 -> {
+          FloatVar[] array = support.dictionary.getVariableFloatArray(e.getIdent());
+          if (array == null || e.getInt() < 0 || e.getInt() >= array.length) {
+            return null;
+          }
+          terms[i] = array[e.getInt()];
+        }
+        default -> {
+          return null;
+        }
+      }
+    }
+    return terms;
+  }
+
+  // keeps a float row whose every term is a constant or the image of an integer variable
+  private void floatRow(double[] a, Object[] terms, double b, boolean eq) {
+    if (!Double.isFinite(b)) {
+      return;
+    }
+    BigDecimal right = BigDecimal.valueOf(b);
+    List<BigDecimal> c = new ArrayList<>();
+    List<Integer> x = new ArrayList<>();
+    for (int i = 0; i < a.length; i++) {
+      if (!Double.isFinite(a[i])) {
+        return;
+      }
+      if (a[i] == 0) {
+        continue;
+      }
+      Integer image = terms[i] instanceof FloatVar f ? intImages.get(f) : null;
+      if (terms[i] instanceof Double d && Double.isFinite(d)) {
+        right = right.subtract(BigDecimal.valueOf(a[i]).multiply(BigDecimal.valueOf(d)));
+      } else if (image != null) {
+        c.add(BigDecimal.valueOf(a[i]));
+        x.add(image);
+      } else {
+        return; // a float variable of its own: its bounds are not read
+      }
+    }
+    floatCoefficients.add(c.toArray(new BigDecimal[0]));
+    floatRowVars.add(x.stream().mapToInt(Integer::intValue).toArray());
+    floatRhs.add(right);
+    floatEqual.set(floatRhs.size() - 1, eq);
+  }
+
+  // the slack a bound from a float row is widened by, relative to the magnitudes summed: the rows
+  // hold the doubles written for decimal constants, and float propagation accepts values within
+  // its precision of a bound
+  private static final BigDecimal SLACK = new BigDecimal("1e-6");
+  private static final BigDecimal BIG_INF = BigDecimal.valueOf(INF);
+
+  // bound propagation over the float rows: each integer x of a row with coefficient a gets
+  // a * x <= b - (min of the other terms), widened outwards; false when some bounds cross
+  private boolean propagateFloatRows(long[] lo, long[] hi, boolean[] changed) {
+    for (int r = 0; r < floatRhs.size(); r++) {
+      BigDecimal[] c = floatCoefficients.get(r);
+      int[] x = floatRowVars.get(r);
+      for (int direction = 0; direction < (floatEqual.get(r) ? 2 : 1); direction++) {
+        // direction 1 reads the equal row as -sum(a * x) <= -b
+        BigDecimal b = direction == 0 ? floatRhs.get(r) : floatRhs.get(r).negate();
+        for (int i = 0; i < x.length; i++) {
+          BigDecimal ai = direction == 0 ? c[i] : c[i].negate();
+          BigDecimal others = BigDecimal.ZERO;
+          BigDecimal magnitude = b.abs();
+          boolean finite = true;
+          for (int j = 0; j < x.length && finite; j++) {
+            if (j == i) {
+              continue;
+            }
+            BigDecimal aj = direction == 0 ? c[j] : c[j].negate();
+            long v = aj.signum() > 0 ? lo[x[j]] : hi[x[j]];
+            if (v <= -INF || v >= INF) {
+              finite = false;
+            } else {
+              BigDecimal term = aj.multiply(BigDecimal.valueOf(v));
+              others = others.add(term);
+              magnitude = magnitude.add(term.abs());
+            }
+          }
+          if (!finite) {
+            continue;
+          }
+          // ai * x <= b - others + slack
+          BigDecimal bound = b.subtract(others).add(SLACK.multiply(magnitude.add(BigDecimal.ONE)));
+          if (ai.signum() > 0) {
+            // rounded up, then down to an integer: never below the exact bound's floor
+            BigDecimal q = bound.divide(ai, new MathContext(40, RoundingMode.CEILING));
+            BigDecimal f = q.setScale(0, RoundingMode.FLOOR);
+            if (f.compareTo(BIG_INF) < 0) {
+              changed[0] |= lower(hi, x[i], f.max(BIG_INF.negate()).longValue());
+            }
+          } else {
+            // dividing by a negative coefficient turns the bound into a lower one
+            BigDecimal q = bound.divide(ai, new MathContext(40, RoundingMode.FLOOR));
+            BigDecimal f = q.setScale(0, RoundingMode.CEILING);
+            if (f.compareTo(BIG_INF.negate()) > 0) {
+              changed[0] |= raise(lo, x[i], f.min(BIG_INF).longValue());
+            }
+          }
+          if (lo[x[i]] > hi[x[i]]) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
   }
 
   private long[] withArgs(int kind, IntVar z, IntVar[] x) {
@@ -551,11 +729,68 @@ public final class ClampedBounds {
       }
     }
     for (int id : moved) {
-      if (!movable(id, objectiveId, lo, hi, moved)) {
+      if (!movable(id, objectiveId, lo, hi, moved) && !freeFactor(id, objectiveId, lo, hi)) {
         return false;
       }
     }
     return true;
+  }
+
+  /**
+   * A narrowed variable c cut on its high side that matters only through a product p = f * c with f
+   * >= 0, while p stays within the range: in a solution with c beyond the range, f >= 1 would give
+   * c <= f * c = p <= MAX_INT, so f = 0 and p = 0 whatever c is, and c can take its least value
+   * instead. Rules: c is not the objective, is cut on its high side only (lo[c] within the range),
+   * occurs in no constraint but that int_times (with f and p other variables) and rows over c and
+   * fixed variables (which its least value satisfies), f has lo[f] >= 0 and stays within the range,
+   * and p stays within the range.
+   */
+  private boolean freeFactor(int c, Integer objectiveId, long[] lo, long[] hi) {
+    if (objectiveId != null && objectiveId == c || otherOccurrences.get(c)[0] != 1) {
+      return false;
+    }
+    if (lo[c] < IntDomain.MIN_INT || lo[c] > IntDomain.MAX_INT || hi[c] <= IntDomain.MAX_INT) {
+      return false;
+    }
+    for (int r : rowsOf.get(c)) {
+      long[] a = coefficients.get(r);
+      int[] x = rowVars.get(r);
+      long sum = 0;
+      for (int i = 0; i < x.length; i++) {
+        if (x[i] != c && lo[x[i]] != hi[x[i]]) {
+          return false; // a row over c and a variable that is not fixed
+        }
+        // c takes its least value, the other variables are fixed
+        sum = add(sum, multiply(a[i], lo[x[i]]));
+      }
+      long b = rhs.get(r)[0];
+      if (equal.get(r) ? sum != b : sum > b) {
+        return false; // the least value of c does not satisfy the row
+      }
+    }
+    long[] product = null;
+    for (long[] f : functions) {
+      for (int i = 1; i < f.length && f[0] != ELEMENT_CONST; i++) {
+        if (f[i] == c) {
+          if (product != null || f[0] != TIMES || i == 1) {
+            return false; // c in another function, or the result of one
+          }
+          product = f;
+        }
+      }
+    }
+    if (product == null) {
+      return false;
+    }
+    int p = (int) product[1];
+    int factor = product[2] == c ? (int) product[3] : (int) product[2];
+    if (product[2] == product[3] || p == factor || p == c) {
+      return false;
+    }
+    return lo[factor] >= 0
+        && hi[factor] <= IntDomain.MAX_INT
+        && lo[p] >= IntDomain.MIN_INT
+        && hi[p] <= IntDomain.MAX_INT;
   }
 
   // whether the rows and functions keep every narrowed variable within JaCoP's range, whatever
@@ -715,7 +950,8 @@ public final class ClampedBounds {
         }
       }
       boolean[] functionChanged = {false};
-      if (!propagateFunctions(lo, hi, functionChanged)) {
+      if (!propagateFunctions(lo, hi, functionChanged)
+          || !propagateFloatRows(lo, hi, functionChanged)) {
         return false;
       }
       if (!changed && !functionChanged[0]) {

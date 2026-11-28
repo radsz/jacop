@@ -895,13 +895,14 @@ public final class ClausalCompiler {
       }
       case AMONG -> {
         IntVar[] xs = vars(n, 0);
-        int[] s = set(n, 1);
+        // the values of each variable in the set, not the values of the set, which may be huge
+        IntDomain s = support.getSetLiteral(n, 1);
         int[] l = new int[xs.length];
         for (int i = 0; i < xs.length; i++) {
           Enc e = enc(xs[i]);
           List<Integer> in = new ArrayList<>();
-          for (int v : s) {
-            if (e.has(v)) {
+          for (int v : e.vals) {
+            if (s.contains(v)) {
               in.add(e.eq(v));
             }
           }
@@ -1082,6 +1083,18 @@ public final class ClausalCompiler {
       int j = y.vals[i] - nt;
       int atLeast = j <= 0 ? T : (j <= s.length ? s[j - 1] : F);
       equivalent(y.ge[i], atLeast);
+      // a count in the hole below vals[i] is no value of y: more than vals[i - 1] is vals[i] or
+      // more
+      int k = y.vals[i - 1] + 1 - nt;
+      if (y.vals[i] > y.vals[i - 1] + 1) {
+        int above;
+        if (k <= 0) {
+          above = T;
+        } else {
+          above = k <= s.length ? s[k - 1] : F;
+        }
+        add(-above, y.ge[i]);
+      }
     }
     int lo = y.lo() - nt;
     if (lo > 0) {
