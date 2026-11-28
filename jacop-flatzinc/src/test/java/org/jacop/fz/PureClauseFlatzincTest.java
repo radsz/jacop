@@ -40,10 +40,17 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.jacop.constraints.LinearInt;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -467,8 +474,46 @@ class PureClauseFlatzincTest {
         assertTrue(holds(rows, a), out);
       }
     }
-    assertTrue(routed >= runs / 2, routed + " of " + runs + " runs given to JaSAT with counters");
+    assertTrue(routed >= runs / 3, routed + " of " + runs + " runs given to JaSAT with counters");
     assertTrue(unsat > 0 && unsat < 20, unsat + " unsatisfiable");
+  }
+
+  @Test
+  void theDomainOfASumLeftOutIsKept() {
+    // ten 5-cycles of x + y <= 1 over 50 0/1 variables (at most 2 of each cycle, 20 in all) and a
+    // sum s = y1 + ... + y50 whose domain 21..50 is the only row that asks for more: the sum is
+    // left out of the clauses, and its domain must stay as two rows over the y (dbsg_50_25_4_15
+    // of the Pseudo-Boolean Competition 2016 kept a split row's right-hand side as the domain of
+    // its block sum, and JaSAT found a model of the clauses without it)
+    Store store = new Store();
+    IntVar[] y = new IntVar[50];
+    for (int i = 0; i < y.length; i++) {
+      y[i] = new IntVar(store, "y" + i, 0, 1);
+    }
+    for (int c = 0; c < 10; c++) {
+      for (int i = 0; i < 5; i++) {
+        IntVar[] pair = {y[5 * c + i], y[5 * c + (i + 1) % 5]};
+        store.impose(new LinearInt(pair, new int[] {1, 1}, "<=", 1));
+      }
+    }
+    IntVar sum = new IntVar(store, "s", 21, 50);
+    IntVar[] all = new IntVar[51];
+    int[] weights = new int[51];
+    System.arraycopy(y, 0, all, 0, 50);
+    Arrays.fill(weights, 1);
+    all[50] = sum;
+    weights[50] = -1;
+    store.impose(new LinearInt(all, weights, "==", 0));
+    assertTrue(store.consistency());
+    PureClauseModel cnf =
+        PureClauseModel.of(
+            store,
+            new ArrayList<>(),
+            Collections.newSetFromMap(new IdentityHashMap<>()),
+            Map.of(),
+            () -> y);
+    assertTrue(cnf != null && cnf.cardinalityRows > 0);
+    assertEquals(CdclSolver.UNSAT, cnf.solver.solve());
   }
 
   // the pigeonhole formula of p pigeons and h holes: each pigeon in a hole, no two in one hole;

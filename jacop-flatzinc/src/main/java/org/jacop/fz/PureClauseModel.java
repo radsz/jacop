@@ -316,8 +316,9 @@ final class PureClauseModel {
     if (pairs != null) {
       return shaped.lexClauses(pairs);
     }
-    if (shaped.splits.definitions.contains(c)) {
-      return true;
+    List<LinearForm> bounds = shaped.splits.bounds.get(c);
+    if (bounds != null) {
+      return shaped.rows(bounds);
     }
     LinearForm flat = shaped.splits.rows.get(c);
     List<IntVar[][]> cs = flat != null ? clausesOf(flat) : clausesOf(c);
@@ -395,13 +396,28 @@ final class PureClauseModel {
     // the clauses of the lex pairs, once the variables of the store are no longer read
     // a cardinality row that is no few clauses, taken as the clauses of its counter while the
     // auxiliary variables of all counters stay within CardinalityClauses.MAX_AUXILIARIES
+    // the rows as clauses or cardinality rows; false when one is neither, or there are none
+    boolean rows(List<LinearForm> rows) {
+      for (LinearForm f : rows) {
+        List<IntVar[][]> cs = clausesOf(f);
+        if (cs != null) {
+          out.addAll(cs);
+        } else if (!cardinality(f)) {
+          return false;
+        }
+      }
+      return !rows.isEmpty();
+    }
+
     boolean cardinality(LinearForm f) {
       CardinalityClauses row = CardinalityClauses.of(f);
       if (row == null || auxiliaries + row.auxiliaries() > CardinalityClauses.MAX_AUXILIARIES) {
         return false;
       }
-      auxiliaries += row.auxiliaries();
-      cardinalities.add(row);
+      if (!row.holdsAlways()) {
+        auxiliaries += row.auxiliaries();
+        cardinalities.add(row);
+      }
       return true;
     }
 

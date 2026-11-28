@@ -58,6 +58,9 @@ final class SplitSums {
   final Set<Constraint> definitions = Collections.newSetFromMap(new IdentityHashMap<>());
   // the constraints that sum blocks, as the rows over the terms of their blocks
   final Map<Constraint, LinearForm> rows = new IdentityHashMap<>();
+  // the domain of the sum of each block left out, as rows over the terms of the block (none when a
+  // row overflows, which leaves the model to lazy clause generation)
+  final Map<Constraint, List<LinearForm>> bounds = new IdentityHashMap<>();
 
   private SplitSums() {}
 
@@ -66,8 +69,9 @@ final class SplitSums {
    * 0..1 is a sum when the only linear equality over it at weight 1 or -1 has 0/1 variables or
    * other sums otherwise (its definition; sums of sums are a tree); each other linear constraint
    * over sums is read back with them replaced by their definitions. A definition is left out when
-   * every constraint over its sum is read back or left out: the sum is then no variable of the
-   * model, and the store computes it from a solution.
+   * every constraint over its sum is read back or left out and the domain of the sum is an
+   * interval: the sum is then no variable of the model, its bounds become two rows over the terms
+   * of its definition, and the store computes it from a solution.
    *
    * @param store the store
    * @return the definitions and the rows read back
@@ -125,10 +129,28 @@ final class SplitSums {
       changed = false;
       for (Map.Entry<IntVar, List<Constraint>> e : users.entrySet()) {
         Constraint b = block.get(e.getKey());
-        if (s.definitions.contains(b) && !standsFor(e.getValue(), s)) {
+        IntVar v = e.getKey();
+        boolean interval = v.dom().getSize() == (long) v.max() - v.min() + 1;
+        if (s.definitions.contains(b) && (!interval || !standsFor(e.getValue(), s))) {
           s.definitions.remove(b);
           changed = true;
         }
+      }
+    }
+    // the domain of a sum left out holds as two rows over the terms of its definition: a split row
+    // may keep its right-hand side as the bound of its sum
+    for (Map.Entry<IntVar, Constraint> e : block.entrySet()) {
+      if (s.definitions.contains(e.getValue())) {
+        IntVar v = e.getKey();
+        LinearForm min =
+            substituted(
+                new LinearForm(new IntVar[] {v}, new long[] {1}, v.min(), LinearForm.GE),
+                definition);
+        LinearForm max =
+            substituted(
+                new LinearForm(new IntVar[] {v}, new long[] {1}, v.max(), LinearForm.LE),
+                definition);
+        s.bounds.put(e.getValue(), min == null || max == null ? List.of() : List.of(min, max));
       }
     }
     return s;

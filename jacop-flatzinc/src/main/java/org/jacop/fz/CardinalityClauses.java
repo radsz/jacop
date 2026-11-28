@@ -135,6 +135,16 @@ final class CardinalityClauses {
   }
 
   /**
+   * Returns whether every assignment meets the row, which then has no clauses.
+   *
+   * @return true when the row has no clauses
+   */
+  boolean holdsAlways() {
+    return (atMost < 0 || atMost >= vars.length)
+        && (atMostNegated < 0 || atMostNegated >= vars.length);
+  }
+
+  /**
    * Returns the auxiliary variables of the counters.
    *
    * @return the number of auxiliary variables
