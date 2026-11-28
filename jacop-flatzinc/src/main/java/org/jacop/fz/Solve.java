@@ -206,10 +206,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   final boolean printSearchInfo = false;
   final SatTranslation sat;
   final NumberFormat nf = NumberFormat.getInstance(Locale.of("en"));
-  public StringBuffer lastSolution;
+  // the best solution found without -a, printed when the run ends; volatile, since the shutdown
+  // hook and the watchdog print it from their own threads while the search goes on
+  public volatile StringBuffer lastSolution;
 
-  // held while the answer of the run is printed, by the search or by the shutdown hook (SIGTERM
-  // with -s), which runs while the search goes on: whichever comes first prints the answer
+  // held while the answer of the run is printed, by the search or by the shutdown hook (SIGTERM),
+  // which runs while the search goes on: whichever comes first prints the answer
   private final Object answerLock = new Object();
   private boolean answered;
 
@@ -11660,24 +11662,35 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (!sat.collectedClauses().isEmpty()) {
       postCollectedClauses();
       if (!rootConsistency()) {
-        IO.println(clampedDomainsHideSolutions() ? "=====UNKNOWN=====" : "=====UNSATISFIABLE=====");
+        printAnswer(
+            () ->
+                IO.println(
+                    clampedDomainsHideSolutions()
+                        ? "=====UNKNOWN====="
+                        : "=====UNSATISFIABLE====="));
         throw new TrivialSolution();
       }
     }
     printSolution();
 
-    if (lastSolution != null) {
-      helperSolutionPrinter(lastSolution.toString());
-    }
+    // as the end of a search, the answer is printed once, by this or by the shutdown hook
+    printAnswer(
+        () -> {
+          if (lastSolution != null) {
+            helperSolutionPrinter(lastSolution.toString());
+          }
 
-    if ((options.getAll() || costVariable != null)
-        && (costVariable != null ? clampedDomainsKeepOptimum() : !clampedDomainsCutSolutions())) {
-      IO.println(SEPARATOR_LINE);
-    }
+          if ((options.getAll() || costVariable != null)
+              && (costVariable != null
+                  ? clampedDomainsKeepOptimum()
+                  : !clampedDomainsCutSolutions())) {
+            IO.println(SEPARATOR_LINE);
+          }
 
-    if (options.getStatistics()) {
-      IO.println(buildTrivialSolutionStatsLine());
-    }
+          if (options.getStatistics()) {
+            IO.println(buildTrivialSolutionStatsLine());
+          }
+        });
     throw new TrivialSolution();
   }
 

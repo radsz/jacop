@@ -133,6 +133,7 @@ public class Fz2jacop {
 
     if (opt.threads() > 1) {
       Portfolio portfolio = new Portfolio(opt);
+      portfolio.printsAtKill = watchdog;
       if (watchdog && opt.getTimeOut() > 0) {
         // the model is read before any thread starts, and that does not look at the time-out
         portfolio.startWatchdog(
@@ -222,7 +223,12 @@ public class Fz2jacop {
     }
 
     RunWhenShuttingDown t = new RunWhenShuttingDown(parser);
-    if (printsAtShutdown(opt)) {
+    // on the command line, a run killed before it answers (SIGTERM from MiniZinc or a script at
+    // its time limit) prints what the watchdog prints at the time-out: the kept solution, which
+    // without -a is printed only when the run ends. In process (callMain) only -s prints at
+    // shutdown, since a hook per run would stay for the life of the JVM
+    boolean killHook = watchdog && !printsAtShutdown(opt) && opt.portfolioWorker() == null;
+    if (printsAtShutdown(opt) || killHook) {
       try {
         Runtime.getRuntime().addShutdownHook(t);
       } catch (IllegalStateException _) {
@@ -245,9 +251,21 @@ public class Fz2jacop {
     try {
       return solve(opt, parser, model, t);
     } finally {
+      if (killHook) {
+        // the run has printed its answer, or ends with an error: nothing more at shutdown
+        removeHook(t);
+      }
       if (watch != null) {
         watch.cancel();
       }
+    }
+  }
+
+  private static void removeHook(Thread hook) {
+    try {
+      Runtime.getRuntime().removeShutdownHook(hook);
+    } catch (IllegalStateException _) {
+      // the JVM is already shutting down, and the hook is running or has run
     }
   }
 
@@ -295,7 +313,8 @@ public class Fz2jacop {
       }
       status = 0;
     } catch (FailException _) {
-      print(opt, () -> handleFailException(opt, parser));
+      // the answer, unless the shutdown hook has printed it
+      print(opt, () -> parser.solver.printAnswer(() -> handleFailException(opt, parser)));
       status = 0;
     } catch (UnsupportedOperationException e) {
       if (opt.proof() == null) {
@@ -338,24 +357,22 @@ public class Fz2jacop {
                   "%% Stack overflow exception error; consider option -Xss... for JVM"));
       status = 0;
     } catch (TrivialSolution _) {
-      Runtime.getRuntime().removeShutdownHook(t);
+      removeHook(t);
       status = 0;
     } catch (ModelTimeOut _) {
       print(
           opt,
-          () -> {
-            IO.println("=====UNKNOWN=====");
-            IO.println("%% =====TIME-OUT=====");
-          });
+          () ->
+              parser.solver.printAnswer(
+                  () -> {
+                    IO.println("=====UNKNOWN=====");
+                    IO.println("%% =====TIME-OUT=====");
+                  }));
       status = 0;
     }
 
     if (opt.getStatistics()) {
-      try {
-        Runtime.getRuntime().removeShutdownHook(t);
-      } catch (IllegalStateException _) {
-        // the JVM is already shutting down, and the hook is running or has run
-      }
+      removeHook(t);
       print(opt, () -> printStatisticsTime(parser));
     }
     return status;

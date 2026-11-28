@@ -11303,4 +11303,81 @@ class FlatzincFrontEndTest {
     assertTrue(store.consistency());
     return new java.lang.ref.WeakReference<>(from);
   }
+
+  /**
+   * A run killed by SIGTERM without -s (MiniZinc and the competition scripts end a solver so at the
+   * time limit) printed nothing, although without -a the solutions it found are kept back to be
+   * printed at its end: it now prints what the watchdog prints at the time-out, the kept solution
+   * and TIME-OUT, once and without statistics.
+   */
+  @Test
+  void aRunKilledWithoutStatisticsPrintsItsKeptSolution() throws Exception {
+    // a dense knapsack: a first solution at once, no proof of the optimum for minutes
+    StringBuilder model = new StringBuilder();
+    int n = 80;
+    StringJoiner xs = new StringJoiner(",");
+    for (int i = 0; i < n; i++) {
+      model.append("var 0..20: x").append(i).append(" :: output_var;\n");
+      xs.add("x" + i);
+    }
+    model.append("var 0..100000: obj :: output_var;\n");
+    for (int r = 0; r < n; r++) {
+      StringJoiner c = new StringJoiner(",");
+      long sum = 0;
+      for (int i = 0; i < n; i++) {
+        int w = 1 + (i * 37 + r * 11 + i * r) % 49;
+        c.add(Integer.toString(w));
+        sum += w;
+      }
+      model.append("constraint int_lin_le([" + c + "],[" + xs + "]," + sum * 5 + ");\n");
+    }
+    StringJoiner w = new StringJoiner(",");
+    for (int i = 0; i < n; i++) {
+      w.add(Integer.toString(1 + (i * 23) % 49));
+    }
+    model.append("constraint int_lin_eq([" + w + ",-1],[" + xs + ",obj],0);\n");
+    model.append("solve maximize obj;\n");
+    Path fzn = tmp.resolve("killed.fzn");
+    Files.writeString(fzn, model, StandardCharsets.UTF_8);
+    Path javaBin = Path.of(System.getProperty("java.home"), "bin", "java");
+    String out = "";
+    // later kills only when the run had no solution yet (a slow machine)
+    for (long delay : new long[] {2500, 6000}) {
+      ProcessBuilder pb =
+          new ProcessBuilder(
+              javaBin.toString(),
+              "-cp",
+              System.getProperty("java.class.path"),
+              "org.jacop.fz.Fz2jacop",
+              "--lcg",
+              "off",
+              fzn.toString());
+      pb.redirectError(tmp.resolve("killed.err").toFile());
+      // a file, not a pipe: destroy() closes the pipe before the hook has written to it
+      pb.redirectOutput(tmp.resolve("killed.out").toFile());
+      Process p = pb.start();
+      boolean ended = p.waitFor(delay, TimeUnit.MILLISECONDS);
+      assertFalse(ended, "the run ended before it was killed");
+      p.destroy(); // SIGTERM
+      assertTrue(p.waitFor(30, TimeUnit.SECONDS));
+      out = Files.readString(tmp.resolve("killed.out")).replace("\r\n", "\n");
+      if (!out.isEmpty() && !out.startsWith("=====UNKNOWN=====")) {
+        break;
+      }
+    }
+    assertTrue(
+        out.endsWith("----------\n%% =====TIME-OUT=====\n"),
+        () -> {
+          try {
+            return Files.readString(tmp.resolve("killed.err"));
+          } catch (IOException e) {
+            return e.toString();
+          }
+        });
+    assertEquals(1, out.split("----------", -1).length - 1, out);
+    assertTrue(out.startsWith("x0 = "), out);
+    assertTrue(out.contains("\nobj = "), out);
+    assertFalse(out.contains("%%%mzn-stat"), out);
+    assertFalse(out.contains("=========="), out);
+  }
 }
