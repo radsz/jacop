@@ -9837,8 +9837,9 @@ Version 5.0 (unreleased)
    Item 541 made free search slower: black-hole 19 (MiniZinc Challenge)
    -f 13,200 / 10,700 nodes against 3,600 / 2,600 with shrinking (two
    seeds), now 1,800; bacp-16 -f back to 1,552 nodes; wbo_30_30_1 -f is
-   proved only with it. wide-quick, 240 s, virtual clock: total -f 3,172
-   -> 2,944 s, 51 -> 52 proved (evm); default 4,430 -> 4,415 s.
+   proved only with it. wide-quick, 240 s, virtual clock, unsolved at
+   240 s: total -f 2,365 -> 2,217 s, 51 -> 52 proved (evm); default 2,940
+   -> 2,875 s.
    -Djacop.lcg.shrink=true shrinks to any literal, as before item 541,
    =propagated to propagated literals in every search, =false never.
 
