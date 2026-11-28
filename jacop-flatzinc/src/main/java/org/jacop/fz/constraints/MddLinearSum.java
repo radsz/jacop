@@ -83,7 +83,22 @@ public final class MddLinearSum {
    * diagrams of one model may share a named array of sources and differ in their labels, so the
    * sources alone do not name a diagram.
    */
-  private record Diagram(int[] level, IntDomain[] label, int[] to, Object structure) {
+  private static final class Diagram {
+    private final int[] level;
+    private final IntDomain[] label;
+    private final int[] to;
+    private final Object structure;
+
+    Diagram(int[] level, IntDomain[] label, int[] to, Object structure) {
+      this.level = level;
+      this.label = label;
+      this.to = to;
+      this.structure = structure;
+    }
+
+    Object structure() {
+      return structure;
+    }
 
     boolean of(int[] level, IntDomain[] label, int[] to) {
       return this.level == level && this.label == label && this.to == to;

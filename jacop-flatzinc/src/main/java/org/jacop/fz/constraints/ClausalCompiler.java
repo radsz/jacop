@@ -1087,7 +1087,13 @@ public final class ClausalCompiler {
       // more
       int k = y.vals[i - 1] + 1 - nt;
       if (y.vals[i] > y.vals[i - 1] + 1) {
-        add(-(k <= 0 ? T : (k <= s.length ? s[k - 1] : F)), y.ge[i]);
+        int above;
+        if (k <= 0) {
+          above = T;
+        } else {
+          above = k <= s.length ? s[k - 1] : F;
+        }
+        add(-above, y.ge[i]);
       }
     }
     int lo = y.lo() - nt;

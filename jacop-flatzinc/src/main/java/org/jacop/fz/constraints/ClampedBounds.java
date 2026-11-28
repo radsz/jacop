@@ -409,12 +409,14 @@ public final class ClampedBounds {
           // read without creating variables for the constants; a strict row is read as a <= row
           double[] a = support.getFloatArray((SimpleNode) node.jjtGetChild(0));
           Object[] terms = floatTerms(support, (SimpleNode) node.jjtGetChild(1));
-          ASTScalarFlatExpr rhs = (ASTScalarFlatExpr) node.jjtGetChild(2);
+          ASTScalarFlatExpr bound = (ASTScalarFlatExpr) node.jjtGetChild(2);
           // a literal or a parameter (getFloat of an unknown array element gives no value)
-          double b =
-              rhs.getType() == 5
-                  ? rhs.getFloat()
-                  : rhs.getType() == 2 ? support.dictionary.getFloat(rhs.getIdent()) : Double.NaN;
+          double b = Double.NaN;
+          if (bound.getType() == 5) {
+            b = bound.getFloat();
+          } else if (bound.getType() == 2) {
+            b = support.dictionary.getFloat(bound.getIdent());
+          }
           if (a != null && terms != null && a.length == terms.length) {
             floatRowsRead.add(new Object[] {a, terms, b, "float_lin_eq".equals(name)});
           }
@@ -471,7 +473,7 @@ public final class ClampedBounds {
     if (!Double.isFinite(b)) {
       return;
     }
-    BigDecimal rhs = new BigDecimal(b);
+    BigDecimal right = BigDecimal.valueOf(b);
     List<BigDecimal> c = new ArrayList<>();
     List<Integer> x = new ArrayList<>();
     for (int i = 0; i < a.length; i++) {
@@ -483,9 +485,9 @@ public final class ClampedBounds {
       }
       Integer image = terms[i] instanceof FloatVar f ? intImages.get(f) : null;
       if (terms[i] instanceof Double d && Double.isFinite(d)) {
-        rhs = rhs.subtract(new BigDecimal(a[i]).multiply(new BigDecimal(d)));
+        right = right.subtract(BigDecimal.valueOf(a[i]).multiply(BigDecimal.valueOf(d)));
       } else if (image != null) {
-        c.add(new BigDecimal(a[i]));
+        c.add(BigDecimal.valueOf(a[i]));
         x.add(image);
       } else {
         return; // a float variable of its own: its bounds are not read
@@ -493,7 +495,7 @@ public final class ClampedBounds {
     }
     floatCoefficients.add(c.toArray(new BigDecimal[0]));
     floatRowVars.add(x.stream().mapToInt(Integer::intValue).toArray());
-    floatRhs.add(rhs);
+    floatRhs.add(right);
     floatEqual.set(floatRhs.size() - 1, eq);
   }
 
@@ -781,7 +783,7 @@ public final class ClampedBounds {
       return false;
     }
     int p = (int) product[1];
-    int factor = (int) (product[2] == c ? product[3] : product[2]);
+    int factor = product[2] == c ? (int) product[3] : (int) product[2];
     if (product[2] == product[3] || p == factor || p == c) {
       return false;
     }
