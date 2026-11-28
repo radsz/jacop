@@ -777,4 +777,25 @@ class XcspReaderTest {
         1,
         t -> t[0] != t[2] || t[1] != t[3] || t[0] == 0 && t[1] == 0 || t[0] == 1 && t[1] == 0);
   }
+
+  /**
+   * The coefficients of a product or nValues objective multiply its terms, as those of a sum,
+   * minimum or maximum do: they were ignored, so the optimum was the one of the plain terms.
+   */
+  @Test
+  void productAndNValuesObjectivesTakeTheirCoefficients() throws IOException {
+    String product =
+        "<instance format=\"XCSP3\" type=\"COP\"><variables><array id=\"x\" size=\"[2]\"> 0..2 </array>"
+            + "</variables><constraints></constraints><objectives><minimize type=\"product\">"
+            + "<list> x[] </list><coeffs> -1 2 </coeffs></minimize></objectives></instance>";
+    String out = competitionOutput(product);
+    assertTrue(out.contains("o -8\ns OPTIMUM FOUND"), out);
+    String values =
+        "<instance format=\"XCSP3\" type=\"COP\"><variables><array id=\"x\" size=\"[2]\"> -1 1 </array>"
+            + "</variables><constraints><intension> ne(x[0],x[1]) </intension></constraints>"
+            + "<objectives><minimize type=\"nValues\"><list> x[] </list><coeffs> 1 -1 </coeffs>"
+            + "</minimize></objectives></instance>";
+    out = competitionOutput(values);
+    assertTrue(out.contains("o 1\ns OPTIMUM FOUND"), out);
+  }
 }

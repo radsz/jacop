@@ -2624,21 +2624,18 @@ public final class XcspReader {
       } else {
         List<Expr> xs = mainList(e, null, 0);
         List<Expr> coeffs = list(e, "coeffs", null, 0);
+        // every type takes the terms c_i x_i
+        List<Expr> terms = new ArrayList<>();
+        for (int i = 0; i < xs.size(); i++) {
+          terms.add(coeffs == null ? xs.get(i) : Expr.op("mul", coeffs.get(i), xs.get(i)));
+        }
         switch (t) {
           case "sum" -> value = sumOf(xs, coeffs);
-          case "maximum", "minimum" -> {
-            List<Expr> terms = new ArrayList<>();
-            for (int i = 0; i < xs.size(); i++) {
-              terms.add(coeffs == null ? xs.get(i) : Expr.op("mul", coeffs.get(i), xs.get(i)));
-            }
-            value =
-                ec.lin(Expr.op(t.equals("maximum") ? "max" : "min", terms.toArray(new Expr[0])));
-          }
-          case "nValues" -> value = nValuesOf(xs, null);
-          case "product" -> {
-            List<Expr> terms = new ArrayList<>(xs);
-            value = ec.lin(Expr.op("mul", terms.toArray(new Expr[0])));
-          }
+          case "maximum", "minimum" ->
+              value =
+                  ec.lin(Expr.op(t.equals("maximum") ? "max" : "min", terms.toArray(new Expr[0])));
+          case "nValues" -> value = nValuesOf(terms, null);
+          case "product" -> value = ec.lin(Expr.op("mul", terms.toArray(new Expr[0])));
           default -> throw new XcspException("objective of type " + t);
         }
       }
