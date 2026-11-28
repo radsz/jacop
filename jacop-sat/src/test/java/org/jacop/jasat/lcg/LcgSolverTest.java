@@ -1279,6 +1279,8 @@ class LcgSolverTest {
         store.impose(new LinearInt(terms, weights, "==", 0));
         LcgSolver solver = new LcgSolver(store);
         solver.setChecking(true);
+        // without shrinking, whose shorter clauses learn no root fact on these instances
+        solver.setShrink(false);
         solver.setRestartPresolve(run == 0 ? 0 : 1e-9);
         status[run] = solver.minimize(cost);
         if (status[run] == CdclSolver.SAT) {
@@ -4096,8 +4098,9 @@ class LcgSolverTest {
       // the cuts are found by one walk each way since the cut explanation of WordDesign2-words-mdd
       // (XCSP 2023) was made faster; the atoms are those of the four walks per cut before it (751
       // until the product and sum reasons of the other relations changed the search, 746 while
-      // learnt clauses were shrunk, which changed the search too)
-      assertThat(atoms).isEqualTo(725);
+      // learnt clauses were shrunk, which changed the search too, and 725 while they were not
+      // shrunk at all)
+      assertThat(atoms).isEqualTo(728);
     }
   }
 
@@ -7845,8 +7848,51 @@ class LcgSolverTest {
     assertThat(without * 10).isLessThan(withShrink * 6);
   }
 
-  /** Solves open stacks with at most {@code ub} open stacks; returns the status and conflicts. */
+  @Test
+  void freeSearchShrinksOnlyToPropagatedUips() {
+    // fixed search keeps the literals of every lower level; free search replaces a level's
+    // literals by a UIP that propagation set, never by the decision of the level, which pinned the
+    // clauses to one prefix of the search: on random open stacks proofs under free search that
+    // takes about half the conflicts of shrinking to any UIP, as many as not shrinking
+    long propagated = 0;
+    long any = 0;
+    for (int seed = 1; seed <= 4; seed++) {
+      Random r = new Random(seed);
+      int size = 12;
+      int[][] orders = new int[size][size];
+      for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+          orders[i][j] = r.nextInt(100) < 30 ? 1 : 0;
+        }
+        orders[i][r.nextInt(size)] = 1;
+      }
+      int ub = size;
+      while (ub > 0 && openStacks(orders, ub - 1, null)[0] == CdclSolver.SAT) {
+        ub--;
+      }
+      long[] fixed = openStacks(orders, ub - 1, null);
+      long[] free = openStacks(orders, ub - 1, null, true);
+      long[] all = openStacks(orders, ub - 1, true, true);
+      assertThat(fixed[2]).isZero();
+      assertThat(free[2]).isEqualTo(1);
+      assertThat(all[2]).isEqualTo(2);
+      assertThat(free[0]).isEqualTo(CdclSolver.UNSAT);
+      assertThat(all[0]).isEqualTo(CdclSolver.UNSAT);
+      propagated += free[1];
+      any += all[1];
+    }
+    assertThat(propagated * 10).isLessThan(any * 7);
+  }
+
   private static long[] openStacks(int[][] orders, int ub, Boolean shrink) {
+    return openStacks(orders, ub, shrink, false);
+  }
+
+  /**
+   * Solves open stacks with at most {@code ub} open stacks; returns the status, the conflicts and
+   * the shrinking mode of the SAT solver.
+   */
+  private static long[] openStacks(int[][] orders, int ub, Boolean shrink, boolean free) {
     int customers = orders.length;
     int products = orders[0].length;
     Store store = new Store();
@@ -7879,9 +7925,9 @@ class LcgSolverTest {
     if (shrink != null) {
       solver.setShrink(shrink);
     }
-    solver.setAnnotation(new SimpleSelect<>(s, null, new IndomainMin<>()), false);
+    solver.setAnnotation(new SimpleSelect<>(s, null, new IndomainMin<>()), free);
     int status = solver.solve();
-    return new long[] {status, solver.sat().conflicts};
+    return new long[] {status, solver.sat().conflicts, solver.sat().shrinkMode()};
   }
 
   // x <= y whose reason of [y >= v] marks the bound [x >= v] as the removal of a value it does not

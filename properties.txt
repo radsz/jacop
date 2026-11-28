@@ -965,7 +965,10 @@ Literals and clauses:
 - jacop.lcg.semanticUip: semantic UIPs in conflict analysis; default
   true.
 - jacop.lcg.shrink: all-UIP shrinking of learnt clauses (one literal
-  per lower decision level, Fleury and Biere 2021); default false.
+  per lower decision level, Fleury and Biere 2021): true (to any UIP of
+  the level), propagated (only to a UIP that propagation set, not to the
+  decision) or false. Default: false under fixed search, propagated
+  otherwise.
 - jacop.lcg.graphClauses: Regular and MDD constraints become clauses
   of the solver; default true.
 - jacop.lcg.clauses: constraints given to the SAT solver as clauses

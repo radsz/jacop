@@ -9827,6 +9827,21 @@ Version 5.0 (unreleased)
    as stalled and LCG does not take over.
    -Dorg.jacop.fz.conditionalEquality=false turns it off.
 
+543. Lazy clause generation shrinks learnt clauses again in free search,
+   but only to a literal that propagation set (all-UIP shrinking, M.
+   Fleury and A. Biere, "Efficient all-UIP learned clause minimization",
+   SAT 2021): a lower level is replaced by one literal only when that
+   literal is not the decision of the level, so the clause is not pinned
+   to one prefix of the search, the reason item 541 turned shrinking off.
+   Fixed search (a search annotation that is not free) keeps it off.
+   Item 541 made free search slower: black-hole 19 (MiniZinc Challenge)
+   -f 13,200 / 10,700 nodes against 3,600 / 2,600 with shrinking (two
+   seeds), now 1,800; bacp-16 -f back to 1,552 nodes; wbo_30_30_1 -f is
+   proved only with it. wide-quick, 240 s, virtual clock: total -f 3,172
+   -> 2,944 s, 51 -> 52 proved (evm); default 4,430 -> 4,415 s.
+   -Djacop.lcg.shrink=true shrinks to any literal, as before item 541,
+   =propagated to propagated literals in every search, =false never.
+
 Version 4.11
 =============
 
