@@ -815,7 +815,9 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
     }
     LateCount lc =
         dominance || ones || !WEIGHTS
-            ? new LateCount(starts, d, due, z, dominance)
+            // symmetry breaking orders identical tasks its own way, which the rule's order of
+            // them by index can contradict
+            ? new LateCount(starts, d, due, z, dominance, !support.options.symmetry())
             : new LateCount(starts, d, due, weight, z);
     lc.setDegreeWeight(0);
     if (support.options.debug()) {
