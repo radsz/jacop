@@ -40,10 +40,17 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.jacop.constraints.LinearInt;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -198,17 +205,18 @@ class PureClauseFlatzincTest {
 
   @Test
   void otherConstraintsStayWithLcg() throws IOException {
-    // at most 4 of the variables are true: a sum, not a clause
+    // a weighted sum of the variables at most 4, x1 at weight 2: neither a clause nor a
+    // cardinality row
     List<int[]> cnf = List.of(new int[] {1, 2, 3}, new int[] {-1, 4});
     StringBuilder ones = new StringBuilder();
     for (int v = 1; v <= VARS; v++) {
-      ones.append(v == 1 ? "" : ",").append('1');
+      ones.append(v == 1 ? "2" : ",1");
     }
     String sum = "constraint bool_lin_le([" + ones + "],xs,4);\n";
     String out = run(model(cnf, sum, "solve satisfy;"), true);
     assertFalse(out.contains("pureClauseModel"), out);
     boolean[] value = printed(out);
-    int count = 0;
+    int count = value[1] ? 1 : 0;
     for (int v = 1; v <= VARS; v++) {
       count += value[v] ? 1 : 0;
     }
@@ -225,7 +233,7 @@ class PureClauseFlatzincTest {
   // over literals (a negated literal 1 - x moves 1 to the right-hand side), x + y <= 1, exactly one
   // of three and x -> y and z (2 x - y - z <= 0); with windows, also y[i] + y[i+1] + y[i+2] <= 1
   // over the first eight variables, which the sequence detector posts as one sequence too, and with
-  // wide, at most 4 of 9 variables, 126 clauses, more than lazy clause generation takes. Each row
+  // wide, at most 4 of 9 variables, 126 clauses, which JaSAT gets as a counter instead. Each row
   // holds its relation (-1 for le, 0 for eq, 1 for ge), its right-hand side and its weights
   private static List<long[]> rows(long seed, boolean windows, boolean wide) {
     Random random = new Random(seed);
@@ -367,8 +375,9 @@ class PureClauseFlatzincTest {
         runs++;
         boolean pure = out.contains("%%%mzn-stat: pureClauseModel=true");
         routed += pure ? 1 : 0;
-        if (wide) {
-          assertFalse(pure, out);
+        if (wide && pure) {
+          // at most 4 of 9 is a cardinality row, written as the clauses of its counter
+          assertFalse(out.contains("%%%mzn-stat: pureClauseCardinalities=0"), out);
         }
         if (solutions == 0) {
           assertTrue(out.contains("=====UNSATISFIABLE====="), out);
@@ -386,6 +395,125 @@ class PureClauseFlatzincTest {
     }
     assertTrue(routed >= runs / 2, routed + " of " + runs + " runs given to JaSAT");
     assertTrue(unsat > 0 && unsat < 24, unsat + " unsatisfiable");
+  }
+
+  // a random model over SMALL 0/1 variables of a few clauses and cardinality rows: sums of 6 to 16
+  // literals (x or 1 - x) at most, at least or equal to a bound, as the rows of rows(...)
+  private static List<long[]> cardinalityRows(long seed) {
+    Random random = new Random(seed);
+    List<long[]> rows = new ArrayList<>();
+    for (int r = 0; r < 6; r++) {
+      long[] row = new long[2 + SMALL];
+      row[0] = 1;
+      row[1] = 1;
+      for (int k = 0; k < 3; k++) {
+        int v = random.nextInt(SMALL);
+        if (row[2 + v] == 0) {
+          boolean negated = random.nextBoolean();
+          row[2 + v] = negated ? -1 : 1;
+          row[1] -= negated ? 1 : 0;
+        }
+      }
+      rows.add(row);
+    }
+    int count = 1 + random.nextInt(3);
+    for (int r = 0; r < count; r++) {
+      long[] row = new long[2 + SMALL];
+      int n = 6 + random.nextInt(SMALL - 5);
+      int k = random.nextInt(n + 1);
+      row[0] = random.nextInt(3) - 1;
+      row[1] = k;
+      int placed = 0;
+      while (placed < n) {
+        int v = random.nextInt(SMALL);
+        if (row[2 + v] == 0) {
+          boolean negated = random.nextInt(4) == 0;
+          row[2 + v] = negated ? -1 : 1;
+          row[1] -= negated ? 1 : 0;
+          placed++;
+        }
+      }
+      rows.add(row);
+    }
+    return rows;
+  }
+
+  @Test
+  void cardinalityRowsGoToJaSatAsCounters() throws IOException {
+    int routed = 0;
+    int runs = 0;
+    int unsat = 0;
+    for (long seed = 1; seed <= 20; seed++) {
+      List<long[]> rows = cardinalityRows(seed);
+      int solutions = 0;
+      for (int a = 0; a < 1 << SMALL; a++) {
+        solutions += holds(rows, a) ? 1 : 0;
+      }
+      unsat += solutions == 0 ? 1 : 0;
+      // split for lazy clause generation into blocks of at most 4 terms, which are read back
+      String[] split =
+          seed % 2 == 0 ? new String[] {"--free-config", "lcg-split=4"} : new String[0];
+      for (boolean free : new boolean[] {false, true}) {
+        String out = run(linearModel(rows), free, split);
+        runs++;
+        if (out.contains("%%%mzn-stat: pureClauseModel=true")
+            && !out.contains("%%%mzn-stat: pureClauseCardinalities=0")) {
+          routed++;
+        }
+        if (solutions == 0) {
+          assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+          continue;
+        }
+        Matcher m = SMALL_MODEL.matcher(out);
+        assertTrue(m.find(), out);
+        String[] values = m.group(1).split(",");
+        int a = 0;
+        for (int i = 0; i < SMALL; i++) {
+          a |= Integer.parseInt(values[i].trim()) << i;
+        }
+        assertTrue(holds(rows, a), out);
+      }
+    }
+    assertTrue(routed >= runs / 3, routed + " of " + runs + " runs given to JaSAT with counters");
+    assertTrue(unsat > 0 && unsat < 20, unsat + " unsatisfiable");
+  }
+
+  @Test
+  void theDomainOfASumLeftOutIsKept() {
+    // ten 5-cycles of x + y <= 1 over 50 0/1 variables (at most 2 of each cycle, 20 in all) and a
+    // sum s = y1 + ... + y50 whose domain 21..50 is the only row that asks for more: the sum is
+    // left out of the clauses, and its domain must stay as two rows over the y (dbsg_50_25_4_15
+    // of the Pseudo-Boolean Competition 2016 kept a split row's right-hand side as the domain of
+    // its block sum, and JaSAT found a model of the clauses without it)
+    Store store = new Store();
+    IntVar[] y = new IntVar[50];
+    for (int i = 0; i < y.length; i++) {
+      y[i] = new IntVar(store, "y" + i, 0, 1);
+    }
+    for (int c = 0; c < 10; c++) {
+      for (int i = 0; i < 5; i++) {
+        IntVar[] pair = {y[5 * c + i], y[5 * c + (i + 1) % 5]};
+        store.impose(new LinearInt(pair, new int[] {1, 1}, "<=", 1));
+      }
+    }
+    IntVar sum = new IntVar(store, "s", 21, 50);
+    IntVar[] all = new IntVar[51];
+    int[] weights = new int[51];
+    System.arraycopy(y, 0, all, 0, 50);
+    Arrays.fill(weights, 1);
+    all[50] = sum;
+    weights[50] = -1;
+    store.impose(new LinearInt(all, weights, "==", 0));
+    assertTrue(store.consistency());
+    PureClauseModel cnf =
+        PureClauseModel.of(
+            store,
+            new ArrayList<>(),
+            Collections.newSetFromMap(new IdentityHashMap<>()),
+            Map.of(),
+            () -> y);
+    assertTrue(cnf != null && cnf.cardinalityRows > 0);
+    assertEquals(CdclSolver.UNSAT, cnf.solver.solve());
   }
 
   // the pigeonhole formula of p pigeons and h holes: each pigeon in a hole, no two in one hole;

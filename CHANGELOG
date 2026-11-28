@@ -9873,6 +9873,23 @@ Version 5.0 (unreleased)
    exit code stays 143, -s prints as before, and runs started in process
    (Fz2jacop.callMain) register no hook.
 
+544. Pseudo-Boolean models of clauses and cardinality rows go to JaSAT
+   whole. A linear constraint over 0/1 variables with weights 1 and -1
+   (at most, at least or exactly k of its literals) now counts as clauses
+   too: the sequential counter of C. Sinz, "Towards an optimal CNF
+   encoding of Boolean cardinality constraints", CP 2005, with (n - 1) k
+   new variables, at most 100,000 for a model
+   (-Dorg.jacop.fz.cardinalityClauses). A row that lazy clause generation
+   split into blocks, or that the flattening wrote over a named sum, is
+   read back over the terms of its blocks first, and the domain of a sum
+   left out becomes two rows. -s prints pureClauseCardinalities. army13
+   (Pseudo-Boolean Competition 2016: clauses and two rows "at least 24 of
+   169") had no solution in 240 s and now has one in 3-5 s. It fires on
+   14 satisfaction models of the Pseudo-Boolean Competition 2016 and on
+   none of the wide set. 600 s, those 14: total -f 1,745 -> 314 s, default
+   1,667 -> 321 s, 12 -> 14 decided in both (army13, 5_6_26 UNSAT in 75 s,
+   compression64_9 UNSAT 342-411 -> 111-115 s).
+
 Version 4.11
 =============
 
