@@ -128,6 +128,9 @@ public class Tables {
   final ArrayList<Var[]> defaultSearchSetArrays = new ArrayList<>();
   // variables named by a defines_var annotation of a constraint
   final ArrayList<Var> definedVariables = new ArrayList<>();
+  // with -a or -n N, the other variables of the constraint that defines each variable of
+  // definedVariables that is not half-reified, whose values fix it (null otherwise)
+  Map<Var, Var[]> definitions;
   // the variables of definedVariables named by a half-reified constraint (b -> c, MiniZinc *_imp),
   // which bounds b but does not fix it from the other variables
   final ArrayList<Var> halfDefinedVariables = new ArrayList<>();
@@ -1695,6 +1698,49 @@ public class Tables {
       }
     }
     return vars;
+  }
+
+  /**
+   * Records the other variables of the constraint whose defines_var annotation names a variable:
+   * they fix its value. Kept for -a and -n N only, which tell solutions apart by their output.
+   *
+   * @param v the defined variable
+   * @param by the other variables of the constraint
+   */
+  public void addDefinition(Var v, Var[] by) {
+    if (definitions == null) {
+      definitions = new IdentityHashMap<>();
+    }
+    definitions.put(v, by);
+  }
+
+  /**
+   * The variables that an identifier of a constraint argument names: a variable, or the variables
+   * of an array; none for a parameter.
+   *
+   * @param ident the identifier
+   * @return the variables
+   */
+  public Var[] namedVariables(String ident) {
+    IntVar x = variableTable.get(ident);
+    if (x != null) {
+      return new Var[] {x};
+    }
+    Var[] a = variableArrayTable.get(ident);
+    if (a == null) {
+      a = variableFloatArrayTable.get(ident);
+    }
+    if (a == null) {
+      a = setVariableArrayTable.get(ident);
+    }
+    if (a != null) {
+      return a.clone();
+    }
+    Var v = variableFloatTable.get(ident);
+    if (v == null) {
+      v = setVariableTable.get(ident);
+    }
+    return v == null ? new Var[0] : new Var[] {v};
   }
 
   /**

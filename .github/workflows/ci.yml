@@ -14,7 +14,7 @@ jobs:
   build:
     name: Build (commit profile)
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v5
 
@@ -30,6 +30,12 @@ jobs:
 
       - name: Build and test
         run: mvn -B -ntp -Pcommit verify
+
+      - name: Test times
+        if: always()
+        run: |
+          echo "runner: $(nproc) cpus, $(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2)"
+          python3 scripts/test-times.py . 60
 
       - name: Upload test reports
         if: failure()

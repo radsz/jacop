@@ -921,22 +921,23 @@ public class SequenceMdd extends Constraint
     return x;
   }
 
-  // the latest departure from i that arrives at j by x
-  private long departureLimit(int i, int j, long x) {
+  // the latest departure from i that arrives at j by x, for the earliest departure t; a departure
+  // without a time (t is NEG) is not linked to j, as in arrival, whatever its step travel
+  private long departureLimit(int i, int j, long x, long t) {
     int tr = travel[i][j];
     if (tr == NONE) {
       return INF;
     }
-    if (stepTravel != null && stepTravel[i][j] != null) {
+    if (stepTravel != null && stepTravel[i][j] != null && t > NEG) {
       return x >= INF ? INF : stepLatest(i, j, x);
     }
     return x >= INF ? INF : x - tr;
   }
 
   // the latest departure from i after which j is reached and left by l, or NEG when none
-  private long latestDeparture(int i, int j, long l) {
+  private long latestDeparture(int i, int j, long l, long t) {
     long x = arrivalLimit(j, l);
-    return x == NEG ? NEG : departureLimit(i, j, x);
+    return x == NEG ? NEG : departureLimit(i, j, x, t);
   }
 
   // backward pass: the latest departure of each (node, last) that still reaches the closing arc;
@@ -965,7 +966,7 @@ public class SequenceMdd extends Constraint
           if (!get(outMask[i], start)) {
             continue;
           }
-          long l = Math.min(hiOut[i], latestDeparture(i, start, INF));
+          long l = Math.min(hiOut[i], latestDeparture(i, start, INF, tu[i]));
           long b = arcCost(i, start);
           if (tu[i] <= l && top[last][u][i] + b <= budget) {
             latest[u][i] = l;
@@ -1010,7 +1011,7 @@ public class SequenceMdd extends Constraint
             for (long bits = lm[w] & im[w]; bits != 0; bits &= bits - 1) {
               int i = (w << 6) + Long.numberOfTrailingZeros(bits);
               long t = tu[i];
-              long l = departureLimit(i, j, x);
+              long l = departureLimit(i, j, x, t);
               if (l < t) {
                 continue;
               }

@@ -14984,4 +14984,32 @@ class SingleConstraintTest extends TestHelper {
     assertThat(second.consistency()).isTrue();
     assertThat(w.value()).isEqualTo(2);
   }
+
+  @Test
+  void sequenceMddLinksNoDepartureWithoutATimeByItsStepTravel() {
+    // node 1 has no departure time, so the arc 1 -> 2 links no times; with a step travel on that
+    // arc the backward pass still asked for a departure that reaches 2 by its arrival 1 and failed,
+    // although 0 -> 1 -> 2 -> 0 with in1 = 4 is a solution (without steps the arc was unlinked)
+    Store store = new Store();
+    int n = 3;
+    IntVar[] arcs = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      // the circuit 0 -> 1 -> 2 -> 0
+      arcs[i] = new IntVar(store, "a" + i, (i + 1) % n, (i + 1) % n);
+    }
+    IntVar[] in = {
+      new IntVar(store, "in0", 0, 9), new IntVar(store, "in1", 0, 9), new IntVar(store, "in2", 1, 1)
+    };
+    IntVar[] out = {new IntVar(store, "out0", 0, 9), null, new IntVar(store, "out2", 0, 9)};
+    int[][][] steps = new int[n][n][];
+    steps[0][1] = new int[] {4};
+    steps[1][2] = new int[] {3, 4, 2};
+    steps[2][0] = new int[] {0};
+    int none = org.jacop.constraints.SequenceMdd.NONE;
+    store.impose(
+        new org.jacop.constraints.SequenceMdd(
+            arcs, false, 0, in, out, steps, 3, new int[] {none, none, none}, 0, 2));
+    assertThat(store.consistency()).isTrue();
+    assertThat(in[1].min()).isEqualTo(4);
+  }
 }

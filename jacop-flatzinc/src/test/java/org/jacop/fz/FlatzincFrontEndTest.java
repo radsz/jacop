@@ -2302,7 +2302,7 @@ class FlatzincFrontEndTest {
     // printed ========== as if all 13! circuits had been enumerated.
     String model =
         """
-        array [1..14] of var 1..14: x;
+        array [1..14] of var 1..14: x :: output_array([1..14]);
         constraint jacop_circuit(x);
         solve :: int_search(x,input_order,indomain_min,complete) satisfy;
         """;
@@ -2721,8 +2721,8 @@ class FlatzincFrontEndTest {
     // summed them: 4 solutions were reported as solutions=22.
     String model =
         """
-        array [1..2] of var 1..2: x;
-        array [1..2] of var bool: b;
+        array [1..2] of var 1..2: x :: output_array([1..2]);
+        array [1..2] of var bool: b :: output_array([1..2]);
         constraint int_ne(x[1],x[2]);
         constraint bool_xor(b[1],b[2],true);
         solve :: seq_search([int_search(x,input_order,indomain_min,complete),bool_search(b,input_order,indomain_min,complete)]) satisfy;
@@ -4115,6 +4115,71 @@ class FlatzincFrontEndTest {
       double treeAtoms = linearAtoms(tree[0]);
       assertTrue(treeAtoms <= 20, tree[0]);
     }
+  }
+
+  @Test
+  void conditionalEqualitiesBoundTheirVariable() throws IOException {
+    // if c then x = a else x = 0 endif, flattened as two reified equalities and an if-then-else
+    // of their truths: x is declared var int, and only ConditionalSelect([c, true], [a, 0], x),
+    // posted redundantly, keeps it within {0, a}; the optimum stays that of the model without it
+    java.util.Random rnd = new java.util.Random(3);
+    int n = 12;
+    StringBuilder model = new StringBuilder();
+    model.append(
+        "predicate jacop_if_then_else_bool(array [int] of var bool: c,"
+            + "array [int] of var bool: x,var bool: y);\n");
+    int[] a = new int[n];
+    for (int i = 0; i < n; i++) {
+      a[i] = 1 + rnd.nextInt(9);
+      model.append(
+          "var int: x%d;%nvar bool: c%d;%nvar bool: p%d;%nvar bool: q%d;%n".formatted(i, i, i, i));
+    }
+    model.append("var -100000..100000: obj :: output_var;\n");
+    String xs =
+        java.util.stream.IntStream.range(0, n)
+            .mapToObj(i -> "x" + i)
+            .collect(Collectors.joining(","));
+    String cs =
+        java.util.stream.IntStream.range(0, n)
+            .mapToObj(i -> "c" + i)
+            .collect(Collectors.joining(","));
+    String ones = String.join(",", java.util.Collections.nCopies(n, "1"));
+    model.append("constraint int_lin_eq([%s,-1], [%s,obj], 0);%n".formatted(ones, xs));
+    model.append("constraint bool_lin_le([%s], [%s], 4);%n".formatted(ones, cs));
+    for (int i = 0; i < n; i++) {
+      model.append("constraint int_eq_reif(x%d, %d, p%d);%n".formatted(i, a[i], i));
+      model.append("constraint int_eq_reif(x%d, 0, q%d);%n".formatted(i, i));
+      model.append(
+          "constraint jacop_if_then_else_bool([c%d,true], [p%d,q%d], true);%n".formatted(i, i, i));
+    }
+    model.append(
+        "solve :: bool_search([%s], input_order, indomain_max, complete) maximize obj;%n"
+            .formatted(cs));
+    int best =
+        java.util.Arrays.stream(a)
+            .boxed()
+            .sorted(java.util.Comparator.reverseOrder())
+            .limit(4)
+            .mapToInt(Integer::intValue)
+            .sum();
+    String[] cp = run(model.toString());
+    String[] lcg = run(model.toString(), "--lcg");
+    String[] debug = run(model.toString(), "-debug");
+    String[] off;
+    System.setProperty("org.jacop.fz.conditionalEquality", "false");
+    try {
+      off = run(model.toString(), "--lcg");
+    } finally {
+      System.clearProperty("org.jacop.fz.conditionalEquality");
+    }
+    for (String[] out : List.of(cp, lcg, off)) {
+      assertEquals("obj = " + best, lastObjective(out[0]), out[0]);
+      assertEquals("==========", lastObjective(out), out[0]);
+    }
+    // one selection per if-then-else, each keeping its x at 0 or a
+    String all = debug[0] + debug[1];
+    assertEquals(n, all.lines().filter(l -> l.contains("ConditionalSelect")).count(), all);
+    assertTrue(all.contains("x0::{0.." + a[0] + "}") || all.contains("x0::{0, " + a[0] + "}"), all);
   }
 
   // the average atoms of the LinearInt reasons in the -s statistics, or -1 without such reasons
@@ -10524,5 +10589,331 @@ class FlatzincFrontEndTest {
             "lcg-fixed-at=0.0001,lcg-fixed-ratio=-1")[0];
     assertTrue(out.contains("----------"), out);
     assertFalse(out.contains("=========="), out);
+  }
+
+  @Test
+  void setUnionTakesNoReifiedLiteralThatATabulatedGroupDropped() throws IOException {
+    // b <-> x = 0 belongs to a group with a modulo that the intension table detection replaced by
+    // a table over x and y, leaving b without constraints; the set union detection still took b
+    // for the literal [x = 0] of the singleton {x}, so 0 in U no longer forced x = 0
+    StringBuilder model = new StringBuilder();
+    model.append("var 0..1: x :: output_var;\nvar 1..3: y :: output_var;\n");
+    model.append("var 0..3: m;\nvar bool: b;\nvar bool: b2;\n");
+    for (int i = 2; i <= 8; i++) {
+      model.append("var 2..9: e").append(i).append(";\n");
+    }
+    for (int i = 1; i <= 8; i++) {
+      model.append("var set of 0..9: S").append(i).append(";\n");
+    }
+    for (int i = 1; i <= 6; i++) {
+      model.append("var set of 0..9: T").append(i).append(";\n");
+    }
+    model.append("var set of 0..9: U :: output_var;\n");
+    model.append("constraint int_mod(y, 2, m);\nconstraint int_eq_reif(m, 0, b2);\n");
+    model.append("constraint int_eq_reif(x, 0, b);\nconstraint bool_clause([b, b2], []);\n");
+    for (int i = 1; i <= 8; i++) {
+      model.append("constraint set_card(S").append(i).append(", 1);\n");
+      model.append("constraint set_in(").append(i == 1 ? "x" : "e" + i);
+      model.append(", S").append(i).append(");\n");
+    }
+    String previous = "S1";
+    for (int i = 2; i <= 8; i++) {
+      String union = i == 8 ? "U" : "T" + (i - 1);
+      model.append("constraint set_union(").append(previous).append(", S").append(i);
+      model.append(", ").append(union).append(");\n");
+      previous = union;
+    }
+    model.append("constraint set_in(0, U);\nsolve satisfy;\n");
+    for (String lcg : new String[] {"off", "on"}) {
+      String out = run(model.toString(), "--lcg", lcg)[0];
+      assertTrue(out.contains("x = 0;\n"), out);
+    }
+  }
+
+  @Test
+  void clausalModelImposesNoValueTheStoreGaveADroppedVariable() throws IOException {
+    // the forced intension table detection drops x and its literals b3, b4, b10 with the group of
+    // x; the channel of the implications b3 -> x = -1, b10 -> x = 1 stays over them, a component
+    // that the component split fixes to x = -1, b3 = b10 = 0, which the CNF of the whole model
+    // then imposed: b3 \/ b4 and b4 <-> x = 1 made it unsatisfiable, and the model was UNSAT
+    String model =
+        "var {-1, 1}: x;\nvar bool: b3;\nvar bool: b4;\nvar bool: b5 :: output_var;\n"
+            + "var bool: b6 :: output_var;\nvar bool: b8 :: output_var;\nvar bool: b10;\n"
+            + "var bool: o :: output_var = b5;\n"
+            + "constraint int_eq_imp(x, -1, b3);\nconstraint int_eq_reif(x, 1, b4);\n"
+            + "constraint bool_clause([b3, b4], []);\nconstraint int_ne_reif(x, -1, b6);\n"
+            + "constraint bool_xor(b5, b6, b8);\nconstraint int_eq_imp(x, 1, b10);\n"
+            + "solve satisfy;\n";
+    System.setProperty("org.jacop.fz.intensionTable", "force");
+    try {
+      String out = run(model, "--lcg", "on")[0];
+      assertTrue(out.contains("----------"), out);
+    } finally {
+      System.clearProperty("org.jacop.fz.intensionTable");
+    }
+  }
+
+  // x and y are printed, hs is not: the annotation decides hs between them, and every value of hs
+  // completes the same assignments of y
+  private static final String HIDDEN_BETWEEN_OUTPUTS =
+      """
+      var 1..2: x :: output_var;
+      var 1..3: y :: output_var;
+      var 0..2: hs;
+      constraint int_lt(x,y);
+      solve :: int_search([x,hs], input_order, indomain_min, complete) satisfy;
+      """;
+
+  private static final String HIDDEN_BETWEEN_OUTPUTS_ALL =
+      "x = 1;\ny = 2;\n----------\nx = 1;\ny = 3;\n----------\nx = 2;\ny = 3;\n----------\n"
+          + "==========\n";
+
+  @Test
+  void allSolutionsPrintEachOutputOnceWhenTheAnnotationDecidesHiddenVariables() throws IOException {
+    // depth-first search printed x = 1, y = 2 and x = 1, y = 3 once for each value of hs: 9 lines
+    // for 3 assignments, where LCG enumeration printed 3
+    String[] out = run(HIDDEN_BETWEEN_OUTPUTS, "-a", "-s");
+    assertTrue(out[0].startsWith(HIDDEN_BETWEEN_OUTPUTS_ALL), out[0]);
+    assertTrue(out[0].contains("%%%mzn-stat: solutions=3\n"), out[0]);
+    assertEquals(HIDDEN_BETWEEN_OUTPUTS_ALL, run(HIDDEN_BETWEEN_OUTPUTS, "-a", "--lcg", "on")[0]);
+    assertEquals(HIDDEN_BETWEEN_OUTPUTS_ALL, run(HIDDEN_BETWEEN_OUTPUTS, "-a", "-f")[0]);
+    // hs decided first: every assignment comes back once per value of hs
+    String first = HIDDEN_BETWEEN_OUTPUTS.replace("[x,hs]", "[hs,x]");
+    assertEquals(HIDDEN_BETWEEN_OUTPUTS_ALL, run(first, "-a")[0]);
+    // no output: one solution
+    String none = HIDDEN_BETWEEN_OUTPUTS.replace(" :: output_var", "");
+    assertEquals("----------\n==========\n", run(none, "-a")[0]);
+  }
+
+  @Test
+  void severalSolutionsAreDistinctWhenTheAnnotationDecidesHiddenVariables() throws IOException {
+    // y is not printed: -n 3 printed x = 0 three times, once for each value of y
+    String model =
+        """
+        var 0..2: x :: output_var;
+        var 0..2: y;
+        constraint int_lin_le([1,1],[x,y],3);
+        solve :: int_search([x,y], input_order, indomain_min, complete) satisfy;
+        """;
+    String three = "x = 0;\n----------\nx = 1;\n----------\nx = 2;\n----------\n";
+    assertEquals(three, run(model, "-n", "3")[0]);
+    // more asked for than there are: all of them, and the search is complete
+    assertEquals(three + "==========\n", run(model, "-n", "5")[0]);
+    assertEquals(three + "==========\n", run(model, "-n", "5", "--lcg", "on")[0]);
+  }
+
+  @Test
+  void presolvedSearchPrintsEachOutputOnceWhenTheAnnotationDecidesHiddenVariables()
+      throws IOException {
+    // presolve searches copies of the variables, as the default engine does under --presolve on
+    String model =
+        """
+        var 1..2: x :: output_var;
+        var 1..3: y :: output_var;
+        var 0..2: hs;
+        var 0..2: g;
+        constraint int_lt(x,y);
+        constraint int_le(hs,g);
+        constraint int_lin_le([1,1],[x,g],3);
+        solve :: int_search([hs,x], input_order, indomain_min, complete) satisfy;
+        """;
+    String all = HIDDEN_BETWEEN_OUTPUTS_ALL;
+    assertEquals(all, run(model, "-a", "--presolve", "on")[0]);
+    assertEquals(all, run(model, "-a", "--presolve", "off")[0]);
+    assertEquals(
+        "x = 1;\ny = 2;\n----------\nx = 1;\ny = 3;\n----------\n",
+        run(model, "-n", "2", "--presolve", "on")[0]);
+  }
+
+  @Test
+  void allSolutionsOfASearchWithARestartAnnotationPrintEachOutputOnce() throws IOException {
+    // the restart annotation in the sequence does not restart a search for all solutions
+    String model =
+        HIDDEN_BETWEEN_OUTPUTS.replace(
+            ":: int_search([x,hs], input_order, indomain_min, complete)",
+            ":: seq_search([int_search([x,hs], input_order, indomain_min, complete),"
+                + " restart_luby(10)])");
+    assertEquals(HIDDEN_BETWEEN_OUTPUTS_ALL, run(model, "-a")[0]);
+    // free search runs the annotation's restarts and enumerates each output once
+    String restarts = HIDDEN_BETWEEN_OUTPUTS.replace("complete)", "complete) :: restart_luby(10)");
+    assertEquals(HIDDEN_BETWEEN_OUTPUTS_ALL, run(restarts, "-a", "-f")[0]);
+  }
+
+  @Test
+  void onlyAnAnnotationOverHiddenVariablesKeepsTheOutputsPrinted() throws IOException {
+    // an annotation over printed variables: nothing is kept, and the statistics have no keys
+    String printed = HIDDEN_BETWEEN_OUTPUTS.replace("[x,hs]", "[x,y]");
+    String[] out = run(printed, "-a", "--search-statistics");
+    assertTrue(out[0].contains(HIDDEN_BETWEEN_OUTPUTS_ALL), out[0]);
+    assertFalse(out[0].contains("peakOutputKeys"), out[0]);
+    // nor over a hidden variable that printed variables define (defines_var)
+    String defined =
+        """
+        var 1..2: x :: output_var;
+        var 1..3: y :: output_var;
+        var 2..5: d;
+        constraint int_lt(x,y);
+        constraint int_lin_eq([1,-1,-1],[d,x,y],0) :: defines_var(d);
+        solve :: int_search([d,x,y], input_order, indomain_min, complete) satisfy;
+        """;
+    out = run(defined, "-a", "--search-statistics");
+    assertEquals(
+        HIDDEN_BETWEEN_OUTPUTS_ALL,
+        out[0]
+            .lines()
+            .filter(line -> !line.startsWith("%") && !line.isEmpty())
+            .collect(Collectors.joining("\n", "", "\n")),
+        out[0]);
+    assertFalse(out[0].contains("peakOutputKeys"), out[0]);
+    // hidden variables decided once the outputs are fixed: their other values are not searched,
+    // and no key is kept
+    String last =
+        """
+        var 0..2: x :: output_var;
+        var 0..2: y;
+        var 0..3: z;
+        constraint int_lin_le([1,1,1],[x,y,z],4);
+        solve :: int_search([x,y,z], input_order, indomain_min, complete) satisfy;
+        """;
+    out = run(last, "-a", "--search-statistics");
+    assertTrue(
+        out[0].contains("x = 0;\n----------\nx = 1;\n----------\nx = 2;\n----------\n=========="),
+        out[0]);
+    assertTrue(out[0].contains("%%%mzn-stat: peakOutputKeys=0\n"), out[0]);
+    assertTrue(out[0].contains("%%%mzn-stat: repeatedOutputs=0\n"), out[0]);
+    // a hidden variable decided first: the keys of the solutions below it are kept
+    out = run(HIDDEN_BETWEEN_OUTPUTS.replace("[x,hs]", "[hs,x]"), "-a", "--search-statistics");
+    assertTrue(out[0].contains("%%%mzn-stat: peakOutputKeys=3\n"), out[0]);
+    assertTrue(out[0].contains("%%%mzn-stat: repeatedOutputs=6\n"), out[0]);
+  }
+
+  @Test
+  void valuePrecedenceKeepsAnOptimumTheMaximumObjectiveCanTake() throws IOException {
+    // relabelling the colours in the order of their first use lowers the largest one, which the
+    // objective defined as the maximum must then take: z in 3..5 (or {1, 3, 4, 5}) cannot take 2,
+    // and value precedence over 1..5 made the model UNSAT instead of z = 3
+    for (String dom : new String[] {"3..5", "{1,3,4,5}"}) {
+      String model =
+          "var 1..5: x1 :: output_var;\nvar 1..5: x2 :: output_var;\n"
+              + "var "
+              + dom
+              + ": z :: output_var;\nconstraint int_ne(x1, x2);\n"
+              + "constraint jacop_maximum(z, [x1, x2]);\nsolve minimize z;\n";
+      for (String lcg : new String[] {"on", "off"}) {
+        String out = run(model, "--symmetry", "on", "--lcg", lcg)[0];
+        assertTrue(out.contains("z = 3;\n----------\n=========="), out);
+      }
+    }
+  }
+
+  @Test
+  void lateCountDominanceKeepsTheOptimumOfTheSymmetryBreakingOrder() throws IOException {
+    // three identical tasks on one machine, of which one can be on time: the dominance rule of
+    // LateCount kept the first task on time whenever another one was, and the lex-leader
+    // constraints of the symmetric tasks (s1 >= s2 >= s3 under indomain_max, s3 <= s2 <= s1 in the
+    // order of the annotation) put another one first: no schedule with one task on time remained,
+    // and the optimum 2 became 3
+    String head =
+        "var 0..10: s1 :: output_var;\nvar 0..10: s2 :: output_var;\nvar 0..10: s3 :: output_var;\n"
+            + "var bool: b1;\nvar bool: b2;\nvar bool: b3;\nvar 0..1: y1;\nvar 0..1: y2;\n"
+            + "var 0..1: y3;\nvar 0..3: z :: output_var;\n"
+            + "constraint jacop_cumulative([s1,s2,s3],[2,2,2],[1,1,1],1);\n"
+            + "constraint int_le_reif(1, s1, b1);\nconstraint int_le_reif(1, s2, b2);\n"
+            + "constraint int_le_reif(1, s3, b3);\nconstraint bool2int(b1, y1);\n"
+            + "constraint bool2int(b2, y2);\nconstraint bool2int(b3, y3);\n"
+            + "constraint int_lin_eq([1,1,1,-1],[y1,y2,y3,z],0);\n";
+    for (String search :
+        new String[] {
+          "int_search([s1,s2,s3], input_order, indomain_max, complete)",
+          "int_search([s3,s2,s1], input_order, indomain_min, complete)"
+        }) {
+      String model = head + "solve :: " + search + " minimize z;\n";
+      String out = run(model, "--symmetry", "on")[0];
+      assertTrue(out.contains("z = 2;\n----------\n=========="), out);
+    }
+  }
+
+  @Test
+  void searchOverEveryVariablePrintsTheFixedOutputOnce() throws IOException {
+    // no annotation and x fixed at the root: the search of the default variables decided g and h,
+    // and -a printed x = 1 once for each of their six assignments
+    String model =
+        """
+        var 1..2: x :: output_var;
+        var 1..3: h;
+        var 1..3: g;
+        constraint int_le(x,1);
+        constraint int_le(g,h);
+        solve satisfy;
+        """;
+    String once = "x = 1;\n----------\n==========\n";
+    assertEquals(once, run(model, "-a", "--default-search", "input", "--lcg", "off")[0]);
+    assertEquals(once, run(model, "-n", "3", "-cs", "--lcg", "off")[0]);
+    // without output, the empty assignment once
+    String none = model.replace(" :: output_var", "");
+    assertEquals("----------\n==========\n", run(none, "-n", "3", "-cs", "--lcg", "off")[0]);
+  }
+
+  @Test
+  void annotationOverAPrintedIntegerOfABooleanKeepsNoOutputKey() throws IOException {
+    // e is printed and is bool2int of b, which stands for e in the search: the annotation names
+    // only a printed variable, yet every solution kept a key and the statistics had the counters
+    String model =
+        """
+        var 0..1: e :: output_var;
+        var bool: b;
+        var 0..1: x :: output_var;
+        constraint bool2int(b,e);
+        solve :: int_search([e],input_order,indomain_min,complete) satisfy;
+        """;
+    for (String presolve : new String[] {"off", "on"}) {
+      String[] out =
+          run(model, "-a", "-s", "--search-statistics", "--lcg", "off", "--presolve", presolve);
+      assertTrue(
+          out[0].contains(
+              "e = 0;\nx = 0;\n----------\ne = 0;\nx = 1;\n----------\ne = 1;\nx = 0;\n"
+                  + "----------\ne = 1;\nx = 1;\n----------\n"),
+          out[0]);
+      assertTrue(out[0].contains("\n==========\n"), out[0]);
+      assertFalse(out[0].contains("peakOutputKeys"), out[0]);
+    }
+  }
+
+  @Test
+  void valuePrecedenceComesFirstInTheLexLeaderOrderOfTheAnnotation() throws IOException {
+    // swapping the values 1 and 2 also swaps the counts c1, c2 and d1, d2; the annotation ranks
+    // the counts first, and the lex-leader constraint of the exchange of (x1, c) with (w1, d) in
+    // that order wanted x1 = 2 while the precedence chain over x1, w1 wanted x1 = 1: UNSAT
+    String model =
+        "var 1..2: x1 :: output_var;\nvar 1..2: w1 :: output_var;\n"
+            + "var 0..1: c1;\nvar 0..1: c2;\nvar 0..1: d1;\nvar 0..1: d2;\n"
+            + "constraint jacop_gcc([x1], [c1, c2], 1);\n"
+            + "constraint jacop_gcc([w1], [d1, d2], 1);\n"
+            + "constraint int_ne(x1, w1);\n"
+            + "solve :: int_search([c1, d1, c2, d2, x1, w1], input_order, indomain_min, complete)"
+            + " satisfy;\n";
+    for (String lcg : new String[] {"on", "off"}) {
+      String out = run(model, "--symmetry", "on", "--lcg", lcg)[0];
+      assertTrue(out.contains("----------"), out);
+    }
+  }
+
+  @Test
+  void valuePrecedenceWithTheModelsLexLeaderComparesItsVariablesFirst() throws IOException {
+    // the model's own lex-leader constraint of the exchange of (x1, c) with (w1, d) compares the
+    // counts first, which swapping the values 1 and 2 moves: with it the precedence chain over
+    // x1, w1 (x1 = 1) left no solution of x1 = 2, the only one
+    String model =
+        "var 1..2: x1 :: output_var;\nvar 1..2: w1 :: output_var;\n"
+            + "var 0..1: c1;\nvar 0..1: c2;\nvar 0..1: d1;\nvar 0..1: d2;\n"
+            + "constraint jacop_gcc([x1], [c1, c2], 1);\n"
+            + "constraint jacop_gcc([w1], [d1, d2], 1);\n"
+            + "constraint int_ne(x1, w1);\n"
+            + "constraint jacop_lex_lesseq_int([c1, d1, c2, d2, x1, w1], [d1, c1, d2, c2, w1, x1]);\n"
+            + "solve satisfy;\n";
+    for (String lcg : new String[] {"on", "off"}) {
+      String out = run(model, "--symmetry", "on", "--lcg", lcg)[0];
+      assertTrue(out.contains("x1 = 2;\nw1 = 1;\n----------"), out);
+    }
   }
 }
