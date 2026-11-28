@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["int_lin_eq", "jacop_if_then_else_set", "set_card", "set_in_reif", "set_superset", "set_union"],
+  "constraintFamilies": ["linear", "set"],
+  "domains": []
+}

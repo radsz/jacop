@@ -1,0 +1,749 @@
+/*
+ * SoftGCC.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.constraints;
+
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import org.jacop.constraints.netflow.DomainStructure;
+import org.jacop.constraints.netflow.NetworkBuilder;
+import org.jacop.constraints.netflow.simplex.Arc;
+import org.jacop.constraints.netflow.simplex.Node;
+import org.jacop.core.Domain;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
+
+/**
+ * This class provides soft-gcc constraint by decomposing it either into a network flow constraint
+ * or a set of primitive constraints.
+ *
+ * <p>It is soft in a sense that every violation of softLower, softUpper bound or softCounter
+ * contributes to the violation cost. It is hard in a sense that it does enforce hardLower,
+ * hardUpper bound or hardCounter.
+ *
+ * <p>Two violation measures are supported (van Hoeve, Pesant, Rousseau 2006). VALUE_BASED sums,
+ * over the counted values, how far each count is from its soft bounds (or from its soft counter).
+ * VARIABLE_BASED is the smallest number of variables that must change their value so that every
+ * count meets its soft bounds (or equals its soft counter). A variable may change to any value, and
+ * a value that is not counted can be taken by any number of variables, so the measure is
+ * max(shortage, excess), where shortage sums max(0, softLower - count) and excess sums max(0, count
+ * - softUpper) (with a soft counter s, both bounds are s). It is defined when the soft lower bounds
+ * (soft counters) sum to at most the number of variables; otherwise the constraint fails. A value
+ * counted twice is only supported with VALUE_BASED.
+ *
+ * @author Radoslaw Szymanek
+ * @version 5.0
+ */
+@SuppressWarnings(
+    "checkstyle:AbbreviationAsWordInName") // GCC is standard constraint programming terminology
+public class SoftGCC extends DecomposedConstraint<Constraint> {
+
+  private final IntVar[] xvars;
+  private final int[] countedValue;
+  private final IntVar costVar;
+  private final ViolationMeasure violationMeasure;
+  private List<Constraint> decomposition;
+  private IntVar[] hardCounters;
+  private IntVar[] softCounters;
+  private int[] softLowerBound;
+  private int[] softUpperBound;
+  private int[] hardLowerBound;
+  private int[] hardUpperBound;
+
+  /**
+   * Helper method to compute countedValue from xvars domains.
+   *
+   * @param xvars the variables
+   * @return array of counted values
+   */
+  private static int[] computeCountedValue(IntVar[] xvars) {
+    IntDomain sum = new IntervalDomain();
+    for (IntVar xVar : xvars) {
+      sum.unionAdapt(xVar.domain);
+    }
+
+    int[] result = new int[sum.getSize()];
+    int i = 0;
+    for (ValueEnumeration enumer = sum.valueEnumeration(); enumer.hasMoreElements(); ) {
+      result[i++] = enumer.nextElement();
+    }
+    return result;
+  }
+
+  /**
+   * Helper method to copy an IntVar array.
+   *
+   * @param source the source array
+   * @return a copy of the array
+   */
+  private static IntVar[] copyIntVarArray(IntVar[] source) {
+    IntVar[] result = new IntVar[source.length];
+    System.arraycopy(source, 0, result, 0, source.length);
+    return result;
+  }
+
+  /**
+   * Helper method to copy an int array.
+   *
+   * @param source the source array
+   * @return a copy of the array
+   */
+  private static int[] copyIntArray(int[] source) {
+    int[] result = new int[source.length];
+    System.arraycopy(source, 0, result, 0, source.length);
+    return result;
+  }
+
+  /**
+   * It specifies soft-GCC constraint.
+   *
+   * @param xvars variables over which counting takes place.
+   * @param hardCounters idNumber variables for different values being counted. Their domain specify
+   *     hard constraints on the occurrences.
+   * @param countedValue it specifies values which occurrence is being counted.
+   * @param softLowerBound it specifies constraint what is the minimal number of occurrences.
+   * @param softUpperBound it specifies constraint what is the maximal number of occurrences.
+   * @param costVar a cost variable specifying the cost of violations.
+   * @param violationMeasure VALUE_BASED or VARIABLE_BASED.
+   */
+  public SoftGCC(
+      IntVar[] xvars,
+      IntVar[] hardCounters,
+      int[] countedValue,
+      int[] softLowerBound,
+      int[] softUpperBound,
+      IntVar costVar,
+      ViolationMeasure violationMeasure) {
+
+    checkInputForNullness(
+        new String[] {
+          "xvars",
+          "hardCounters",
+          "countedValue",
+          "softLowerBound",
+          "softUpperBound",
+          "costVar",
+          "violationMeasure"
+        },
+        xvars,
+        hardCounters,
+        new Object[] {countedValue},
+        new Object[] {softLowerBound},
+        new Object[] {softUpperBound},
+        new Object[] {costVar},
+        new Object[] {violationMeasure});
+
+    this.xvars = copyIntVarArray(xvars);
+    this.hardCounters = copyIntVarArray(hardCounters);
+    this.softLowerBound = copyIntArray(softLowerBound);
+    this.softUpperBound = copyIntArray(softUpperBound);
+    this.countedValue = copyIntArray(countedValue);
+    this.costVar = costVar;
+    this.violationMeasure = violationMeasure;
+    checkCounterLengths();
+  }
+
+  /**
+   * It specifies soft-GCC constraint.
+   *
+   * @param xvars variables over which counting takes place.
+   * @param hardLowerBound it specifies constraint what is the minimal number of occurrences. (hard)
+   * @param hardUpperBound it specifies constraint what is the maximal number of occurrences. (hard)
+   * @param countedValue it specifies values which occurrence is being counted.
+   * @param softCounters it specifies the number of occurrences (soft).
+   * @param costVar a cost variable specifying the cost of violations.
+   * @param violationMeasure VALUE_BASED or VARIABLE_BASED.
+   */
+  public SoftGCC(
+      IntVar[] xvars,
+      int[] hardLowerBound,
+      int[] hardUpperBound,
+      int[] countedValue,
+      IntVar[] softCounters,
+      IntVar costVar,
+      ViolationMeasure violationMeasure) {
+
+    this.xvars = copyIntVarArray(xvars);
+    this.softCounters = copyIntVarArray(softCounters);
+    this.hardLowerBound = copyIntArray(hardLowerBound);
+    this.hardUpperBound = copyIntArray(hardUpperBound);
+    this.countedValue = copyIntArray(countedValue);
+    this.costVar = costVar;
+    this.violationMeasure = violationMeasure;
+    checkCounterLengths();
+  }
+
+  /**
+   * It specifies soft-GCC constraint.
+   *
+   * @param xvars variables over which counting takes place.
+   * @param hardCounters idNumber variables for different values being counted. (hard)
+   * @param countedValue it specifies values which occurrence is being counted.
+   * @param softCounters idNumber variables for different values being counted. (soft)
+   * @param costVar a cost variable specifying the cost of violations.
+   * @param violationMeasure VALUE_BASED or VARIABLE_BASED.
+   */
+  public SoftGCC(
+      IntVar[] xvars,
+      IntVar[] hardCounters,
+      int[] countedValue,
+      IntVar[] softCounters,
+      IntVar costVar,
+      ViolationMeasure violationMeasure) {
+
+    this.xvars = copyIntVarArray(xvars);
+    this.softCounters = copyIntVarArray(softCounters);
+    this.hardCounters = copyIntVarArray(hardCounters);
+    this.countedValue = copyIntArray(countedValue);
+    this.costVar = costVar;
+    this.violationMeasure = violationMeasure;
+    checkCounterLengths();
+  }
+
+  /**
+   * It specifies soft-GCC constraint.
+   *
+   * @param xvars variables over which counting takes place.
+   * @param hardCounters idNumber variables for different values being counted. (hard)
+   * @param softLowerBound it specifies constraint what is the minimal number of occurrences. (soft)
+   * @param softUpperBound it specifies constraint what is the maximal number of occurrences. (soft)
+   * @param costVar a cost variable specifying the cost of violations.
+   * @param violationMeasure VALUE_BASED or VARIABLE_BASED.
+   */
+  public SoftGCC(
+      IntVar[] xvars,
+      IntVar[] hardCounters,
+      int[] softLowerBound,
+      int[] softUpperBound,
+      IntVar costVar,
+      ViolationMeasure violationMeasure) {
+
+    this.countedValue = computeCountedValue(xvars);
+    this.xvars = copyIntVarArray(xvars);
+    this.hardCounters = copyIntVarArray(hardCounters);
+    this.softLowerBound = copyIntArray(softLowerBound);
+    this.softUpperBound = copyIntArray(softUpperBound);
+    this.costVar = costVar;
+    this.violationMeasure = violationMeasure;
+    checkCounterLengths();
+  }
+
+  /**
+   * It specifies soft-GCC constraint.
+   *
+   * @param xvars variables over which counting takes place.
+   * @param hardLowerBound it specifies constraint what is the minimal number of occurrences. (hard)
+   * @param hardUpperBound it specifies constraint what is the maximal number of occurrences. (hard)
+   * @param softCounters idNumber variables for different values being counted. (soft)
+   * @param costVar a cost variable specifying the cost of violations.
+   * @param violationMeasure VALUE_BASED or VARIABLE_BASED.
+   */
+  public SoftGCC(
+      IntVar[] xvars,
+      int[] hardLowerBound,
+      int[] hardUpperBound,
+      IntVar[] softCounters,
+      IntVar costVar,
+      ViolationMeasure violationMeasure) {
+
+    this.countedValue = computeCountedValue(xvars);
+    this.xvars = copyIntVarArray(xvars);
+    this.softCounters = copyIntVarArray(softCounters);
+    this.hardLowerBound = copyIntArray(hardLowerBound);
+    this.hardUpperBound = copyIntArray(hardUpperBound);
+
+    this.costVar = costVar;
+    this.violationMeasure = violationMeasure;
+    checkCounterLengths();
+  }
+
+  /**
+   * It specifies soft-GCC constraint.
+   *
+   * @param xvars variables over which counting takes place.
+   * @param hardCounters idNumber variables for different values being counted. (hard)
+   * @param softCounters idNumber variables that may be violated.
+   * @param costVar a cost variable specifying the cost of violations.
+   * @param violationMeasure VALUE_BASED or VARIABLE_BASED.
+   */
+  public SoftGCC(
+      IntVar[] xvars,
+      IntVar[] hardCounters,
+      IntVar[] softCounters,
+      IntVar costVar,
+      ViolationMeasure violationMeasure) {
+
+    this.countedValue = computeCountedValue(xvars);
+    this.xvars = copyIntVarArray(xvars);
+    this.softCounters = copyIntVarArray(softCounters);
+    this.hardCounters = copyIntVarArray(hardCounters);
+
+    this.costVar = costVar;
+    this.violationMeasure = violationMeasure;
+    checkCounterLengths();
+  }
+
+  /**
+   * Checks that every counter and bound array has one entry per counted value. The constructors
+   * without countedValue count the values in the domains of xvars when the constraint is created,
+   * so a variable that is already ground can remove a value and shift the counters.
+   */
+  private void checkCounterLengths() {
+    if (violationMeasure == ViolationMeasure.VARIABLE_BASED
+        && Arrays.stream(countedValue).distinct().count() < countedValue.length) {
+      throw new IllegalArgumentException(
+          "SoftGCC: a value counted twice "
+              + Arrays.toString(countedValue)
+              + " is not supported with the variable-based violation measure");
+    }
+    int[][] bounds = {softLowerBound, softUpperBound, hardLowerBound, hardUpperBound};
+    String[] boundNames = {"softLowerBound", "softUpperBound", "hardLowerBound", "hardUpperBound"};
+    for (int i = 0; i < bounds.length; i++) {
+      checkCounterLength(boundNames[i], bounds[i] == null ? -1 : bounds[i].length);
+    }
+    checkCounterLength("hardCounters", hardCounters == null ? -1 : hardCounters.length);
+    checkCounterLength("softCounters", softCounters == null ? -1 : softCounters.length);
+  }
+
+  private void checkCounterLength(String name, int length) {
+    if (length >= 0 && length != countedValue.length) {
+      throw new IllegalArgumentException(
+          "SoftGCC: "
+              + name
+              + " has "
+              + length
+              + " entries but "
+              + countedValue.length
+              + " values are counted "
+              + Arrays.toString(countedValue)
+              + "; without countedValue the counted values are the values left in the domains of"
+              + " xvars, so pass countedValue when some of them may be ground");
+    }
+  }
+
+  /**
+   * Decomposes the constraint into primitive constraints.
+   *
+   * @param store the constraint store.
+   * @return list of primitive constraints.
+   */
+  public List<Constraint> primitiveDecomposition(Store store) {
+
+    if (decomposition == null) {
+      decomposition = new ArrayList<>();
+      buildValueBasedDecomposition(store, decomposition);
+      return decomposition;
+    }
+    List<Constraint> result = new ArrayList<>();
+    buildValueBasedDecomposition(store, result);
+    return result;
+  }
+
+  private void buildValueBasedDecomposition(Store store, List<Constraint> target) {
+    if (violationMeasure == ViolationMeasure.VARIABLE_BASED) {
+      buildVariableBasedDecomposition(store, target);
+      return;
+    }
+    if (violationMeasure != ViolationMeasure.VALUE_BASED) {
+      throw new UnsupportedOperationException("Unsupported violation measure " + violationMeasure);
+    }
+    List<IntVar> costs = new ArrayList<>(countedValue.length);
+    for (int i = 0; i < countedValue.length; i++) {
+      if (hardCounters != null && softLowerBound != null) {
+        buildValueBasedHardCountersSoftBounds(store, target, costs, i);
+      } else if (softCounters != null) {
+        buildValueBasedSoftCounters(store, target, costs, i);
+      }
+    }
+    target.add(new SumInt(costs, "==", costVar));
+  }
+
+  private void buildValueBasedHardCountersSoftBounds(
+      Store store, List<Constraint> target, List<IntVar> costs, int i) {
+    target.add(new Count(xvars, hardCounters[i], countedValue[i]));
+    if (ASSERTS_ENABLED && (softLowerBound[i] < 0 || softLowerBound[i] > xvars.length)) {
+      throw new IllegalStateException(
+          String.valueOf(
+              "LowerBound for " + i + "-th element must be between 0 and number of variables"));
+    }
+    if (ASSERTS_ENABLED && (softUpperBound[i] < 0 || softUpperBound[i] > xvars.length)) {
+      throw new IllegalStateException(
+          String.valueOf(
+              "UpperBound for " + i + "-th element must be between 0 and number of variables"));
+    }
+    int[][] table = new int[xvars.length + 1][2];
+    for (int j = 0; j <= xvars.length; j++) {
+      table[j][0] = j;
+      table[j][1] = 0;
+      if (j < softLowerBound[i]) {
+        table[j][1] = softLowerBound[i] - j;
+      }
+      if (j > softUpperBound[i]) {
+        table[j][1] = j - softUpperBound[i];
+      }
+    }
+    IntVar v = new IntVar(store, 0, xvars.length);
+    costs.add(v);
+    target.add(new ExtensionalSupportVa(new IntVar[] {hardCounters[i], v}, table));
+  }
+
+  private void buildValueBasedSoftCounters(
+      Store store, List<Constraint> target, List<IntVar> costs, int i) {
+    IntVar hardCounter =
+        hardLowerBound != null
+            ? new IntVar(store, hardLowerBound[i], hardUpperBound[i])
+            : hardCounters[i];
+    target.add(new Count(xvars, hardCounter, countedValue[i]));
+    List<int[]> tuples = new ArrayList<>();
+    for (ValueEnumeration hard = hardCounter.domain.valueEnumeration(); hard.hasMoreElements(); ) {
+      int hardElement = hard.nextElement();
+      for (ValueEnumeration soft = softCounters[i].domain.valueEnumeration();
+          soft.hasMoreElements(); ) {
+        int softElement = soft.nextElement();
+        int cost =
+            hardElement > softElement ? hardElement - softElement : softElement - hardElement;
+        tuples.add(new int[] {hardElement, softElement, cost});
+      }
+    }
+    IntVar v = new IntVar(store, 0, xvars.length);
+    costs.add(v);
+    target.add(
+        new ExtensionalSupportVa(
+            new IntVar[] {hardCounter, softCounters[i], v},
+            tuples.toArray(new int[tuples.size()][3])));
+  }
+
+  /**
+   * The variable-based measure is max(shortage, excess), where each counted value adds its shortage
+   * below its soft lower bound and its excess above its soft upper bound.
+   */
+  private void buildVariableBasedDecomposition(Store store, List<Constraint> target) {
+    int n = xvars.length;
+    List<IntVar> shortages = new ArrayList<>(countedValue.length);
+    List<IntVar> excesses = new ArrayList<>(countedValue.length);
+    for (int i = 0; i < countedValue.length; i++) {
+      IntVar count =
+          hardCounters != null
+              ? hardCounters[i]
+              : new IntVar(store, hardLowerBound[i], hardUpperBound[i]);
+      target.add(new Count(xvars, count, countedValue[i]));
+      IntVar shortage = new IntVar(store, 0, n);
+      IntVar excess = new IntVar(store, 0, n);
+      shortages.add(shortage);
+      excesses.add(excess);
+      List<int[]> tuples = new ArrayList<>();
+      if (softCounters == null) {
+        for (int c = 0; c <= n; c++) {
+          tuples.add(
+              new int[] {
+                c, Math.max(0, softLowerBound[i] - c), Math.max(0, c - softUpperBound[i])
+              });
+        }
+        target.add(
+            new ExtensionalSupportVa(
+                new IntVar[] {count, shortage, excess}, tuples.toArray(new int[0][])));
+      } else {
+        for (int c = 0; c <= n; c++) {
+          for (ValueEnumeration e = softCounters[i].domain.valueEnumeration();
+              e.hasMoreElements(); ) {
+            int soft = e.nextElement();
+            tuples.add(new int[] {c, soft, Math.max(0, soft - c), Math.max(0, c - soft)});
+          }
+        }
+        target.add(
+            new ExtensionalSupportVa(
+                new IntVar[] {count, softCounters[i], shortage, excess},
+                tuples.toArray(new int[0][])));
+      }
+    }
+    // the measure is defined when the soft lower bounds (soft counters) sum to at most n
+    if (softCounters == null) {
+      if (Arrays.stream(softLowerBound).asLongStream().sum() > n) {
+        target.add(new XeqC(new IntVar(store, 0, 0), 1));
+      }
+    } else {
+      target.add(new SumInt(softCounters, "<=", new IntVar(store, n, n)));
+    }
+    IntVar shortage = new IntVar(store, 0, n);
+    IntVar excess = new IntVar(store, 0, n);
+    target.add(new SumInt(shortages, "==", shortage));
+    target.add(new SumInt(excesses, "==", excess));
+    target.add(new Max(new IntVar[] {shortage, excess}, costVar));
+  }
+
+  @Override
+  public List<Constraint> decompose(Store store) {
+
+    if (Arrays.stream(countedValue).distinct().count() < countedValue.length) {
+      // a value counted twice needs a flow of its count to two counters, which the network cannot
+      // express; the primitive decomposition counts every entry on its own
+      decomposition = new ArrayList<>();
+      buildValueBasedDecomposition(store, decomposition);
+      return decomposition;
+    }
+
+    if (decomposition == null || decomposition.size() > 1) {
+      decomposition = new ArrayList<>();
+      decomposition.add(buildSoftGCCConstraint());
+    }
+
+    return decomposition;
+  }
+
+  private Constraint buildSoftGCCConstraint() {
+    IntDomain all = new IntervalDomain();
+    // value node i stands for countedValue[i], the value its counters and bounds refer to
+    IntDomain[] doms = new IntDomain[countedValue.length];
+    for (int i = 0; i < countedValue.length; i++) {
+      all.unionAdapt(countedValue[i]);
+      doms[i] = new IntervalDomain(countedValue[i], countedValue[i]);
+    }
+    return new SoftGCCBuilder(all, doms, violationMeasure).build();
+  }
+
+  @Override
+  public void imposeDecomposition(Store store) {
+
+    if (decomposition == null) {
+      decomposition = decompose(store);
+    }
+
+    for (Constraint c : decomposition) {
+      store.impose(c);
+    }
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder result = new StringBuilder();
+    result.append(" : SoftGCC([");
+    toStringAppendXvars(result);
+    result.append("], [");
+    toStringAppendCountedValue(result);
+    result.append("], [");
+    toStringAppendHardBounds(result);
+    result.append("], [");
+    toStringAppendSoftBounds(result);
+    result.append("], ");
+    result.append(costVar).append(", ").append(violationMeasure).append(")");
+    return result.toString();
+  }
+
+  private void toStringAppendXvars(StringBuilder result) {
+    for (int i = 0; i < xvars.length; i++) {
+      result.append(xvars[i]);
+      if (i < xvars.length - 1) {
+        result.append(", ");
+      }
+    }
+  }
+
+  private void toStringAppendCountedValue(StringBuilder result) {
+    for (int i = 0; i < countedValue.length; i++) {
+      result.append(countedValue[i]);
+      if (i < countedValue.length - 1) {
+        result.append(", ");
+      }
+    }
+  }
+
+  private void toStringAppendHardBounds(StringBuilder result) {
+    if (hardCounters == null) {
+      for (int i = 0; i < hardLowerBound.length; i++) {
+        result.append(hardLowerBound[i]).append("..").append(hardUpperBound[i]);
+        if (i < hardLowerBound.length - 1) {
+          result.append(", ");
+        }
+      }
+    } else {
+      for (int i = 0; i < hardCounters.length; i++) {
+        result.append(hardCounters[i]);
+        if (i < hardCounters.length - 1) {
+          result.append(", ");
+        }
+      }
+    }
+  }
+
+  private void toStringAppendSoftBounds(StringBuilder result) {
+    if (softCounters == null) {
+      for (int i = 0; i < softLowerBound.length; i++) {
+        result.append(softLowerBound[i]).append("..").append(softUpperBound[i]);
+        if (i < softLowerBound.length - 1) {
+          result.append(", ");
+        }
+      }
+    } else {
+      for (int i = 0; i < softCounters.length; i++) {
+        result.append(softCounters[i]);
+        if (i < softCounters.length - 1) {
+          result.append(", ");
+        }
+      }
+    }
+  }
+
+  @SuppressWarnings("checkstyle:AbbreviationAsWordInName") // GCC is standard terminology
+  private class SoftGCCBuilder extends NetworkBuilder {
+
+    private SoftGCCBuilder(IntDomain all, IntDomain[] doms, ViolationMeasure vm) {
+      super(costVar);
+      if (vm == ViolationMeasure.VARIABLE_BASED) {
+        buildVariableBased(all, doms);
+        return;
+      }
+      if (vm != ViolationMeasure.VALUE_BASED) {
+        throw new UnsupportedOperationException("Unknown violation measure : " + vm);
+      }
+      int n = xvars.length;
+      int m = doms.length;
+      Node[] xNodes = new Node[n];
+      Node[] valueNodes = new Node[m];
+      Node[] countNodes = new Node[m];
+      for (int i = 0; i < n; i++) {
+        xNodes[i] = addNode(xvars[i].id, 1);
+      }
+      for (int i = 0; i < m; i++) {
+        valueNodes[i] = addNode(doms[i].toString(), 0);
+      }
+      for (int i = 0; i < m; i++) {
+        countNodes[i] = addNode("c_" + doms[i].toString(), 0);
+      }
+      Node s = addNode("source", 0);
+      Node t = addNode("sink", -n);
+      addArc(t, s, 0, 0, n * countedValue.length);
+      addValueBasedXArcs(all, doms, n, m, xNodes, valueNodes, t);
+      addValueBasedCountArcs(n, s, t, countNodes, valueNodes);
+    }
+
+    /**
+     * The network of the variable-based measure: every variable sends one unit to its value, the
+     * value node to its count node over the hard counter, and the count node to the sink over the
+     * soft bounds (or soft counter). A unit can instead be moved from a count node, or from the
+     * node of the values that are not counted, to any other one through a hub, at cost 1: the cost
+     * of a flow is the number of variables that change their value.
+     */
+    private void buildVariableBased(IntDomain all, IntDomain[] doms) {
+      int n = xvars.length;
+      int m = doms.length;
+      Node[] xNodes = new Node[n];
+      Node[] valueNodes = new Node[m];
+      Node[] countNodes = new Node[m];
+      for (int i = 0; i < n; i++) {
+        xNodes[i] = addNode(xvars[i].id, 1);
+      }
+      for (int i = 0; i < m; i++) {
+        valueNodes[i] = addNode(doms[i].toString(), 0);
+        countNodes[i] = addNode("c_" + doms[i].toString(), 0);
+      }
+      Node others = addNode("not counted", 0);
+      Node hub = addNode("hub", 0);
+      Node t = addNode("sink", -n);
+      addValueBasedXArcs(all, doms, n, m, xNodes, valueNodes, others);
+      for (int i = 0; i < m; i++) {
+        if (hardCounters != null) {
+          addArc(valueNodes[i], countNodes[i], 0, hardCounters[i]);
+        } else {
+          addArc(valueNodes[i], countNodes[i], 0, hardLowerBound[i], hardUpperBound[i]);
+        }
+        if (softLowerBound != null) {
+          addArc(countNodes[i], t, 0, softLowerBound[i], softUpperBound[i]);
+        } else {
+          addArc(countNodes[i], t, 0, softCounters[i]);
+        }
+        addArc(countNodes[i], hub, 1, 0, n);
+        addArc(hub, countNodes[i], 0, 0, n);
+      }
+      addArc(others, t, 0, 0, n);
+      addArc(others, hub, 1, 0, n);
+      addArc(hub, others, 0, 0, n);
+    }
+
+    private void addValueBasedXArcs(
+        IntDomain all,
+        IntDomain[] doms,
+        int n,
+        int m,
+        Node[] variableNodes,
+        Node[] valueNodes,
+        Node t) {
+      for (int i = 0; i < n; i++) {
+        IntVar v = xvars[i];
+        List<Arc> arcs = new ArrayList<>();
+        List<Domain> domains = new ArrayList<>();
+        IntDomain vDom = v.domain;
+        for (int j = 0; j < m; j++) {
+          if (vDom.isIntersecting(doms[j])) {
+            arcs.add(addArc(variableNodes[i], valueNodes[j], 0, 1));
+            domains.add(doms[j]);
+          }
+        }
+        // one arc for all the values that are not counted
+        IntDomain notCounted = vDom.subtract(all);
+        if (!notCounted.isEmpty()) {
+          arcs.add(addArc(variableNodes[i], t, 0, 1));
+          domains.add(notCounted);
+        }
+        handlerList.add(new DomainStructure(v, domains, arcs));
+      }
+    }
+
+    private void addValueBasedCountArcs(
+        int n, Node s, Node t, Node[] countNodes, Node[] valueNodes) {
+      for (int i = 0; i < countNodes.length; i++) {
+        if (softLowerBound != null) {
+          addArc(s, countNodes[i], 1, 0, softLowerBound[i]);
+        } else {
+          addArc(s, countNodes[i], 1, 0, softCounters[i].max());
+        }
+        int excessCap = softUpperBound != null ? n - softUpperBound[i] : n - softCounters[i].min();
+        if (excessCap > 0) {
+          addArc(countNodes[i], t, 1, 0, excessCap);
+        }
+        if (hardCounters != null) {
+          addArc(valueNodes[i], countNodes[i], 0, hardCounters[i]);
+        } else {
+          addArc(valueNodes[i], countNodes[i], 0, hardLowerBound[i], hardUpperBound[i]);
+        }
+        if (softLowerBound != null) {
+          addArc(countNodes[i], t, 0, softLowerBound[i], softUpperBound[i]);
+        } else {
+          addArc(countNodes[i], t, 0, softCounters[i]);
+        }
+      }
+    }
+  }
+}

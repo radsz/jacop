@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["jacop_nvalue"],
+  "constraintFamilies": ["counting"],
+  "domains": []
+}

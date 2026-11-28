@@ -1,0 +1,3 @@
+n_periods = 6;
+shift_periods = 3;
+worker_count = array1d(0..5, [26, 52, 86, 120, 75, 35]);

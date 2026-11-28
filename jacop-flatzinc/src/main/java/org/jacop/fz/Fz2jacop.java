@@ -1,0 +1,483 @@
+/*
+ * Fz2jacop.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.fz;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Locale;
+import java.util.concurrent.TimeUnit;
+import lombok.extern.slf4j.Slf4j;
+import org.jacop.core.FailException;
+import org.jacop.core.Store;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.jasat.cdcl.CdclSolver;
+import org.jacop.jasat.lcg.VeriPbProof;
+
+/**
+ * An executable to parse and execute the flatzinc file.
+ *
+ * @author Krzysztof Kuchcinki
+ * @version 5.0
+ */
+@Slf4j
+public class Fz2jacop {
+
+  // whether a run with a time-out is ended by a TimeLimitWatchdog (only on the command line, since
+  // it halts the JVM)
+  private boolean watchdog;
+
+  /**
+   * Parses and solves the model like the command line does, without exiting the JVM.
+   *
+   * @param args the command line arguments
+   * @return the exit status: 0 when the model was solved (or shown unsatisfiable), 1 when it was
+   *     rejected or solving failed with an error
+   */
+  public int callMain(String[] args) {
+    return run(args);
+  }
+
+  /**
+   * It parses the provided file and parsing parameters followed by problem solving.
+   *
+   * @param args parameters describing the flatzinc file containing the problem to be solved as well
+   *     as options for problem solving.
+   */
+  void main(String[] args) {
+    // a run from the command line ends at its time-out even where the solver does not check it
+    watchdog = true;
+    int status = run(args);
+    // a model JaCoP cannot read or solve must not look like a successful run to MiniZinc or a
+    // script, which go by the exit status
+    if (status != 0) {
+      System.exit(status);
+    }
+  }
+
+  private int run(String[] args) {
+
+    // The float settings are static: a model solved earlier in the same JVM (its float_search
+    // precision, or --precision, --format, --step, -i) must not change this one.
+    FloatDomain.setPrecision(FloatDomain.DEFAULT_PRECISION);
+    FloatDomain.setFormat(FloatDomain.DEFAULT_FORMAT);
+    FloatDomain.setStep(0.0d);
+    FloatDomain.intervalPrint(false);
+    // without -r the seed is 0, so that the random choices (neighbourhoods of free search,
+    // indomain_random, on_restart) repeat from run to run
+    Store.setSeed(0);
+
+    if (args.length == 0) {
+      // as Options does on the command line, without exiting the JVM
+      IO.println("fz2jacop: no model file specified");
+      IO.println("fz2jacop: use --help for more information.");
+      return 1;
+    }
+    Options opt;
+    try {
+      opt = new Options(args);
+      // the settings that the portfolio reads before its threads start
+      for (String key :
+          new String[] {"portfolio-split", "portfolio-dfs-split", "portfolio-bisect"}) {
+        String value = opt.freeConfig(key, "0");
+        try {
+          Double.parseDouble(value);
+          if (!key.endsWith("bisect")) {
+            Integer.parseInt(value);
+          }
+        } catch (NumberFormatException _) {
+          throw new IllegalArgumentException(
+              "option --free-config " + key + "=" + value + ": not a number");
+        }
+      }
+    } catch (IllegalArgumentException e) {
+      // a value of an option that is not one, as an error of the command line, not a stack trace
+      FzConsole.printlnErr("%% Error: " + e.getMessage());
+      return 1;
+    }
+
+    // several objectives: each subproblem is solved by this method in turn
+    Goals goals = Goals.of(opt, args);
+    if (goals != null) {
+      return goals.solve();
+    }
+
+    if (opt.threads() > 1) {
+      Portfolio portfolio = new Portfolio(opt);
+      portfolio.printsAtKill = watchdog;
+      if (watchdog && opt.getTimeOut() > 0) {
+        // the model is read before any thread starts, and that does not look at the time-out
+        portfolio.startWatchdog(
+            watchdogDelay(opt) + TimeLimitWatchdog.GRACE,
+            () -> {
+              VeriPbProof.abandon();
+              Runtime.getRuntime().halt(0);
+            });
+      }
+      String unsupported;
+      try {
+        unsupported = Portfolio.unsupported(opt);
+        if (unsupported == null) {
+          return portfolio.run(args);
+        }
+      } finally {
+        portfolio.cancelWatchdog();
+      }
+      IO.println("%% -p ignored: " + unsupported);
+    }
+
+    if (opt.debug()) {
+      IO.println("%% Flatzinc2JaCoP: compiling and executing " + args[args.length - 1]);
+    }
+
+    // the model file is closed when solving ends, also after an error (an open file cannot be
+    // deleted on Windows)
+    int status = 1;
+    // a model file that is not found ends this run, not the JVM (callMain)
+    FileInputStream model = opt.openFile();
+    if (model == null) {
+      return 1;
+    }
+    try (FileInputStream file = model) {
+      status = solve(opt, file, null);
+    } catch (IOException e) {
+      log.error("Failed to close {}", opt.getFileName(), e);
+    }
+    return status;
+  }
+
+  /**
+   * Parses and solves the model in a thread of a parallel portfolio.
+   *
+   * @param opt the options of the thread
+   * @param file the model
+   * @return the exit status, as {@link #callMain}
+   */
+  static int solveInPortfolio(Options opt, FileInputStream file) {
+    return new Fz2jacop().solve(opt, file, null);
+  }
+
+  /**
+   * Solves a model the portfolio has read already, in the calling thread.
+   *
+   * @param opt the options of the thread
+   * @param model the tree of the model ({@link Parser#parseModel}), which is only read
+   * @return 0 when the run ended normally
+   */
+  static int solveInPortfolio(Options opt, SimpleNode model) {
+    return new Fz2jacop().solve(opt, InputStream.nullInputStream(), model);
+  }
+
+  // how many times the time-out the watchdog waits under the virtual clock
+  private static final long VIRTUAL_CLOCK_WALL_FACTOR =
+      Long.getLong("jacop.virtualClock.wallFactor", 10);
+
+  // when the watchdog fires, before its grace period: under the virtual clock the search stops on
+  // its work, which can take longer than the time-out on the wall clock, and the watchdog only
+  // catches a run that hangs
+  private static long watchdogDelay(Options opt) {
+    return CdclSolver.VIRTUAL_CLOCK
+        ? VIRTUAL_CLOCK_WALL_FACTOR * opt.getRemainingTimeOut()
+        : opt.getRemainingTimeOut();
+  }
+
+  private int solve(Options opt, InputStream file, SimpleNode model) {
+
+    Parser parser = new Parser(file);
+    parser.setOptions(opt);
+    if (opt.portfolioWorker() != null) {
+      // a thread the portfolio stops while it builds the model or works at the root (the linear
+      // relaxation, presolve) stops there too, not only in its search
+      opt.portfolioWorker().onStop(parser.getStore()::interrupt);
+      // once the portfolio has returned, the thread prints nothing more
+      opt.portfolioWorker().onClose(parser.solver::closeAnswer);
+    }
+
+    RunWhenShuttingDown t = new RunWhenShuttingDown(parser);
+    // on the command line, a run killed before it answers (SIGTERM from MiniZinc or a script at
+    // its time limit) prints what the watchdog prints at the time-out: the kept solution, which
+    // without -a is printed only when the run ends. In process (callMain) only -s prints at
+    // shutdown, since a hook per run would stay for the life of the JVM
+    boolean killHook = watchdog && !printsAtShutdown(opt) && opt.portfolioWorker() == null;
+    boolean hooked = false;
+    if (printsAtShutdown(opt) || killHook) {
+      try {
+        Runtime.getRuntime().addShutdownHook(t);
+        hooked = true;
+      } catch (IllegalStateException _) {
+        // the JVM is already shutting down (a signal right after the start): nothing to print
+      }
+    }
+
+    TimeLimitWatchdog watch = null;
+    if (watchdog && opt.getTimeOut() > 0 && opt.portfolioWorker() == null) {
+      watch =
+          TimeLimitWatchdog.start(
+              watchdogDelay(opt),
+              report(opt, parser),
+              () -> {
+                // a proof ends after its last whole step, so that it still checks
+                VeriPbProof.abandon();
+                Runtime.getRuntime().halt(0);
+              });
+    }
+    try {
+      return solve(opt, parser, model, t);
+    } finally {
+      // the run has printed its answer, or ends with an error (also an exception): the hook would
+      // keep the parser for the life of the JVM and print this run's statistics when it exits
+      if (hooked) {
+        removeHook(t);
+      }
+      if (watch != null) {
+        watch.cancel();
+      }
+    }
+  }
+
+  private static void removeHook(Thread hook) {
+    try {
+      Runtime.getRuntime().removeShutdownHook(hook);
+    } catch (IllegalStateException _) {
+      // the JVM is already shutting down, and the hook is running or has run
+    }
+  }
+
+  /**
+   * Whether the run prints its last solution and statistics when the JVM is shut down before it
+   * ends. A thread of a portfolio does not: it would print its own solution, which need not be the
+   * best one, after the portfolio's answer; the portfolio prints the best solution itself.
+   *
+   * @param opt the options of the run
+   * @return true with statistics, outside a portfolio
+   */
+  static boolean printsAtShutdown(Options opt) {
+    return opt.getStatistics() && opt.portfolioWorker() == null;
+  }
+
+  // what the watchdog prints when the run overruns its time-out
+  private static TimeLimitWatchdog.Report report(Options opt, Parser parser) {
+    return new TimeLimitWatchdog.Report() {
+      @Override
+      public boolean printKeptSolution() {
+        StringBuffer kept = parser.solver.lastSolution;
+        if (!opt.getAll() && kept != null) {
+          parser.solver.helperSolutionPrinter(kept.toString());
+          return true;
+        }
+        return false;
+      }
+
+      @Override
+      public void printStatistics() {
+        if (opt.getStatistics()) {
+          parser.solver.printStatisticsIterrupt();
+        }
+      }
+    };
+  }
+
+  private int solve(Options opt, Parser parser, SimpleNode model, RunWhenShuttingDown t) {
+    int status = 1;
+    try {
+      if (model == null) {
+        parser.model();
+      } else {
+        parser.build(model);
+      }
+      status = 0;
+    } catch (FailException _) {
+      // the answer, unless the shutdown hook has printed it
+      print(opt, () -> parser.solver.printAnswer(() -> handleFailException(opt, parser)));
+      status = 0;
+    } catch (UnsupportedOperationException e) {
+      if (opt.proof() == null) {
+        throw e;
+      }
+      // a model that --proof cannot write: no answer rather than one without its proof
+      print(
+          opt,
+          () -> {
+            IO.println("%% --proof: " + e.getMessage());
+            IO.println("=====UNKNOWN=====");
+          });
+    } catch (ArithmeticException e) {
+      print(opt, () -> handleArithmeticException(e));
+    } catch (IllegalArgumentException e) {
+      print(opt, () -> handleIllegalArgumentException(e));
+    } catch (ParseException | TokenMgrError e) {
+      print(opt, () -> FzConsole.printlnErr("%% Parser error: " + e.getMessage()));
+    } catch (ArrayIndexOutOfBoundsException e) {
+      print(opt, () -> handleArrayIndexOutOfBoundsException(e));
+    } catch (OutOfMemoryError _) {
+      // as a stack overflow: the run ended before it was complete, and the unwound search has
+      // left the memory its last allocation lacked
+      print(
+          opt,
+          () ->
+              printKeptOrUnknown(
+                  opt, parser, "%% Out of memory error; consider option -Xmx... for JVM"));
+      status = 0;
+    } catch (StackOverflowError _) {
+      // a search too deep for the JVM's stack (one recursion per refuted value of a large
+      // domain) ended before it was complete: as at a time-out, the best solution kept so far is
+      // printed, or UNKNOWN when none was printed
+      print(
+          opt,
+          () ->
+              printKeptOrUnknown(
+                  opt,
+                  parser,
+                  "%% Stack overflow exception error; consider option -Xss... for JVM"));
+      status = 0;
+    } catch (TrivialSolution _) {
+      removeHook(t);
+      status = 0;
+    } catch (ModelTimeOut _) {
+      print(
+          opt,
+          () ->
+              parser.solver.printAnswer(
+                  () -> {
+                    IO.println("=====UNKNOWN=====");
+                    IO.println("%% =====TIME-OUT=====");
+                  }));
+      status = 0;
+    }
+
+    if (opt.getStatistics()) {
+      removeHook(t);
+      print(opt, () -> printStatisticsTime(parser));
+    }
+    return status;
+  }
+
+  // the end of a run cut short by an error: the message, then the best solution kept so far, or
+  // UNKNOWN when none was printed; nothing more once the answer is out (an error while it was
+  // printed, or the shutdown hook of -s)
+  private static void printKeptOrUnknown(Options opt, Parser parser, String message) {
+    IO.println(message);
+    parser.solver.printAnswer(
+        () -> {
+          StringBuffer kept = parser.solver.lastSolution;
+          if (!opt.getAll() && kept != null) {
+            parser.solver.helperSolutionPrinter(kept.toString());
+          } else if (parser.solver.numberSolutions == 0) {
+            IO.println("=====UNKNOWN=====");
+          }
+        });
+  }
+
+  // prints what the run prints at its end; a thread of a portfolio that has returned prints nothing
+  private static void print(Options opt, Runnable print) {
+    Portfolio.Worker worker = opt.portfolioWorker();
+    if (worker == null) {
+      print.run();
+    } else {
+      worker.print(print);
+    }
+  }
+
+  private void handleFailException(Options opt, Parser parser) {
+    boolean narrowing = parser.getTables().failureMayComeFromNarrowing();
+    if (narrowing) {
+      // the failure may come from the values cut off by narrowing a domain to JaCoP's range
+      IO.println("=====UNKNOWN=====");
+    } else {
+      IO.println("=====UNSATISFIABLE=====");
+    }
+    if (opt.proof() != null && !parser.getTables().rootFailureProved) {
+      // the model failed while it was translated, before the propagation the proof derives
+      IO.println("%% --proof: no proof written, the model fails while it is translated");
+    }
+    if (!opt.getOutputFilename().isEmpty() && !narrowing) {
+      try {
+        Files.writeString(Path.of(opt.getOutputFilename()), "=====UNSATISFIABLE=====");
+      } catch (IOException e1) {
+        log.error("Failed to write output to {}", opt.getOutputFilename(), e1);
+      }
+    }
+    if (opt.getStatistics()) {
+      IO.println(
+          "%%%mzn-stat: variables="
+              + (parser.getStore().size() + parser.getTables().getNumberBoolVariables()));
+      IO.println("%%%mzn-stat: propagators=" + parser.getStore().numberConstraints());
+      IO.println("\n%%%mzn-stat: propagations=" + parser.getStore().numberConsistencyCalls);
+      // the block ends as every other block of statistics does
+      IO.println("%%%mzn-stat-end");
+    }
+  }
+
+  // Errors go to stderr, so that stdout holds only solutions and status lines, as MiniZinc
+  // expects from a solver that rejects its input.
+
+  private void handleArithmeticException(ArithmeticException e) {
+    FzConsole.printlnErr("%% Evaluation of model resulted in an overflow: " + e.getMessage());
+  }
+
+  private void handleIllegalArgumentException(IllegalArgumentException e) {
+    FzConsole.printlnErr("%% Error: " + e.getMessage());
+  }
+
+  private void handleArrayIndexOutOfBoundsException(ArrayIndexOutOfBoundsException e) {
+    FzConsole.printlnErr("%% JaCoP internal error. Array out of bound exception " + e);
+    if (e.getStackTrace().length > 0) {
+      FzConsole.printlnErr("%%\t" + e.getStackTrace()[0]);
+    }
+  }
+
+  private void printStatisticsTime(Parser parser) {
+    long execTime = (parser.solver.initTime + parser.solver.searchTime) / 1_000_000L; // in ms
+    final long hr = TimeUnit.MILLISECONDS.toHours(execTime);
+    final long min = TimeUnit.MILLISECONDS.toMinutes(execTime - TimeUnit.HOURS.toMillis(hr));
+    final long sec =
+        TimeUnit.MILLISECONDS.toSeconds(
+            execTime - TimeUnit.HOURS.toMillis(hr) - TimeUnit.MINUTES.toMillis(min));
+    final long ms =
+        TimeUnit.MILLISECONDS.toMillis(
+            execTime
+                - TimeUnit.HOURS.toMillis(hr)
+                - TimeUnit.MINUTES.toMillis(min)
+                - TimeUnit.SECONDS.toMillis(sec));
+    System.out.printf(Locale.ROOT, "%n%%%%%%mzn-stat: time=%.3f ", execTime / 1000.0);
+    if (hr == 0) {
+      if (min == 0) {
+        IO.println();
+      } else {
+        IO.println("(%d:%02d.%03d)".formatted(min, sec, ms));
+      }
+    } else {
+      IO.println("(%d:%02d:%02d.%03d)".formatted(hr, min, sec, ms));
+    }
+  }
+}

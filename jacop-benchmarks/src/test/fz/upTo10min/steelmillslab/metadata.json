@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["array_bool_or", "array_int_element", "bool2int", "bool_clause", "int_eq_reif", "int_lin_eq", "int_lin_le", "jacop_bin_packing"],
+  "constraintFamilies": ["binpacking", "boolean", "comparison", "element", "linear"],
+  "domains": []
+}

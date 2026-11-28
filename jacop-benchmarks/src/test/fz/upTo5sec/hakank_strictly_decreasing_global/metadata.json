@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["jacop_increasing", "jacop_strictly_increasing"],
+  "constraintFamilies": ["ordering"],
+  "domains": []
+}

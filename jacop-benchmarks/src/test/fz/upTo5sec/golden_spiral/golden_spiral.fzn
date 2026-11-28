@@ -1,0 +1,14 @@
+var 0.0..20.0: theta;
+var 0.0..20.0: r;
+var -20.0..20.0: x:: is_defined_var:: output_var;
+var -20.0..20.0: y:: is_defined_var:: output_var;
+var -6.129799999999999..6.129799999999999: X_INTRODUCED_1 ::var_is_introduced :: is_defined_var;
+var -1.0..1.0: X_INTRODUCED_3 ::var_is_introduced ;
+var -1.0..1.0: X_INTRODUCED_5 ::var_is_introduced ;
+constraint float_exp(X_INTRODUCED_1,r);
+constraint float_sin(theta,X_INTRODUCED_3);
+constraint float_cos(theta,X_INTRODUCED_5);
+constraint float_times(r,X_INTRODUCED_5,x):: defines_var(x);
+constraint float_times(r,X_INTRODUCED_3,y):: defines_var(y);
+constraint float_lin_eq([0.30649,-1.0],[theta,X_INTRODUCED_1],0.0):: defines_var(X_INTRODUCED_1);
+solve :: float_search([x,y,theta,r],0.01,input_order,indomain_split,complete) satisfy;

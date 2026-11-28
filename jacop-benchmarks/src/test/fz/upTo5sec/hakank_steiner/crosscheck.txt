@@ -1,0 +1,5 @@
+source: hakank/minizinc/steiner.mzn
+mode: all (satisfaction)
+verified: JaCoP, Chuffed 0.13.2 find 30 distinct solutions
+feasibility: 20 JaCoP solution(s) accepted by chuffed as data
+gecode differs: Gecode orders sets differently from the MiniZinc library's set_le/set_lt

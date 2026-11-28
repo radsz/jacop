@@ -1,0 +1,283 @@
+/*
+ * XplusClteqZImplied.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+package org.jacop.constraints;
+
+import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
+import org.jacop.lcg.ReifiedExplanation;
+
+/**
+ * Constraint b =&gt; X + C{@literal <=} Z, where b is a 0/1 variable (half reification).
+ *
+ * <p>It is equivalent to {@code new Implies(b, new XplusClteqZ(x, c, z))} and prunes the same,
+ * without the overhead of a wrapper around a nested constraint. Boundary consistency is used.
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 5.0
+ */
+public class XplusClteqZImplied extends PrimitiveConstraint
+    implements Copyable<XplusClteqZImplied>, Explainable, PbEncodable {
+
+  static final AtomicInteger idNumber = new AtomicInteger(0);
+
+  /** It specifies variable x. */
+  public final IntVar x;
+
+  /** It specifies constant c. */
+  public final int c;
+
+  /** It specifies variable z. */
+  public final IntVar z;
+
+  /** It specifies the 0/1 variable that implies x + c &lt;= z. */
+  public final IntVar b;
+
+  // the value of b that enforces x + c <= z: 1, or 0 in XplusClteqZImpliedNot
+  private final int on;
+
+  /**
+   * It constructs constraint b =&gt; X + C{@literal <=} Z.
+   *
+   * @param b the 0/1 variable that implies the inequality.
+   * @param x variable x.
+   * @param c constant c.
+   * @param z variable z.
+   */
+  public XplusClteqZImplied(IntVar b, IntVar x, int c, IntVar z) {
+    this(b, x, c, z, 1);
+  }
+
+  /**
+   * It constructs constraint b = on =&gt; X + C{@literal <=} Z.
+   *
+   * @param b the 0/1 variable that implies the inequality.
+   * @param x variable x.
+   * @param c constant c.
+   * @param z variable z.
+   * @param on the value of b, 0 or 1, that enforces the inequality.
+   */
+  protected XplusClteqZImplied(IntVar b, IntVar x, int c, IntVar z, int on) {
+
+    checkInputForNullness(new String[] {"b", "x", "z"}, new Object[] {b, x, z});
+    if (b.min() < 0 || b.max() > 1) {
+      throw new IllegalArgumentException(
+          "Variable b in " + getClass().getSimpleName() + " must be 0/1 but is " + b);
+    }
+
+    numberId = idNumber.incrementAndGet();
+
+    this.b = b;
+    this.on = on;
+    this.x = x;
+    this.c = c;
+    this.z = z;
+
+    checkSumOverflow(x.min(), x.max(), c, c, z.min(), z.max());
+    setScope(b, x, z);
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  public int getBoundPruningEvent(Var v) {
+    // consistency() reads both bounds of b, but only the minimum of x and the maximum of z
+    if (v == b || x == z) {
+      return IntDomain.BOUND;
+    }
+    return v == x ? IntDomain.MIN_EVENT : IntDomain.MAX_EVENT;
+  }
+
+  @Override
+  public void consistency(final Store store) {
+
+    if (x == z) {
+      // b => x + c <= x is b = 0 for c > 0 and true otherwise; the bounds below would shrink by c
+      // per call, but the constraint is not woken by its own pruning
+      if (c > 0) {
+        b.domain.inValue(store.level, b, 1 - on);
+      }
+      removeConstraint();
+    } else if (off()) {
+      removeConstraint();
+    } else if (b.singleton()) {
+      x.domain.inMax(store.level, x, long2int((long) z.max() - c));
+      z.domain.inMin(store.level, z, long2int((long) x.min() + c));
+      if ((long) x.max() + c <= z.min()) {
+        removeConstraint();
+      }
+    } else if ((long) x.min() + c > z.max()) {
+      b.domain.inValue(store.level, b, 1 - on);
+      removeConstraint();
+    } else if ((long) x.max() + c <= z.min()) {
+      removeConstraint();
+    }
+  }
+
+  @Override
+  public void notConsistency(final Store store) {
+
+    // not (b => x + c <= z) is b and x + c > z.
+    if (x == z && c <= 0) {
+      throw Store.failException;
+    }
+    b.domain.inValue(store.level, b, on);
+    if (x == z) {
+      return;
+    }
+    x.domain.inMin(store.level, x, long2int((long) z.min() - c + 1));
+    z.domain.inMax(store.level, z, long2int((long) x.max() + c - 1));
+  }
+
+  @Override
+  public boolean satisfied() {
+    return off() || (x == z ? c <= 0 : (long) x.max() + c <= z.min());
+  }
+
+  @Override
+  public boolean notSatisfied() {
+    return b.singleton() && !off() && (x == z ? c > 0 : (long) x.min() + c > z.max());
+  }
+
+  @Override
+  public String toString() {
+
+    return id()
+        + " : "
+        + getClass().getSimpleName()
+        + "("
+        + b
+        + ", "
+        + x
+        + ", "
+        + c
+        + ", "
+        + z
+        + " )";
+  }
+
+  @Override
+  public XplusClteqZImplied copy(VarMap map) {
+    return new XplusClteqZImplied(map.get(b), map.get(x), c, map.get(z));
+  }
+
+  // the implied inequality, for its explanations
+  private XplusClteqZ lcgNested;
+
+  private XplusClteqZ nested() {
+    if (lcgNested == null) {
+      lcgNested = new XplusClteqZ(x, c, z);
+    }
+    return lcgNested;
+  }
+
+  /**
+   * It returns the value of b that enforces the inequality.
+   *
+   * @return 1, or 0 for {@link XplusClteqZImpliedNot}.
+   */
+  public int enforcingValue() {
+    return on;
+  }
+
+  // b cannot take the value that enforces the inequality
+  private boolean off() {
+    return on == 1 ? b.max() == 0 : b.min() == 1;
+  }
+
+  // the explanations and the encoding are this class's and XplusClteqZImpliedNot's, not of others
+  private boolean own() {
+    return getClass() == XplusClteqZImplied.class || getClass() == XplusClteqZImpliedNot.class;
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (!own() || x == z || b == x || b == z) {
+      return false;
+    }
+    return on == 1
+        ? ReifiedExplanation.explain(trail, entry, b, nested(), false, out)
+        : ReifiedExplanation.explainNegatedControl(trail, entry, b, nested(), out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (!own() || x == z || b == x || b == z) {
+      return false;
+    }
+    return on == 1
+        ? ReifiedExplanation.explainFailure(trail, b, nested(), false, out)
+        : ReifiedExplanation.explainNegatedControlFailure(trail, b, nested(), out);
+  }
+
+  // b = on -> x + c <= z, as the inequality under the guard b (or not b)
+  @Override
+  public boolean encode(PbModel model) {
+    // x + c <= x has no linear form (x is z): the model is not encoded
+    LinearForm form = nested().linearForm();
+    if (!own() || form == null || model.domain(b).min() < 0 || model.domain(b).max() > 1) {
+      return false;
+    }
+    if (on == 1) {
+      model.reified(b, form, false);
+    } else {
+      model.guarded(PbModel.not(model.equalTo(b, 1)), form);
+    }
+    return true;
+  }
+}

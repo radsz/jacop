@@ -1,0 +1,16 @@
+%  toy example used in the paper Chiarandini et al (optimal cost = 191)
+
+n_periods =  4 ;
+n_courses =  6 ;
+n_curricula =  3 ;
+min_courses =  0 ;
+max_courses =  2 ;
+n_precedences =  3 ;
+n_undesirables =  4 ;
+w1 = 1;
+w2 = 1;
+course_load =  [5, 10, 5, 4, 20, 7] ;
+courses_of =  [{1, 2, 3, 4}, {2, 3, 4, 6}, {1, 2, 5, 6}] ;
+precedes = array2d(precedences,1..2, [4, 3, 4, 5, 3, 6] );
+undesirable = array2d(undesirables,1..2, [2, 1, 2, 3, 1, 2, 1, 4] );
+% {'B': 2, 'E': 5, 'F': 6, 'A': 1, 'C': 3, 'D': 4}

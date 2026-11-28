@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["jacop_lex_less_bool", "jacop_lex_lesseq_bool"],
+  "constraintFamilies": ["ordering"],
+  "domains": []
+}

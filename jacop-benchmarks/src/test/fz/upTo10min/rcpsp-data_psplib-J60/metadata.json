@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["int_lin_le", "jacop_cumulative"],
+  "constraintFamilies": ["cumulative", "linear"],
+  "domains": []
+}

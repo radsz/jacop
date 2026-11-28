@@ -1,0 +1,5 @@
+obj = 231;
+open = array1d(1..15, [false, false, false, false, false, true, false, true, true, false, false, false, false, true, false]);
+to = array1d(1..25, [8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 9, 9, 9, 14, 14, 14, 14, 14, 6, 6, 6, 6, 6, 6]);
+----------
+==========

@@ -1,0 +1,8 @@
+objective = 103936;
+def = array1d(0..40, [0, 0, 0, 1, 0, 0, 4, 0, 5, 5, 5, 6, 6, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 4, 0, 0, 0, 5, 5, 5, 6, 6, 2, 3, 0, 0]);
+loc = array1d(0..40, [31, 31, 34, 31, 0, 31, 34, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 0, 0, 31, 0, 31, 0, 0, 31, 31, 0, 31, 31, 31, 31, 31, 0, 31, 0, 0]);
+sel = array1d(0..113, [true, true, false, false, true, true, true, false, true, true, true, true, true, true, true, false, true, false, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, false, true, true, false, false, true, false, true, false, false, false, false, true, false, true, false, false, false, false, false, true, true, false, false, false, true, false, false, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, true, true, false, false, true, false, false, false, false, false, false, false, false, false, true, true, true, true, false]);
+place = array1d(0..113, [3, 1, 13, 13, 7, 8, 9, 13, 11, 12, 0, 0, 0, 0, 0, 13, 0, 13, 0, 0, 1, 5, 6, 3, 0, 0, 0, 0, 0, 0, 0, 5, 5, 6, 5, 13, 5, 6, 13, 13, 0, 13, 4, 13, 13, 13, 13, 1, 13, 2, 13, 13, 13, 13, 13, 5, 6, 13, 13, 13, 10, 13, 13, 3, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 2, 0, 0, 13, 13, 0, 13, 13, 13, 13, 13, 13, 13, 13, 13, 0, 5, 6, 0, 13]);
+succ = array1d(0..13, [7, 3, 9, 10, 11, 8, 12, 2, 1, 4, 13, 6, 5, 0]);
+----------
+==========

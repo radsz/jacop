@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["bool2int", "int_eq_reif", "int_lin_eq", "jacop_count", "jacop_lex_lesseq_int", "jacop_regular", "jacop_value_precede_int"],
+  "constraintFamilies": ["boolean", "comparison", "counting", "linear", "ordering", "regular", "sequence"],
+  "domains": []
+}

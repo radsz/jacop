@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["int_lin_eq", "int_lin_le", "int_mod", "jacop_cumulative", "jacop_maximum"],
+  "constraintFamilies": ["arithmetic", "cumulative", "linear", "minmax"],
+  "domains": []
+}

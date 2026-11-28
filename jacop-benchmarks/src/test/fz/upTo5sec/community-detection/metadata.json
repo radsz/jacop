@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["bool2int", "int_eq_reif", "int_lin_eq", "int_lin_ne", "jacop_count_values_bounds", "jacop_maximum", "jacop_value_precede_chain_int"],
+  "constraintFamilies": ["boolean", "comparison", "counting", "linear", "minmax", "sequence"],
+  "domains": []
+}

@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["array_bool_and", "array_bool_or", "int_eq_reif", "int_lin_eq", "int_lin_eq_reif", "int_lin_ne", "int_times"],
+  "constraintFamilies": ["arithmetic", "boolean", "comparison", "linear"],
+  "domains": []
+}

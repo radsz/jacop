@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["bool2int", "int_lin_eq", "int_lin_le", "jacop_all_disjoint", "jacop_minimum", "set_card", "set_in_reif", "set_subset_reif"],
+  "constraintFamilies": ["boolean", "linear", "minmax", "set"],
+  "domains": []
+}

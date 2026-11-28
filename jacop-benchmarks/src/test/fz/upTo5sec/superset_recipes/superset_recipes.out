@@ -1,0 +1,4 @@
+pantry = {1, 2, 3, 4, 7, 9, 12, 13, 15};
+cook = array1d(1..14, [true, true, false, true, false, false, false, true, false, true, false, true, false, false]);
+----------
+==========

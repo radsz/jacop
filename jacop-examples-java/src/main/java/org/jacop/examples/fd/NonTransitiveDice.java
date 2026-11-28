@@ -1,0 +1,363 @@
+/*
+ * NonTransitiveDice.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.examples.fd;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.Constraint;
+import org.jacop.constraints.Max;
+import org.jacop.constraints.Min;
+import org.jacop.constraints.Reified;
+import org.jacop.constraints.SumInt;
+import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XgtY;
+import org.jacop.constraints.XltY;
+import org.jacop.constraints.XplusYeqC;
+import org.jacop.core.BooleanVar;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMiddle;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleSelect;
+
+/**
+ * It models and solves Nontransitive Dice Problem.
+ *
+ * <p>Nontransitive Dice problem is to assign to given number of dices a number to each side of the
+ * dice in such a way that
+ *
+ * <p>a) given cyclic order of dices, each dice wins with the next one with probability p larger
+ * than 0.5.
+ *
+ * <p>b) maximize minimum p.
+ *
+ * <p>c) no two dices which are matched against each other can result in draw. default approach to
+ * satisfy this condition is to require all sides of all dices to be assigned unique values.
+ *
+ * @author Radoslaw Szymanek
+ * @version 5.0
+ */
+@Slf4j
+public class NonTransitiveDice extends ExampleFd {
+
+  /** It contains constraints which can be used for shaving guidance. */
+  public final List<Constraint> shavingConstraints = new ArrayList<>();
+
+  /** If true then faces on non consequtive faces can be the same. */
+  public final boolean reuseOfNumbers = false;
+
+  /** It specifies number of dices in the problem. */
+  public int noDices = 3;
+
+  /** It specifies number of sides for each dice in the problem. */
+  public int noSides = 6;
+
+  /**
+   * It specifies the currently best solution which is a bound for the next solution.
+   *
+   * <p>The currentBest specifies the difference between noSides^2 and minimumWinning. Since we
+   * maximize minimumWinning we minimize currentBest. The next solution must have a lower value for
+   * currentBest. currentBest is an upperbound.
+   *
+   * <p>minimumWinning + currentBest = noSides^2
+   *
+   * <p>Good initial value for currentBest is noSides^2 / 2.
+   */
+  public int currentBest = 16;
+
+  /** Parses noDices and noSides from args; returns initial currentBest for first phase. */
+  private static int runFirstPhase(int noDices, int noSides) {
+    int noSidesSq = noSides * noSides;
+    int currentBest = (noSidesSq % 2 == 0) ? noSidesSq / 2 - 1 : noSidesSq / 2;
+    boolean firstSolutionFound = false;
+    while (true) {
+      NonTransitiveDice example = new NonTransitiveDice();
+      example.noDices = noDices;
+      example.noSides = noSides;
+      example.currentBest = currentBest;
+      example.model();
+      boolean result = example.searchSpecial();
+      currentBest--;
+      if (result) {
+        firstSolutionFound = true;
+      }
+      if (!result && firstSolutionFound) {
+        break;
+      }
+    }
+    return noSidesSq / 2;
+  }
+
+  /** Runs second phase (shaving search) and prints stats until no solution. */
+  private static void runSecondPhase(int noDices, int noSides, int initialCurrentBest) {
+    boolean firstSolutionFound = false;
+    int currentBest = initialCurrentBest;
+    while (true) {
+      NonTransitiveDice example = new NonTransitiveDice();
+      example.noDices = noDices;
+      example.noSides = noSides;
+      example.currentBest = currentBest;
+      example.model();
+      boolean result = example.shavingSearch(example.shavingConstraints, false);
+      IO.print(noDices + "\t");
+      IO.print(noSides + "\t");
+      IO.print(currentBest + "\t");
+      IO.print(result + "\t");
+      IO.print(example.searchLabel.getNodes() + "\t");
+      IO.print(example.searchLabel.getDecisions() + "\t");
+      IO.print(example.searchLabel.getWrongDecisions() + "\t");
+      IO.print(example.searchLabel.getBacktracks() + "\t");
+      log.info(example.searchLabel.getMaximumDepth() + "\t");
+      currentBest--;
+      if (result) {
+        firstSolutionFound = true;
+      }
+      if (!result && firstSolutionFound) {
+        break;
+      }
+    }
+  }
+
+  /**
+   * It executes the program solving non transitive dice problem using two different methods. The
+   * second method employs constraint guided shaving.
+   *
+   * @param args the first argument specifies number of dices, the second argument specifies the
+   *     number of sides of each dice.
+   */
+  static void main(String[] args) {
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
+    int noDices = (args.length > 0) ? Integer.parseInt(args[0]) : 4;
+    int noSides = (args.length > 1) ? Integer.parseInt(args[1]) : 7;
+
+    int initialCurrentBest = runFirstPhase(noDices, noSides);
+    runSecondPhase(noDices, noSides, initialCurrentBest);
+  }
+
+  private IntVar[] createFaces(int noNumbers) {
+    IntVar[] faces = new IntVar[noDices * noSides];
+    for (int i = 0; i < faces.length; i++) {
+      faces[i] = new IntVar(store, "d" + (i / noSides + 1) + "f" + (i % noSides + 1), 1, noNumbers);
+    }
+    return faces;
+  }
+
+  private void imposeLexOrderOnFaces(IntVar[] faces) {
+    for (int i = 0; i < noDices; i++) {
+      for (int j = 0; j < noSides - 1; j++) {
+        store.impose(new XltY(faces[i * noSides + j], faces[i * noSides + j + 1]));
+      }
+    }
+  }
+
+  private IntVar[][][] createWins() {
+    IntVar[][][] wins = new IntVar[noDices][noSides][noSides];
+    for (int i = 0; i < noDices; i++) {
+      for (int j = 0; j < noSides; j++) {
+        for (int m = 0; m < noSides; m++) {
+          wins[i][j][m] =
+              new BooleanVar(
+                  store, "win_D" + (i + 1) + "->" + ((i + 2) % noDices) + "F" + j + m, 0, 1);
+        }
+      }
+    }
+    return wins;
+  }
+
+  private void imposeWinningConstraints(IntVar[] faces, IntVar[][][] wins) {
+    for (int i = 0; i < noDices; i++) {
+      for (int j = 0; j < noSides; j++) {
+        for (int m = 0; m < noSides; m++) {
+          store.impose(
+              new Reified(
+                  new XgtY(faces[noSides * i + j], faces[noSides * ((i + 1) % noDices) + m]),
+                  wins[i][j][m]));
+        }
+      }
+    }
+  }
+
+  private IntVar[] createWinningSums(IntVar[][][] wins) {
+    IntVar[] winningSum = new IntVar[noDices];
+    for (int i = 0; i < noDices; i++) {
+      winningSum[i] =
+          new IntVar(
+              store,
+              "noWins-d" + (i + 1) + "->d" + ((i + 2) % noDices),
+              noSides * noSides / 2 + 1,
+              noSides * noSides);
+
+      IntVar[] matrix = new IntVar[noSides * noSides];
+      for (int j = 0; j < noSides; j++) {
+        System.arraycopy(wins[i][j], 0, matrix, j * noSides, noSides);
+      }
+
+      store.impose(new SumInt(matrix, "==", winningSum[i]));
+    }
+    return winningSum;
+  }
+
+  /** Imposes implied constraints that fix wins[i][j][m] to 1 when probability is high enough. */
+  private void imposeImpliedWinConstraints(IntVar[][][] wins, int noDices, int noSides) {
+    int threshold = currentBest != noSides * noSides ? currentBest - 1 : noSides * noSides / 2;
+    for (int j = 0; j < noSides; j++) {
+      for (int m = 0; m < noSides; m++) {
+        if ((j + 1) * (noSides - m) > threshold) {
+          for (int i = 0; i < noDices; i++) {
+            store.impose(new XeqC(wins[i][j][m], 1));
+          }
+        }
+      }
+    }
+  }
+
+  @Override
+  public void model() {
+
+    store = new Store();
+    int noNumbers = noDices * noSides;
+
+    IntVar[] faces = createFaces(noNumbers);
+    imposeLexOrderOnFaces(faces);
+    IntVar[][][] wins = createWins();
+    imposeWinningConstraints(faces, wins);
+    imposeImpliedWinConstraints(wins, noDices, noSides);
+
+    IntVar[] winningSum = createWinningSums(wins);
+
+    IntVar minimumWinning = new IntVar(store, "MinDominance", 0, noSides * noSides);
+
+    store.impose(new Min(winningSum, minimumWinning));
+
+    // FDV noSidesSquare = new FDV(store, "noSidesSquare",
+    // noSides*noSides, noSides*noSides);
+
+    // minimumWinning + diff = noSidesSquare
+    // Objective to maximize minimumWinning is equal to minimization
+    // objective
+    // of diff
+    IntVar diff = new IntVar(store, "diff", currentBest, currentBest);
+
+    store.impose(new XplusYeqC(minimumWinning, diff, noSides * noSides));
+
+    if (reuseOfNumbers) {
+
+      // Why not only restriction that all faces of any two
+      // consequtive dices
+      // should be different?
+
+      IntVar[] sidesTwoConsecutiveDices = new IntVar[noSides * 2];
+
+      for (int i = 0; i < noDices; i++) {
+
+        for (int j = 0; j < noSides; j++) {
+          sidesTwoConsecutiveDices[j] = faces[noSides * i + j];
+          sidesTwoConsecutiveDices[j + noSides] = faces[noSides * ((i + 1) % noDices) + j];
+        }
+        Constraint cx = new Alldistinct(sidesTwoConsecutiveDices);
+        store.impose(cx);
+        shavingConstraints.add(cx);
+      }
+    } else {
+
+      Constraint cx = new Alldistinct(faces);
+      store.impose(cx, 1);
+      shavingConstraints.add(cx);
+    }
+
+    // Symmetry breaking between dices
+    store.impose(new XeqC(faces[0], 1));
+
+    // Minimizing maximal number on dice
+
+    IntVar maxNo = new IntVar(store, "maxNo", noSides * 2, noDices * noSides);
+    store.impose(new Max(faces, maxNo));
+
+    // Simple maximum constraint on cost variable
+
+    vars = new ArrayList<>();
+
+    for (int i = noSides / 2, j = noSides / 2 + 1; i >= 0 || j < noSides; i--, j++) {
+      for (int d = 0; d < noDices; d++) {
+        if (i >= 0) {
+          vars.add(faces[d * noSides + i]);
+        }
+      }
+      for (int d = 0; d < noDices; d++) {
+        if (j < noSides) {
+          vars.add(faces[d * noSides + j]);
+        }
+      }
+    }
+
+    for (int i = 0; i < noDices; i++) {
+      for (int j = 0; j < noSides; j++) {
+        vars.addAll(Arrays.asList(wins[i][j]).subList(0, noSides));
+      }
+    }
+  }
+
+  /**
+   * It executes a specialized search to find a solution to this problem. It uses input order,
+   * indomain middle, and limit of backtracks. It prints major search statistics.
+   *
+   * @return true if solution is found, false otherwise.
+   */
+  public boolean searchSpecial() {
+
+    searchLabel = new DepthFirstSearch<>();
+    searchLabel.setPrintInfo(false);
+    searchLabel.setBacktracksOut(10000000);
+
+    SelectChoicePoint<IntVar> select =
+        new SimpleSelect<>(vars.toArray(new IntVar[1]), null, new IndomainMiddle<>());
+
+    boolean result = searchLabel.labeling(store, select);
+
+    IO.print(noDices + "\t");
+    IO.print(noSides + "\t");
+    IO.print(currentBest + "\t");
+    IO.print(result + "\t");
+    IO.print(searchLabel.getNodes() + "\t");
+    IO.print(searchLabel.getDecisions() + "\t");
+    IO.print(searchLabel.getWrongDecisions() + "\t");
+    IO.print(searchLabel.getBacktracks() + "\t");
+    log.info(searchLabel.getMaximumDepth() + "\t");
+
+    return result;
+  }
+}

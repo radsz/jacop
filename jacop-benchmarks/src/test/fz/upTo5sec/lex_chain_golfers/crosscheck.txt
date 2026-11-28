@@ -1,0 +1,3 @@
+source: radsz/osolpro benchmarks/lex-chain (social golfers, 4 weeks of 3 groups of 3, integer model)
+mode: all (satisfaction)
+verified: JaCoP with LexChain, JaCoP with pairwise lex and Gecode 6.3.0 all find 36 solutions

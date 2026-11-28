@@ -1,0 +1,314 @@
+/*
+ * ConferenceTalkPlacement.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.examples.fd;
+
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import org.jacop.constraints.Count;
+import org.jacop.constraints.IfThenElse;
+import org.jacop.constraints.In;
+import org.jacop.constraints.SumInt;
+import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XlteqC;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.MaxRegret;
+import org.jacop.search.PrintOutListener;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleMatrixSelect;
+import org.jacop.search.SmallestDomain;
+
+/**
+ * It solves a simple conference talk placement problem.
+ *
+ * <p>It solves a simple conference example problem, where different sessions must be scheduled
+ * according to the specified constraints.
+ *
+ * @author Radoslaw Szymanek
+ * @version 5.0
+ */
+@Slf4j
+public class ConferenceTalkPlacement {
+
+  Store store;
+  IntVar cost;
+  List<IntVar> vars;
+  IntVar[][] varsMatrix;
+  DepthFirstSearch<IntVar> searchLabel;
+  SecureRandom random = new SecureRandom();
+
+  /**
+   * It executes the program to solve this Travelling Salesman Problem.
+   *
+   * @param args no argument is used.
+   */
+  static void main(String[] args) {
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
+    int noOfParallelTracks = 6;
+    int noOfTimeSlots = 6;
+    int noOfTalks = noOfParallelTracks * noOfTimeSlots;
+    int maxSingleCost = 50;
+    int randomSeed = 55;
+
+    ConferenceTalkPlacement example = new ConferenceTalkPlacement();
+
+    // The first key in the main hashmap denotes the first (lower id value) talk in any pair.
+    // The second key in the secondary hashmap denotes the second (higher id value) talk in any
+    // pair.
+    // The value in the nested hashmap specify the cost if pair of talks (first key, second key) are
+    // scheduled
+    // in the same time slot.
+    // The goal is to minimize the sum of costs.
+    Map<Integer, Map<Integer, Integer>> costMap =
+        example.randomCosts(noOfTalks, randomSeed, maxSingleCost);
+
+    example.model(noOfParallelTracks, noOfTalks, noOfTimeSlots, maxSingleCost, costMap);
+
+    // If you get the first time out then it means that the problem gets too difficult or you have
+    // setup the
+    // maximum cost too low.
+    int timeOutSeconds = 180;
+
+    // Unlikely to finish anytime soon for random examples of size more than noOfParallelTracks=3,
+    // and noOfTimeSlots=3.
+    // Real life examples maybe solvable to optimality for much larger sizes.
+
+    if (example.searchMaxRegretForMatrixOptimal(timeOutSeconds)) {
+      log.info("Solution(s) found");
+    }
+
+    // Everytime you find a solution reduce the maximum cost by a bit (e.g. 5%).
+  }
+
+  /**
+   * Generates random costs for scheduling talk pairs.
+   *
+   * @param noOfTalks total number of talks
+   * @param randomSeed seed for random number generation
+   * @param maxSingleCost maximum cost for any single talk pair
+   * @return nested map structure with random costs for each talk pair
+   */
+  private Map<Integer, Map<Integer, Integer>> randomCosts(
+      int noOfTalks, int randomSeed, int maxSingleCost) {
+
+    random.setSeed(randomSeed);
+
+    Map<Integer, Map<Integer, Integer>> result = new HashMap<>();
+
+    for (int i = 0; i < noOfTalks; i++) {
+      result.put(i, new HashMap<>());
+    }
+
+    for (int i = 0; i < noOfTalks; i++) {
+      for (int j = i + 1; j < noOfTalks; j++) {
+        result.get(i).put(j, random.nextInt(maxSingleCost));
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Creates the constraint model for the conference talk placement problem.
+   *
+   * @param noOfParallelTracks number of parallel tracks
+   * @param noOfTalks number of talks to schedule
+   * @param noOfTimeSlots number of available time slots
+   * @param maxSingleCost maximum cost for a single conflict
+   * @param costMap mapping of talk pairs to their conflict costs
+   */
+  public void model(
+      int noOfParallelTracks,
+      int noOfTalks,
+      int noOfTimeSlots,
+      int maxSingleCost,
+      Map<Integer, Map<Integer, Integer>> costMap) {
+
+    store = new Store();
+
+    varsMatrix = new IntVar[noOfTalks * (noOfTalks - 1) / 2][3];
+
+    IntVar[] talkPlacement = new IntVar[noOfTalks];
+
+    for (int i = 0; i < noOfTalks; i++) {
+      talkPlacement[i] = new IntVar(store, "talk[" + i + "]-track", 0, noOfParallelTracks - 1);
+    }
+
+    IntVar[] talkCounterInTrack = new IntVar[noOfParallelTracks];
+    for (int i = 0; i < noOfParallelTracks; i++) {
+      talkCounterInTrack[i] =
+          new IntVar(
+              store,
+              "noOfTalksIn-" + i + "-th-Track",
+              noOfTalks / noOfParallelTracks - 1,
+              noOfTimeSlots);
+    }
+
+    for (int i = 0; i < noOfParallelTracks; i++) {
+      store.impose(new Count(talkPlacement, talkCounterInTrack[i], i));
+    }
+
+    IntVar[] pairCosts = new IntVar[noOfTalks * (noOfTalks - 1) / 2];
+
+    int pairNo = 0;
+    for (int i = 0; i < noOfTalks; i++) {
+      for (int j = i + 1; j < noOfTalks; j++) {
+
+        pairCosts[pairNo] = new IntVar(store, "pair(" + i + ", " + j + ")Cost", 0, maxSingleCost);
+
+        varsMatrix[pairNo][0] = pairCosts[pairNo];
+        varsMatrix[pairNo][1] = talkPlacement[i];
+        varsMatrix[pairNo][2] = talkPlacement[j];
+
+        if (costMap.get(i).get(j) != null) {
+
+          store.impose(
+              new IfThenElse(
+                  new XeqY(talkPlacement[i], talkPlacement[j]),
+                  new XeqC(pairCosts[pairNo], costMap.get(i).get(j)),
+                  new XeqC(pairCosts[pairNo], 0)));
+
+          IntervalDomain costPairDomain = new IntervalDomain(0, 0);
+          costPairDomain.unionAdapt(costMap.get(i).get(j));
+          store.impose(new In(pairCosts[pairNo], costPairDomain));
+        } else {
+          store.impose(new XeqC(pairCosts[pairNo], 0));
+        }
+
+        pairNo++;
+      }
+    }
+
+    cost = new IntVar(store, "cost", 0, IntDomain.MAX_INT);
+
+    store.impose(new SumInt(pairCosts, "==", cost));
+
+    vars = new ArrayList<>();
+    vars.addAll(Arrays.asList(talkPlacement));
+  }
+
+  /**
+   * It uses MaxRegret variable ordering heuristic to search for a solution.
+   *
+   * @param timeOutSeconds time-out in seconds
+   * @return true if there is a solution, false otherwise.
+   */
+  public boolean searchMaxRegretForMatrixOptimal(int timeOutSeconds) {
+
+    long t1;
+    long t2;
+    t1 = System.currentTimeMillis();
+
+    searchLabel = new DepthFirstSearch<>();
+    PrintOutListener<IntVar> solutionListener = new PrintOutListener<>();
+    searchLabel.setSolutionListener(solutionListener);
+
+    if (timeOutSeconds > 0) {
+      searchLabel.setTimeOut(timeOutSeconds);
+    }
+
+    // pivot variable is at index 0.
+    SelectChoicePoint<IntVar> select =
+        new SimpleMatrixSelect<>(
+            varsMatrix, new MaxRegret<>(), new SmallestDomain<>(), new IndomainMin<>());
+
+    boolean result = searchLabel.labeling(store, select, cost);
+
+    t2 = System.currentTimeMillis();
+    long t = t2 - t1;
+
+    if (result) {
+      log.info("Variables : " + vars);
+    } else {
+      log.info("Failed to find any solution");
+    }
+
+    log.info("\n\t*** Execution time = " + t + " ms");
+
+    return result;
+  }
+
+  /**
+   * Performs search for a solution with specified cost constraint and timeout.
+   *
+   * @param maxCostAllowed maximum allowed cost (-1 for no limit)
+   * @param timeOutSeconds timeout in seconds
+   * @return true if a solution was found, false otherwise
+   */
+  public boolean search(int maxCostAllowed, int timeOutSeconds) {
+
+    if (maxCostAllowed != -1) {
+      store.impose(new XlteqC(cost, maxCostAllowed));
+    }
+
+    long t1;
+    long t2;
+    t1 = System.currentTimeMillis();
+
+    searchLabel = new DepthFirstSearch<>();
+
+    // pivot variable is at index 0.
+    SelectChoicePoint<IntVar> select =
+        new SimpleMatrixSelect<>(
+            varsMatrix, new MaxRegret<>(), new SmallestDomain<>(), new IndomainMin<>());
+
+    if (timeOutSeconds > 0) {
+      searchLabel.setTimeOut(timeOutSeconds);
+    }
+
+    boolean result = searchLabel.labeling(store, select);
+
+    t2 = System.currentTimeMillis();
+    long t = t2 - t1;
+
+    if (result) {
+      log.info("Variables : " + vars);
+    } else {
+      log.info("Failed to find any solution");
+    }
+
+    log.info("\n\t*** Execution time = " + t + " ms");
+
+    return result;
+  }
+}

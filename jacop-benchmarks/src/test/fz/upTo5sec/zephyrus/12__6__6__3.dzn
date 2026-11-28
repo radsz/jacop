@@ -1,0 +1,18 @@
+comps = 1..4;
+ports = 1..4;
+multi_provide_ports = 1..5;
+locations = 1..48;
+resources = 1..1;
+requirement_port_nums = [|
+0,6,0,0|0,13,0,0|6,0,0,0|0,0,0,0|];
+provide_port_nums = [|
+-1,0,0,0,0|0,-1,-1,0,0|0,0,0,-1,0|0,0,0,0,3|];
+conflicts = [|
+false,false,false,false|false,false,true,false|false,false,false,false|false,false,false,false|];
+multi_provides = [|
+false,false,false,true|false,false,false,true|false,false,true,false|false,true,false,false|true,false,false,false|];
+costs = [260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 260, 130, 130, 130, 130, 130, 130, 130, 130, 130, 130, 130, 130, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 520, 520, 520, 520, 520, 520, 520, 520, 520, 520, 520, 520];
+resource_provisions = [|
+8052|8052|8052|8052|8052|8052|8052|8052|8052|8052|8052|8052|4026|4026|4026|4026|4026|4026|4026|4026|4026|4026|4026|4026|1825|1825|1825|1825|1825|1825|1825|1825|1825|1825|1825|1825|16104|16104|16104|16104|16104|16104|16104|16104|16104|16104|16104|16104|];
+resource_consumptions = [|
+512|64|512|512|];

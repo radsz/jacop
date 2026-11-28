@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["int_lin_eq", "int_lin_ne", "jacop_count_values", "jacop_maximum", "jacop_minimum"],
+  "constraintFamilies": ["counting", "linear", "minmax"],
+  "domains": []
+}

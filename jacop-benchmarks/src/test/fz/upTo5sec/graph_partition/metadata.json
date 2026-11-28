@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["bool2int", "int_lin_eq", "int_times", "jacop_partition_set", "set_card", "set_in", "set_in_reif"],
+  "constraintFamilies": ["arithmetic", "boolean", "linear", "set"],
+  "domains": []
+}
