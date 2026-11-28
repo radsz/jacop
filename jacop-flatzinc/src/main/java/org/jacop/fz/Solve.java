@@ -4176,10 +4176,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     try {
       lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
     } finally {
-      // -n or --gap stops the search by throwing from the solution listener: the check would go on
+      // -n or --gap stops the search by throwing from the solution listener: the checks would go on
       // after the run, printing and keeping the solver
       if (slowCheck != null) {
         slowCheck.interrupt();
+      }
+      if (firstCheck != null) {
+        firstCheck.interrupt();
       }
     }
     if (lpProbing) {
@@ -4192,7 +4195,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       printProbeStatistics(lcg);
     }
     if (firstCheck != null) {
-      firstCheck.interrupt();
       firstCheck = null;
     }
     if (slowCheck != null) {

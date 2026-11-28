@@ -11372,6 +11372,55 @@ class FlatzincFrontEndTest {
   }
 
   /**
+   * The check of LCG after the search without learning first (fixed-first) is a virtual thread that
+   * wakes after a delay; -n stops LCG by throwing from its solution listener, and the thread was
+   * interrupted only when LCG returned normally: it woke after the run, stopped the old solver and
+   * printed into whatever ran next in the JVM. The model: o = 2 is found at once, o = 1 only after
+   * the search without learning thrashes over 2^24 nodes, which LCG cuts after one conflict.
+   */
+  @Test
+  void theFixedFirstCheckEndsWithARunThatMinusNStops() throws IOException, InterruptedException {
+    StringBuilder model = new StringBuilder();
+    StringBuilder ws = new StringBuilder();
+    model.append("var 1..2: o :: output_var;\nvar bool: b;\nvar 0..1: z :: output_var;\n");
+    model.append("var 0..1: p;\nvar 0..1: q;\nvar bool: r1;\nvar bool: r2;\nvar bool: zb;\n");
+    for (int i = 0; i < 22; i++) {
+      model.append("var 0..1: w").append(i).append(";\n");
+      ws.append(",w").append(i);
+    }
+    model.append("constraint int_eq_reif(o,1,b);\nconstraint int_eq_reif(z,1,zb);\n");
+    model.append("constraint int_ne_reif(p,q,r1);\nconstraint int_eq_reif(p,q,r2);\n");
+    model.append("constraint bool_clause([r1,zb],[b]);\nconstraint bool_clause([r2,zb],[b]);\n");
+    model.append("solve :: seq_search([int_search([o],input_order,indomain_max,complete),");
+    model.append("int_search([z").append(ws).append(",p,q],input_order,indomain_min,complete)])");
+    model.append(" minimize o;\n");
+    String[] first =
+        run(
+            model.toString(),
+            "--lcg",
+            "on",
+            "-debug",
+            "-n",
+            "2",
+            "-t",
+            "20000",
+            "--free-config",
+            "fixed-first-lcg-min=200");
+    assertTrue(first[0].contains("o = 1;"), first[0]);
+    assertTrue(first[0].contains("% fixed search first: 1 solutions"), first[0]);
+    // what the JVM prints after the run, past the delay of the check (at most 3 * 100 ms)
+    ByteArrayOutputStream after = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+    try (PrintStream capture = new PrintStream(after, true, StandardCharsets.UTF_8)) {
+      System.setOut(capture);
+      Thread.sleep(1000);
+    } finally {
+      System.setOut(originalOut);
+    }
+    assertEquals("", after.toString(StandardCharsets.UTF_8));
+  }
+
+  /**
    * A run killed by SIGTERM without -s (MiniZinc and the competition scripts end a solver so at the
    * time limit) printed nothing, although without -a the solutions it found are kept back to be
    * printed at its end: it now prints what the watchdog prints at the time-out, the kept solution
