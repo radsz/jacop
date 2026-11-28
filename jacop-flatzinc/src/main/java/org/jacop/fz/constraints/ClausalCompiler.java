@@ -1083,6 +1083,12 @@ public final class ClausalCompiler {
       int j = y.vals[i] - nt;
       int atLeast = j <= 0 ? T : (j <= s.length ? s[j - 1] : F);
       equivalent(y.ge[i], atLeast);
+      // a count in the hole below vals[i] is no value of y: more than vals[i - 1] is vals[i] or
+      // more
+      int k = y.vals[i - 1] + 1 - nt;
+      if (y.vals[i] > y.vals[i - 1] + 1) {
+        add(-(k <= 0 ? T : (k <= s.length ? s[k - 1] : F)), y.ge[i]);
+      }
     }
     int lo = y.lo() - nt;
     if (lo > 0) {
