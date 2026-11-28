@@ -438,6 +438,30 @@ class LinearRelaxationTest {
   }
 
   /**
+   * The time of the solves so far, which the fixed-first check of free search reads from another
+   * thread to give LCG back the LP's share of its window, is 0 before the first solve and the time
+   * of the solves between them (steelmillslab bench_19_6: the first solve, with its trial of the
+   * extra rows, filled LCG's whole window and LCG gave way).
+   */
+  @Test
+  void solveTimeSoFarCountsTheSolvesDone() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 10);
+    IntVar y = new IntVar(store, "y", 0, 10);
+    IntVar obj = new IntVar(store, "obj", 0, 100);
+    store.impose(new LinearInt(new IntVar[] {x, y}, new int[] {1, 1}, ">=", 3));
+    store.impose(new LinearInt(new IntVar[] {x, y, obj}, new int[] {1, 2, -1}, "==", 0));
+    LinearRelaxation lp =
+        LinearRelaxation.ofModel(store, obj, false, LinearRelaxation.Simplex.DENSE);
+    store.impose(lp);
+    assertThat(lp.solveNanosSoFar()).isZero();
+    assertThat(store.consistency()).isTrue();
+    assertThat(lp.solveNanos).isPositive();
+    assertThat(lp.solveNanosSoFar()).isEqualTo(lp.solveNanos);
+    assertThat(obj.min()).isEqualTo(3);
+  }
+
+  /**
    * A combination at the long minimum keeps its sign when negated: the multiplier -2^40 of a cut
    * with the weight 2^23 gave -2^63, whose negation is itself, so the lower inequality of the root
    * reduced costs held that weight with the wrong sign. At a restart it removed the optimum (-9
