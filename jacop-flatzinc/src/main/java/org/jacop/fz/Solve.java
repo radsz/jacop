@@ -7904,6 +7904,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 Duration.ofMillis(
                     Long.parseLong(options.freeConfig("ls-patience", auto ? "5000" : "1000"))))
             .scheduleOnly(schedule)
+            .relativePatience(
+                schedule ? Double.parseDouble(options.freeConfig("ls-patience-factor", "2")) : 0,
+                Duration.ofMillis(Long.parseLong(options.freeConfig("ls-patience-min", "500"))))
             .jump(!"walk".equals(options.freeConfig("ls-moves", "fj")))
             .permutations(!"0".equals(options.freeConfig("ls-perm", "1")))
             .scheduling(scheduleKinds(options.freeConfig("ls-sched", "ns+n4")))

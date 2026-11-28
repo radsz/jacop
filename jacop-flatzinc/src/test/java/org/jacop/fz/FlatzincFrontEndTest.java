@@ -9871,6 +9871,27 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void zeroSumDropsAnOutputSumOfAnOptimisationPrintingItsSolutions() throws IOException {
+    // -a on an optimisation prints its improving solutions, each with a better objective, so a
+    // dropped output sum loses none of them; keeping the sum there, as for -a on a satisfaction,
+    // made XCSP 2024 SameQueensKnights-b-65 end at 16-21 instead of 103-111 within 120 s under -f
+    String model =
+        "var 0..2: x :: output_var;\n"
+            + "var 0..1: y;\n"
+            + "var 0..3: s :: output_var;\n"
+            + "var bool: b;\n"
+            + "var bool: c;\n"
+            + "constraint int_lin_eq([1,1,-1],[x,y,s],0);\n"
+            + "constraint int_le_imp(s,0,b);\n"
+            + "constraint bool_clause([b,c],[]);\n"
+            + "solve maximize x;\n";
+    String one = run(model, "-s", "--lcg", "off")[0];
+    String all = run(model, "-a", "-s", "--lcg", "off")[0];
+    assertEquals(stat(one, "propagators"), stat(all, "propagators"), all);
+    assertTrue(all.contains("x = 2;\ns = 2;\n----------\n=========="), all);
+  }
+
+  @Test
   void minOfSumsTakesNoSumThatTheLinearIndexElementDetectionReplaced() throws IOException {
     // z = x + k also defines the index k = z - x of an element, which the linear index element
     // detection replaced by a table over x, z and v, dropping k; the merge of sums into minimums
