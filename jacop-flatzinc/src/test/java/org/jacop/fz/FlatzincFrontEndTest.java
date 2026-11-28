@@ -11191,4 +11191,33 @@ class FlatzincFrontEndTest {
       }
     }
   }
+
+  @Test
+  void regularImposeStopsAtTheTimeOut() throws IOException {
+    // the layered graph of one regular constraint over 10,000 positions of an automaton of 200
+    // states took 7 s to build at its impose, which did not look at -t 1000 (9 s in all)
+    java.util.Random random = new java.util.Random(1);
+    int length = 10_000;
+    int states = 200;
+    int symbols = 8;
+    StringBuilder model = new StringBuilder();
+    StringJoiner xs = new StringJoiner(",");
+    for (int i = 0; i < length; i++) {
+      model.append("var 1..").append(symbols).append(": x").append(i).append(";\n");
+      xs.add("x" + i);
+    }
+    StringJoiner d = new StringJoiner(",");
+    for (int k = 0; k < states * symbols; k++) {
+      d.add(Integer.toString(random.nextInt(10) < 6 ? 1 + random.nextInt(states) : 0));
+    }
+    model.append(
+        "constraint jacop_regular([%s],%d,%d,[%s],1,1..%d,1);\n"
+            .formatted(xs, states, symbols, d, states));
+    model.append("solve satisfy;\n");
+    long start = System.nanoTime();
+    String out = run(model.toString(), "-t", "1000")[0];
+    long millis = (System.nanoTime() - start) / 1_000_000;
+    assertTrue(out.contains("=====UNKNOWN=====\n%% =====TIME-OUT====="), out);
+    assertTrue(millis < 5000, millis + " ms");
+  }
 }
