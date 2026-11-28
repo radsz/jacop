@@ -234,6 +234,9 @@ setup to run configuration. -->
                                 <float.builtins.trials>200</float.builtins.trials>
                                 <satpresolve.trials>500</satpresolve.trials>
                                 <globalPresolve.trials>100</globalPresolve.trials>
+                                <xorfuzz.trials>75</xorfuzz.trials>
+                                <symmetry.trials>150</symmetry.trials>
+                                <freesearch.every>3</freesearch.every>
                             </systemPropertyVariables>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -555,7 +558,23 @@ setup to run configuration. -->
                         <configuration>
                             <systemPropertyVariables>
                                 <upTo30sec.list>list-commit.txt</upTo30sec.list>
-                                <consistency.instances>200</consistency.instances>
+                                <!-- fewer random instances than the defaults (which the push profile
+                                     runs) for the slowest generators, so the CI build stays well
+                                     under its 120-minute limit on slow runners; same checks -->
+                                <consistency.instances>100</consistency.instances>
+                                <globals.bruteforce.trials>100</globals.bruteforce.trials>
+                                <floats.fuzz.trials>200</floats.fuzz.trials>
+                                <floats.fuzz.opt.trials>8</floats.fuzz.opt.trials>
+                                <grounding.trials>20</grounding.trials>
+                                <rootRefutation.fuzz.trials>1000</rootRefutation.fuzz.trials>
+                                <lcg.scheduling.instances>200</lcg.scheduling.instances>
+                                <disjunctiveCliques.trials>200</disjunctiveCliques.trials>
+                                <pairCover.trials>100</pairCover.trials>
+                                <unary.reasoning.trials>800</unary.reasoning.trials>
+                                <lp.test.runs>600</lp.test.runs>
+                                <xorfuzz.trials>75</xorfuzz.trials>
+                                <symmetry.trials>150</symmetry.trials>
+                                <freesearch.every>3</freesearch.every>
                             </systemPropertyVariables>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
