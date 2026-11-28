@@ -11421,6 +11421,23 @@ class FlatzincFrontEndTest {
   }
 
   /**
+   * -i (print float domains as intervals) is a static setting of FloatDomain that the search sets
+   * when it starts: what a run printed before its search (the -debug lines of the default float
+   * search) still came out as intervals after a run with -i in the same JVM.
+   */
+  @Test
+  void aRunAfterARunWithMinusIPrintsFloatsAsValues() throws IOException {
+    String model = "var 0.0..1.0: x :: output_var;\nconstraint float_eq(x,0.5);\nsolve satisfy;\n";
+    String before = run(model, "-debug")[0];
+    String interval = run(model, "-i")[0];
+    assertTrue(interval.contains("x = 0.5..0.5;"), interval);
+    String after = run(model, "-debug")[0];
+    assertTrue(before.contains("[x = 0.5]"), before);
+    assertTrue(after.contains("[x = 0.5]"), after);
+    assertFalse(after.contains("0.5..0.5"), after);
+  }
+
+  /**
    * A run killed by SIGTERM without -s (MiniZinc and the competition scripts end a solver so at the
    * time limit) printed nothing, although without -a the solutions it found are kept back to be
    * printed at its end: it now prints what the watchdog prints at the time-out, the kept solution

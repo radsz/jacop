@@ -88,10 +88,11 @@ public class Fz2jacop {
   private int run(String[] args) {
 
     // The float settings are static: a model solved earlier in the same JVM (its float_search
-    // precision, or --precision, --format, --step) must not change this one.
+    // precision, or --precision, --format, --step, -i) must not change this one.
     FloatDomain.setPrecision(FloatDomain.DEFAULT_PRECISION);
     FloatDomain.setFormat(FloatDomain.DEFAULT_FORMAT);
     FloatDomain.setStep(0.0d);
+    FloatDomain.intervalPrint(false);
     // without -r the seed is 0, so that the random choices (neighbourhoods of free search,
     // indomain_random, on_restart) repeat from run to run
     Store.setSeed(0);
