@@ -9848,6 +9848,15 @@ Version 5.0 (unreleased)
    as stalled and LCG does not take over.
    -Dorg.jacop.fz.conditionalEquality=false turns it off.
 
+543. fzn-jacop killed by SIGTERM or SIGINT without -s (as MiniZinc and the
+   competition scripts end a solver at their time limit) prints what it
+   prints at its own time-out: the solution it kept and
+   "%% =====TIME-OUT=====", or "=====UNKNOWN=====" when it printed none.
+   Before, without -a a run printed its solutions only when it ended, so
+   a killed run printed nothing and lost the solutions it had found. The
+   exit code stays 143, -s prints as before, and runs started in process
+   (Fz2jacop.callMain) register no hook.
+
 Version 4.11
 =============
 
