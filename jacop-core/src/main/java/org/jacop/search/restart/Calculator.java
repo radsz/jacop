@@ -120,4 +120,36 @@ public abstract class Calculator implements ConsistencyListener {
   public void setChildrenListeners(ConsistencyListener child) {
     this.child = child;
   }
+
+  /**
+   * The consistency listener of a search that this calculator limits: the calculator after the
+   * search's own listener. One calculator limits every search of a chain (the searches of a
+   * sequence and their completion), and its one child would keep the listener of the last search
+   * only, so that a credit search lost its depth count and failed with a negative index.
+   *
+   * @param listener the search's own consistency listener, or null.
+   * @return the listener to set on the search.
+   */
+  public ConsistencyListener on(ConsistencyListener listener) {
+    if (listener == null) {
+      return this;
+    }
+    return new ConsistencyListener() {
+      @Override
+      public boolean executeAfterConsistency(boolean consistent) {
+        listener.executeAfterConsistency(consistent);
+        return Calculator.this.executeAfterConsistency(consistent);
+      }
+
+      @Override
+      public void setChildrenListeners(ConsistencyListener[] children) {
+        listener.setChildrenListeners(children);
+      }
+
+      @Override
+      public void setChildrenListeners(ConsistencyListener child) {
+        listener.setChildrenListeners(child);
+      }
+    };
+  }
 }

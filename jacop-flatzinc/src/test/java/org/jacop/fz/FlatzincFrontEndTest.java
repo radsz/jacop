@@ -11799,4 +11799,26 @@ class FlatzincFrontEndTest {
     assertTrue(out.contains("y = 1;"), out);
     assertFalse(out.contains("=========="), out);
   }
+
+  /**
+   * The restart calculator limits every search of a chain, the annotation's and the completion of
+   * y, and its one child listener kept that of the completion only: the credit search of the
+   * annotation lost the consistency listener that counts its depth and failed with an index of -2
+   * in its credit arrays.
+   */
+  @Test
+  void aCreditSearchUnderRestartsKeepsItsListener() throws IOException {
+    String model =
+        """
+        var 1..3: x :: output_var;
+        var 1..3: y :: output_var;
+        constraint int_le(x, y);
+        solve :: int_search([x],input_order,indomain_min,credit(2,bbs(1))) \
+        :: restart_constant(2) maximize y;
+        """;
+    String[] out = run(model, "--lcg", "off", "-t", "2000");
+    assertFalse(
+        out[0].contains("out of bound") || out[1].contains("out of bound"), out[0] + out[1]);
+    assertTrue(out[0].contains("y = 3;"), out[0]);
+  }
 }
