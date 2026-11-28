@@ -4117,6 +4117,71 @@ class FlatzincFrontEndTest {
     }
   }
 
+  @Test
+  void conditionalEqualitiesBoundTheirVariable() throws IOException {
+    // if c then x = a else x = 0 endif, flattened as two reified equalities and an if-then-else
+    // of their truths: x is declared var int, and only ConditionalSelect([c, true], [a, 0], x),
+    // posted redundantly, keeps it within {0, a}; the optimum stays that of the model without it
+    java.util.Random rnd = new java.util.Random(3);
+    int n = 12;
+    StringBuilder model = new StringBuilder();
+    model.append(
+        "predicate jacop_if_then_else_bool(array [int] of var bool: c,"
+            + "array [int] of var bool: x,var bool: y);\n");
+    int[] a = new int[n];
+    for (int i = 0; i < n; i++) {
+      a[i] = 1 + rnd.nextInt(9);
+      model.append(
+          "var int: x%d;%nvar bool: c%d;%nvar bool: p%d;%nvar bool: q%d;%n".formatted(i, i, i, i));
+    }
+    model.append("var -100000..100000: obj :: output_var;\n");
+    String xs =
+        java.util.stream.IntStream.range(0, n)
+            .mapToObj(i -> "x" + i)
+            .collect(Collectors.joining(","));
+    String cs =
+        java.util.stream.IntStream.range(0, n)
+            .mapToObj(i -> "c" + i)
+            .collect(Collectors.joining(","));
+    String ones = String.join(",", java.util.Collections.nCopies(n, "1"));
+    model.append("constraint int_lin_eq([%s,-1], [%s,obj], 0);%n".formatted(ones, xs));
+    model.append("constraint bool_lin_le([%s], [%s], 4);%n".formatted(ones, cs));
+    for (int i = 0; i < n; i++) {
+      model.append("constraint int_eq_reif(x%d, %d, p%d);%n".formatted(i, a[i], i));
+      model.append("constraint int_eq_reif(x%d, 0, q%d);%n".formatted(i, i));
+      model.append(
+          "constraint jacop_if_then_else_bool([c%d,true], [p%d,q%d], true);%n".formatted(i, i, i));
+    }
+    model.append(
+        "solve :: bool_search([%s], input_order, indomain_max, complete) maximize obj;%n"
+            .formatted(cs));
+    int best =
+        java.util.Arrays.stream(a)
+            .boxed()
+            .sorted(java.util.Comparator.reverseOrder())
+            .limit(4)
+            .mapToInt(Integer::intValue)
+            .sum();
+    String[] cp = run(model.toString());
+    String[] lcg = run(model.toString(), "--lcg");
+    String[] debug = run(model.toString(), "-debug");
+    String[] off;
+    System.setProperty("org.jacop.fz.conditionalEquality", "false");
+    try {
+      off = run(model.toString(), "--lcg");
+    } finally {
+      System.clearProperty("org.jacop.fz.conditionalEquality");
+    }
+    for (String[] out : List.of(cp, lcg, off)) {
+      assertEquals("obj = " + best, lastObjective(out[0]), out[0]);
+      assertEquals("==========", lastObjective(out), out[0]);
+    }
+    // one selection per if-then-else, each keeping its x at 0 or a
+    String all = debug[0] + debug[1];
+    assertEquals(n, all.lines().filter(l -> l.contains("ConditionalSelect")).count(), all);
+    assertTrue(all.contains("x0::{0.." + a[0] + "}") || all.contains("x0::{0, " + a[0] + "}"), all);
+  }
+
   // the average atoms of the LinearInt reasons in the -s statistics, or -1 without such reasons
   @Test
   void lcgSplitsLongCountsIntoBlockCounts() throws IOException {

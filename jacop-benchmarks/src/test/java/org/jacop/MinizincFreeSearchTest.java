@@ -42,6 +42,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.fz.Fz2jacop;
@@ -63,6 +64,10 @@ import org.junit.jupiter.params.provider.MethodSource;
  * (one solution), {@code ALL} (value is the number of solutions), {@code MIN} or {@code MAX} (value
  * is the optimum).
  *
+ * <p>The system property {@code freesearch.every} (default 1, all models) takes every n-th model,
+ * starting with the last of each group of n so that the sample differs from the one of {@link
+ * MinizincPortfolioTest}; the commit profile takes a third of them.
+ *
  * @author Radoslaw Szymanek
  * @version 5.0
  */
@@ -78,8 +83,14 @@ class MinizincFreeSearchTest {
         .filter(l -> !l.isBlank() && !l.startsWith("#"));
   }
 
+  static Stream<String> sample() throws IOException {
+    int every = Integer.getInteger("freesearch.every", 1);
+    AtomicInteger i = new AtomicInteger();
+    return reference().filter(l -> i.getAndIncrement() % every == every - 1);
+  }
+
   @ParameterizedTest
-  @MethodSource("reference")
+  @MethodSource("sample")
   @Timeout(30)
   void freeSearchAgreesWithTheModelSearch(String line) throws IOException {
     check(line, List.of(System.getProperty("freesearch.options", "-f").trim().split("\\s+")));

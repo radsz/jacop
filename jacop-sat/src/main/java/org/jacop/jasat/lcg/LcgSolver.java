@@ -63,6 +63,7 @@ import org.jacop.constraints.Circuit;
 import org.jacop.constraints.ConditionalSelect;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
+import org.jacop.constraints.ImpliesNot;
 import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.LinearForms;
 import org.jacop.constraints.Not;
@@ -2364,37 +2365,40 @@ public final class LcgSolver implements ExternalPropagator {
       return;
     }
     int b = trail.id(r.b);
+    // the kind of a bound of b that enforces the row: b >= 1, or b <= 0 for b = 0 => row
+    int enforcing = r instanceof ImpliesNot ? AtomicTrail.LE : AtomicTrail.GE;
+    boolean equivalence = r instanceof Reified;
     if (entry >= 0
         && trail.id(proofTrail.variable(entry)) == b
-        && (proofTrail.kind(entry) == AtomicTrail.LE
-            || proofTrail.kind(entry) == AtomicTrail.GE && r instanceof Reified)) {
-      // the clause "hypotheses imply b = 0" is the row's failure under b, and "hypotheses imply
-      // b = 1" that of its negation under not b
-      boolean zero = proofTrail.kind(entry) == AtomicTrail.LE;
-      proofLinearBounds(zero ? f : f.negated(), atoms, from, -1, " 1 " + proofAtom(entry, 0));
+        && (proofTrail.kind(entry) != enforcing || equivalence)) {
+      // the clause "hypotheses imply b is released" is the row's failure under the enforcing b,
+      // and "hypotheses imply b enforces" that of its negation under the other value
+      boolean released = proofTrail.kind(entry) != enforcing;
+      proofLinearBounds(released ? f : f.negated(), atoms, from, -1, " 1 " + proofAtom(entry, 0));
       return;
     }
     for (int k = from; k < atoms.size(); k++) {
       int e = atoms.get(k);
       if (trail.id(proofTrail.variable(e)) == b
-          && (proofTrail.kind(e) == AtomicTrail.GE
-              || proofTrail.kind(e) == AtomicTrail.LE && r instanceof Reified)) {
-        // b = 1 holds the row and b = 0 its negation (x != 4 under b is x = 4 under not b)
+          && (proofTrail.kind(e) == enforcing || equivalence)) {
+        // the enforcing b holds the row and the other value its negation (x != 4 under b is
+        // x = 4 under not b)
         String atom = proofAtom(e, atoms.slack(k));
         String guard = "1".equals(atom) ? "" : " 1 " + OpbEncoder.negate(atom);
         proofLinearBounds(
-            proofTrail.kind(e) == AtomicTrail.GE ? f : f.negated(), atoms, from, entry, guard);
+            proofTrail.kind(e) == enforcing ? f : f.negated(), atoms, from, entry, guard);
         return;
       }
     }
     // b fixed at the root is not among the hypotheses: the row, or its negation, holds under b's
     // root literal (b <=> 2 x + 2 y - z != 5 with b = 0 at the root)
-    if (r.b.singleton() && (r.b.value() == 1 || r instanceof Reified)) {
+    int on = r instanceof ImpliesNot ? 0 : 1;
+    if (r.b.singleton() && (r.b.value() == on || equivalence)) {
       boolean one = r.b.value() == 1;
       // b = 1 is the clause literal b < 1, b = 0 the literal b >= 1
       String literal = one ? OpbEncoder.negate(OpbEncoder.ge(b, 1)) : OpbEncoder.ge(b, 1);
       String guard = proofDomains[b].singleton() ? "" : " 1 " + literal;
-      proofLinearBounds(one ? f : f.negated(), atoms, from, entry, guard);
+      proofLinearBounds(r.b.value() == on ? f : f.negated(), atoms, from, entry, guard);
     }
   }
 

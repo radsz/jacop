@@ -64,6 +64,7 @@ import org.jacop.fz.constraints.ClampedBounds;
 import org.jacop.fz.constraints.ClausalCompiler;
 import org.jacop.fz.constraints.ColouredTreeDetector;
 import org.jacop.fz.constraints.CommonSubexpressions;
+import org.jacop.fz.constraints.ConditionalEqualityDetector;
 import org.jacop.fz.constraints.ConjunctionSumDetector;
 import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.ConvexAllocationDetector;
@@ -901,6 +902,12 @@ public class Constraints implements ParserTreeConstants {
       }
 
       support.detectBinPackingCliques();
+
+      // the value an if-then-else of reified equalities of one variable selects, redundant
+      // (--proof does not encode it)
+      if (ConditionalEqualityDetector.enabled() && options.proof() == null) {
+        support.implied(() -> new ConditionalEqualityDetector(support).detect(astTree));
+      }
 
       support.poseDelayedConstraints();
 
