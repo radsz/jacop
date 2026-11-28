@@ -462,6 +462,20 @@ public class LinearRelaxation extends Constraint
   /** Statistics: the time of the solves and their propagation, in nanoseconds. */
   public long solveNanos;
 
+  // the start of the solve in progress, 0 between solves; read by other threads
+  private volatile long solvingSince;
+
+  /**
+   * Returns the time of the solves so far, with the solve in progress: a first solve that tries the
+   * extra rows can take seconds, and only then adds to {@link #solveNanos}.
+   *
+   * @return the time in nanoseconds
+   */
+  public long solveNanosSoFar() {
+    long since = solvingSince;
+    return solveNanos + (since == 0 ? 0 : Math.max(0, System.nanoTime() - since));
+  }
+
   /** Statistics: rows added to the simplex from the pool, as the simplex's solution broke them. */
   public long lazyAdded;
 
@@ -3632,6 +3646,7 @@ public class LinearRelaxation extends Constraint
       domainBound = maximize ? objective.max() : objective.min();
     }
     long started = System.nanoTime();
+    solvingSince = started;
     try {
       if (refutation) {
         refutationStatus = LpSolver.INFEASIBLE;
@@ -3655,6 +3670,7 @@ public class LinearRelaxation extends Constraint
       }
     } finally {
       solveNanos += System.nanoTime() - started;
+      solvingSince = 0;
       long cost =
           simplex == Simplex.DENSE
               ? (pivots() - pivots + 1) * lp.pivotWork()
@@ -3867,6 +3883,7 @@ public class LinearRelaxation extends Constraint
     restartAtRoot = store.level == rootLevel;
     largeDeadline = 0;
     long started = System.nanoTime();
+    solvingSince = started;
     long pruned = prunings;
     restarting = true;
     if (rootSimplex != null
@@ -3886,6 +3903,7 @@ public class LinearRelaxation extends Constraint
     } finally {
       restarting = false;
       solveNanos += System.nanoTime() - started;
+      solvingSince = 0;
       restartNanos += System.nanoTime() - started;
       scanned = 0;
     }

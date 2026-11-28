@@ -6440,13 +6440,32 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     double firstRate = (double) fixedFirstNodes / fixedFirstMillis;
     long decisionsBefore = solver.sat().decisions;
     long started = System.nanoTime();
+    long lpBefore = lpSolveNanos();
     fixedFirstOutcome = 2;
     return Thread.ofVirtual()
         .start(
             () -> {
               try {
                 Thread.sleep(wait);
-                double lcgMillis = (double) Math.max(1, (System.nanoTime() - started) / 1_000_000L);
+                // the linear relaxation's solves in the window are not LCG's search, and LCG gets
+                // that time again, up to three windows: the first solve tries the extra rows at the
+                // root, and on steelmillslab bench_19_6 (MZNC 2019) it took the whole window in 4
+                // runs of 10 since #955 (8,000 rows tried), so that LCG had made 150 decisions,
+                // had not reached the first search's cost 25 and gave way (27 s instead of 12 s)
+                long lp = 0;
+                long given = 0;
+                while (fixedFirstLcgBest > firstCost && given < 3 * wait) {
+                  lp = (lpSolveNanos() - lpBefore) / 1_000_000L;
+                  long owed = Math.min(lp - given, 3 * wait - given);
+                  if (owed <= 0) {
+                    break;
+                  }
+                  Thread.sleep(owed);
+                  given += owed;
+                }
+                lp = (lpSolveNanos() - lpBefore) / 1_000_000L;
+                double lcgMillis =
+                    (double) Math.max(1, (System.nanoTime() - started) / 1_000_000L - lp);
                 double lcgRate = (solver.sat().decisions - decisionsBefore) / lcgMillis;
                 if (options.debug()) {
                   IO.println(
@@ -6454,7 +6473,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                           + firstRate
                           + " nodes/ms, LCG "
                           + lcgRate
-                          + " nodes/ms, best "
+                          + " nodes/ms, LP "
+                          + lp
+                          + " ms, best "
                           + fixedFirstLcgBest);
                 }
                 if (fixedFirstLcgBest > firstCost
@@ -6469,6 +6490,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 Thread.currentThread().interrupt();
               }
             });
+  }
+
+  // the time the linear relaxation has spent in its solves so far, 0 without one
+  private long lpSolveNanos() {
+    LinearRelaxation lp = linearRelaxation;
+    return lp == null ? 0 : lp.solveNanosSoFar();
   }
 
   // the best solution of LCG free search before it gave way to free search without learning
