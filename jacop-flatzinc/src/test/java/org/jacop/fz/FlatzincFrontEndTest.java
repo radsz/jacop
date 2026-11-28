@@ -11779,4 +11779,24 @@ class FlatzincFrontEndTest {
       assertTrue(out.contains("=====UNSATISFIABLE====="), mode + "\n" + out);
     }
   }
+
+  /**
+   * A seq_search below a priority_search applies the LDS of its own sub-search, so the search is
+   * not complete: lds(0) finds only y = 1 here, which was printed with ==========, although the
+   * optimum is y = 3.
+   */
+  @Test
+  void aPrioritySearchOverAnLdsSearchProvesNoOptimum() throws IOException {
+    String model =
+        """
+        var 1..3: x :: output_var;
+        var 1..3: y :: output_var;
+        constraint int_le(x, y);
+        solve :: priority_search([x],[seq_search([int_search([x,y],input_order,indomain_min,\
+        lds(0))])],input_order,complete) maximize y;
+        """;
+    String out = run(model, "--lcg", "off")[0];
+    assertTrue(out.contains("y = 1;"), out);
+    assertFalse(out.contains("=========="), out);
+  }
 }

@@ -10795,7 +10795,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         interrupted,
         result,
         label.timeOutOccured,
-        COMPLETE.equals(si.exploration()) && (rs == null || !rs.restartsLimitReached()));
+        // a seq_search below a priority_search applies the LDS or credit of its own sub-searches
+        COMPLETE.equals(si.exploration())
+            && !heuristicSeqSearch
+            && (rs == null || !rs.restartsLimitReached()));
 
     if (options.getStatistics()) {
       int[] stats = gatherSingleSearchStats();
