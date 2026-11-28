@@ -5271,10 +5271,116 @@ class FlatzincFrontEndTest {
       System.setErr(originalErr);
     }
     // IO.println ends lines with the platform separator ("\r\n" on Windows); the checks expect "\n"
-    return new String[] {
+    String[] result = {
       out.toString(StandardCharsets.UTF_8).replace("\r\n", "\n"),
       err.toString(StandardCharsets.UTF_8).replace("\r\n", "\n")
     };
+    checkUnderDefaults(model, fzn, options, result[0]);
+    return result;
+  }
+
+  // Every model of run() is solved a second time with the defaults of fzn-jacop, which the build
+  // switches off for the expected outputs (LCG, symmetry breaking without presolve, the LP probe,
+  // the symmetry budget: see the parent pom), and the answer must agree: satisfiable or not, and
+  // the optimum. Runs that choose their engine or limit the search themselves are left out.
+  // -Dfz.defaults.check=false skips it, -Dfz.defaults.every=N checks every N-th run only.
+  private static final boolean DEFAULTS_CHECK =
+      !"false".equals(System.getProperty("fz.defaults.check"));
+
+  private static final int DEFAULTS_EVERY = Math.max(1, Integer.getInteger("fz.defaults.every", 1));
+
+  // the options of a run that is compared with its run under the defaults
+  private static final Set<String> NEUTRAL_OPTIONS = Set.of("-a", "-s", "-statistics", "-v");
+
+  private static final Pattern OBJECTIVE =
+      Pattern.compile("solve[^;]*\\b(?:minimize|maximize)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*;");
+
+  private static int defaultsRuns;
+
+  private void checkUnderDefaults(String model, Path fzn, String[] options, String out)
+      throws IOException {
+    if (!DEFAULTS_CHECK
+        || !NEUTRAL_OPTIONS.containsAll(Arrays.asList(options))
+        || !model.contains("solve")
+        || defaultsRuns++ % DEFAULTS_EVERY != 0) {
+      return;
+    }
+    Matcher objective = OBJECTIVE.matcher(model);
+    String cost = objective.find() ? objective.group(1) : null;
+    String expected = answer(out, cost);
+    if (expected == null) {
+      return;
+    }
+    String[] args = new String[options.length + 3];
+    System.arraycopy(options, 0, args, 0, options.length);
+    args[options.length] = "-t";
+    args[options.length + 1] = "5000";
+    args[options.length + 2] = fzn.toString();
+    String[] names = {
+      "jacop.lcg", "jacop.symmetry", "org.jacop.fz.symmetryTime", "org.jacop.fz.lpProbe"
+    };
+    String[] saved = new String[names.length];
+    for (int i = 0; i < names.length; i++) {
+      saved[i] = System.getProperty(names[i]);
+      System.clearProperty(names[i]);
+    }
+    int status = lastStatus;
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+    PrintStream originalErr = System.err;
+    try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8)) {
+      System.setOut(capture);
+      System.setErr(capture);
+      new Fz2jacop().callMain(args);
+    } finally {
+      System.setOut(originalOut);
+      System.setErr(originalErr);
+      for (int i = 0; i < names.length; i++) {
+        restoreProperty(names[i], saved[i]);
+      }
+      lastStatus = status;
+    }
+    String defaults = buffer.toString(StandardCharsets.UTF_8).replace("\r\n", "\n");
+    String got = answer(defaults, cost);
+    // a run under the defaults that reached its time limit decides nothing
+    if (got != null || defaults.contains("=====UNSATISFIABLE=====")) {
+      assertEquals(
+          expected,
+          got,
+          "under the defaults of fzn-jacop "
+              + Arrays.toString(options)
+              + "\n"
+              + model
+              + "\n--- test configuration:\n"
+              + out
+              + "\n--- defaults:\n"
+              + defaults);
+    }
+  }
+
+  // UNSAT, SAT, or the optimum of an output objective; null when the run decided nothing
+  private static String answer(String out, String cost) {
+    if (out.contains("=====UNKNOWN=====") || out.contains("%% Error")) {
+      return null;
+    }
+    if (out.contains("=====UNSATISFIABLE=====")) {
+      return out.contains("----------") ? null : "UNSAT";
+    }
+    if (!out.contains("----------")) {
+      return null;
+    }
+    if (cost == null) {
+      return "SAT";
+    }
+    if (!out.contains("==========")) {
+      return null;
+    }
+    Matcher m = Pattern.compile("(?m)^" + Pattern.quote(cost) + " = (-?\\d+);$").matcher(out);
+    String value = null;
+    while (m.find()) {
+      value = m.group(1);
+    }
+    return value == null ? "OPT" : "OPT " + value;
   }
 
   private Set<String> solveAll(String model) throws IOException {
