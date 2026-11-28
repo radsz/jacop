@@ -11305,6 +11305,73 @@ class FlatzincFrontEndTest {
   }
 
   /**
+   * A run of -s that an exception ends (here the output stream, which throws on the solution) left
+   * its shutdown hook registered: in a JVM that went on, the hook kept the parser, its store and
+   * its solver for the life of the JVM, and ran when the JVM exited (printing the stale statistics
+   * of that run when it had not answered yet).
+   */
+  @Test
+  void anExceptionThatEndsARunRemovesItsShutdownHook() throws IOException, InterruptedException {
+    Path fzn = tmp.resolve("hook.fzn");
+    Files.writeString(fzn, "var 1..3: x :: output_var;\nsolve satisfy;\n");
+    Path java = Path.of(System.getProperty("java.home"), "bin", "java");
+    ProcessBuilder pb =
+        new ProcessBuilder(
+            java.toString(),
+            "--add-opens",
+            "java.base/java.lang=ALL-UNNAMED",
+            "-cp",
+            System.getProperty("java.class.path"),
+            ThrowingOutputRun.class.getName(),
+            fzn.toString());
+    pb.redirectErrorStream(true);
+    Process p = pb.start();
+    String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+    boolean ended = p.waitFor(60, TimeUnit.SECONDS);
+    if (!ended) {
+      p.destroyForcibly();
+    }
+    assertTrue(ended, out);
+    assertTrue(out.contains("%% thrown: "), out);
+    assertTrue(out.contains("%% hooks left: 0\n"), out);
+    assertFalse(out.substring(out.indexOf("%% hooks left")).contains("mzn-stat"), out);
+  }
+
+  /** Solves a model with -s into an output stream that throws, then returns from main. */
+  static final class ThrowingOutputRun {
+    private ThrowingOutputRun() {}
+
+    public static void main(String[] args) throws ReflectiveOperationException {
+      PrintStream saved = System.out;
+      System.setOut(
+          new PrintStream(
+              new OutputStream() {
+                @Override
+                public void write(int b) {
+                  throw new IllegalStateException("output closed");
+                }
+              },
+              true));
+      try {
+        new Fz2jacop().callMain(new String[] {"-s", args[0]});
+      } catch (RuntimeException e) {
+        saved.println("%% thrown: " + e.getMessage());
+      } finally {
+        System.setOut(saved);
+      }
+      Field hooks = Class.forName("java.lang.ApplicationShutdownHooks").getDeclaredField("hooks");
+      hooks.setAccessible(true);
+      long left;
+      synchronized (Class.forName("java.lang.ApplicationShutdownHooks")) {
+        left =
+            ((Map<?, ?>) hooks.get(null))
+                .keySet().stream().filter(h -> h instanceof RunWhenShuttingDown).count();
+      }
+      saved.println("%% hooks left: " + left);
+    }
+  }
+
+  /**
    * A run killed by SIGTERM without -s (MiniZinc and the competition scripts end a solver so at the
    * time limit) printed nothing, although without -a the solutions it found are kept back to be
    * printed at its end: it now prints what the watchdog prints at the time-out, the kept solution

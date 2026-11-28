@@ -228,9 +228,11 @@ public class Fz2jacop {
     // without -a is printed only when the run ends. In process (callMain) only -s prints at
     // shutdown, since a hook per run would stay for the life of the JVM
     boolean killHook = watchdog && !printsAtShutdown(opt) && opt.portfolioWorker() == null;
+    boolean hooked = false;
     if (printsAtShutdown(opt) || killHook) {
       try {
         Runtime.getRuntime().addShutdownHook(t);
+        hooked = true;
       } catch (IllegalStateException _) {
         // the JVM is already shutting down (a signal right after the start): nothing to print
       }
@@ -251,8 +253,9 @@ public class Fz2jacop {
     try {
       return solve(opt, parser, model, t);
     } finally {
-      if (killHook) {
-        // the run has printed its answer, or ends with an error: nothing more at shutdown
+      // the run has printed its answer, or ends with an error (also an exception): the hook would
+      // keep the parser for the life of the JVM and print this run's statistics when it exits
+      if (hooked) {
         removeHook(t);
       }
       if (watch != null) {
