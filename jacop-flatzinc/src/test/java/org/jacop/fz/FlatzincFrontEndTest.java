@@ -11754,4 +11754,29 @@ class FlatzincFrontEndTest {
     store.impose(new org.jacop.constraints.XlteqY(items[0], cost));
     assertSame(packing, Solve.binPackingNear(cost));
   }
+
+  /**
+   * The copy of the tables into the store derived by presolve keeps the built-ins of on_restart:
+   * without them status() was a free variable of the presolved store and took 2, although it is
+   * START (1) in the only run, and restart neighbourhoods were not imposed.
+   */
+  @Test
+  void presolveKeepsTheOnRestartBuiltIns() throws IOException {
+    String model =
+        """
+        var 0..9: pa;
+        var 0..9: pb :: output_var;
+        var 0..9: pc :: output_var;
+        var 1..5: st :: output_var;
+        constraint int_lin_eq([1,1],[pa,pb],5);
+        constraint int_lin_le([1,1],[pc,pb],5);
+        constraint jacop_on_restart_status(st);
+        constraint int_ne(st,1);
+        solve satisfy;
+        """;
+    for (String mode : new String[] {"off", "on", "check"}) {
+      String out = run(model, "--presolve", mode)[0];
+      assertTrue(out.contains("=====UNSATISFIABLE====="), mode + "\n" + out);
+    }
+  }
 }

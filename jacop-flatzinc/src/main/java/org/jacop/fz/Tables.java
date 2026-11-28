@@ -1056,6 +1056,8 @@ public class Tables {
     lnsRoutes.forEach(r -> t.lnsRoutes.add(r.copy(map)));
     t.zeroSums = zeroSums == null ? null : zeroSums.copy(map);
     t.indexDisjunctions = indexDisjunctions == null ? null : indexDisjunctions.copy(map);
+    // the built-ins of on_restart fix variables of the searched store at the root of every run
+    t.onRestart = onRestart == null ? null : onRestart.copy(map);
     t.objectiveScale = objectiveScale;
     t.scaledIdents.addAll(scaledIdents);
     // the narrowing of declared domains cuts values off the model, whatever store is searched: a
