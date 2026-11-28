@@ -11266,4 +11266,41 @@ class FlatzincFrontEndTest {
       }
     }
   }
+
+  @Test
+  void mddLinearSumForgetsTheDiagramsOfAFinishedModel() throws InterruptedException {
+    // the structure of each diagram was kept in a static map by the identity of its arrays and
+    // never removed; keyed weakly by one array of the diagram while the graph of its
+    // ExtensionalSupportMdd is shared by another, each map kept the key of the other alive: every
+    // mdd of every model solved in the JVM stayed in memory (180 kB per run of mdd_a10)
+    // (the other arrays go when the maps drop the entries of the collected key, at their next use)
+    java.lang.ref.WeakReference<int[]> sources = mddLinearSumOnce();
+    for (int i = 0; i < 100 && sources.get() != null; i++) {
+      System.gc();
+      Thread.sleep(5);
+    }
+    assertNull(sources.get());
+  }
+
+  private static java.lang.ref.WeakReference<int[]> mddLinearSumOnce() {
+    org.jacop.core.Store store = new org.jacop.core.Store();
+    org.jacop.core.IntVar[] x = {
+      new org.jacop.core.IntVar(store, "x", 0, 1), new org.jacop.core.IntVar(store, "y", 0, 1)
+    };
+    // x + y = 1 over 0..1: root 1 -> 2 (x = 0) or 3 (x = 1), 2 -> terminal (y = 1), 3 -> (y = 0)
+    int[] level = {1, 2, 2};
+    int[] from = {1, 1, 2, 3};
+    org.jacop.core.IntDomain[] label = {
+      new org.jacop.core.IntervalDomain(0, 0),
+      new org.jacop.core.IntervalDomain(1, 1),
+      new org.jacop.core.IntervalDomain(1, 1),
+      new org.jacop.core.IntervalDomain(0, 0)
+    };
+    int[] to = {2, 3, 0, 0};
+    assertEquals(
+        Long.valueOf(1), org.jacop.fz.constraints.MddLinearSum.sum(x, level, from, label, to));
+    store.impose(new org.jacop.constraints.ExtensionalSupportMdd(x, level, from, label, to));
+    assertTrue(store.consistency());
+    return new java.lang.ref.WeakReference<>(from);
+  }
 }
