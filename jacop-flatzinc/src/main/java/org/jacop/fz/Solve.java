@@ -63,6 +63,7 @@ import java.util.function.Consumer;
 import java.util.function.DoubleUnaryOperator;
 import java.util.function.IntFunction;
 import java.util.function.LongSupplier;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.SolutionHint;
 import org.jacop.api.VarMap;
@@ -251,6 +252,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   FreeSearch freeSearch;
   FreeSearch.Status freeSearchStatus;
   LcgSolver lcg;
+  // -a and -n N of a satisfaction model whose search annotation decides a variable that is not
+  // printed: the outputs printed before, so that each is printed once (null otherwise)
+  private DistinctOutputs<T> distinctOutputs;
+  // the untouched outputs that the search of the outputs labels last, below the completion
+  private Set<Var> untouchedLast = Set.of();
+  // whether the engine that prints tells the solutions apart by the output itself (LCG blocking
+  // the printed values, free search distinct on the outputs), so that no key is kept
+  private boolean printsDistinct;
   // the solver of a model of clauses alone, which JaSAT solves without lazy clause generation
   private CdclSolver pureSat;
   // set when pureSat solved the CNF of a model compiled by ClausalCompiler
@@ -3672,6 +3681,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (enumerate && !lcg.setEnumeration(enumeratedVariables())) {
       throw new IllegalStateException("the output variables cannot be enumerated by LCG");
     }
+    // the blocking clauses over the printed variables print each output once
+    printsDistinct = enumerate;
     // the hints of constraints first; a solution of local search replaces them
     Hint constraintHint = constraintHints();
     if (constraintHint != null) {
@@ -4472,7 +4483,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    *     rejected, and the model is then solved as without the compilation
    */
   private boolean executeClausalSearch(ClausalModel cnf) {
-    CdclSolver solver = cnf.solver();
+    // the variables the detectors dropped: the store may have fixed them to values that are not
+    // those of a solution of the clauses
+    Set<Var> dropped = new HashSet<>(dictionary.unusedVariables);
+    CdclSolver solver = cnf.solver(dropped);
     if (options.debug()) {
       FzConsole.println("% clausal model: " + cnf.numVars() + " variables solved by JaSAT");
     }
@@ -4497,7 +4511,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         return false;
       }
       assert propagated() : "executeClausalSearch opens a level with propagation queued";
-      if (!cnf.fix(store, solver) || !diveConsistency() || !fixRest() || !clausesHold()) {
+      if (!cnf.fix(store, solver, dropped) || !diveConsistency() || !fixRest() || !clausesHold()) {
         // not a solution of the store: a compilation error, reported, and solved without it; a
         // check stopped at the time-out rejects nothing, and the search then times out
         if (!store.isConsistencyCut()) {
@@ -6064,6 +6078,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     slowLcg = SlowLcg.of(lcg);
     lcg.release();
     lcg = null;
+    printsDistinct = false;
     postCollectedClauses();
     if (options.debug()) {
       IO.println(
@@ -8922,6 +8937,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .onSolution(s -> printSolution());
     if (shown != null) {
       builder.distinctOn(shown);
+      printsDistinct = true;
     }
     for (SearchMonitor m : monitors) {
       builder.monitor(m);
@@ -9855,6 +9871,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (split != null) {
       return executeSplitSearch(label, split, costVar);
     }
+    trackDistinctOutputs(label);
     if (costVar instanceof IntVar cost) {
       // a node whose subtree is all that is left bounds the solutions not found yet
       label.setLastSubtreeListener(
@@ -10742,6 +10759,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   DepthFirstSearch<T>[] setSubSearchForAll(DepthFirstSearch<T> label, Options opt) {
 
     DepthFirstSearch<T>[] intAndSetSearch = new DepthFirstSearch[9];
+    setUpDistinctOutputs(label);
 
     DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
 
@@ -10776,12 +10794,33 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (shouldUseDefaultSearchVars(
         intSearchVariables, boolSearchVariables, setSearchVariables, floatSearchVariables)) {
+      // no output to label and no annotation: the search of every variable decides the variables
+      // that are not printed too
+      boolean noOutputToLabel =
+          outputVarsOnly
+              && label == null
+              && !options.freeSearch()
+              && noSearchVariables(
+                  intSearchVariables,
+                  boolSearchVariables,
+                  setSearchVariables,
+                  floatSearchVariables);
       outputVarsOnly = false;
       searchVars.defaultVars();
       intSearchVariables = searchVars.getIntVars();
       setSearchVariables = searchVars.getSetVars();
       boolSearchVariables = searchVars.getBoolVars();
       floatSearchVariables = searchVars.getFloatVars();
+      if (noOutputToLabel) {
+        setUpDistinctOutputs(
+            Stream.of(
+                    intSearchVariables,
+                    boolSearchVariables,
+                    setSearchVariables,
+                    floatSearchVariables)
+                .flatMap(Arrays::stream)
+                .toList());
+      }
     }
 
     if (opt.debug()) {
@@ -11011,11 +11050,201 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       addUntouchedSearches(parent, intAndSetSearch[4] != null, untouched, intAndSetSearch);
     }
 
+    if (distinctOutputs != null) {
+      Set<Var> last = Collections.newSetFromMap(new IdentityHashMap<>());
+      last.addAll(untouched);
+      // an untouched output that the annotation decides is not labelled last
+      if (si != null) {
+        removeAnnotated(si, last);
+      }
+      untouchedLast = last;
+    }
+
     if (noOutputSearch) {
       handleTrivialSolution();
     }
 
     return intAndSetSearch;
+  }
+
+  /**
+   * Under -a and -n N of a satisfaction model, sets up {@link #distinctOutputs} when the search
+   * annotation decides a variable that is not printed and not fixed: other values of it can
+   * complete the same output, which the search would then print again. A model whose annotation
+   * decides printed variables only keeps nothing.
+   *
+   * @param label the search of the annotation, or null without annotation
+   */
+  private void setUpDistinctOutputs(DepthFirstSearch<T> label) {
+    distinctOutputs = null;
+    untouchedLast = Set.of();
+    if (label == null || si == null || costVariable != null || !options.getAll()) {
+      return;
+    }
+    List<Var> printed = printedVariables();
+    Map<Var, Boolean> determined = new IdentityHashMap<>();
+    for (Var v : searchedPrinted(printed)) {
+      determined.put(v, true);
+    }
+    if (!decidesHidden(si, determined)) {
+      return;
+    }
+    distinctOutputs = new DistinctOutputs<>(printed.toArray(new Var[0]));
+  }
+
+  /**
+   * Under -a and -n N of a satisfaction model without annotation, sets up {@link #distinctOutputs}
+   * when the given variables, which the search labels instead of the outputs, hold one whose value
+   * the output does not fix.
+   *
+   * @param searched the variables of the search
+   */
+  private void setUpDistinctOutputs(List<Var> searched) {
+    if (distinctOutputs != null || costVariable != null || !options.getAll()) {
+      return;
+    }
+    List<Var> printed = printedVariables();
+    Map<Var, Boolean> determined = new IdentityHashMap<>();
+    for (Var v : searchedPrinted(printed)) {
+      determined.put(v, true);
+    }
+    for (Var v : searched) {
+      if (!determined(v, determined)) {
+        distinctOutputs = new DistinctOutputs<>(printed.toArray(new Var[0]));
+        return;
+      }
+    }
+  }
+
+  // the variables of the searched store that hold the printed values (with presolve the copies)
+  private Set<Var> searchedPrinted(List<Var> printed) {
+    Set<Var> searched = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (Var v : printed) {
+      // and the variable that a printed variable is an alias of (bool2int, int_eq), which the
+      // annotation names in its place: it has the printed value
+      Var alias = v instanceof IntVar x ? output.getAlias(x) : v;
+      for (Var w : alias == v ? List.of(v) : List.of(v, alias)) {
+        Var copy = presolve == null ? w : presolve.get(w);
+        if (copy != null) {
+          searched.add(copy);
+        }
+      }
+    }
+    return searched;
+  }
+
+  /**
+   * Whether the annotation names a variable whose value the output does not fix: a variable that is
+   * not fixed, not printed and not defined (defines_var) by variables that the output fixes.
+   *
+   * @param item the annotation
+   * @param determined whether the output fixes a variable, for the variables decided so far
+   * @return true if some variable of the annotation can take several values with one output
+   */
+  private boolean decidesHidden(SearchItem<?> item, Map<Var, Boolean> determined) {
+    if (item.vars() != null) {
+      for (Var v : item.vars()) {
+        if (v != null && !determined(v, determined)) {
+          return true;
+        }
+      }
+    }
+    if (item.getSearchItems() != null) {
+      for (SearchItem<?> sub : item.getSearchItems()) {
+        if (decidesHidden(sub, determined)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  // whether the output fixes the value of v: v is fixed, printed, or defined by such variables
+  private boolean determined(Var v, Map<Var, Boolean> determined) {
+    if (v.singleton()) {
+      return true;
+    }
+    Boolean known = determined.get(v);
+    if (known != null) {
+      return known;
+    }
+    if (v instanceof IntVar x && dictionary.getAlias(x) != x) {
+      boolean aliased = determined(dictionary.getAlias(x), determined);
+      determined.put(v, aliased);
+      return aliased;
+    }
+    // presolve copies a variable it eliminated as a stand-in, which a definition would take for
+    // fixed, and an output that the store does not hold is not what the definition reads
+    boolean definitions =
+        dictionary.definitions != null
+            && presolve == null
+            && output.tableElimination == null
+            && output.zeroSums == null
+            && output.indexDisjunctions == null;
+    Var[] by = definitions ? dictionary.definitions.get(v) : null;
+    // a cycle of definitions fixes nothing
+    determined.put(v, false);
+    if (by == null) {
+      return false;
+    }
+    for (Var w : by) {
+      if (!determined(w, determined)) {
+        return false;
+      }
+    }
+    determined.put(v, true);
+    return true;
+  }
+
+  private static void removeAnnotated(SearchItem<?> item, Set<Var> vars) {
+    if (item.vars() != null) {
+      for (Var v : item.vars()) {
+        vars.remove(v);
+      }
+    }
+    if (item.getSearchItems() != null) {
+      for (SearchItem<?> sub : item.getSearchItems()) {
+        removeAnnotated(sub, vars);
+      }
+    }
+  }
+
+  /**
+   * Lets {@link #distinctOutputs} follow the decisions of the depth-first search of the annotation
+   * and of the outputs, down to the completion search, so that it skips the branches whose leaves
+   * all print an output printed already and keeps keys only below a decision that can repeat one.
+   * Otherwise, with presolve (which searches copies), outputs whose values the store does not hold,
+   * a priority search or a search with listeners of its own on its branches, every key is kept.
+   */
+  @SuppressWarnings("unchecked")
+  private void trackDistinctOutputs(DepthFirstSearch<T> label) {
+    if (distinctOutputs == null
+        || distinctOutputs.tracking()
+        || presolve != null
+        || output.tableElimination != null
+        || output.zeroSums != null
+        || output.indexDisjunctions != null) {
+      return;
+    }
+    List<DepthFirstSearch<T>> chain = new ArrayList<>();
+    for (DepthFirstSearch<T> s = label;
+        s != null && s != completionSearch && s != completionChild && s != floatCompletion;
+        s =
+            s.childSearches != null && s.childSearches[0] instanceof DepthFirstSearch<?> child
+                ? (DepthFirstSearch<T>) child
+                : null) {
+      if (s instanceof PrioritySearch
+          || s.getExitChildListener() != null
+          || s.getDecisionListener() != null
+          || s.childSearches != null && s.childSearches.length > 1) {
+        return;
+      }
+      chain.add(s);
+    }
+    distinctOutputs.track(printedVariables(), untouchedLast);
+    for (DepthFirstSearch<T> s : chain) {
+      s.setDecisionListener(distinctOutputs);
+    }
   }
 
   /**
@@ -11735,7 +11964,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 + nf.format(freeSearch.getProbeFailures())
             : "")
         + lnsStatistics(freeLns)
-        + localSearchStatistics();
+        + localSearchStatistics()
+        + (distinctOutputs != null && !printsDistinct ? distinctOutputs.statistics() : "");
   }
 
   /**
@@ -12138,8 +12368,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   void printSolution() {
 
     StringBuffer printBuffer = new StringBuffer();
-    numberSolutions++;
-    solutionFound = true;
     if (costVariable instanceof IntVar cost && cost.singleton()) {
       if (lcg != null) {
         lcgLastCost = cost.value();
@@ -12170,6 +12398,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       eliminatedValues = new IdentityHashMap<>(eliminatedValues);
       output.indexDisjunctions.addValues(eliminatedValues);
     }
+
+    if (distinctOutputs != null
+        && !printsDistinct
+        && !distinctOutputs.firstTime(eliminatedValues)) {
+      // the output of an earlier solution, with other values of variables that are not printed
+      return;
+    }
+    numberSolutions++;
+    solutionFound = true;
 
     if (!output.outputVariables.isEmpty()) {
       appendOutputVariablesToBuffer(printBuffer);

@@ -32,8 +32,10 @@ package org.jacop.fz.constraints;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.List;
+import java.util.Set;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 import org.jacop.jasat.cdcl.CdclSolver;
 
 /**
@@ -74,15 +76,23 @@ public final class ClausalModel {
   /**
    * Returns a solver with the clauses added, and with the values each variable lost since the
    * compilation excluded: root propagation, and the reductions that keep some solution (symmetry,
-   * dominance), prune the store's domains, and a solution of the clauses must be one of the store.
+   * dominance, components), prune the store's domains, and a solution of the clauses must be one of
+   * the store. The values of a variable whose constraints a reformulation dropped are not excluded:
+   * the store keeps a solution of the reformulated model, in which such a variable is free, and a
+   * value it gives such a variable (a component fixed to its first solution) need not extend to a
+   * solution of the clauses.
    *
+   * @param dropped the variables the reformulations of the front end left without constraints
    * @return the solver
    */
-  public CdclSolver solver() {
+  public CdclSolver solver(Set<? extends Var> dropped) {
     CdclSolver solver = new CdclSolver();
     solver.ensureVars(numVars);
     for (int i = 0; i < vars.size(); i++) {
       IntVar x = vars.get(i);
+      if (dropped.contains(x)) {
+        continue;
+      }
       int[] v = values.get(i);
       int[] lits = literals.get(i);
       for (int j = 0; j < v.length; j++) {
@@ -137,14 +147,21 @@ public final class ClausalModel {
    * Fixes the variables of the model to the values the solver's model gives them, at a new level of
    * the store.
    *
+   * <p>The variables a reformulation dropped keep the values of the store, which {@link
+   * #solver(Set)} does not impose on the clauses.
+   *
    * @param store the store
    * @param solver the solver, after it found a model
+   * @param dropped the variables the reformulations of the front end left without constraints
    * @return false when a variable has no value or a value outside its domain
    */
-  public boolean fix(Store store, CdclSolver solver) {
+  public boolean fix(Store store, CdclSolver solver, Set<? extends Var> dropped) {
     store.setLevel(store.level + 1);
     for (int i = 0; i < vars.size(); i++) {
       IntVar x = vars.get(i);
+      if (dropped.contains(x)) {
+        continue;
+      }
       int[] lits = literals.get(i);
       int value = 0;
       int found = 0;
