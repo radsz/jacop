@@ -173,6 +173,38 @@ public final class InferredCumulatives {
     this.workLimit = workLimit;
   }
 
+  // when the inference stops, as at its work limit; read once per STOP_WORK steps of work
+  private java.util.function.BooleanSupplier stop;
+
+  private long nextStopCheck;
+
+  private static final long STOP_WORK = 1L << 16;
+
+  /**
+   * It makes the inference stop when asked, as at its work limit, with the cumulatives found so
+   * far, which are all valid (the time-out of the run: 4,000 tasks took 2.5 s).
+   *
+   * @param stop tells whether to stop; it is asked once per few thousand steps of work.
+   */
+  public void stopWhen(java.util.function.BooleanSupplier stop) {
+    this.stop = stop;
+  }
+
+  // whether work is left: false at the work limit, or once stop said so, which ends the work
+  private boolean workLeft() {
+    if (work >= workLimit) {
+      return false;
+    }
+    if (stop != null && work >= nextStopCheck) {
+      nextStopCheck = work + STOP_WORK;
+      if (stop.getAsBoolean()) {
+        work = workLimit;
+        return false;
+      }
+    }
+    return true;
+  }
+
   /**
    * It adds a cumulative resource. A task listed twice uses the sum of its uses; tasks of no
    * positive use are ignored.
@@ -307,6 +339,7 @@ public final class InferredCumulatives {
   public List<Inferred> infer(
       int maxCovers, int maxOut, java.util.function.Predicate<Inferred> keep) {
     work = 0;
+    nextStopCheck = 0;
     coversFound = 0;
     coversLifted = 0;
     dominated = 0;
@@ -322,7 +355,7 @@ public final class InferredCumulatives {
     List<Integer> skipSizes = new ArrayList<>();
     Set<Key> seen = new HashSet<>();
     List<Inferred> found = new ArrayList<>();
-    for (int ci = 0; ci < covers.size() && work < workLimit; ci++) {
+    for (int ci = 0; ci < covers.size() && workLeft(); ci++) {
       Cover c = covers.get(ci);
       int[] pi = skipped(c.tasks, skipSets, skipSizes) ? new int[0] : lift(c.tasks);
       if (pi.length > 0) {
@@ -454,7 +487,7 @@ public final class InferredCumulatives {
     Set<Key> keys = new HashSet<>();
     PriorityQueue<Cover> best =
         new PriorityQueue<>(Comparator.comparingDouble((Cover c) -> c.bound));
-    for (int r = 0; r < rows.size() && work < workLimit; r++) {
+    for (int r = 0; r < rows.size() && workLeft(); r++) {
       shortCovers(rows.get(r), capacities.get(r), maxCovers, best, keys);
     }
     List<Cover> result = new ArrayList<>(best);
@@ -585,7 +618,7 @@ public final class InferredCumulatives {
       }
     }
     work += (long) m * 8;
-    for (int x = 0; x < m && work < workLimit; x++) {
+    for (int x = 0; x < m && workLeft(); x++) {
       int i = byUse[x];
       for (int y = x + 1; y < m; y++) {
         int j = byUse[y];
@@ -653,7 +686,7 @@ public final class InferredCumulatives {
       support[size++] = t;
     }
     for (int i : order) {
-      if (work >= workLimit) {
+      if (!workLeft()) {
         // the tasks not lifted keep coefficient 0, which is valid
         break;
       }

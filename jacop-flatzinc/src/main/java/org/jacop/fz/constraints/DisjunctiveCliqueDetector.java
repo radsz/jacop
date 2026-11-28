@@ -596,6 +596,11 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
       duration[t] = cliques.minDuration(t);
     }
     InferredCumulatives inference = new InferredCumulatives(duration);
+    if (support.options != null && support.options.getTimeOut() > 0) {
+      // the model is read before the time-out stops it: the inference stops there too, with the
+      // cumulatives found so far
+      inference.stopWhen(support.options::timeOutPassed);
+    }
     for (Row row : rows) {
       inference.resource(row.tasks, row.use, row.capacity);
     }
