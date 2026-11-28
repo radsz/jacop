@@ -644,7 +644,7 @@ public final class LcgSolver implements ExternalPropagator {
     // one more instance in each
     sat.setExternalReasonKeep(Integer.getInteger("jacop.lcg.reasonKeep", 3));
     sat.setExternalWork(() -> WORK_PER_CALL * store.numberConsistencyCalls);
-    sat.setShrink(SHRINK);
+    applyShrink(false);
     // learnt clauses keep longer in LCG, where a level holds many atoms: core up to LBD 3, middle
     // up to 8 scored 19.4 against 15.6 for 2 and 6 on the Challenge sample, in four pairings
     sat.setTierLimits(3, 8);
@@ -5633,6 +5633,7 @@ public final class LcgSolver implements ExternalPropagator {
       h.setLazy(lazy);
     }
     sat.setLazyOrder(select != null && !free);
+    applyShrink(select != null && !free);
     applyAnnotationChrono();
   }
 
@@ -7923,23 +7924,62 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
-   * Whether learnt clauses are shrunk to one literal per lower decision level (all-UIP shrinking,
-   * Fleury and Biere 2021) under lazy clause generation ({@code jacop.lcg.shrink}); default false.
-   * Shrinking replaces the literals of a lower level by the decision of that level. Under lazy
-   * clause generation those literals are bounds and values reached by propagation, which other
-   * orders of the decisions reach too, while the decision pins the clause to one prefix of the
-   * search: open stacks problem_20_20_1 under fixed search needs 90,000 conflicts with shrinking
-   * and 39,000 without.
+   * How learnt clauses are shrunk to one literal per lower decision level (all-UIP shrinking,
+   * Fleury and Biere 2021) under lazy clause generation ({@code jacop.lcg.shrink}): {@code true}
+   * replaces the literals of a level by any UIP of that level, {@code propagated} only by a UIP
+   * that propagation set, not by the decision, and {@code false} keeps them all. Unset, fixed
+   * search keeps them all and every other search shrinks to propagated UIPs. Under lazy clause
+   * generation the literals of a lower level are bounds and values reached by propagation, which
+   * other orders of the decisions reach too, while the decision pins the clause to one prefix of
+   * the search: open stacks problem_20_20_1 under fixed search needs 90,000 conflicts when
+   * shrinking to decisions and 39,000 without. Under free search, shrinking to propagated UIPs
+   * keeps the short clauses that shrinking gave without the decisions: black-hole 19 with -f needs
+   * 1,800 conflicts against 13,000 without shrinking and 3,600 with decisions.
    */
-  static final boolean SHRINK = Boolean.getBoolean("jacop.lcg.shrink");
+  static final String SHRINK = System.getProperty("jacop.lcg.shrink", "");
+
+  // the shrinking set by setShrink, or null for the default of the search
+  private Boolean shrinkSet;
+
+  private void applyShrink(boolean fixedSearch) {
+    boolean on;
+    boolean toDecisions;
+    if (shrinkSet != null) {
+      on = shrinkSet;
+      toDecisions = true;
+    } else {
+      switch (SHRINK) {
+        case "true" -> {
+          on = true;
+          toDecisions = true;
+        }
+        case "false" -> {
+          on = false;
+          toDecisions = false;
+        }
+        case "propagated" -> {
+          on = true;
+          toDecisions = false;
+        }
+        default -> {
+          on = !fixedSearch;
+          toDecisions = false;
+        }
+      }
+    }
+    sat.setShrink(on);
+    sat.setShrinkToDecisions(toDecisions);
+  }
 
   /**
-   * Turns all-UIP shrinking of learnt clauses on or off; the default is {@link #SHRINK}.
+   * Turns all-UIP shrinking of learnt clauses to any UIP of a level on or off, in place of the
+   * default of the search (see {@link #SHRINK}).
    *
    * @param on whether to shrink
    */
   public void setShrink(boolean on) {
-    sat.setShrink(on);
+    shrinkSet = on;
+    applyShrink(false);
   }
 
   /**

@@ -248,6 +248,8 @@ public final class CdclSolver {
   private int stamp;
   // all-UIP shrinking (Fleury and Biere 2020): marks of one level's block, and the sort keys
   private boolean shrink = true;
+  // whether a block may shrink to the decision of its level, not only to a propagated literal
+  private boolean shrinkToDecisions = true;
   private int[] shrinkMark = new int[0];
   private int shrinkStamp;
   // the depth of the minimisation's search, as CaDiCaL's minimizedepth
@@ -1294,6 +1296,28 @@ public final class CdclSolver {
    */
   public void setShrink(boolean on) {
     shrink = on;
+  }
+
+  /**
+   * Lets all-UIP shrinking replace a block only by a propagated literal of its level, not by the
+   * decision of that level (on by default: any UIP).
+   *
+   * @param on whether a block may shrink to the decision of its level
+   */
+  public void setShrinkToDecisions(boolean on) {
+    shrinkToDecisions = on;
+  }
+
+  /**
+   * Tells how learnt clauses are shrunk: 0 not at all, 1 only to propagated UIPs, 2 to any UIP.
+   *
+   * @return the shrinking mode
+   */
+  public int shrinkMode() {
+    if (!shrink) {
+      return 0;
+    }
+    return shrinkToDecisions ? 2 : 1;
   }
 
   /**
@@ -2532,7 +2556,7 @@ public final class CdclSolver {
         continue;
       }
       if (--open == 0) {
-        return t;
+        return shrinkToDecisions || reasonRef(v) != NO_REASON ? t : -1;
       }
       int r = reasonRef(v);
       if (r == NO_REASON || r == UNIT_REASON) {
