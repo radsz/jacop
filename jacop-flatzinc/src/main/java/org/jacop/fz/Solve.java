@@ -45,6 +45,7 @@ import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -136,6 +137,7 @@ import org.jacop.search.ComparatorVariable;
 import org.jacop.search.ConsistencyListener;
 import org.jacop.search.CreditCalculator;
 import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.ExitListener;
 import org.jacop.search.FailConstraintsStatistics;
 import org.jacop.search.Indomain;
 import org.jacop.search.IndomainMax;
@@ -219,6 +221,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   Tables output;
   // the derivation of the searched store, or null when the loaded store is searched
   Derivation presolve;
+  // the variables that no constraint touched before presolve, in the searched store (presolve
+  // maps them), and whether a variable of the default search, or one that is not output, was
+  // touched then: what the search labels last does not depend on what presolve removed
+  private Set<Var> untouchedBeforePresolve = Set.of();
+  private boolean touchedBeforePresolve;
+  private boolean touchedHiddenBeforePresolve;
   // the symmetry breaking that ran, or null: its constraints, which the model does not imply, may
   // differ between portfolio threads, so learnt clauses go only to threads that posted the same
   private SymmetryBreaking symmetry;
@@ -250,6 +258,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   // a variable of the pure clause model fixed by its complement symmetry
   private boolean pureComplementFixed;
+
+  // the linear constraints and the lex-leader pairs the pure clause model took as clauses
+  private int pureShaped;
+
+  private int pureLexPairs;
   int lcgStatus;
 
   // the linear relaxation (--lp), or null
@@ -1038,6 +1051,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     ObjectivePresolve objective = objectiveRule(node);
     // the last reader of the variable and constraint items
     releaseModelItems(node);
+    recordUntouched();
     if (opt.presolve() != Options.Presolve.OFF) {
       presolve(node, objective);
       if (sat.collecting() && !opt.lcg()) {
@@ -1955,6 +1969,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       case DERIVED -> {
         VarMap map = completeMap(d);
         dictionary = dictionary.mapTo(map);
+        Set<Var> untouched = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (Var v : untouchedBeforePresolve) {
+          Var copy = d.get(v);
+          if (copy != null) {
+            untouched.add(copy);
+          }
+        }
+        untouchedBeforePresolve = untouched;
         if (objectiveCosts != null) {
           // the cost variables of the objective rule are made in the loaded store
           objectiveCosts = map.get(objectiveCosts);
@@ -3557,11 +3579,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (refutation != null) {
         ignored.add(refutation);
       }
+      ignored.addAll(dictionary.windowSequences);
       if (!refuteAtRoot()) {
         return false;
       }
       PureClauseModel cnf =
-          PureClauseModel.of(store, sat.collectedClauses(), ignored, this::declaredVariables);
+          PureClauseModel.of(
+              store, sat.collectedClauses(), ignored, dictionary.lexPairs, this::declaredVariables);
       if (cnf != null) {
         return executePureClauseSearch(cnf);
       }
@@ -4404,6 +4428,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private boolean executePureClauseSearch(PureClauseModel cnf) {
     pureSat = cnf.solver;
+    pureShaped = cnf.shapedConstraints;
+    pureLexPairs = cnf.lexPairs;
     pureComplementFixed = cnf.complementFixed != 0;
     if (options.debug()) {
       FzConsole.println("% pure clause model: " + cnf.numVars() + " variables solved by JaSAT");
@@ -5006,7 +5032,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + (fixedTasteOutcome == 2 ? ": kept" : ": LCG goes on"));
     }
     if (found || numberSolutions > 0) {
-      lcgStatus = CdclSolver.SAT;
+      // under an objective the search without learning proves the optimum only at its end
+      lcgStatus = costVar != null && label.timeOutOccured ? CdclSolver.UNKNOWN : CdclSolver.SAT;
       return true;
     }
     if (!label.timeOutOccured) {
@@ -7105,6 +7132,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         IO.println("%%%mzn-stat: clausalModel=true");
       } else if (pureSat != null) {
         IO.println("%%%mzn-stat: pureClauseModel=true");
+        IO.println("%%%mzn-stat: pureClauseShaped=" + pureShaped);
+        IO.println("%%%mzn-stat: pureClauseLexPairs=" + pureLexPairs);
         if (pureComplementFixed) {
           IO.println("%%%mzn-stat: complementSymmetry=true");
         }
@@ -7749,7 +7778,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     long budget = Long.parseLong(options.freeConfig("ls-max", "0"));
     if (options.getTimeOut() > 0) {
-      long part = (long) (share * options.getRemainingTimeOut());
+      // at least a millisecond: a time limit of 0 is none, and the time left is a millisecond once
+      // the time-out has passed, so the local search ran until its patience ran out
+      long part = Math.max(1, (long) (share * options.getRemainingTimeOut()));
       budget = budget > 0 ? Math.min(budget, part) : part;
     } else if (budget <= 0) {
       budget = 10_000;
@@ -8098,6 +8129,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private MaxSatModel maxSat;
   private MaxSatLocalSearch maxSatSearch;
   private long maxSatMillis;
+  // the time JaSAT took for a model of the hard clauses the local search did not satisfy
+  // (--free-config maxsat-sat=0 turns it off)
+  private long maxSatSatMillis;
   private long maxSatProposals;
   private SymmetryCanonicalizer maxSatCanonical;
 
@@ -8179,7 +8213,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     long improvedAt = started;
     // the fewest falsified hard clauses so far, and when they were reached
     int fewestHard = Integer.MAX_VALUE;
-    long hardAt = started;
+    boolean jasat = !"0".equals(options.freeConfig("maxsat-sat", "1"));
+    long hardAt = hardSince(jasat, started);
     int[] hintValues = null;
     while (!stopped[0]) {
       long now = System.currentTimeMillis();
@@ -8199,12 +8234,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       if (ls.lowestFalsifiedHard() < fewestHard) {
         fewestHard = ls.lowestFalsifiedHard();
-        hardAt = System.currentTimeMillis();
+        hardAt = hardSince(jasat, System.currentTimeMillis());
       }
       if (ls.falsifiedHard() == 0 && ls.cost() == 0) {
         break;
       }
     }
+    best = jasatStart(model, ls, stopped, started, deadline, best, jasat);
     if (best < Long.MAX_VALUE && model.cost(best) < bestPrintedCost.get()) {
       int[] values = canonical(model.values(ls.bestAssignment()));
       long expected = model.cost(best);
@@ -8230,9 +8266,63 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + ls.steps()
               + "\n%%%mzn-stat: maxsatTime="
               + maxSatMillis / 1000.0
+              + "\n%%%mzn-stat: maxsatSatTime="
+              + maxSatSatMillis / 1000.0
               + (best == Long.MAX_VALUE ? "" : "\n%%%mzn-stat: maxsatBest=" + model.cost(best)));
     }
     return hintValues == null ? null : new Hint(hintedVariables(), hintValues);
+  }
+
+  // the JaSAT start when the local search reached no assignment of the hard clauses (best is
+  // Long.MAX_VALUE) and jasat is on; returns the best cost of the local search
+  private long jasatStart(
+      MaxSatModel model,
+      MaxSatLocalSearch ls,
+      boolean[] stopped,
+      long started,
+      long deadline,
+      long bestSoFar,
+      boolean jasat) {
+    if (bestSoFar != Long.MAX_VALUE || stopped[0] || !jasat) {
+      return bestSoFar;
+    }
+    // no assignment of the hard clauses by the patience: JaSAT looks for one in the rest of the
+    // budget, and the search goes on from it for at least 200 ms, until it finds nothing better
+    // in the last half of the time since, and for at most half the time it searched before
+    // (hanoi5 of the PB competition 2016: the search reached no assignment of its 13,383 hard
+    // clauses in 7 to 15 s, JaSAT finds one of the optimal cost in 0.7 s; on mqc-10tree of the
+    // MaxSAT Evaluation 2024 the search went on for 4 s from the JaSAT start of cost 123 and
+    // ended far from the optimum 2, which the solver then found in 1 s)
+    long asked = System.currentTimeMillis();
+    boolean[] start = deadline <= asked ? null : model.hardModel(deadline - asked);
+    long from = System.currentTimeMillis();
+    maxSatSatMillis = from - asked;
+    if (start == null) {
+      return bestSoFar;
+    }
+    ls.start(start);
+    long best = ls.bestCost();
+    long improvedAt = from;
+    long now = from;
+    while (!stopped[0]
+        && ls.cost() != 0
+        && now <= deadline
+        && now - from <= (from - started) / 2
+        && (now - from <= 200 || now - improvedAt <= (now - from) / 2)) {
+      long found = ls.run(100_000, () -> stopped[0] || System.currentTimeMillis() > deadline);
+      if (found < best) {
+        best = found;
+        improvedAt = System.currentTimeMillis();
+      }
+      now = System.currentTimeMillis();
+    }
+    return best;
+  }
+
+  // the time the fewest falsified hard clauses fell, or long before when JaSAT takes over at the
+  // patience, so that the local search stops there
+  private static long hardSince(boolean jasat, long now) {
+    return jasat ? Long.MIN_VALUE / 4 : now;
   }
 
   /**
@@ -8727,13 +8817,23 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       outputSet.addAll(Arrays.asList(localOutput.getBoolVars()));
       outputSet.addAll(Arrays.asList(localOutput.getFloatVars()));
       shown = outputSet.toArray(new Var[0]);
+      // the output variables that no constraint touches come after the others, as in the
+      // search of the outputs (untouchedOutputs): above a failing completion every failure
+      // enumerated their values again
+      Set<Var> untouched =
+          untouchedOutputs(
+              localOutput.getIntVars(),
+              localOutput.getBoolVars(),
+              localOutput.getSetVars(),
+              localOutput.getFloatVars(),
+              false);
       addFreeSelects(
           selects,
           monitors,
-          localOutput.getSetVars(),
-          localOutput.getIntVars(),
-          localOutput.getBoolVars(),
-          localOutput.getFloatVars(),
+          withoutVars(localOutput.getSetVars(), untouched, SetVar[]::new),
+          withoutVars(localOutput.getIntVars(), untouched, IntVar[]::new),
+          withoutVars(localOutput.getBoolVars(), untouched, BooleanVar[]::new),
+          withoutVars(localOutput.getFloatVars(), untouched, FloatVar[]::new),
           null);
       addFreeSelects(
           selects,
@@ -8743,17 +8843,49 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           withoutVars(searchVars.getBoolVars(), outputSet, BooleanVar[]::new),
           withoutVars(searchVars.getFloatVars(), outputSet, FloatVar[]::new),
           null);
-    } else if (DEFINED_LAST) {
-      addDefinedLastSelects(selects, monitors, searchVars, objective);
+      if (!untouched.isEmpty()) {
+        addFreeSelects(
+            selects,
+            monitors,
+            Arrays.stream(localOutput.getSetVars())
+                .filter(untouched::contains)
+                .toArray(SetVar[]::new),
+            Arrays.stream(localOutput.getIntVars())
+                .filter(untouched::contains)
+                .toArray(IntVar[]::new),
+            Arrays.stream(localOutput.getBoolVars())
+                .filter(untouched::contains)
+                .toArray(BooleanVar[]::new),
+            Arrays.stream(localOutput.getFloatVars())
+                .filter(untouched::contains)
+                .toArray(FloatVar[]::new),
+            null);
+      }
     } else {
-      addFreeSelects(
-          selects,
-          monitors,
-          searchVars.getSetVars(),
-          searchVars.getIntVars(),
-          searchVars.getBoolVars(),
-          searchVars.getFloatVars(),
-          objective);
+      // the variables that no constraint touches take any value: branching on them before the
+      // others multiplied the tree by their values (a free set of 1..16 above a failing search)
+      Set<Var> untouched = untouchedFreeVars(searchVars, costVar);
+      DefaultSearchVars touched = searchVars;
+      if (!untouched.isEmpty()) {
+        touched = new DefaultSearchVars(dictionary);
+        touched.setVars = withoutVars(searchVars.getSetVars(), untouched, SetVar[]::new);
+        touched.intVars = withoutVars(searchVars.getIntVars(), untouched, IntVar[]::new);
+        touched.boolVars = withoutVars(searchVars.getBoolVars(), untouched, BooleanVar[]::new);
+        touched.floatVars = withoutVars(searchVars.getFloatVars(), untouched, FloatVar[]::new);
+      }
+      if (DEFINED_LAST) {
+        addDefinedLastSelects(selects, monitors, touched, objective);
+      } else {
+        addFreeSelects(
+            selects,
+            monitors,
+            touched.getSetVars(),
+            touched.getIntVars(),
+            touched.getBoolVars(),
+            touched.getFloatVars(),
+            objective);
+      }
+      addUntouchedFreeSelects(selects, untouched);
     }
     if (selects.isEmpty()) {
       selects.add(new SimpleSelect<>(new IntVar[0], null, new IndomainMin<>()));
@@ -9217,6 +9349,52 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return new IntVar[][] {vars, new IntVar[0]};
     }
     return new IntVar[][] {first.toArray(new IntVar[0]), last.toArray(new IntVar[0])};
+  }
+
+  /**
+   * The variables of the free search that no constraint of the model touches, before presolve (as
+   * {@link #untouchedOutputs}) or among the clauses kept for the LCG solver, and that are not the
+   * objective; none when no other variable is left.
+   */
+  private Set<Var> untouchedFreeVars(DefaultSearchVars searchVars, Var costVar) {
+    Set<Var> clauseVars = clauseVariables();
+    List<Var> all = new ArrayList<>(Arrays.asList(searchVars.getSetVars()));
+    all.addAll(Arrays.asList(searchVars.getIntVars()));
+    all.addAll(Arrays.asList(searchVars.getBoolVars()));
+    all.addAll(Arrays.asList(searchVars.getFloatVars()));
+    Set<Var> untouched = new LinkedHashSet<>();
+    boolean other = false;
+    for (Var v : all) {
+      if (!v.singleton()
+          && v != costVar
+          && v != costVariable
+          && v != objectiveVariable
+          && untouchedBeforePresolve.contains(v)
+          && !clauseVars.contains(v)) {
+        untouched.add(v);
+      } else if (!v.singleton()) {
+        other = true;
+      }
+    }
+    return other && !fewAssignments(untouched) ? untouched : Set.of();
+  }
+
+  /** Adds the branching on the untouched variables at the end of the free search. */
+  private void addUntouchedFreeSelects(
+      List<SelectChoicePoint<? extends Var>> selects, Set<Var> untouched) {
+    SetVar[] sets = untouched.stream().filter(SetVar.class::isInstance).toArray(SetVar[]::new);
+    IntVar[] ints = untouched.stream().filter(IntVar.class::isInstance).toArray(IntVar[]::new);
+    FloatVar[] floats =
+        untouched.stream().filter(FloatVar.class::isInstance).toArray(FloatVar[]::new);
+    if (sets.length > 0) {
+      selects.add(new SimpleSelect<>(sets, null, new IndomainSetMin<>()));
+    }
+    if (ints.length > 0) {
+      selects.add(new SimpleSelect<>(ints, null, new IndomainMin<>()));
+    }
+    if (floats.length > 0) {
+      selects.add(new SplitSelectFloat<Var>(store, floats, freeFloatChoice()));
+    }
   }
 
   private static <V extends Var> V[] withoutVars(
@@ -10180,11 +10358,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  // the finest precision of the float searches made; a sequence of float searches of different
+  // precisions proves the optimum to the finest (as free search does, keepAnnotationPrecision):
+  // after a run the precision in force is the one of the outermost float search, and
+  // seq_search([float_search 0.05, float_search 1e-6]) ended 4 % above the optimum
+  private double floatSearchPrecision = Double.POSITIVE_INFINITY;
+
   // the precision of the optimum: relative to its magnitude, as the gaps of Ibex and SCIP
   // the precision is read at each use: the search sets the precision of its annotation when it
   // starts
-  private static double gap(double best) {
-    return FloatDomain.precision() * Math.max(1, Math.abs(best));
+  private double gap(double best) {
+    return Math.min(FloatDomain.precision(), floatSearchPrecision) * Math.max(1, Math.abs(best));
   }
 
   private static final boolean FLOAT_BISECT_START =
@@ -10538,7 +10722,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   @SuppressWarnings("unchecked")
   DepthFirstSearch<T>[] setSubSearchForAll(DepthFirstSearch<T> label, Options opt) {
 
-    DepthFirstSearch<T>[] intAndSetSearch = new DepthFirstSearch[5];
+    DepthFirstSearch<T>[] intAndSetSearch = new DepthFirstSearch[9];
 
     DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
 
@@ -10565,7 +10749,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // every output variable is fixed already (root probing of presolve fixes them): labelling
       // every variable instead would report the one output solution again for each assignment of
       // the other variables, so they are only completed once
-      intAndSetSearch[4] = addCompletionSearch(label);
+      intAndSetSearch[4] = addCompletionSearch(label, Set.of());
       if (intAndSetSearch[4] != null) {
         return intAndSetSearch;
       }
@@ -10583,6 +10767,54 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (opt.debug()) {
       IO.println(searchVars);
+    }
+
+    boolean noOutputSearch =
+        noSearchVariables(
+            intSearchVariables, boolSearchVariables, setSearchVariables, floatSearchVariables);
+    // The output variables that no constraint touches are labelled below the completion search:
+    // above it, every failure of the completion re-enumerated their values (the bisection of an
+    // untouched float down to its precision for each failure).
+    // The search over all variables labels those that no constraint touches after the others too:
+    // a restart search without annotation searched a failing tree again for each value of a free
+    // variable of a large domain, and its limit never reached the end.
+    Set<Var> untouched =
+        untouchedOutputs(
+            intSearchVariables,
+            boolSearchVariables,
+            setSearchVariables,
+            floatSearchVariables,
+            !outputVarsOnly);
+    // Without annotation and with all unfixed output variables untouched, the first search would
+    // be the completion, which no caller expects: an integer search with no variable stands above
+    // it instead, so the completion is still decided before the untouched variables.
+    boolean emptyFirst = false;
+    if (label == null
+        && untouched.size()
+            == intSearchVariables.length
+                + boolSearchVariables.length
+                + setSearchVariables.length
+                + floatSearchVariables.length) {
+      if (outputVarsOnly) {
+        emptyFirst = true;
+      } else {
+        untouched = Set.of();
+      }
+    }
+    if (!untouched.isEmpty()) {
+      Set<Var> free = untouched;
+      intSearchVariables =
+          Arrays.stream(intSearchVariables).filter(v -> !free.contains(v)).toArray(IntVar[]::new);
+      boolSearchVariables =
+          Arrays.stream(boolSearchVariables)
+              .filter(v -> !free.contains(v))
+              .toArray(BooleanVar[]::new);
+      setSearchVariables =
+          Arrays.stream(setSearchVariables).filter(v -> !free.contains(v)).toArray(SetVar[]::new);
+      floatSearchVariables =
+          Arrays.stream(floatSearchVariables)
+              .filter(v -> !free.contains(v))
+              .toArray(FloatVar[]::new);
     }
 
     DepthFirstSearch<T> lastSearch = label;
@@ -10631,7 +10863,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       intAndSetSearch[0] = setSearch;
     }
 
-    if (intSearchVariables.length != 0) {
+    if (intSearchVariables.length != 0 || emptyFirst) {
       // add search containing int variables to be sure that they get a value
       SelectChoicePoint<IntVar> intSelect;
       if (options.freeSearch() || options.complementarySearch()) {
@@ -10746,16 +10978,202 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       intAndSetSearch[3] = floatSearch;
     }
 
-    if (outputVarsOnly && lastSearch != label) {
-      intAndSetSearch[4] = addCompletionSearch(lastSearch);
+    if (outputVarsOnly && (lastSearch != label || !untouched.isEmpty())) {
+      intAndSetSearch[4] = addCompletionSearch(lastSearch, untouched);
     }
 
-    if (noSearchVariables(
-        intSearchVariables, boolSearchVariables, setSearchVariables, floatSearchVariables)) {
+    if (!untouched.isEmpty()) {
+      DepthFirstSearch<T> parent =
+          intAndSetSearch[4] == null
+              ? lastSearch
+              : floatCompletion != null
+                  ? floatCompletion
+                  : completionChild != null ? completionChild : completionSearch;
+      addUntouchedSearches(parent, intAndSetSearch[4] != null, untouched, intAndSetSearch);
+    }
+
+    if (noOutputSearch) {
       handleTrivialSolution();
     }
 
     return intAndSetSearch;
+  }
+
+  /**
+   * Returns the given output variables that the search labels last, below the completion search.
+   * The rule: a variable is labelled last when it is not fixed and not the objective, no constraint
+   * of the loaded model touched it before presolve and no clause kept for the SAT or LCG solver
+   * names it; when before presolve some variable of the default search that is not output (with
+   * allVariables, where the given variables are all the variables of the search: any variable of
+   * the default search) was touched and not fixed, so that the completion can fail; and when the
+   * untouched variables together have more than {@link #FEW_ASSIGNMENTS} assignments (a float
+   * counts as unbounded, a set as 2 to its undecided elements), so that re-enumerating them for
+   * each failure below them is what hurts. Otherwise every variable stays where the outputs put it,
+   * as it always did. The rule reads the model before presolve, so presolve, which removes
+   * constraints, and the linear relaxation imposed after it, which spans what is left, do not
+   * change the order of the search; the constraints imposed after presolve are implied by the model
+   * or keep an optimum, so an untouched variable still takes any value, and -a prints each output
+   * assignment once. A view and the base of a view come from an equation of the model, which
+   * touched both.
+   */
+  private Set<Var> untouchedOutputs(
+      IntVar[] ints, BooleanVar[] bools, SetVar[] sets, FloatVar[] floats, boolean allVariables) {
+    if (!(allVariables ? touchedBeforePresolve : touchedHiddenBeforePresolve)) {
+      return Set.of();
+    }
+    Set<Var> clauseVars = clauseVariables();
+    Set<Var> untouched = new LinkedHashSet<>();
+    for (Var[] vars : List.<Var[]>of(ints, bools, sets, floats)) {
+      for (Var v : vars) {
+        if (!v.singleton()
+            && v != costVariable
+            && untouchedBeforePresolve.contains(v)
+            && !clauseVars.contains(v)) {
+          untouched.add(v);
+        }
+      }
+    }
+    return fewAssignments(untouched) ? Set.of() : untouched;
+  }
+
+  // the most assignments of the untouched variables that the search still labels where the model
+  // puts them: re-enumerating them for each failure of what is below costs at most this factor
+  private static final double FEW_ASSIGNMENTS = 1024;
+
+  /**
+   * Whether the variables have at most {@link #FEW_ASSIGNMENTS} assignments together: the product
+   * of the sizes of the integer domains, of 2 to the number of undecided elements of each set, and
+   * no bound for a float, whose bisection goes down to the precision.
+   */
+  private static boolean fewAssignments(Collection<Var> vars) {
+    double assignments = 1;
+    for (Var v : vars) {
+      assignments *=
+          switch (v) {
+            case FloatVar f -> Double.POSITIVE_INFINITY;
+            case SetVar set ->
+                Math.pow(2, (double) set.dom().lub().getSize() - set.dom().glb().getSize());
+            default -> v.getSize();
+          };
+    }
+    return assignments <= FEW_ASSIGNMENTS;
+  }
+
+  /** The variables of the clauses kept for the SAT or LCG solver. */
+  private Set<Var> clauseVariables() {
+    Set<Var> clauseVars = new HashSet<>();
+    for (IntVar[][] clause : sat.collectedClauses()) {
+      clauseVars.addAll(Arrays.asList(clause[0]));
+      clauseVars.addAll(Arrays.asList(clause[1]));
+    }
+    return clauseVars;
+  }
+
+  /**
+   * Records, before presolve, the variables that no constraint and no kept clause touches, and
+   * whether a variable of the default search, or one of them that is not output, is touched and not
+   * fixed. With presolve on the searched store has lost constraints that the model has, and a
+   * variable they touched would otherwise be labelled last with presolve and not without it.
+   */
+  private void recordUntouched() {
+    Set<Var> clauseVars = clauseVariables();
+    Set<Var> untouched = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (int i = 0; i < store.size(); i++) {
+      Var v = store.vars[i];
+      if (v != null
+          && !v.singleton()
+          && v.dom().sizeConstraints() == 0
+          && !clauseVars.contains(v)) {
+        untouched.add(v);
+      }
+    }
+    untouchedBeforePresolve = untouched;
+    DefaultSearchVars outputVars = new DefaultSearchVars(dictionary);
+    outputVars.outputVars();
+    Set<Var> outputs = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (Var[] vars :
+        List.<Var[]>of(
+            outputVars.getIntVars(),
+            outputVars.getBoolVars(),
+            outputVars.getSetVars(),
+            outputVars.getFloatVars())) {
+      Collections.addAll(outputs, vars);
+    }
+    // the variables of the default search, which the completion search labels
+    List<Var> all = new ArrayList<>(dictionary.defaultSearchVariables);
+    all.addAll(dictionary.defaultSearchSetVariables);
+    all.addAll(dictionary.defaultSearchFloatVariables);
+    for (List<Var[]> arrays :
+        List.of(
+            dictionary.defaultSearchArrays,
+            dictionary.defaultSearchSetArrays,
+            dictionary.defaultSearchFloatArrays)) {
+      for (Var[] vars : arrays) {
+        Collections.addAll(all, vars);
+      }
+    }
+    touchedBeforePresolve = false;
+    touchedHiddenBeforePresolve = false;
+    for (Var v : all) {
+      if (!v.singleton() && !untouched.contains(v)) {
+        touchedBeforePresolve = true;
+        touchedHiddenBeforePresolve |= !outputs.contains(v);
+      }
+    }
+  }
+
+  /**
+   * Labels the untouched output variables below parent, which then reports no solution itself:
+   * sets, integers, Booleans and floats in that order, each with the value order of the output
+   * search, so the first solution is the same. The searches go to the slots of searches after that
+   * of the completion.
+   */
+  @SuppressWarnings("unchecked")
+  private void addUntouchedSearches(
+      DepthFirstSearch<T> parent,
+      boolean belowCompletion,
+      Set<Var> untouched,
+      DepthFirstSearch<T>[] searches) {
+    List<SelectChoicePoint<T>> selects = new ArrayList<>();
+    SetVar[] sets = untouched.stream().filter(SetVar.class::isInstance).toArray(SetVar[]::new);
+    IntVar[] ints =
+        untouched.stream()
+            .filter(v -> v instanceof IntVar && !(v instanceof BooleanVar))
+            .toArray(IntVar[]::new);
+    BooleanVar[] bools =
+        untouched.stream().filter(BooleanVar.class::isInstance).toArray(BooleanVar[]::new);
+    FloatVar[] floats =
+        untouched.stream().filter(FloatVar.class::isInstance).toArray(FloatVar[]::new);
+    if (sets.length > 0) {
+      selects.add((SelectChoicePoint<T>) new SimpleSelect<>(sets, null, new IndomainSetMin<>()));
+    }
+    if (ints.length > 0) {
+      selects.add((SelectChoicePoint<T>) new SplitSelect<>(ints, null, new IndomainMiddle<>()));
+    }
+    if (bools.length > 0) {
+      selects.add((SelectChoicePoint<T>) new SimpleSelect<>(bools, null, new IndomainMin<>()));
+    }
+    if (floats.length > 0) {
+      selects.add((SelectChoicePoint<T>) new SplitSelectFloat<>(store, floats, null));
+    }
+    // after the slot of the completion search: the first search in the slots is the main one
+    int slot = 5;
+    boolean first = belowCompletion;
+    for (SelectChoicePoint<T> select : selects) {
+      DepthFirstSearch<T> search = first ? new ExtensionSearch() : new DepthFirstSearch<>();
+      first = false;
+      if (options.debug()) {
+        search.setConsistencyListener(failStatistics);
+      }
+      search.setSelectChoicePoint(select);
+      search.setPrintInfo(false);
+      parent.setSolutionListener(new SimpleSolutionListener<>());
+      search.setSolutionListener(new CostListener<>());
+      parent.addChildSearch(search);
+      setSearchTimeout(search);
+      searches[slot++] = search;
+      parent = search;
+    }
   }
 
   /**
@@ -10765,15 +11183,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * search stops at the first one, also when all solutions are requested.
    */
   @SuppressWarnings("unchecked")
-  private DepthFirstSearch<T> addCompletionSearch(DepthFirstSearch<T> lastSearch) {
+  private DepthFirstSearch<T> addCompletionSearch(
+      DepthFirstSearch<T> lastSearch, Set<Var> untouched) {
     DefaultSearchVars allVars = new DefaultSearchVars(dictionary);
     allVars.defaultVars();
     LinkedHashSet<IntVar> rest = new LinkedHashSet<>(Arrays.asList(allVars.getIntVars()));
     rest.addAll(Arrays.asList(allVars.getBoolVars()));
+    // the untouched output variables are labelled below
+    rest.removeAll(untouched);
     // the float variables whose constraints a reformulation replaced take any value, and those
     // MiniZinc introduced are intermediate results that the others define
     Set<Var> unused = new HashSet<>(dictionary.unusedVariables);
     unused.addAll(dictionary.introducedFloatVariables());
+    unused.addAll(untouched);
     FloatVar[] floats =
         Arrays.stream(allVars.getFloatVars())
             .filter(v -> !unused.contains(v))
@@ -10782,6 +11204,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     completionChild = null;
     // the sets whose constraints a reformulation replaced take any value
     Set<Var> unusedSets = new HashSet<>(dictionary.unusedVariables);
+    unusedSets.addAll(untouched);
     SetVar[] sets =
         Arrays.stream(allVars.getSetVars())
             .filter(v -> !unusedSets.contains(v))
@@ -10876,6 +11299,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     setSearchTimeout(completion);
     floatCompletion = completion;
     return completion;
+  }
+
+  /**
+   * The first search below the completion search, which stops at its first solution: it tells it
+   * that a solution exists also when it enumerated all solutions below it, for all solutions, and
+   * so returns false. The completion would otherwise look for another assignment of its variables
+   * and report the same solutions again.
+   */
+  private final class ExtensionSearch extends DepthFirstSearch<T> {
+    @Override
+    public boolean labeling() {
+      int before = getSolutionListener().solutionsNo();
+      boolean found = super.labeling();
+      return found || !timeOutOccured && getSolutionListener().solutionsNo() > before;
+    }
   }
 
   /**
@@ -11472,6 +11910,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     } else {
       label.setInitializeListener(new PrecisionSetting(si.precision));
     }
+    double precision = options.precision() ? options.getPrecision() : si.precision;
+    if (precision > 0) {
+      floatSearchPrecision = Math.min(floatSearchPrecision, precision);
+    }
+    label.setExitListener(new PrecisionRestore(label));
     attachFloatCid(label, si.vars());
 
     return label;
@@ -12128,6 +12571,46 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     public void setChildrenListeners(InitializeListener child) {
       initializeChildListeners = new InitializeListener[1];
       initializeChildListeners[0] = child;
+    }
+  }
+
+  /**
+   * Gives back, when a float search ends, the precision of the float search it runs under. A float
+   * search sets its precision when it starts, and a child search of another precision left that one
+   * in force after it returned: the master search, whose variables are split only down to its own
+   * precision, found them no longer singleton when it recorded its solution and threw "Variable is
+   * not grounded in the solution" (seq_search of float_search 0.01 then 0.0001).
+   */
+  static final class PrecisionRestore implements ExitListener {
+
+    private final DepthFirstSearch<?> label;
+
+    PrecisionRestore(DepthFirstSearch<?> label) {
+      this.label = label;
+    }
+
+    /** {@inheritDoc} */
+    public void executedAtExit(Store store, int solutionsNo) {
+      for (Search<? extends Var> s = label.masterSearch; s != null; ) {
+        if (!(s instanceof DepthFirstSearch<?> master)) {
+          return;
+        }
+        if (master.getInitializeListener() instanceof PrecisionSetting setting) {
+          FloatDomain.setPrecision(setting.precision);
+          return;
+        }
+        s = master.masterSearch;
+      }
+    }
+
+    /** {@inheritDoc} */
+    public void setChildrenListeners(ExitListener[] children) {
+      // no children
+    }
+
+    /** {@inheritDoc} */
+    public void setChildrenListeners(ExitListener child) {
+      // no children
     }
   }
 

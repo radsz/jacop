@@ -2,14 +2,16 @@ package org.jacop;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -20,6 +22,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -44,20 +47,59 @@ class SmallDenseDomainTest {
     prepareMethod = cls.getMethod(prepareMethodName, int[].class);
   }
 
+  // the domains prepared by the test, with their bounds when they were prepared
+  private final List<IntDomain> prepared = new ArrayList<>();
+  private final List<int[]> preparedBounds = new ArrayList<>();
+
+  private IntDomain prepared(int[] intervals) throws Exception {
+    IntDomain d = (IntDomain) prepareMethod.invoke(this, new Object[] {intervals});
+    prepared.add(d);
+    preparedBounds.add(new int[] {d.min(), d.max()});
+    return d;
+  }
+
+  /**
+   * Verifies the one event of a change of the bounds. A change of the minimum only (or of the
+   * maximum only) may be reported as MIN_EVENT (MAX_EVENT) instead of BOUND; a directional event is
+   * accepted when a prepared domain changed that bound only.
+   */
+  private void verifyBoundEvent() {
+    ArgumentCaptor<Integer> reported = ArgumentCaptor.forClass(Integer.class);
+    verify(v).domainHasChanged(reported.capture());
+    int actual = reported.getValue();
+    if (actual == IntDomain.MIN_EVENT || actual == IntDomain.MAX_EVENT) {
+      boolean minOnly = false;
+      boolean maxOnly = false;
+      // a domain changed at a later level than its stamp is replaced by a new one in the variable
+      for (int i = 0; i < 2 * prepared.size(); i++) {
+        IntDomain d = i < prepared.size() ? prepared.get(i) : v.domain;
+        if (d == null || d.isEmpty()) {
+          continue;
+        }
+        int[] before = preparedBounds.get(i % prepared.size());
+        minOnly |= d.min() > before[0] && d.max() == before[1];
+        maxOnly |= d.max() < before[1] && d.min() == before[0];
+      }
+      assertThat(actual == IntDomain.MIN_EVENT ? minOnly : maxOnly)
+          .as("event " + actual + " for a change that is not of one bound only")
+          .isTrue();
+    } else {
+      assertThat(actual).isEqualTo(IntDomain.BOUND);
+    }
+  }
+
   @ParameterizedTest
   @MethodSource("parametricTest")
   void testContains(String prepareMethodName) throws Exception {
     setupPrepareMethod(prepareMethodName);
 
     log.info("Contains function test");
-    IntDomain testedDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
+    IntDomain testedDomain = prepared(new int[] {1, 2});
 
     assertThat(testedDomain.contains(createDomain(new Interval(0, 0)))).isFalse();
     assertThat(testedDomain.contains(createDomain(new Interval(1, 1)))).isTrue();
 
-    testedDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {-3, 4, 5, 5, 9, 10}});
+    testedDomain = prepared(new int[] {-3, 4, 5, 5, 9, 10});
 
     log.info("Test Complement function");
     assertThat(testedDomain.contains(createDomain(new Interval(1, 2), new Interval(6, 6))))
@@ -69,8 +111,7 @@ class SmallDenseDomainTest {
   void testComplement(String prepareMethodName) throws Exception {
     setupPrepareMethod(prepareMethodName);
     log.info("Complement function test");
-    IntDomain testedDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
+    IntDomain testedDomain = prepared(new int[] {1, 3, 5, 7, 12, 18});
     assertThat(testedDomain.complement())
         .hasToString("{" + IntDomain.MIN_INT + "..0, 4, 8..11, 19.." + IntDomain.MAX_INT + "}");
   }
@@ -80,8 +121,7 @@ class SmallDenseDomainTest {
   void testGetElementAt(String prepareMethodName) throws Exception {
     setupPrepareMethod(prepareMethodName);
     log.info("GetElementAt function test");
-    IntDomain testedDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
+    IntDomain testedDomain = prepared(new int[] {1, 2});
     assertThat(testedDomain.getElementAt(0)).isOne();
     assertThat(testedDomain.getElementAt(1)).isEqualTo(2);
   }
@@ -92,31 +132,26 @@ class SmallDenseDomainTest {
     setupPrepareMethod(prepareMethodName);
     log.info("Intersect function test");
 
-    IntDomain testedDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
+    IntDomain testedDomain = prepared(new int[] {1, 2});
 
-    IntDomain goldenResultDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {2, 2}});
+    IntDomain goldenResultDomain = prepared(new int[] {2, 2});
     assertThat(testedDomain.intersect(2, 3)).hasToString(goldenResultDomain.toString());
 
-    goldenResultDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
+    goldenResultDomain = prepared(new int[] {1, 2});
     assertThat(testedDomain.intersect(0, 25)).hasToString(goldenResultDomain.toString());
 
-    goldenResultDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
+    goldenResultDomain = prepared(new int[] {1, 2});
     assertThat(testedDomain.intersect(1, 2)).hasToString(goldenResultDomain.toString());
 
-    testedDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
+    testedDomain = prepared(new int[] {1, 2});
     assertThat(testedDomain.intersectAdapt(createDomain(new Interval(2, 4)))).isZero();
 
-    testedDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
-    goldenResultDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {2, 3, 5, 7, 12, 14}});
+    testedDomain = prepared(new int[] {1, 3, 5, 7, 12, 18});
+    goldenResultDomain = prepared(new int[] {2, 3, 5, 7, 12, 14});
     assertThat(testedDomain.intersect(2, 14)).hasToString(goldenResultDomain.toString());
 
-    testedDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
-    goldenResultDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {15, 15}});
+    testedDomain = prepared(new int[] {1, 3, 5, 7, 12, 18});
+    goldenResultDomain = prepared(new int[] {15, 15});
     assertThat(testedDomain.intersect(15, 15)).hasToString(goldenResultDomain.toString());
   }
 
@@ -126,59 +161,48 @@ class SmallDenseDomainTest {
     setupPrepareMethod(prepareMethodName);
 
     log.info("IntersectAdapt function test");
-    IntDomain testedDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
+    IntDomain testedDomain = prepared(new int[] {1, 2});
     assertThat(testedDomain.intersectAdapt(createDomain(new Interval(2, 4)))).isZero();
 
-    testedDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
+    testedDomain = prepared(new int[] {1, 3, 5, 7, 12, 18});
     assertThat(testedDomain.intersectAdapt(createDomain(new Interval(14, 20)))).isOne();
 
-    testedDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
+    testedDomain = prepared(new int[] {1, 3, 5, 7, 12, 18});
     assertThat(testedDomain.intersectAdapt(createDomain(new Interval(2, 6)))).isOne();
 
-    testedDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
+    testedDomain = prepared(new int[] {1, 3, 5, 7, 12, 18});
     assertThat(testedDomain.intersectAdapt(createDomain(new Interval(2, 6), new Interval(8, 15))))
         .isOne();
 
-    testedDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
+    testedDomain = prepared(new int[] {1, 3, 5, 7, 12, 18});
     assertThat(testedDomain.intersectAdapt(createDomain(new Interval(0, 0), new Interval(20, 28))))
         .isZero();
 
-    testedDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
+    testedDomain = prepared(new int[] {1, 3, 5, 7, 12, 18});
     assertThat(
             testedDomain.intersectAdapt(
                 createDomain(new Interval(2, 2), new Interval(5, 5), new Interval(20, 25))))
         .isOne();
 
-    testedDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
+    testedDomain = prepared(new int[] {1, 3, 5, 7, 12, 18});
     assertThat(
             testedDomain.intersectAdapt(
                 createDomain(new Interval(1, 3), new Interval(5, 5), new Interval(20, 25))))
         .isOne();
 
-    testedDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
+    testedDomain = prepared(new int[] {1, 3, 5, 7, 12, 18});
     assertThat(
             testedDomain.intersectAdapt(
                 createDomain(new Interval(1, 3), new Interval(5, 5), new Interval(13, 18))))
         .isEqualTo(2);
 
-    testedDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
+    testedDomain = prepared(new int[] {1, 3, 5, 7, 12, 18});
     assertThat(testedDomain.intersectAdapt(createDomain(new Interval(4, 9)))).isOne();
 
-    testedDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
+    testedDomain = prepared(new int[] {1, 3, 5, 7, 12, 18});
     assertThat(testedDomain.intersectAdapt(createDomain(new Interval(0, 0)))).isZero();
 
-    testedDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
+    testedDomain = prepared(new int[] {1, 3, 5, 7, 12, 18});
     assertThat(testedDomain.intersectAdapt(createDomain(new Interval(0, 0), new Interval(2, 2))))
         .isZero();
 
@@ -228,7 +252,8 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testIsIntersecting() throws Exception {
+  void testIsIntersecting(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
     log.info("IsIntersecting function test");
     IntDomain testedDomain =
@@ -242,7 +267,8 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testSubtract() throws Exception {
+  void testSubtract(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
     log.info("Subtract function test");
     IntDomain testedDomain =
@@ -261,32 +287,32 @@ class SmallDenseDomainTest {
                 this, new Object[] {new int[] {1, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26}});
     assertThat(testedDomain.subtract(0, 0)).hasToString(goldenResultDomain.toString());
 
-    goldenResultDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {0, 0}});
+    goldenResultDomain = prepared(new int[] {0, 0});
     assertThat(testedDomain.subtract(1, 26)).hasToString(goldenResultDomain.toString());
 
-    goldenResultDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {0, 6}});
+    goldenResultDomain = prepared(new int[] {0, 6});
     assertThat(testedDomain.subtract(8, 26)).hasToString(goldenResultDomain.toString());
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testNextValue() throws Exception {
+  void testNextValue(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
     log.info("NextValue function test");
 
-    IntDomain goldenResultDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
+    IntDomain goldenResultDomain = prepared(new int[] {1, 3, 5, 7, 12, 18});
     assertThat(goldenResultDomain.nextValue(3)).isEqualTo(5);
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testPreviousValue() throws Exception {
+  void testPreviousValue(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
     log.info("previousValue function test");
 
-    IntDomain goldenResultDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
+    IntDomain goldenResultDomain = prepared(new int[] {1, 3, 5, 7, 12, 18});
     assertThat(goldenResultDomain.previousValue(2)).isOne();
   }
 
@@ -297,9 +323,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval() throws InvocationTargetException, IllegalAccessException {
+  void testinterval(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
+    intervalDomain = prepared(new int[] {1, 2});
     intervalDomain.inComplement(100, v, 2);
 
     verify(v).domainHasChanged(IntDomain.GROUND);
@@ -307,9 +334,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval2() throws InvocationTargetException, IllegalAccessException {
+  void testinterval2(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
+    intervalDomain = prepared(new int[] {1, 2});
     intervalDomain.inComplement(100, v, 1);
 
     verify(v).domainHasChanged(IntDomain.GROUND);
@@ -317,9 +345,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval3() throws InvocationTargetException, IllegalAccessException {
+  void testinterval3(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
+    intervalDomain = prepared(new int[] {1, 2});
     intervalDomain.setStamp(100);
     intervalDomain.inComplement(100, v, 1);
 
@@ -328,8 +357,9 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval4() throws InvocationTargetException, IllegalAccessException {
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
+  void testinterval4(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
+    intervalDomain = prepared(new int[] {1, 2, 4, 10});
     intervalDomain.setStamp(100);
     intervalDomain.inComplement(100, v, 2);
 
@@ -338,9 +368,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval5() throws InvocationTargetException, IllegalAccessException {
+  void testinterval5(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
+    intervalDomain = prepared(new int[] {1, 2, 4, 10});
     intervalDomain.setStamp(100);
     intervalDomain.inComplement(100, v, 5);
 
@@ -349,8 +380,9 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval6() throws InvocationTargetException, IllegalAccessException {
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
+  void testinterval6(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
+    intervalDomain = prepared(new int[] {1, 2, 4, 10});
     intervalDomain.inComplement(100, v, 5);
 
     verify(v).domainHasChanged(IntDomain.ANY);
@@ -358,10 +390,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval7() throws InvocationTargetException, IllegalAccessException {
+  void testinterval7(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 5, 7, 10}});
+    intervalDomain = prepared(new int[] {1, 3, 5, 5, 7, 10});
     intervalDomain.inComplement(100, v, 5);
 
     verify(v).domainHasChanged(IntDomain.ANY);
@@ -369,10 +401,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval8() throws InvocationTargetException, IllegalAccessException {
+  void testinterval8(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 5, 7, 10}});
+    intervalDomain = prepared(new int[] {1, 3, 5, 5, 7, 10});
     intervalDomain.setStamp(100);
     intervalDomain.inComplement(100, v, 5);
 
@@ -381,9 +413,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval9() throws InvocationTargetException, IllegalAccessException {
+  void testinterval9(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {5, 5, 7, 7}});
+    intervalDomain = prepared(new int[] {5, 5, 7, 7});
     intervalDomain.setStamp(100);
     intervalDomain.inComplement(100, v, 5);
 
@@ -392,10 +425,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval10() throws InvocationTargetException, IllegalAccessException {
+  void testinterval10(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 9, 20}});
+    intervalDomain = prepared(new int[] {1, 3, 5, 7, 9, 20});
     intervalDomain.setStamp(100);
     intervalDomain.inComplement(100, v, 5);
 
@@ -404,33 +437,33 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval11() throws InvocationTargetException, IllegalAccessException {
+  void testinterval11(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 9, 20}});
+    intervalDomain = prepared(new int[] {1, 3, 5, 7, 9, 20});
     intervalDomain.setStamp(100);
     intervalDomain.inComplement(100, v, 1);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval12() throws InvocationTargetException, IllegalAccessException {
+  void testinterval12(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 9, 20}});
+    intervalDomain = prepared(new int[] {1, 3, 5, 7, 9, 20});
     intervalDomain.inComplement(100, v, 1);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval13() throws InvocationTargetException, IllegalAccessException {
+  void testinterval13(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 9, 20}});
+    intervalDomain = prepared(new int[] {1, 3, 5, 7, 9, 20});
     intervalDomain.inComplement(100, v, 7);
 
     verify(v).domainHasChanged(IntDomain.ANY);
@@ -438,9 +471,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval14() throws InvocationTargetException, IllegalAccessException {
+  void testinterval14(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {0, 0, 2, 2}});
+    intervalDomain = prepared(new int[] {0, 0, 2, 2});
     intervalDomain.inComplement(100, v, 0);
 
     verify(v).domainHasChanged(IntDomain.GROUND);
@@ -448,20 +482,21 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval15() throws InvocationTargetException, IllegalAccessException {
+  void testinterval15(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 5}});
+    intervalDomain = prepared(new int[] {1, 3, 5, 5});
     intervalDomain.inComplement(100, v, 5);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval16() throws InvocationTargetException, IllegalAccessException {
+  void testinterval16(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 5, 7, 9, 11, 20}});
+    intervalDomain = prepared(new int[] {1, 5, 7, 9, 11, 20});
     intervalDomain.inComplement(100, v, 7);
 
     verify(v).domainHasChanged(IntDomain.ANY);
@@ -469,39 +504,43 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval17() throws InvocationTargetException, IllegalAccessException {
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
+  void testinterval17(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
+    intervalDomain = prepared(new int[] {1, 2, 4, 10});
     intervalDomain.setStamp(100);
     intervalDomain.inComplement(100, v, 10);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval18() throws InvocationTargetException, IllegalAccessException {
+  void testinterval18(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 5}});
+    intervalDomain = prepared(new int[] {1, 3, 5, 5});
     intervalDomain.setStamp(100);
     intervalDomain.inComplement(100, v, 5);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval19() throws InvocationTargetException, IllegalAccessException {
+  void testinterval19(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7}});
+    intervalDomain = prepared(new int[] {1, 3, 5, 7});
     intervalDomain.inComplement(100, v, 7);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval20() throws InvocationTargetException, IllegalAccessException {
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
+  void testinterval20(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
+    intervalDomain = prepared(new int[] {1, 2});
     intervalDomain.setStamp(100);
     intervalDomain.inComplement(100, v, 2);
     verify(v).domainHasChanged(IntDomain.GROUND);
@@ -509,9 +548,9 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval21() throws InvocationTargetException, IllegalAccessException {
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10, 12, 12}});
+  void testinterval21(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
+    intervalDomain = prepared(new int[] {1, 2, 4, 10, 12, 12});
     intervalDomain.setStamp(100);
     intervalDomain.inComplement(100, v, 5);
 
@@ -520,10 +559,9 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval22() throws InvocationTargetException, IllegalAccessException {
-    intervalDomain =
-        (IntDomain)
-            prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10, 12, 12, 15, 22}});
+  void testinterval22(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
+    intervalDomain = prepared(new int[] {1, 2, 4, 10, 12, 12, 15, 22});
     intervalDomain.setStamp(100);
     intervalDomain.inComplement(100, v, 5);
 
@@ -532,20 +570,22 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval23() throws InvocationTargetException, IllegalAccessException {
+  void testinterval23(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
+    intervalDomain = prepared(new int[] {1, 2, 4, 10});
     intervalDomain.setStamp(100);
     intervalDomain.inComplement(100, v, 1, 2);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval24() throws InvocationTargetException, IllegalAccessException {
+  void testinterval24(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 15}});
+    intervalDomain = prepared(new int[] {1, 2, 4, 15});
     intervalDomain.setStamp(100);
     intervalDomain.inComplement(100, v, 5, 5);
 
@@ -554,10 +594,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval25() throws InvocationTargetException, IllegalAccessException {
+  void testinterval25(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10, 12, 33}});
+    intervalDomain = prepared(new int[] {1, 2, 4, 10, 12, 33});
     intervalDomain.setStamp(100);
     intervalDomain.inComplement(100, v, 2, 11);
 
@@ -566,9 +606,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval26() throws InvocationTargetException, IllegalAccessException {
+  void testinterval26(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 20}});
+    intervalDomain = prepared(new int[] {1, 20});
     intervalDomain.setStamp(100);
     intervalDomain.inComplement(100, v, 2, 11);
 
@@ -577,18 +618,20 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval27() throws InvocationTargetException, IllegalAccessException {
+  void testinterval27(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {3, 6}});
+    intervalDomain = prepared(new int[] {3, 6});
     intervalDomain.setStamp(100);
     intervalDomain.inComplement(100, v, 2, 4);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval28() throws InvocationTargetException, IllegalAccessException {
+  void testinterval28(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
     intervalDomain =
         (IntDomain)
@@ -602,9 +645,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval29() throws InvocationTargetException, IllegalAccessException {
+  void testinterval29(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {3, 6}});
+    intervalDomain = prepared(new int[] {3, 6});
     intervalDomain.setStamp(100);
     intervalDomain.inComplement(100, v, 2, 5);
 
@@ -613,19 +657,21 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval30() throws InvocationTargetException, IllegalAccessException {
+  void testinterval30(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
+    intervalDomain = prepared(new int[] {1, 2, 4, 10});
     intervalDomain.inComplement(100, v, 1, 2);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval31() throws InvocationTargetException, IllegalAccessException {
+  void testinterval31(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
+    intervalDomain = prepared(new int[] {1, 2, 4, 10});
     intervalDomain.inComplement(100, v, 2, 4);
 
     verify(v).domainHasChanged(IntDomain.ANY);
@@ -633,9 +679,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval32() throws InvocationTargetException, IllegalAccessException {
+  void testinterval32(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
+    intervalDomain = prepared(new int[] {1, 2, 4, 10});
     intervalDomain.inComplement(100, v, 2, 11);
 
     verify(v).domainHasChanged(IntDomain.GROUND);
@@ -643,9 +690,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval33() throws InvocationTargetException, IllegalAccessException {
+  void testinterval33(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 20}});
+    intervalDomain = prepared(new int[] {1, 20});
     intervalDomain.inComplement(100, v, 2, 11);
 
     verify(v).domainHasChanged(IntDomain.ANY);
@@ -653,19 +701,21 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval34() throws InvocationTargetException, IllegalAccessException {
+  void testinterval34(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {3, 6}});
+    intervalDomain = prepared(new int[] {3, 6});
     intervalDomain.inComplement(100, v, 2, 4);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval35() throws InvocationTargetException, IllegalAccessException {
+  void testinterval35(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {3, 5}});
+    intervalDomain = prepared(new int[] {3, 5});
     intervalDomain.inComplement(100, v, 2, 4);
 
     verify(v).domainHasChanged(IntDomain.GROUND);
@@ -673,9 +723,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval36() throws InvocationTargetException, IllegalAccessException {
+  void testinterval36(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
+    intervalDomain = prepared(new int[] {1, 2, 4, 10});
     intervalDomain.inComplement(100, v, 1, 9);
 
     verify(v).domainHasChanged(IntDomain.GROUND);
@@ -683,41 +734,42 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval37() throws InvocationTargetException, IllegalAccessException {
+  void testinterval37(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+    intervalDomain = prepared(new int[] {10, 20, 30, 40});
     intervalDomain.inComplement(100, v, 25, 50);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval38() throws InvocationTargetException, IllegalAccessException {
+  void testinterval38(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+    intervalDomain = prepared(new int[] {10, 20, 30, 40});
     intervalDomain.setStamp(100);
     intervalDomain.inComplement(100, v, 5, 35);
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval39() throws InvocationTargetException, IllegalAccessException {
+  void testinterval39(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+    intervalDomain = prepared(new int[] {10, 20, 30, 40});
     intervalDomain.inComplement(100, v, 5, 11);
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval40() throws InvocationTargetException, IllegalAccessException {
+  void testinterval40(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20}});
+    intervalDomain = prepared(new int[] {10, 20});
     intervalDomain.setStamp(100);
     intervalDomain.inComplement(100, v, 11, 41);
     verify(v).domainHasChanged(IntDomain.GROUND);
@@ -725,10 +777,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval41() throws InvocationTargetException, IllegalAccessException {
+  void testinterval41(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {0, 0, 3, 6, 7, 18}});
+    intervalDomain = prepared(new int[] {0, 0, 3, 6, 7, 18});
     intervalDomain.inComplement(100, v, 2, 4);
 
     verify(v).domainHasChanged(IntDomain.ANY);
@@ -736,10 +788,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval42() throws InvocationTargetException, IllegalAccessException {
+  void testinterval42(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {18, 20, 22, 23}});
+    intervalDomain = prepared(new int[] {18, 20, 22, 23});
     intervalDomain.setStamp(100);
     intervalDomain.inComplement(100, v, 18, 22);
     verify(v).domainHasChanged(IntDomain.GROUND);
@@ -747,10 +799,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval43() throws InvocationTargetException, IllegalAccessException {
+  void testinterval43(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {0, 0, 4, 4, 16, 26}});
+    intervalDomain = prepared(new int[] {0, 0, 4, 4, 16, 26});
     intervalDomain.setStamp(100);
     intervalDomain.inComplement(100, v, 5, 17);
 
@@ -759,9 +811,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval44() throws InvocationTargetException, IllegalAccessException {
+  void testinterval44(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
+    intervalDomain = prepared(new int[] {1, 2, 4, 10});
     intervalDomain.setStamp(100);
     intervalDomain.inComplement(100, v, 3, 6);
 
@@ -770,151 +823,151 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval37b() throws InvocationTargetException, IllegalAccessException {
+  void testinterval37b(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+    intervalDomain = prepared(new int[] {10, 20, 30, 40});
     intervalDomain.in(100, v, 11, 50);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval46() throws InvocationTargetException, IllegalAccessException {
+  void testinterval46(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+    intervalDomain = prepared(new int[] {10, 20, 30, 40});
     intervalDomain.in(100, v, 35, 50);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval47() throws InvocationTargetException, IllegalAccessException {
+  void testinterval47(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+    intervalDomain = prepared(new int[] {10, 20, 30, 40});
     intervalDomain.in(100, v, 9, 11);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval48() throws InvocationTargetException, IllegalAccessException {
+  void testinterval48(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+    intervalDomain = prepared(new int[] {10, 20, 30, 40});
     intervalDomain.in(100, v, 9, 21);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval49() throws InvocationTargetException, IllegalAccessException {
+  void testinterval49(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+    intervalDomain = prepared(new int[] {10, 20, 30, 40});
     intervalDomain.in(100, v, 9, 31);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval50() throws InvocationTargetException, IllegalAccessException {
+  void testinterval50(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+    intervalDomain = prepared(new int[] {10, 20, 30, 40});
     intervalDomain.in(100, v, 11, 31);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval51() throws InvocationTargetException, IllegalAccessException {
+  void testinterval51(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+    intervalDomain = prepared(new int[] {10, 20, 30, 40});
     intervalDomain.inMax(100, v, 11); // in(100, v, 29, 41);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval52() throws InvocationTargetException, IllegalAccessException {
+  void testinterval52(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+    intervalDomain = prepared(new int[] {10, 20, 30, 40});
     intervalDomain.inMax(100, v, 21); // in(100, v, 29, 41);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval53() throws InvocationTargetException, IllegalAccessException {
+  void testinterval53(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+    intervalDomain = prepared(new int[] {10, 20, 30, 40});
     intervalDomain.inMax(100, v, 32); // in(100, v, 29, 41);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval54() throws InvocationTargetException, IllegalAccessException {
+  void testinterval54(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+    intervalDomain = prepared(new int[] {10, 20, 30, 40});
     intervalDomain.inMin(200, v, 19);
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval55() throws InvocationTargetException, IllegalAccessException {
+  void testinterval55(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+    intervalDomain = prepared(new int[] {10, 20, 30, 40});
     intervalDomain.inMin(200, v, 21);
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval56() throws InvocationTargetException, IllegalAccessException {
+  void testinterval56(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+    intervalDomain = prepared(new int[] {10, 20, 30, 40});
     intervalDomain.inShift(100, v, intervalDomain, 2);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval57() throws InvocationTargetException, IllegalAccessException {
+  void testinterval57(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+    intervalDomain = prepared(new int[] {10, 20, 30, 40});
     intervalDomain.inShift(100, v, intervalDomain, 15);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval58() throws InvocationTargetException, IllegalAccessException {
+  void testinterval58(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+    intervalDomain = prepared(new int[] {10, 20, 30, 40});
     intervalDomain.inValue(100, v, 11);
 
     verify(v).domainHasChanged(IntDomain.GROUND);
@@ -922,21 +975,21 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval59() throws InvocationTargetException, IllegalAccessException {
+  void testinterval59(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 11, 13, 15}});
+    intervalDomain = prepared(new int[] {10, 11, 13, 15});
     intervalDomain.in(100, v, 14, 15);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval60() throws InvocationTargetException, IllegalAccessException {
+  void testinterval60(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 10, 12, 20, 22, 22}});
+    intervalDomain = prepared(new int[] {10, 10, 12, 20, 22, 22});
     intervalDomain.in(100, v, 10, 11);
 
     verify(v).domainHasChanged(IntDomain.GROUND);
@@ -944,10 +997,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval61() throws InvocationTargetException, IllegalAccessException {
+  void testinterval61(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 10, 12, 20, 22, 22}});
+    intervalDomain = prepared(new int[] {10, 10, 12, 20, 22, 22});
     intervalDomain.in(100, v, 22, 23);
 
     verify(v).domainHasChanged(IntDomain.GROUND);
@@ -955,10 +1008,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval62() throws InvocationTargetException, IllegalAccessException {
+  void testinterval62(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 10, 12, 12, 22, 22}});
+    intervalDomain = prepared(new int[] {10, 10, 12, 12, 22, 22});
     intervalDomain.in(100, v, 12, 20);
 
     verify(v).domainHasChanged(IntDomain.GROUND);
@@ -966,10 +1019,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval63() throws InvocationTargetException, IllegalAccessException {
+  void testinterval63(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 10, 12, 12, 22, 22}});
+    intervalDomain = prepared(new int[] {10, 10, 12, 12, 22, 22});
     intervalDomain.in(100, v, 10, 11);
 
     verify(v).domainHasChanged(IntDomain.GROUND);
@@ -977,10 +1030,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval64() throws InvocationTargetException, IllegalAccessException {
+  void testinterval64(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
+    intervalDomain = prepared(new int[] {10, 20, 30, 40});
     intervalDomain.in(100, v, 10, 10);
 
     verify(v).domainHasChanged(IntDomain.GROUND);
@@ -988,42 +1041,43 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval65() throws InvocationTargetException, IllegalAccessException {
+  void testinterval65(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 11, 13, 15}});
+    intervalDomain = prepared(new int[] {10, 11, 13, 15});
     intervalDomain.in(100, v, 10, 11);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval66() throws InvocationTargetException, IllegalAccessException {
+  void testinterval66(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 11, 13, 15}});
+    intervalDomain = prepared(new int[] {10, 11, 13, 15});
     intervalDomain.in(100, v, 14, 15);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval67() throws InvocationTargetException, IllegalAccessException {
+  void testinterval67(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 11, 13, 15}});
+    intervalDomain = prepared(new int[] {10, 11, 13, 15});
     intervalDomain.in(100, v, 9, 14);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval68() throws InvocationTargetException, IllegalAccessException {
+  void testinterval68(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 11}});
+    intervalDomain = prepared(new int[] {10, 11});
     intervalDomain.in(100, v, 11, 11);
 
     verify(v).domainHasChanged(IntDomain.GROUND);
@@ -1031,9 +1085,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval69() throws InvocationTargetException, IllegalAccessException {
+  void testinterval69(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 11}});
+    intervalDomain = prepared(new int[] {10, 11});
     intervalDomain.in(100, v, 10, 10);
 
     verify(v).domainHasChanged(IntDomain.GROUND);
@@ -1041,9 +1096,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval70() throws InvocationTargetException, IllegalAccessException {
+  void testinterval70(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 12}});
+    intervalDomain = prepared(new int[] {10, 12});
     intervalDomain.in(100, v, 11, 11);
 
     verify(v).domainHasChanged(IntDomain.GROUND);
@@ -1051,10 +1107,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval71() throws InvocationTargetException, IllegalAccessException {
+  void testinterval71(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 12, 14, 21}});
+    intervalDomain = prepared(new int[] {10, 12, 14, 21});
     intervalDomain.inShift(100, v, intervalDomain, 11);
 
     verify(v).domainHasChanged(IntDomain.GROUND);
@@ -1062,9 +1118,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval72() throws InvocationTargetException, IllegalAccessException {
+  void testinterval72(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 1, 3, 3}});
+    intervalDomain = prepared(new int[] {1, 1, 3, 3});
     intervalDomain.in(100, v, -1, 1);
 
     verify(v).domainHasChanged(IntDomain.GROUND);
@@ -1072,9 +1129,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval73() throws InvocationTargetException, IllegalAccessException {
+  void testinterval73(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 1, 3, 3}});
+    intervalDomain = prepared(new int[] {1, 1, 3, 3});
     intervalDomain.in(100, v, -1, 2);
 
     verify(v).domainHasChanged(IntDomain.GROUND);
@@ -1082,21 +1140,21 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval74() throws InvocationTargetException, IllegalAccessException {
+  void testinterval74(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {-10, -10, 14, 21}});
+    intervalDomain = prepared(new int[] {-10, -10, 14, 21});
     intervalDomain.inShift(100, v, intervalDomain, 6);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval75() throws InvocationTargetException, IllegalAccessException {
+  void testinterval75(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {-2, -2, -1, -1}});
+    intervalDomain = prepared(new int[] {-2, -2, -1, -1});
     intervalDomain.inShift(100, v, intervalDomain, 1);
 
     verify(v).domainHasChanged(IntDomain.GROUND);
@@ -1104,31 +1162,32 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval76() throws InvocationTargetException, IllegalAccessException {
+  void testinterval76(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {-10, 10}});
+    intervalDomain = prepared(new int[] {-10, 10});
     intervalDomain.inShift(100, v, intervalDomain, 5);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval77() throws InvocationTargetException, IllegalAccessException {
+  void testinterval77(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {-10, -5, -3, 10}});
+    intervalDomain = prepared(new int[] {-10, -5, -3, 10});
     intervalDomain.inShift(100, v, intervalDomain, 5);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval78() throws InvocationTargetException, IllegalAccessException {
+  void testinterval78(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {-10, -5, -3, 10}});
+    intervalDomain = prepared(new int[] {-10, -5, -3, 10});
     intervalDomain.in(100, v, -10, -10);
 
     verify(v).domainHasChanged(IntDomain.GROUND);
@@ -1136,31 +1195,32 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval79() throws InvocationTargetException, IllegalAccessException {
+  void testinterval79(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {-10, -5, -3, 10}});
+    intervalDomain = prepared(new int[] {-10, -5, -3, 10});
     intervalDomain.in(100, v, -9, 10);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval80() throws InvocationTargetException, IllegalAccessException {
+  void testinterval80(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    intervalDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {-10, -5, -3, 10}});
+    intervalDomain = prepared(new int[] {-10, -5, -3, 10});
     intervalDomain.in(100, v, -9, 9);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval81() throws InvocationTargetException, IllegalAccessException {
+  void testinterval81(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    IntDomain intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
+    IntDomain intDomain = prepared(new int[] {1, 2});
     intDomain.inShift(100, v, intDomain, 1);
 
     verify(v).domainHasChanged(IntDomain.GROUND);
@@ -1168,35 +1228,37 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval82() throws InvocationTargetException, IllegalAccessException {
+  void testinterval82(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    IntDomain intDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
+    IntDomain intDomain = prepared(new int[] {1, 3, 5, 7, 12, 18});
     intDomain.inShift(100, v, intDomain, 1);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval83() throws InvocationTargetException, IllegalAccessException {
+  void testinterval83(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    IntDomain intDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
+    IntDomain intDomain = prepared(new int[] {1, 3, 5, 7, 12, 18});
     intDomain.inShift(100, v, intDomain, 1);
 
-    verify(v).domainHasChanged(IntDomain.BOUND);
+    verifyBoundEvent();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval84() throws InvocationTargetException, IllegalAccessException {
+  void testinterval84(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    IntDomain intDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
+    IntDomain intDomain = prepared(new int[] {1, 3, 5, 7, 12, 18});
 
     IntDomain intDomain1 = mock(IntDomain.class, Mockito.CALLS_REAL_METHODS);
-    when(intDomain1.contains(anyInt(), anyInt())).thenReturn(true);
+    // a SmallDenseDomain argument is enumerated value by value, an IntervalDomain by intervals
+    lenient().when(intDomain1.contains(anyInt(), anyInt())).thenReturn(true);
+    lenient().when(intDomain1.contains(anyInt())).thenReturn(true);
 
     boolean result = intDomain1.contains(intDomain);
 
@@ -1205,15 +1267,16 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval86() throws InvocationTargetException, IllegalAccessException {
+  void testinterval86(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    IntDomain intDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
+    IntDomain intDomain = prepared(new int[] {1, 3, 5, 7, 12, 18});
 
     IntDomain intDomain1 = mock(IntDomain.class, Mockito.CALLS_REAL_METHODS);
 
-    when(intDomain1.isIntersecting(anyInt(), anyInt())).thenReturn(true);
-    when(intDomain1.contains(anyInt())).thenReturn(true);
+    // a SmallDenseDomain argument is enumerated value by value, an IntervalDomain by intervals
+    lenient().when(intDomain1.isIntersecting(anyInt(), anyInt())).thenReturn(true);
+    lenient().when(intDomain1.contains(anyInt())).thenReturn(true);
 
     boolean result = intDomain1.isIntersecting(intDomain);
 
@@ -1222,9 +1285,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval87() throws InvocationTargetException, IllegalAccessException {
+  void testinterval87(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    IntDomain intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {5, 5}});
+    IntDomain intDomain = prepared(new int[] {5, 5});
     IntDomain intDomain1 = mock(IntDomain.class, Mockito.CALLS_REAL_METHODS);
 
     when(intDomain1.eq(intDomain)).thenReturn(true);
@@ -1235,9 +1299,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval88() throws InvocationTargetException, IllegalAccessException {
+  void testinterval88(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    IntDomain intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {5, 5}});
+    IntDomain intDomain = prepared(new int[] {5, 5});
 
     IntDomain intDomain1 = mock(IntDomain.class, Mockito.CALLS_REAL_METHODS);
 
@@ -1249,9 +1314,10 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval89() throws InvocationTargetException, IllegalAccessException {
+  void testinterval89(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    IntDomain intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {5, 5}});
+    IntDomain intDomain = prepared(new int[] {5, 5});
 
     IntDomain intDomain1 = mock(IntDomain.class, Mockito.CALLS_REAL_METHODS);
 
@@ -1263,14 +1329,18 @@ class SmallDenseDomainTest {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  void testinterval188() throws InvocationTargetException, IllegalAccessException {
+  void testinterval188(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
-    IntDomain intDomain =
-        (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
+    IntDomain intDomain = prepared(new int[] {1, 3, 5, 7, 12, 18});
 
     IntDomain intDomain1 = mock(IntDomain.class, Mockito.CALLS_REAL_METHODS);
 
-    when(intDomain1.contains(anyInt(), anyInt())).thenReturn(true, true, true, true, true, false);
+    // a SmallDenseDomain argument is enumerated value by value, an IntervalDomain by intervals
+    lenient()
+        .when(intDomain1.contains(anyInt(), anyInt()))
+        .thenReturn(true, true, true, true, true, false);
+    lenient().when(intDomain1.contains(anyInt())).thenReturn(true, true, true, true, true, false);
 
     intDomain1.contains(intDomain);
     intDomain1.contains(intDomain);

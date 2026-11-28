@@ -79,6 +79,7 @@ import org.jacop.constraints.IfThen;
 import org.jacop.constraints.IfThenBool;
 import org.jacop.constraints.IfThenElse;
 import org.jacop.constraints.Implies;
+import org.jacop.constraints.ImpliesNot;
 import org.jacop.constraints.In;
 import org.jacop.constraints.Increasing;
 import org.jacop.constraints.IncreasingNValue;
@@ -127,6 +128,7 @@ import org.jacop.constraints.XorBool;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusClteqZImplied;
+import org.jacop.constraints.XplusClteqZImpliedNot;
 import org.jacop.constraints.XplusCneqZ;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
@@ -597,7 +599,7 @@ class WakeUpFixpointTest {
       int w2 = nonZero(2);
       int w3 = random.nextInt(3) + 1;
       int count = random.nextInt(3);
-      return switch (random.nextInt(43)) {
+      return switch (random.nextInt(44)) {
         case 0 -> (x, b, r) -> new XeqC(x[i], c);
         case 1 -> (x, b, r) -> new XneqC(x[i], c);
         case 2 -> (x, b, r) -> new XltC(x[i], c);
@@ -649,6 +651,7 @@ class WakeUpFixpointTest {
         case 39 -> (x, b, r) -> new AndBoolSimple(b[u], b[v], b[w]);
         case 40 -> (x, b, r) -> new OrBoolSimple(b[u], b[v], b[w]);
         case 41 -> (x, b, r) -> new XplusClteqZImplied(b[u], x[i], c, x[j]);
+        case 42 -> (x, b, r) -> new XplusClteqZImpliedNot(b[u], x[i], c, x[j]);
         default -> (x, b, r) -> new XorBool(new IntVar[] {b[u], b[v], b[w]}, b[(w + 1) % BOOLS]);
       };
     }
@@ -660,7 +663,7 @@ class WakeUpFixpointTest {
       int k = random.nextInt(REIFS);
       PrimitiveBuilder c1 = composed(depth - 1);
       PrimitiveBuilder c2 = composed(depth - 1);
-      return switch (random.nextInt(9)) {
+      return switch (random.nextInt(10)) {
         case 0 -> (x, b, r) -> new Reified(c1.build(x, b, r), r[k]);
         case 1 -> (x, b, r) -> new Implies(r[k], c1.build(x, b, r));
         case 2 -> (x, b, r) -> new Not(c1.build(x, b, r));
@@ -669,6 +672,7 @@ class WakeUpFixpointTest {
         case 5 -> (x, b, r) -> new And(c1.build(x, b, r), c2.build(x, b, r));
         case 6 -> (x, b, r) -> new Or(c1.build(x, b, r), c2.build(x, b, r));
         case 7 -> (x, b, r) -> new IfThen(c1.build(x, b, r), c2.build(x, b, r));
+        case 8 -> (x, b, r) -> new ImpliesNot(r[k], c1.build(x, b, r));
         default -> {
           PrimitiveBuilder c3 = composed(depth - 1);
           yield (x, b, r) ->

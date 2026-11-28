@@ -1250,7 +1250,8 @@ public class FloatIntervalDomain extends FloatDomain {
     FloatIntervalDomain temp = new FloatIntervalDomain(size);
 
     if (size == 0) {
-      return this;
+      // a new empty domain, as for no common value: the caller may change the result in place
+      return temp;
     }
 
     int pointer1 = 0;
@@ -3223,6 +3224,11 @@ public class FloatIntervalDomain extends FloatDomain {
     if (ASSERTS_ENABLED && min > max) {
       throw new IllegalStateException(
           String.valueOf("Min value greater than max value " + min + " > " + max));
+    }
+
+    if (size == 0) {
+      // an empty domain stays empty (intervals[0] does not exist)
+      return NONE;
     }
 
     if (max < intervals[0].min()) {

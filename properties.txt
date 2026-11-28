@@ -424,6 +424,9 @@ unless stated otherwise):
 - org.jacop.fz.optionalUnary: redundant unary resources with optional
   tasks for flexible job shops, from disjunctions of two precedences
   that apply only when two tasks run on the same machine; default true.
+- org.jacop.fz.optionalUnary.options: the most values an assignment
+  variable may have for its task to be an optional task of those
+  resources; default 4.
 - org.jacop.fz.elementTable: element constraints over constant arrays
   that share one index variable become one table.
 - org.jacop.fz.energyPrecedence: EnergyPrecedence on cumulatives
@@ -961,6 +964,8 @@ Literals and clauses:
   default true.
 - jacop.lcg.semanticUip: semantic UIPs in conflict analysis; default
   true.
+- jacop.lcg.shrink: all-UIP shrinking of learnt clauses (one literal
+  per lower decision level, Fleury and Biere 2021); default false.
 - jacop.lcg.graphClauses: Regular and MDD constraints become clauses
   of the solver; default true.
 - jacop.lcg.clauses: constraints given to the SAT solver as clauses

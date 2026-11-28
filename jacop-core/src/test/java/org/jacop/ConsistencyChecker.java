@@ -89,18 +89,21 @@ import org.jacop.constraints.MultiInterDistance;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.PrecedenceCost;
+import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Sort;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.WeightedCompletion;
 import org.jacop.constraints.XdivYeqZ;
+import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqZ;
+import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZImplied;
@@ -2883,7 +2886,363 @@ class ConsistencyChecker {
                   new org.jacop.constraints.XplusClteqZ(x, c, z),
                   t -> t[0] + c <= t[1],
                   new IntVar[] {x, z});
+            }),
+        // constraint audit, 2026-11-27: constraints added since 2026-11-10 that had no case yet
+        new Case("XmulYeqZSaturated", Level.NONE, ConsistencyChecker::mulSaturated),
+        new Case("Dag", Level.DOMAIN, ConsistencyChecker::dag),
+        new Case("CostNetworkBound", Level.NONE, ConsistencyChecker::costNetworkBound),
+        // a dominance rule: the relation is a tour that no 2-opt or pure 3-opt move shortens
+        new Case("TspKOpt", Level.NONE, ConsistencyChecker::tspKOpt),
+        // a bound from a relaxation, with the cumulative and the rows posted on their own: the
+        // check is that it never removes a solution
+        new Case("TimeIndexedBound", Level.NONE, ConsistencyChecker::timeIndexedBound),
+        // the implications with a negated control of an eliminated control (Support.negateControl);
+        // ImpliesNot reaches what its nested constraint reaches (a linear: bounds of the intervals)
+        new Case("ImpliesNot", Level.NONE, ConsistencyChecker::impliesNot),
+        new Case(
+            "XplusClteqZImpliedNot",
+            Level.DOMAIN,
+            (s, r) -> {
+              int c = r.nextInt(7) - 3;
+              IntVar b = r.nextBoolean() ? aBool(s, "b") : aVar(s, "b", 0, 1, r);
+              IntVar x = aVar(s, "x", -4, 4, r);
+              IntVar z = aVar(s, "z", -4, 4, r);
+              return new Model(
+                  new org.jacop.constraints.XplusClteqZImpliedNot(b, x, c, z),
+                  t -> t[0] == 1 || t[1] + c <= t[2],
+                  new IntVar[] {b, x, z});
             }));
+  }
+
+  /** b = 0 =&gt; c for the constraints the front end nests: x = c, x != c, x = y and a linear. */
+  private static Model impliesNot(Store store, Random random) {
+    IntVar b = random.nextBoolean() ? aBool(store, "b") : aVar(store, "b", 0, 1, random);
+    int kind = random.nextInt(4);
+    int n = kind == 3 ? 2 + random.nextInt(2) : kind == 2 ? 2 : 1;
+    IntVar[] x = vars(store, "x", n, -2, 3, random);
+    int c = random.nextInt(5) - 2;
+    int[] w = weights(random, n, 3);
+    String rel = RELATIONS[random.nextInt(RELATIONS.length)];
+    PrimitiveConstraint nested =
+        switch (kind) {
+          case 0 -> new XeqC(x[0], c);
+          case 1 -> new XneqC(x[0], c);
+          case 2 -> new XeqY(x[0], x[1]);
+          default -> new LinearInt(x, w, rel, c);
+        };
+    Predicate<int[]> holds =
+        t -> {
+          switch (kind) {
+            case 0:
+              return t[1] == c;
+            case 1:
+              return t[1] != c;
+            case 2:
+              return t[1] == t[2];
+            default:
+              long sum = 0;
+              for (int i = 0; i < n; i++) {
+                sum += (long) w[i] * t[i + 1];
+              }
+              return holds(rel, sum, c);
+          }
+        };
+    return new Model(
+        new org.jacop.constraints.ImpliesNot(b, nested),
+        t -> t[0] == 1 || holds.test(t),
+        concat(new IntVar[] {b}, x));
+  }
+
+  /**
+   * Z = X * Y saturated at the ends of the range: small factors, or factors whose products reach an
+   * end of the range with z next to it.
+   */
+  private static Model mulSaturated(Store store, Random random) {
+    IntVar x;
+    IntVar y;
+    IntVar z;
+    if (random.nextBoolean()) {
+      x = aVar(store, "x", -4, 4, random);
+      y = aVar(store, "y", -4, 4, random);
+      z = aVar(store, "z", -16, 16, random);
+    } else {
+      boolean negative = random.nextBoolean();
+      int b = (IntDomain.MAX_INT - 6) / 3 + random.nextInt(3);
+      x = negative ? aVar(store, "x", -5, -2, random) : aVar(store, "x", 2, 5, random);
+      y = interval(store, "y", b, b + 3, random);
+      z =
+          negative
+              ? aVar(store, "z", IntDomain.MIN_INT, IntDomain.MIN_INT + 12, random)
+              : aVar(store, "z", IntDomain.MAX_INT - 12, IntDomain.MAX_INT, random);
+    }
+    return new Model(
+        new org.jacop.constraints.XmulYeqZSaturated(x, y, z),
+        t -> Math.max(IntDomain.MIN_INT, Math.min(IntDomain.MAX_INT, (long) t[0] * t[1])) == t[2],
+        new IntVar[] {x, y, z});
+  }
+
+  /** Dag over a random directed graph of 3 to 5 nodes, with an occasional self-loop. */
+  private static Model dag(Store store, Random random) {
+    int n = 3 + random.nextInt(3);
+    int m = n - 1 + random.nextInt(4);
+    int[] from = new int[m];
+    int[] to = new int[m];
+    for (int e = 0; e < m; e++) {
+      from[e] = random.nextInt(n);
+      to[e] = random.nextInt(10) == 0 ? from[e] : (from[e] + 1 + random.nextInt(n - 1)) % n;
+    }
+    IntVar[] ns = bools(store, "n", n);
+    IntVar[] es = bools(store, "e", m);
+    return new Model(
+        new org.jacop.constraints.graph.Dag(from, to, ns, es),
+        t -> {
+          for (int e = 0; e < m; e++) {
+            if (t[n + e] == 1 && (t[from[e]] == 0 || t[to[e]] == 0)) {
+              return false;
+            }
+          }
+          // acyclic: remove nodes of in-degree 0 among the selected edges until none is left
+          int[] indegree = new int[n];
+          for (int e = 0; e < m; e++) {
+            indegree[to[e]] += t[n + e];
+          }
+          boolean[] gone = new boolean[n];
+          for (int round = 0; round < n; round++) {
+            for (int v = 0; v < n; v++) {
+              if (!gone[v] && indegree[v] == 0) {
+                gone[v] = true;
+                for (int e = 0; e < m; e++) {
+                  if (from[e] == v && t[n + e] == 1) {
+                    indegree[to[e]]--;
+                  }
+                }
+              }
+            }
+          }
+          for (int v = 0; v < n; v++) {
+            if (!gone[v]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        concat(ns, es));
+  }
+
+  /**
+   * CostNetworkBound over 2 to 4 variables with random unary and binary costs, some hard and posted
+   * on their own: the objective is at least the cost of the network, which allows the assignment.
+   */
+  private static Model costNetworkBound(Store store, Random random) {
+    int n = 2 + random.nextInt(3);
+    IntVar[] x = vars(store, "x", n, 0, 3, random);
+    int[][] values = new int[n][];
+    for (int i = 0; i < n; i++) {
+      values[i] = new int[x[i].getSize()];
+      int k = 0;
+      for (org.jacop.core.ValueEnumeration e = x[i].dom().valueEnumeration();
+          e.hasMoreElements(); ) {
+        values[i][k++] = e.nextElement();
+      }
+    }
+    long hard = org.jacop.constraints.cfn.CostNetwork.HARD;
+    long constant = random.nextInt(3);
+    long[][] unary = new long[n][];
+    long[][][] binary = new long[n][n][];
+    for (int i = 0; i < n; i++) {
+      unary[i] = new long[values[i].length];
+      for (int a = 0; a < unary[i].length; a++) {
+        unary[i][a] = random.nextInt(12) == 0 ? hard : random.nextInt(4);
+      }
+      for (int j = i + 1; j < n; j++) {
+        if (random.nextInt(3) > 0) {
+          binary[i][j] = new long[values[i].length * values[j].length];
+          for (int k = 0; k < binary[i][j].length; k++) {
+            binary[i][j][k] = random.nextInt(10) == 0 ? hard : random.nextInt(4);
+          }
+        }
+      }
+    }
+    org.jacop.constraints.cfn.CostNetwork network =
+        new org.jacop.constraints.cfn.CostNetwork(values);
+    network.addConstant(constant);
+    for (int i = 0; i < n; i++) {
+      for (int a = 0; a < values[i].length; a++) {
+        network.addUnary(i, a, unary[i][a]);
+      }
+      for (int j = i + 1; j < n; j++) {
+        if (binary[i][j] != null) {
+          network.addBinary(i, j, binary[i][j].clone());
+        }
+      }
+    }
+    // the hard costs are projections of constraints the model posts on its own
+    // (CostNetworkDetector), and the bound counts a variable merged along a bijection with the
+    // value its partner gives it, so those constraints are posted here as well
+    for (int i = 0; i < n; i++) {
+      for (int a = 0; a < values[i].length; a++) {
+        if (unary[i][a] == hard) {
+          store.impose(new org.jacop.constraints.XneqC(x[i], values[i][a]));
+        }
+      }
+      for (int j = i + 1; j < n; j++) {
+        for (int k = 0; binary[i][j] != null && k < binary[i][j].length; k++) {
+          if (binary[i][j][k] == hard) {
+            store.impose(
+                new org.jacop.constraints.Or(
+                    new org.jacop.constraints.XneqC(x[i], values[i][k / values[j].length]),
+                    new org.jacop.constraints.XneqC(x[j], values[j][k % values[j].length])));
+          }
+        }
+      }
+    }
+    IntVar z = aVar(store, "z", 0, 16, random);
+    return new Model(
+        new org.jacop.constraints.cfn.CostNetworkBound(z, false, x, network),
+        t -> {
+          int[] at = new int[n];
+          for (int i = 0; i < n; i++) {
+            at[i] = Arrays.binarySearch(values[i], t[i]);
+            if (at[i] < 0) {
+              return false;
+            }
+          }
+          long cost = constant;
+          for (int i = 0; i < n; i++) {
+            if (unary[i][at[i]] == hard) {
+              return false;
+            }
+            cost += unary[i][at[i]];
+            for (int j = i + 1; j < n; j++) {
+              if (binary[i][j] != null) {
+                long c = binary[i][j][at[i] * values[j].length + at[j]];
+                if (c == hard) {
+                  return false;
+                }
+                cost += c;
+              }
+            }
+          }
+          return cost <= t[n];
+        },
+        concat(x, new IntVar[] {z}));
+  }
+
+  /**
+   * TspKOpt over 4 to 6 nodes with random symmetric lengths and a circuit posted on its own: the
+   * successors form a tour that no 2-opt move and no pure 3-opt reconnection makes strictly
+   * shorter.
+   */
+  private static Model tspKOpt(Store store, Random random) {
+    int n = 4 + random.nextInt(3);
+    long[][] d = new long[n][n];
+    for (int v = 0; v < n; v++) {
+      d[v][v] = 1000;
+      for (int w = v + 1; w < n; w++) {
+        d[v][w] = 1 + random.nextInt(9);
+        d[w][v] = d[v][w];
+      }
+    }
+    IntVar[] x = vars(store, "x", n, 0, n - 1, random);
+    // it is posted with the circuit it prunes (GiantTourDetector), which forbids x[v] = v
+    store.impose(new org.jacop.constraints.Circuit(x, 0));
+    return new Model(
+        new org.jacop.constraints.TspKOpt(x, 0, d),
+        t -> {
+          int[] order = new int[n];
+          boolean[] seen = new boolean[n];
+          int v = 0;
+          for (int k = 0; k < n; k++) {
+            if (seen[v]) {
+              return false;
+            }
+            seen[v] = true;
+            order[k] = v;
+            v = t[v];
+          }
+          if (v != 0) {
+            return false;
+          }
+          // arc k is order[k] -> order[k + 1]
+          for (int i = 0; i < n; i++) {
+            int a = order[i];
+            int b = order[(i + 1) % n];
+            for (int j = i + 1; j < n; j++) {
+              int c = order[j];
+              int e = order[(j + 1) % n];
+              if (d[a][c] + d[b][e] < d[a][b] + d[c][e]) {
+                return false;
+              }
+              for (int k = j + 1; k < n; k++) {
+                int g = order[k];
+                int h = order[(k + 1) % n];
+                // arcs a -> b, c -> e, g -> h; segments b..c and e..g
+                long now = d[a][b] + d[c][e] + d[g][h];
+                if (d[a][e] + d[g][b] + d[c][h] < now
+                    || d[a][e] + d[g][c] + d[b][h] < now
+                    || d[a][g] + d[e][b] + d[c][h] < now
+                    || d[a][c] + d[b][g] + d[e][h] < now) {
+                  return false;
+                }
+              }
+            }
+          }
+          return true;
+        },
+        x);
+  }
+
+  /**
+   * TimeIndexedBound over 2 or 3 tasks of one cumulative resource and the makespan c, with the
+   * cumulative and the rows s + d &lt;= c posted on their own.
+   */
+  private static Model timeIndexedBound(Store store, Random random) {
+    int n = 2 + random.nextInt(2);
+    int horizon = 6;
+    int[] dur = new int[n];
+    int[] use = new int[n];
+    IntVar[] s = new IntVar[n];
+    IntVar[] dv = new IntVar[n];
+    IntVar[] uv = new IntVar[n];
+    int cap = 1 + random.nextInt(3);
+    List<org.jacop.lcg.LinearForm> rows = new ArrayList<>();
+    IntVar c = aVar(store, "c", 1, horizon, random);
+    for (int j = 0; j < n; j++) {
+      dur[j] = 1 + random.nextInt(3);
+      use[j] = 1 + random.nextInt(cap);
+      s[j] = aVar(store, "s" + j, 0, horizon - dur[j], random);
+      dv[j] = new IntVar(store, dur[j], dur[j]);
+      uv[j] = new IntVar(store, use[j], use[j]);
+      rows.add(
+          new org.jacop.lcg.LinearForm(
+              new IntVar[] {s[j], c}, new long[] {1, -1}, -dur[j], org.jacop.lcg.LinearForm.LE));
+      store.impose(new org.jacop.constraints.XplusClteqZ(s[j], dur[j], c));
+    }
+    store.impose(new Cumulative(s, dv, uv, new IntVar(store, cap, cap)));
+    // null when no task is left to index (all starts fixed): the posted constraints alone
+    Object bound = org.jacop.constraints.lp.TimeIndexedBound.of(store, c, false, rows);
+    return new Model(
+        bound == null ? List.of() : bound,
+        t -> {
+          for (int j = 0; j < n; j++) {
+            if (t[j] + dur[j] > t[n]) {
+              return false;
+            }
+          }
+          for (int time = 0; time <= horizon; time++) {
+            int load = 0;
+            for (int j = 0; j < n; j++) {
+              if (t[j] <= time && time < t[j] + dur[j]) {
+                load += use[j];
+              }
+            }
+            if (load > cap) {
+              return false;
+            }
+          }
+          return true;
+        },
+        concat(s, new IntVar[] {c}));
   }
 
   /**
