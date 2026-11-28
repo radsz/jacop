@@ -176,7 +176,7 @@ public final class CountStepCostBound {
         Step s =
             step(
                 support.getVarArray((SimpleNode) c.jjtGetChild(0)),
-                support.getIntArray((SimpleNode) c.jjtGetChild(1)),
+                fixedValues(support.getVarArray((SimpleNode) c.jjtGetChild(1))),
                 reified,
                 reifiedVar);
         if (s != null) {
@@ -292,6 +292,18 @@ public final class CountStepCostBound {
   }
 
   // the step function of if c[0] then x[0] elseif ... else x[n-1] with c[i] = (v <= k[i])
+  // the values of fixed branches, null when a branch is a variable (fzn_if_then_else_var_int)
+  private static int[] fixedValues(IntVar[] branches) {
+    int[] values = new int[branches.length];
+    for (int i = 0; i < branches.length; i++) {
+      if (!branches[i].singleton()) {
+        return null;
+      }
+      values[i] = branches[i].value();
+    }
+    return values;
+  }
+
   private static Step step(
       IntVar[] conditions, int[] values, Map<IntVar, long[]> reified, Map<IntVar, IntVar> on) {
     int n = conditions.length;
