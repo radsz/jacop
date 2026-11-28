@@ -279,8 +279,18 @@ public final class LoadFunctionDetector implements ParserTreeConstants {
     return r;
   }
 
+  // x^e as int_pow: a negative exponent truncates 1 / x^-e, undefined only for x = 0
   private static long power(long x, long e) {
     if (e < 0 || e > 62) {
+      if (x == 1 || x == -1) {
+        return (e & 1) == 0 ? 1 : x;
+      }
+      if (e < 0) {
+        return x == 0 ? TimeIndexedBound.NONE : 0;
+      }
+      if (x == 0) {
+        return 0;
+      }
       return TimeIndexedBound.NONE;
     }
     long r = 1;

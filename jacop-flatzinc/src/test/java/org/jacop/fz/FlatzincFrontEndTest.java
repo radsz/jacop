@@ -11838,4 +11838,38 @@ class FlatzincFrontEndTest {
     String[] out = run(model, "--lcg", "off", "-t", "3000");
     assertTrue(out[0].contains("x = 1;\nb = false;\n----------"), out[0] + out[1]);
   }
+
+  /**
+   * A power with a negative exponent is defined except at 0 ((-2)^-1 = 0, 1^-n = 1, (-1)^-n = +-1):
+   * the load functions took every negative exponent as undefined, so the bin packing cost bound
+   * left out the loads 0 here and the optimum -2 of loads 2 and 0 was cut to 2.
+   */
+  @Test
+  void aLoadCostWithANegativeExponentKeepsTheLoadsWhereItIsDefined() throws IOException {
+    String model =
+        """
+        var 1..2: b0 :: output_var;
+        var 1..2: b1 :: output_var;
+        var 0..2: l0;
+        var 0..2: l1;
+        var -1..1: e0;
+        var -1..1: e1;
+        var -2..1: t0;
+        var -2..1: t1;
+        var -4..2: obj :: output_var;
+        constraint jacop_bin_packing([b0,b1],[l0,l1],[1,1],1);
+        constraint int_lin_eq([1,-1],[l0,e0],1) :: defines_var(e0);
+        constraint int_lin_eq([1,-1],[l1,e1],1) :: defines_var(e1);
+        constraint int_pow(-2,e0,t0) :: defines_var(t0);
+        constraint int_pow(-2,e1,t1) :: defines_var(t1);
+        constraint int_lin_eq([1,1,-1],[t0,t1,obj],0) :: defines_var(obj);
+        solve minimize obj;
+        """;
+    for (String[] options : new String[][] {{"--lcg", "on"}, {"--lcg", "off"}, {"-f"}}) {
+      String out = run(model, options)[0];
+      assertTrue(
+          out.contains("obj = -2;\n----------\n=========="),
+          String.join(" ", options) + ": " + out);
+    }
+  }
 }
