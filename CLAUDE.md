@@ -46,7 +46,7 @@ the work is truly done.
 
 `jacop-core/src/test/java/org/jacop/ConsistencyChecker.java` measures the consistency a propagator
 actually reaches. It is a tool for improving constraints and a guard against weakened propagators:
-the profiles run it with few instances (`consistency.instances` 50 in `min`, about 40 s, and 200 in
+the profiles run it with few instances (`consistency.instances` 50 in `min`, about 40 s, and 100 in
 `commit`), since it is the only test that fails when a propagator still answers right but prunes
 less. Run it at volume on demand with `-Dtest`.
 
