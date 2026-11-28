@@ -1077,14 +1077,27 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       imposeObjective(objective, store, store::impose, Constraint::removeConstraint);
     }
 
+    // the bounds and nogoods below are optional: none starts once the time-out has passed, since
+    // the search after them stops at once (on 500 variable elements at -t 2000 the dominance
+    // nogoods, the cost network and the linear relaxation took a second past it); the search still
+    // gets its moment, in which a first solution may come
+    if (opt.timeOutPassed()) {
+      return;
+    }
     if (CoveringDominance.enabled() && opt.proof() == null && store.consistency()) {
       coveringDominance(node);
     }
 
+    if (opt.timeOutPassed()) {
+      return;
+    }
     if (dominanceOn() && store.consistency()) {
       dominanceNogoods(node);
     }
 
+    if (opt.timeOutPassed()) {
+      return;
+    }
     if (dictionary.costNetwork != null) {
       if (opt.presolve() == Options.Presolve.OFF && store.consistency()) {
         costNetworkBound(node);
@@ -1092,18 +1105,30 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       dictionary.costNetwork = null;
     }
 
+    if (opt.timeOutPassed()) {
+      return;
+    }
     if (ObjectiveBlockBound.on() && opt.proof() == null) {
       objectiveBlockBound(node);
     }
 
+    if (opt.timeOutPassed()) {
+      return;
+    }
     if (opt.lp()) {
       imposeLinearRelaxation(node);
     }
 
+    if (opt.timeOutPassed()) {
+      return;
+    }
     if (costNetworkBound != null) {
       imposeCostNetworkBound();
     }
 
+    if (opt.timeOutPassed()) {
+      return;
+    }
     if (DecompositionBound.on() && opt.proof() == null) {
       decompositionBound(node);
     }

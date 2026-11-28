@@ -11380,4 +11380,63 @@ class FlatzincFrontEndTest {
     assertFalse(out.contains("%%%mzn-stat"), out);
     assertFalse(out.contains("=========="), out);
   }
+
+  @Test
+  void noOptionalStepAtTheRootStartsOnceTheTimeOutHasPassed() throws IOException, ParseException {
+    // the dominance nogoods, the cost network and the linear relaxation after presolve took a
+    // second past -t 2000 on 500 variable elements, for a search that stops at once
+    Path fzn = tmp.resolve("rootlate.fzn");
+    Files.writeString(
+        fzn,
+        """
+        var 0..9: x :: output_var;
+        var 0..9: y :: output_var;
+        var 0..100: obj :: output_var;
+        constraint int_lin_le([3,5],[x,y],27);
+        constraint int_lin_eq([4,7,-1],[x,y,obj],0);
+        solve maximize obj;
+        """,
+        StandardCharsets.UTF_8);
+    for (boolean late : new boolean[] {false, true}) {
+      // the time-out passes only for the checks of the steps at the root
+      Options opt =
+          new Options(
+              new String[] {
+                "-t",
+                "60000",
+                "-s",
+                "--search-statistics",
+                "--lp",
+                "on",
+                "--lcg",
+                "off",
+                fzn.toString()
+              }) {
+            @Override
+            public boolean timeOutPassed() {
+              return late
+                  && StackWalker.getInstance()
+                      .walk(f -> f.skip(1).findFirst())
+                      .map(f -> f.getMethodName().equals("rootSteps"))
+                      .orElse(false);
+            }
+          };
+      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+      PrintStream originalOut = System.out;
+      try (PrintStream capture = new PrintStream(bytes, true, StandardCharsets.UTF_8);
+          java.io.FileInputStream input = new java.io.FileInputStream(fzn.toFile())) {
+        System.setOut(capture);
+        Parser parser = new Parser(input);
+        parser.setOptions(opt);
+        parser.model();
+      } finally {
+        System.setOut(originalOut);
+      }
+      String out = bytes.toString(StandardCharsets.UTF_8).replace("\r\n", "\n");
+      // the search still runs: here it has the time to prove the optimum
+      assertTrue(out.contains("obj = 37;\n----------\n"), out);
+      assertTrue(out.contains("\n==========\n"), out);
+      assertEquals(!late, out.contains("%%%mzn-stat: lpCalls="), out);
+    }
+  }
 }
