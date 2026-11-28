@@ -1351,10 +1351,12 @@ class FlatzincFrontEndTest {
             """);
     assertTrue(out[0].endsWith("x = 9;\n----------\n"), out[0]);
 
-    // no claim of unsatisfiability: the solutions may lie in the values cut off
+    // the row x <= -11 keeps x within the range, so the failure while the model is translated cuts
+    // off no solution: unsatisfiable, as a search that completes without one
     out =
         run("var -10..1687566400: x :: output_var;\nconstraint int_le(x, -11);\nsolve satisfy;\n");
-    assertTrue(out[0].endsWith("=====UNKNOWN=====\n"), out[0]);
+    assertTrue(out[0].endsWith("=====UNSATISFIABLE=====\n"), out[0]);
+    // no claim of unsatisfiability: the solutions lie in the values cut off
     out =
         run(
             """
@@ -11541,6 +11543,40 @@ class FlatzincFrontEndTest {
     assertTrue(before.contains("[x = 0.5]"), before);
     assertTrue(after.contains("[x = 0.5]"), after);
     assertFalse(after.contains("0.5..0.5"), after);
+  }
+
+  /**
+   * A model that fails while it is translated, next to a declared domain narrowed to JaCoP's range
+   * that the rows show harmless (s is in no constraint), printed UNKNOWN although a search that
+   * completes without a solution on the same narrowing prints UNSATISFIABLE: the pigeonholes below
+   * printed UNSATISFIABLE without symmetry breaking and UNKNOWN with it (the default when LCG is
+   * off), whose value precedence refutes them while the model is translated. A narrowing that the
+   * failure may come from still gives UNKNOWN.
+   */
+  @Test
+  void aFailureWhileTranslatingNextToAHarmlessNarrowingIsUnsatisfiable() throws IOException {
+    String narrowed = "var 0..2000000000: s :: output_var;\n";
+    StringBuilder holes = new StringBuilder(narrowed);
+    holes.append("array [1..4] of var 1..3: p :: output_array([1..4]);\n");
+    for (int i = 1; i <= 4; i++) {
+      for (int j = i + 1; j <= 4; j++) {
+        holes.append("constraint int_ne(p[").append(i).append("], p[").append(j).append("]);\n");
+      }
+    }
+    holes.append("solve satisfy;\n");
+    String root =
+        narrowed
+            + "var 1..1: a;\nvar 1..1: b :: output_var;\nconstraint int_ne(a,b);\nsolve satisfy;\n";
+    for (String model : List.of(holes.toString(), root)) {
+      for (String symmetry : List.of("off", "on")) {
+        String out = run(model, "--lcg", "off", "--symmetry", symmetry)[0];
+        assertTrue(out.endsWith("=====UNSATISFIABLE=====\n"), symmetry + "\n" + model + out);
+      }
+    }
+    // s = 600000000 is a solution beyond the narrowed domain
+    String cut = narrowed + "constraint int_lin_le([-1],[s],-600000000);\nsolve satisfy;\n";
+    String out = run(cut, "--lcg", "off")[0];
+    assertTrue(out.contains("=====UNKNOWN====="), out);
   }
 
   /**

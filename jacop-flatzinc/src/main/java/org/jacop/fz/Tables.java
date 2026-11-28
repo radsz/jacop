@@ -727,11 +727,11 @@ public class Tables {
    * Tells whether a failure may come from the values cut off by narrowing domains to JaCoP's
    * integer range, so that it proves no unsatisfiability.
    *
-   * @return false if no domain was narrowed, or only unbounded ones that the rows of the model show
-   *     to lie within the range.
+   * @return false if no domain was narrowed, or only ones that the rows of the model show to lie
+   *     within the range, as for a search that completes without a solution.
    */
   public boolean failureMayComeFromNarrowing() {
-    if (floatDomainsNarrowed || constantBeyondRange || boundedDomainsClamped()) {
+    if (floatDomainsNarrowed || constantBeyondRange) {
       return true;
     }
     return !clampedDomains.isEmpty()
