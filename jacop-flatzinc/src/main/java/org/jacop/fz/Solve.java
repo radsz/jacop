@@ -2694,6 +2694,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       probability = s.probability;
       return true;
     }
+    if (PRIORITY_SEARCH.equals(s.searchType) && s.vars().length == 0) {
+      // a priority search over no variable has nothing to search, as for a single annotation
+      return true;
+    }
     if (s.searchType.endsWith("_search")) {
       ns.add(s);
       return true;

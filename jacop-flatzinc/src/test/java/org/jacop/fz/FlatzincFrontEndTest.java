@@ -11821,4 +11821,21 @@ class FlatzincFrontEndTest {
         out[0].contains("out of bound") || out[1].contains("out of bound"), out[0] + out[1]);
     assertTrue(out[0].contains("y = 3;"), out[0]);
   }
+
+  /**
+   * A priority_search whose only sub-search is empty searches nothing; next to a restart annotation
+   * it was kept and PrioritySearch failed with an IndexOutOfBoundsException.
+   */
+  @Test
+  void anEmptyPrioritySearchNextToARestartAnnotationSearchesTheRest() throws IOException {
+    String model =
+        """
+        var 1..3: x :: output_var;
+        var bool: b :: output_var;
+        solve :: priority_search([x],[bool_search([],input_order,indomain_min,complete)],\
+        largest,complete) :: restart_luby(27) satisfy;
+        """;
+    String[] out = run(model, "--lcg", "off", "-t", "3000");
+    assertTrue(out[0].contains("x = 1;\nb = false;\n----------"), out[0] + out[1]);
+  }
 }
