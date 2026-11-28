@@ -70,6 +70,7 @@ import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.Implies;
+import org.jacop.constraints.ImpliesNot;
 import org.jacop.constraints.In;
 import org.jacop.constraints.Increasing;
 import org.jacop.constraints.IncreasingSum;
@@ -96,6 +97,7 @@ import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XgtC;
 import org.jacop.constraints.XgtY;
 import org.jacop.constraints.XgteqC;
+import org.jacop.constraints.XltY;
 import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmulCeqZ;
@@ -2817,5 +2819,33 @@ class VeriPbProofTest {
     assertThat(lcg.minimize(end)).isEqualTo(CdclSolver.SAT);
     RupChecker checker = new RupChecker();
     assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+  }
+
+  @Test
+  void negatedControlRowHoldsUnderZero() {
+    // b0 = 0 => x0 < x2: the row lemmas were guarded by b0 = 1, as for Implies, and the proof
+    // claimed x0 >= 2 fails under b0 = 1 (fuzz proof seed 132561005)
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 0);
+    x0.addDom(2, 3);
+    IntVar x1 = new IntVar(store, "x1", -1, 2);
+    x1.addDom(4, 4);
+    IntVar x2 = new IntVar(store, "x2", 0, 0);
+    x2.addDom(2, 2);
+    IntVar x3 = new IntVar(store, "x3", 1, 1);
+    x3.addDom(3, 3);
+    IntVar b0 = new IntVar(store, "b0", 0, 1);
+    IntVar obj = new IntVar(store, "obj", -30, 30);
+    store.impose(new XplusYeqC(x1, x3, 2));
+    store.impose(new ImpliesNot(b0, new XltY(x0, x2)));
+    store.impose(new XneqC(x3, -1));
+    store.impose(new LinearInt(new IntVar[] {x1, x0, x0, obj}, new int[] {3, -2, 1, -1}, "==", 0));
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.sat().setExternalReasonKeep(3);
+    lcg.setChecking(true);
+    lcg.setProof(model, proof);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(lcg.value(obj)).isEqualTo(-6);
+    assertThat(new RupChecker().check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
   }
 }
