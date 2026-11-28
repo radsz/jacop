@@ -11872,4 +11872,30 @@ class FlatzincFrontEndTest {
           String.join(" ", options) + ": " + out);
     }
   }
+
+  /**
+   * The intension table detector drops the element and the reification below, whose variables are
+   * internal and leave every pair v0, v1 a solution, and frees x8, x9 and b. The difference cycles
+   * detector still read them and posted its redundant constraint over the freed variables, where it
+   * was the only constraint: presolve, which treats it as redundant, eliminated x9 and b with it,
+   * and --presolve check rejected the solution it wrote back.
+   */
+  @Test
+  void differenceCyclesReadNoConstraintAnIntensionTableDropped() throws IOException {
+    String model =
+        """
+        var {1,3}: v0 :: output_var;
+        var {-3,-2,-1}: v1 :: output_var;
+        var -3..3: x8 :: var_is_introduced :: is_defined_var;
+        var 1..3: x9 :: var_is_introduced :: is_defined_var;
+        var bool: b :: var_is_introduced;
+        constraint array_var_int_element(x9,[v0,v0,v1],x8) :: defines_var(x8);
+        constraint int_le_reif(x8,v0,b);
+        solve satisfy;
+        """;
+    for (String lcg : new String[] {"off", "on"}) {
+      String out = run(model, "--presolve", "check", "--lcg", lcg)[0];
+      assertTrue(out.contains("v0 = 1;\nv1 = -3;\n----------"), lcg + "\n" + out);
+    }
+  }
 }

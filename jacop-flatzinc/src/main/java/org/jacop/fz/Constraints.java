@@ -741,7 +741,7 @@ public class Constraints implements ParserTreeConstants {
       if (DifferenceCyclesDetector.enabled() && options.proof() == null) {
         // fails on a negative cycle of the difference constraints that hold, with the cycle as
         // reason
-        new DifferenceCyclesDetector(support).detect(astTree);
+        new DifferenceCyclesDetector(support).detect(astTree, replaced);
       }
 
       // energy precedence when enabled, and the reservoirs, which are not redundant

@@ -36,6 +36,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.jacop.constraints.DifferenceCycles;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -120,8 +121,28 @@ public class DifferenceCyclesDetector implements ParserTreeConstants {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
+    detect(astTree, Set.of());
+  }
+
+  /**
+   * It reads the difference constraints of the model, except the replaced ones, and adds a
+   * redundant {@link DifferenceCycles} to the delayed constraints when one of the conditional ones
+   * can be on a cycle. A replaced constraint is not posted, and the detector that replaced it may
+   * have freed its internal variables: arcs over them would be the only constraint on them, no
+   * longer redundant, while presolve copies the constraint as redundant.
+   *
+   * @param astTree the root of the parsed model.
+   * @param replaced the constraint elements that other detectors replaced.
+   */
+  public void detect(SimpleNode astTree, Set<SimpleNode> replaced) {
     long start = System.nanoTime();
-    support.forEachConstraint(astTree, this::collect);
+    support.forEachConstraint(
+        astTree,
+        node -> {
+          if (!replaced.contains(node)) {
+            collect(node);
+          }
+        });
     if (bs.stream().allMatch(b -> b == null)) {
       return;
     }
