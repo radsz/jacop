@@ -2106,14 +2106,13 @@ public final class XcspReader {
       shifted.add(m.intAtom(s));
     }
     m.constraint("jacop_subcircuit(" + FznModel.list(shifted) + ")");
-    // the number of non-loops: at least 2 (XCSP3 circuit has at least one cycle), or the size
+    // the number of non-loops: at least 2 (XCSP3 circuit has at least one cycle), and the size
     Lin loops = new Lin();
     for (int i = 0; i < n; i++) {
       loops.add(m.lin(m.valueLit(vs.get(i), (long) i + start).not()), 1);
     }
-    if (size == null) {
-      m.post("ge", ExprCompiler.diff(loops, Lin.constant(2)));
-    } else {
+    m.post("ge", ExprCompiler.diff(loops, Lin.constant(2)));
+    if (size != null) {
       m.post("eq", ExprCompiler.diff(loops, ec.lin(size.get(0))));
     }
   }

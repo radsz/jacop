@@ -817,4 +817,30 @@ class XcspReaderTest {
         1,
         t -> t[0] != 0 && t[1] == 1);
   }
+
+  /**
+   * An XCSP3 circuit has at least one cycle, also with a size: the size branch posted only that the
+   * number of nodes that are not loops equals the size, so a size that may be 0 accepted the tuple
+   * of loops only.
+   */
+  @Test
+  void aCircuitWithASizeHasACycle() throws IOException {
+    check(
+        vars(4, 0, 3),
+        "<circuit><list> x[0..2] </list><size> x[3] </size></circuit>",
+        4,
+        0,
+        3,
+        t -> {
+          int moved = 0;
+          for (int i = 0; i < 3; i++) {
+            moved += t[i] != i ? 1 : 0;
+          }
+          return t[0] <= 2
+              && t[1] <= 2
+              && t[2] <= 2
+              && subcircuit(Arrays.copyOf(t, 3))
+              && moved == t[3];
+        });
+  }
 }
