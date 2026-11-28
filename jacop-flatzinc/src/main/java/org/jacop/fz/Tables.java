@@ -128,6 +128,9 @@ public class Tables {
   final ArrayList<Var[]> defaultSearchSetArrays = new ArrayList<>();
   // variables named by a defines_var annotation of a constraint
   final ArrayList<Var> definedVariables = new ArrayList<>();
+  // with -a or -n N, the other variables of the constraint that defines each variable of
+  // definedVariables that is not half-reified, whose values fix it (null otherwise)
+  Map<Var, Var[]> definitions;
   // the variables of definedVariables named by a half-reified constraint (b -> c, MiniZinc *_imp),
   // which bounds b but does not fix it from the other variables
   final ArrayList<Var> halfDefinedVariables = new ArrayList<>();
@@ -661,8 +664,27 @@ public class Tables {
    * @return true if it is shown harmless
    */
   boolean clampsHarmless(IntVar objective, long low, long high) {
-    return clampedBounds != null && clampedBounds.harmless(objective, low, high);
+    IntVar loadedObjective = objective;
+    if (objective != null && loadedVariables != null) {
+      loadedObjective = loadedVariables.get(objective);
+      if (loadedObjective == null) {
+        return false;
+      }
+    }
+    return clampedBounds != null && clampedBounds.harmless(loadedObjective, low, high);
   }
+
+  // the variable of the loaded model a variable of this copy (mapTo) stands for
+  private IntVar loaded(IntVar v) {
+    if (loadedVariables == null) {
+      return v;
+    }
+    IntVar w = loadedVariables.get(v);
+    return w != null ? w : v;
+  }
+
+  // for a copy made by mapTo after presolve: the variables of the loaded model, by their copies
+  private IdentityHashMap<IntVar, IntVar> loadedVariables;
 
   /**
    * Tells whether the rows of the model keep every narrowed domain within JaCoP's range, so that an
@@ -705,11 +727,11 @@ public class Tables {
    * Tells whether a failure may come from the values cut off by narrowing domains to JaCoP's
    * integer range, so that it proves no unsatisfiability.
    *
-   * @return false if no domain was narrowed, or only unbounded ones that the rows of the model show
-   *     to lie within the range.
+   * @return false if no domain was narrowed, or only ones that the rows of the model show to lie
+   *     within the range, as for a search that completes without a solution.
    */
   public boolean failureMayComeFromNarrowing() {
-    if (floatDomainsNarrowed || constantBeyondRange || boundedDomainsClamped()) {
+    if (floatDomainsNarrowed || constantBeyondRange) {
       return true;
     }
     return !clampedDomains.isEmpty()
@@ -1034,8 +1056,26 @@ public class Tables {
     lnsRoutes.forEach(r -> t.lnsRoutes.add(r.copy(map)));
     t.zeroSums = zeroSums == null ? null : zeroSums.copy(map);
     t.indexDisjunctions = indexDisjunctions == null ? null : indexDisjunctions.copy(map);
+    // the built-ins of on_restart fix variables of the searched store at the root of every run
+    t.onRestart = onRestart == null ? null : onRestart.copy(map);
     t.objectiveScale = objectiveScale;
     t.scaledIdents.addAll(scaledIdents);
+    // the narrowing of declared domains cuts values off the model, whatever store is searched: a
+    // completed search of the copy proves neither unsatisfiability nor optimality either
+    t.clampedDomains.addAll(clampedDomains);
+    t.floatDomainsNarrowed = floatDomainsNarrowed;
+    t.constantBeyondRange = constantBeyondRange;
+    // the reasoning over the rows of the loaded model, asked about the loaded objective
+    t.clampedBounds = clampedBounds;
+    if (clampedBounds != null) {
+      t.loadedVariables = new IdentityHashMap<>();
+      variableTable.forEach((k, v) -> t.loadedVariables.put(map.get(v), loaded(v)));
+      aliasTable.forEach(
+          (k, v) -> {
+            t.loadedVariables.put(map.get(k), loaded(k));
+            t.loadedVariables.put(map.get(v), loaded(v));
+          });
+    }
     t.numberBoolVariables = numberBoolVariables;
     t.numberFloatVariables = numberFloatVariables;
     t.numberSetVariables = numberSetVariables;
@@ -1695,6 +1735,49 @@ public class Tables {
       }
     }
     return vars;
+  }
+
+  /**
+   * Records the other variables of the constraint whose defines_var annotation names a variable:
+   * they fix its value. Kept for -a and -n N only, which tell solutions apart by their output.
+   *
+   * @param v the defined variable
+   * @param by the other variables of the constraint
+   */
+  public void addDefinition(Var v, Var[] by) {
+    if (definitions == null) {
+      definitions = new IdentityHashMap<>();
+    }
+    definitions.put(v, by);
+  }
+
+  /**
+   * The variables that an identifier of a constraint argument names: a variable, or the variables
+   * of an array; none for a parameter.
+   *
+   * @param ident the identifier
+   * @return the variables
+   */
+  public Var[] namedVariables(String ident) {
+    IntVar x = variableTable.get(ident);
+    if (x != null) {
+      return new Var[] {x};
+    }
+    Var[] a = variableArrayTable.get(ident);
+    if (a == null) {
+      a = variableFloatArrayTable.get(ident);
+    }
+    if (a == null) {
+      a = setVariableArrayTable.get(ident);
+    }
+    if (a != null) {
+      return a.clone();
+    }
+    Var v = variableFloatTable.get(ident);
+    if (v == null) {
+      v = setVariableTable.get(ident);
+    }
+    return v == null ? new Var[0] : new Var[] {v};
   }
 
   /**

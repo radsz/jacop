@@ -166,4 +166,23 @@ class InferredCumulativesTest {
     List<InferredCumulatives.Inferred> found = ic.infer(0, 5, null);
     assertTrue(found.size() <= 5, found.toString());
   }
+
+  @Test
+  void theInferenceStopsWhenAsked() {
+    // the time-out of the run did not stop it: 4,000 tasks took 2.5 s past -t 1000
+    int[] duration = {3, 3, 3, 3};
+    InferredCumulatives free = new InferredCumulatives(duration);
+    free.resource(new int[] {0, 1, 2, 3}, new int[] {5, 3, 2, 4}, 7);
+    assertEquals(1, free.infer(100, 5, null).size());
+    InferredCumulatives stopped = new InferredCumulatives(duration);
+    stopped.resource(new int[] {0, 1, 2, 3}, new int[] {5, 3, 2, 4}, 7);
+    int[] asked = {0};
+    stopped.stopWhen(
+        () -> {
+          asked[0]++;
+          return true;
+        });
+    assertTrue(stopped.infer(100, 5, null).isEmpty());
+    assertEquals(1, asked[0]);
+  }
 }

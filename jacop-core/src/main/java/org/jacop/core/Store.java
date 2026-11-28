@@ -363,6 +363,9 @@ public class Store {
   /** The prefix of any variable which was noname. */
   protected String variableIdPrefix = "_";
 
+  // the variables of this store given a generated id so far
+  private int generatedIds;
+
   /**
    * Variables for accumulated failure count (AFC) for constraints. constraintAfcManagement- opens
    * AFC menagement decay- decay factor allConstraints- all constraints in the store
@@ -939,6 +942,29 @@ public class Store {
   }
 
   /**
+   * It sets the time, as given by {@link System#currentTimeMillis()}, after which a constraint
+   * whose impose takes long (the layered graph of a large automaton) throws {@link #failException}
+   * instead of finishing; the model being built under a time-out is then abandoned. It is a
+   * deadline of imposing only, which no propagation and no search reads.
+   *
+   * @param deadline the time, or 0 for none
+   */
+  public void setImposeDeadline(long deadline) {
+    imposeDeadline = deadline;
+  }
+
+  /**
+   * It tells whether the deadline set by {@link #setImposeDeadline(long)} has passed.
+   *
+   * @return true if a deadline is set and it has passed
+   */
+  public boolean imposeDeadlinePassed() {
+    return imposeDeadline > 0 && System.currentTimeMillis() > imposeDeadline;
+  }
+
+  private long imposeDeadline;
+
+  /**
    * It propagates as {@link #consistency()} does, but stops at the given deadline, or at the
    * earlier one {@link #setConsistencyDeadline(long)} has set: a decision or a probe made outside a
    * search can then not overrun a time-out when bounds converge a step per pass. The deadline holds
@@ -1198,6 +1224,18 @@ public class Store {
    */
   public String getVariableIdPrefix() {
     return variableIdPrefix;
+  }
+
+  /**
+   * It gives an id to a variable created without one: the prefix of {@link #getVariableIdPrefix()}
+   * followed by the number of such variables of this store. The number counts in this store, not in
+   * the JVM, so that a model gets the same ids, and the same order of the variables sorted by id,
+   * however many models the JVM solved before.
+   *
+   * @return an id unused in this store.
+   */
+  public String generatedVariableId() {
+    return freshVariableId(variableIdPrefix + ++generatedIds);
   }
 
   /**

@@ -93,7 +93,7 @@ public class SetVar extends Var implements Mirrored {
    * @param dom the domain of the variable being created.
    */
   public SetVar(Store store, SetDomain dom) {
-    this(store, store.getVariableIdPrefix() + idNumber.incrementAndGet(), dom);
+    this(store, store.generatedVariableId(), dom);
   }
 
   /** No parameter, explicit, empty constructor for subclasses. */
@@ -106,7 +106,7 @@ public class SetVar extends Var implements Mirrored {
    * @param store store in which the variable is created.
    */
   public SetVar(Store store) {
-    this(store, store.getVariableIdPrefix() + idNumber.incrementAndGet(), new BoundSetDomain());
+    this(store, store.generatedVariableId(), new BoundSetDomain());
   }
 
   /**
@@ -118,10 +118,7 @@ public class SetVar extends Var implements Mirrored {
    * @param max the maximum value of the domain.
    */
   public SetVar(Store store, int min, int max) {
-    this(
-        store,
-        store.getVariableIdPrefix() + idNumber.incrementAndGet(),
-        new BoundSetDomain(min, max));
+    this(store, store.generatedVariableId(), new BoundSetDomain(min, max));
   }
 
   /**

@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -173,6 +174,32 @@ public class OnRestart implements RestartHook {
    */
   public void addComplete(IntVar marker) {
     completeMarkers.add(marker);
+  }
+
+  /**
+   * Returns these built-ins over other variables, for example over the variables of a store derived
+   * by presolve, before the search has started.
+   *
+   * @param map the mapping of every variable of these built-ins.
+   * @return the mapped built-ins.
+   */
+  OnRestart copy(VarMap map) {
+    OnRestart r = new OnRestart();
+    r.status.addAll(map.get(status));
+    r.solIn.addAll(map.get(solIn));
+    r.solOut.addAll(map.get(solOut));
+    r.solFloatIn.addAll(map.get(solFloatIn));
+    r.solFloatOut.addAll(map.get(solFloatOut));
+    r.lastValIn.addAll(map.get(lastValIn));
+    r.lastValOut.addAll(map.get(lastValOut));
+    r.lastValFloatIn.addAll(map.get(lastValFloatIn));
+    r.lastValFloatOut.addAll(map.get(lastValFloatOut));
+    r.uniformRange.addAll(uniformRange);
+    r.uniformOut.addAll(map.get(uniformOut));
+    r.uniformFloatRange.addAll(uniformFloatRange);
+    r.uniformFloatOut.addAll(map.get(uniformFloatOut));
+    r.completeMarkers.addAll(map.get(completeMarkers));
+    return r;
   }
 
   /**

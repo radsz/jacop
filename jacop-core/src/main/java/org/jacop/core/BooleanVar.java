@@ -58,7 +58,7 @@ public class BooleanVar extends IntVar {
    * @param store It specifies the store in which boolean variable should be created.
    */
   public BooleanVar(final Store store) {
-    this(store, store.getVariableIdPrefix() + idNumber.incrementAndGet(), new BoundDomain(0, 1));
+    this(store, store.generatedVariableId(), new BoundDomain(0, 1));
   }
 
   /**
@@ -91,8 +91,7 @@ public class BooleanVar extends IntVar {
    * @param max it specifies the maximum value, which must be smaller or equal 1.
    */
   public BooleanVar(Store store, int min, int max) {
-    this(
-        store, store.getVariableIdPrefix() + idNumber.incrementAndGet(), new BoundDomain(min, max));
+    this(store, store.generatedVariableId(), new BoundDomain(min, max));
   }
 
   /**
@@ -102,7 +101,7 @@ public class BooleanVar extends IntVar {
    * @param dom It specifies the domain of the boolean variable.
    */
   public BooleanVar(Store store, BoundDomain dom) {
-    this(store, store.getVariableIdPrefix() + idNumber.incrementAndGet(), dom);
+    this(store, store.generatedVariableId(), dom);
   }
 
   /**

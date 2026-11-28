@@ -31,13 +31,13 @@
 package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -60,6 +60,12 @@ class MznlibGlobalsTest {
 
   private static final String DIR = "src/test/fz/mznlib/";
   private static final String SEPARATOR = "----------";
+
+  /**
+   * The models without solution: in hook_cost_regular_holes the costs of the four accepted words
+   * (-4, -2, 8, 10, by enumeration of a, b and e) all lie in holes of the cost's domain.
+   */
+  private static final Set<String> UNSATISFIABLE = Set.of("hook_cost_regular_holes");
 
   @ParameterizedTest
   @ValueSource(
@@ -130,7 +136,8 @@ class MznlibGlobalsTest {
     Set<String> nativeSolutions = solveAll(DIR + model + ".fzn");
     Set<String> decompSolutions = solveAll(DIR + model + "-decomp.fzn");
 
-    assertFalse(nativeSolutions.isEmpty(), model + " has no solutions");
+    assertEquals(
+        !UNSATISFIABLE.contains(model), !nativeSolutions.isEmpty(), model + " has no solutions");
     assertEquals(decompSolutions, nativeSolutions, model);
   }
 
@@ -165,21 +172,34 @@ class MznlibGlobalsTest {
     assertEquals(Set.of("1", "2", "3", "4", "5"), values, solutions.toString());
   }
 
+  /**
+   * Prints every solution of the model with -a and returns them. The run must end with exit status
+   * 0 and with ==========, the line that says the enumeration is complete, and print no solution
+   * twice.
+   */
   private static Set<String> solveAll(String fzn) {
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     PrintStream originalOut = System.out;
+    int status;
     try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8)) {
       System.setOut(capture);
-      new Fz2jacop().callMain(new String[] {"-a", fzn});
+      status = new Fz2jacop().callMain(new String[] {"-a", fzn});
     } finally {
       System.setOut(originalOut);
     }
     String result = buffer.toString(StandardCharsets.UTF_8);
-    Set<String> solutions = new TreeSet<>();
-    Arrays.stream(result.split(SEPARATOR))
-        .map(String::strip)
-        .filter(s -> !s.isEmpty() && !s.startsWith("=========="))
-        .forEach(solutions::add);
+    assertEquals(0, status, fzn + ":\n" + result);
+    List<String> printed =
+        Arrays.stream(result.split(SEPARATOR))
+            .map(String::strip)
+            .filter(s -> !s.isEmpty() && !s.startsWith("=====") && !s.startsWith("%"))
+            .toList();
+    // an enumeration ends with ==========, or =====UNSATISFIABLE===== when there is no solution
+    assertTrue(
+        result.strip().endsWith(printed.isEmpty() ? "=====UNSATISFIABLE=====" : "=========="),
+        fzn + " is not enumerated completely:\n" + result);
+    Set<String> solutions = new TreeSet<>(printed);
+    assertEquals(printed.size(), solutions.size(), fzn + " prints a solution twice:\n" + result);
     return solutions;
   }
 }

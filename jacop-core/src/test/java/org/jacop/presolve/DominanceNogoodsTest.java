@@ -415,4 +415,43 @@ class DominanceNogoodsTest {
     search(store, new IntVar[] {a1, a3, h, obj}, 1, () -> best[0] = Math.max(best[0], obj.value()));
     assertThat(best[0]).isEqualTo(11);
   }
+
+  @Test
+  void aPassedDeadlineStopsTheNogoodsOnOneVariable() {
+    // the clock was read only at every 64th variable, after the variables that are no candidate
+    // were skipped: past the deadline every candidate whose index is no multiple of 64 was still
+    // checked (a second past the time-out on element chains of 600 variables, whose pairs were
+    // checked 64 at a time). Here a is the only candidate among 20 wide variables
+    for (boolean late : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar p = new IntVar(store, "p", 0, 3000);
+      IntVar a = new IntVar(store, "a", 0, 1);
+      IntVar[] row = new IntVar[22];
+      int[] weights = new int[22];
+      row[0] = p;
+      weights[0] = -1;
+      row[1] = a;
+      weights[1] = 5;
+      for (int i = 2; i < row.length; i++) {
+        row[i] = new IntVar(store, "q" + i, 0, 100);
+        weights[i] = 1;
+      }
+      store.impose(new LinearInt(row, weights, "==", 0));
+      assertThat(store.consistency()).isTrue();
+      DominanceNogoods nogoods = new DominanceNogoods(store, p, false);
+      if (late) {
+        nogoods.setDeadline(System.nanoTime() - 1);
+      }
+      DominanceNogoods.Outcome o = nogoods.run();
+      if (late) {
+        assertThat(o.removed()).isZero();
+        assertThat(o.complete()).isFalse();
+        assertThat(a.getSize()).isEqualTo(2);
+      } else {
+        // a = 0 is dominated by a = 1 under maximisation
+        assertThat(o.removed()).isEqualTo(1);
+        assertThat(a.value()).isEqualTo(1);
+      }
+    }
+  }
 }

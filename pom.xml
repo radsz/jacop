@@ -82,6 +82,8 @@
         <checkstyle.config.location>resources/checkstyle.xml</checkstyle.config.location>
         <dependency.locations.enabled>false</dependency.locations.enabled>
         <maven.surefire.version>3.5.4</maven.surefire.version>
+        <!-- a failing test runs once more; -Dsurefire.rerunFailingTestsCount=0 shows every failure -->
+        <surefire.rerunFailingTestsCount>1</surefire.rerunFailingTestsCount>
         <maven.surefire.report.version>3.5.4</maven.surefire.report.version>
         <maven.javadoc.version>3.12.0</maven.javadoc.version>
         <maven.source.version>3.4.0</maven.source.version>
@@ -229,6 +231,7 @@ setup to run configuration. -->
                                 <presolve.dominance.trials>500</presolve.dominance.trials>
                                 <wakeup.trials>1000</wakeup.trials>
                                 <consistency.instances>50</consistency.instances>
+                                <symmetry.default.models>200</symmetry.default.models>
                                 <floats.fuzz.trials>100</floats.fuzz.trials>
                                 <floats.fuzz.opt.trials>3</floats.fuzz.opt.trials>
                                 <float.builtins.trials>200</float.builtins.trials>
@@ -237,6 +240,7 @@ setup to run configuration. -->
                                 <xorfuzz.trials>75</xorfuzz.trials>
                                 <symmetry.trials>150</symmetry.trials>
                                 <freesearch.every>3</freesearch.every>
+                                <defaults.instances>400</defaults.instances>
                             </systemPropertyVariables>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -465,6 +469,7 @@ setup to run configuration. -->
                                 <include>**/FunctionalTabuFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
+                                <include>**/DefaultSymmetryBruteForceTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
@@ -497,6 +502,7 @@ setup to run configuration. -->
                                 <include>**/GoalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
+                                <include>**/MinizincDefaultSettingsTest.java</include>
                                 <include>**/MinizincPortfolioTest.java</include>
                                 <include>**/PortfolioSettingsTest.java</include>
                                 <include>**/PortfolioOneParseTest.java</include>
@@ -575,6 +581,7 @@ setup to run configuration. -->
                                 <xorfuzz.trials>75</xorfuzz.trials>
                                 <symmetry.trials>150</symmetry.trials>
                                 <freesearch.every>3</freesearch.every>
+                                <defaults.instances>1000</defaults.instances>
                             </systemPropertyVariables>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -808,6 +815,7 @@ setup to run configuration. -->
                                 <include>**/FunctionalTabuFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
+                                <include>**/DefaultSymmetryBruteForceTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
@@ -841,6 +849,7 @@ setup to run configuration. -->
                                 <include>**/GoalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
+                                <include>**/MinizincDefaultSettingsTest.java</include>
                                 <include>**/MinizincPortfolioTest.java</include>
                                 <include>**/PortfolioSettingsTest.java</include>
                                 <include>**/PortfolioOneParseTest.java</include>
@@ -1125,6 +1134,7 @@ setup to run configuration. -->
                                 <include>**/FunctionalTabuFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
+                                <include>**/DefaultSymmetryBruteForceTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
@@ -1158,6 +1168,7 @@ setup to run configuration. -->
                                 <include>**/GoalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
+                                <include>**/MinizincDefaultSettingsTest.java</include>
                                 <include>**/MinizincPortfolioTest.java</include>
                                 <include>**/PortfolioSettingsTest.java</include>
                                 <include>**/PortfolioOneParseTest.java</include>
@@ -1439,10 +1450,12 @@ setup to run configuration. -->
                                 <include>**/FunctionalTabuFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
+                                <include>**/DefaultSymmetryBruteForceTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
+                                <include>**/MinizincDefaultSettingsTest.java</include>
                                 <include>**/MinizincPortfolioTest.java</include>
                                 <include>**/PortfolioSettingsTest.java</include>
                                 <include>**/PortfolioOneParseTest.java</include>
@@ -1892,7 +1905,7 @@ setup to run configuration. -->
                          Mockito's inline mock maker is loaded as an agent at start up, since the
                          JDK warns about (and will refuse) agents attached while running -->
                     <argLine>@{argLine} -Xss100m -javaagent:${org.mockito:mockito-core:jar}</argLine>
-                    <rerunFailingTestsCount>1</rerunFailingTestsCount>
+                    <rerunFailingTestsCount>${surefire.rerunFailingTestsCount}</rerunFailingTestsCount>
                     <includes>
                         <include>**/IntDomainTest.java</include>
                         <include>**/CdclSolverTest.java</include>

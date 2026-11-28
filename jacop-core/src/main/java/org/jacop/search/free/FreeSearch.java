@@ -207,6 +207,10 @@ public final class FreeSearch {
 
   private final List<Frame> stack = new ArrayList<>();
   private int stackSize;
+  // the frames at the bottom of the stack whose unprojected decisions skipUnprojected has marked:
+  // -a over one variable deepens the stack by a refuted value per solution, and marking it all at
+  // each solution took quadratic time
+  private int unprojectedMarked;
   private int rootLevel;
   private long deadline;
   // the end of the time limit on the clock of the search (virtual or wall-clock milliseconds)
@@ -852,6 +856,7 @@ public final class FreeSearch {
         return false;
       }
       stackSize--;
+      unprojectedMarked = Math.min(unprojectedMarked, stackSize);
       store.setLevel(f.level - 1);
     }
     return true;
@@ -870,12 +875,13 @@ public final class FreeSearch {
     // decisions outside the projection below projected ones (variables that no constraint
     // touches, branched on last): their other values would only repeat the solutions that the
     // projected decisions above them give, so they are not retried
-    for (int i = 0; i < stackSize; i++) {
+    for (int i = Math.min(unprojectedMarked, stackSize); i < stackSize; i++) {
       Frame f = stack.get(i);
       if (!f.projected) {
         f.right = true;
       }
     }
+    unprojectedMarked = stackSize;
   }
 
   /** Removes all decisions, back to the root level. */
@@ -885,6 +891,7 @@ public final class FreeSearch {
       store.removeLevel(f.level);
       store.setLevel(f.level - 1);
     }
+    unprojectedMarked = 0;
   }
 
   private Frame top() {

@@ -30,6 +30,7 @@
 
 package org.jacop.constraints.regular;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -447,8 +448,22 @@ public abstract class LayeredGraphConstraint extends Constraint
 
     int size;
 
+    // the store the constraint is imposed in, whose impose deadline stops the description
+    Store store;
+
     LayeredGraphDescription(int levels) {
       levelNodes = new int[levels + 1];
+    }
+
+    /**
+     * It throws {@link Store#failException} once the impose deadline of the store ({@link
+     * Store#setImposeDeadline(long)}) has passed: a large diagram takes seconds to describe and
+     * build, and the model being built under a time-out is then abandoned.
+     */
+    public void checkDeadline() {
+      if (store != null && store.imposeDeadlinePassed()) {
+        throw Store.failException;
+      }
     }
 
     /**
@@ -481,6 +496,9 @@ public abstract class LayeredGraphConstraint extends Constraint
       }
       if (4 * size + 4 > edges.length) {
         edges = Arrays.copyOf(edges, 2 * edges.length);
+      }
+      if ((size & 0xFFFF) == 0) {
+        checkDeadline();
       }
       edges[4 * size] = level;
       edges[4 * size + 1] = source;
@@ -1067,7 +1085,11 @@ public abstract class LayeredGraphConstraint extends Constraint
     final int inBits;
     // the domains of the levels the graph was built over and the rest of the key it is shared by
     private final IntDomain[] domains;
+    // the key without its first object, which is held weakly: BUILT_GRAPHS keeps the graphs by
+    // that object as a weak key, and a strong reference from a graph kept every shared graph and
+    // its arrays for the life of the JVM (24 MB more per run of 50 regular constraints in one JVM)
     private final Object[] key;
+    private final WeakReference<Object> firstKey;
     private LayeredGraphExplanation.Graph explanation;
     private final Map<Store, SearchScratch> scratches = new WeakHashMap<>();
     // the edges on a path last computed, over the domains they were computed over
@@ -1082,7 +1104,11 @@ public abstract class LayeredGraphConstraint extends Constraint
     BuiltGraph(LayeredGraphDescription description, IntDomain[] domains, Object[] key) {
       this.description = description;
       this.domains = domains;
-      this.key = key;
+      this.key = key.clone();
+      this.firstKey = new WeakReference<>(key.length > 0 ? key[0] : null);
+      if (key.length > 0) {
+        this.key[0] = null;
+      }
       levels = domains.length;
       final int[] edge = description.edges;
       final int described = description.size;
@@ -1160,6 +1186,7 @@ public abstract class LayeredGraphConstraint extends Constraint
       }
       keptStart[levels] = keptEdges;
 
+      description.checkDeadline();
       // Slots: the values labelling edges of each level.
       levelSlotStart = new int[levels + 1];
       int[][] levelValues = new int[levels][];
@@ -1187,6 +1214,7 @@ public abstract class LayeredGraphConstraint extends Constraint
         Arrays.fill(slotLevel, levelSlotStart[level], levelSlotStart[level + 1], level);
       }
 
+      description.checkDeadline();
       // Kept edges as global source, slot and target.
       edges = keptEdges;
       int[] edgeSource = new int[edges];
@@ -1202,6 +1230,7 @@ public abstract class LayeredGraphConstraint extends Constraint
         }
       }
 
+      description.checkDeadline();
       // Count edges per node and per slot.
       int[] outCount = new int[nodes + 1];
       int[] inCount = new int[nodes + 1];
@@ -1287,7 +1316,10 @@ public abstract class LayeredGraphConstraint extends Constraint
       if (otherKey.length != key.length || otherDomains.length != domains.length) {
         return false;
       }
-      for (int i = 0; i < key.length; i++) {
+      if (key.length > 0 && otherKey[0] != firstKey.get()) {
+        return false;
+      }
+      for (int i = 1; i < key.length; i++) {
         if (otherKey[i] != key[i]) {
           return false;
         }
@@ -1346,8 +1378,14 @@ public abstract class LayeredGraphConstraint extends Constraint
     BuiltGraph built = key == null ? null : sharedGraph(key, domains);
     if (built == null) {
       LayeredGraphDescription localDescription = new LayeredGraphDescription(levels);
-      describeGraph(localDescription);
-      built = new BuiltGraph(localDescription, domains, key == null ? new Object[0] : key);
+      localDescription.store = store;
+      try {
+        describeGraph(localDescription);
+        built = new BuiltGraph(localDescription, domains, key == null ? new Object[0] : key);
+      } finally {
+        // the graph, which other stores may share, keeps its description but not the store
+        localDescription.store = null;
+      }
       if (key != null) {
         synchronized (BUILT_GRAPHS) {
           BUILT_GRAPHS.computeIfAbsent(key[0], k -> new ArrayList<>(1)).add(built);

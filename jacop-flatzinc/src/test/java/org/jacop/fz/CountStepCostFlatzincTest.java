@@ -207,4 +207,22 @@ class CountStepCostFlatzincTest {
     assertTrue(out.contains("==========") || out.contains("UNSATISFIABLE"), out);
     return last;
   }
+
+  /**
+   * An if-then-else whose branches are variables (fzn_if_then_else_var_int, an XCSP3 if in an
+   * objective) is no step cost: its branches were read as integers, and the model ended with the
+   * error that x has no value instead of an answer.
+   */
+  @Test
+  void anIfThenElseOverVariablesIsNoStepCost() throws IOException {
+    String model =
+        """
+        var 1..2: x:: output_var;
+        var bool: b;
+        var 0..2: obj:: output_var;
+        constraint jacop_if_then_else_int([b,true],[x,0],obj);
+        solve maximize obj;
+        """;
+    assertEquals("2", optimum(run(model, true)));
+  }
 }
