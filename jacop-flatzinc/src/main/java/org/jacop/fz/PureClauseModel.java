@@ -98,6 +98,8 @@ final class PureClauseModel {
 
   int lexPairs;
 
+  int cardinalityRows;
+
   /** The solver, with the clauses added. */
   final CdclSolver solver = new CdclSolver();
 
@@ -136,7 +138,7 @@ final class PureClauseModel {
     if (!onlyClauses(store, ignored)) {
       return null;
     }
-    shapes.encodeLex();
+    shapes.encode();
     Map<IntVar, Integer> index = new IdentityHashMap<>();
     List<IntVar> order = new ArrayList<>();
     for (IntVar[][] clause : clauses) {
@@ -175,6 +177,7 @@ final class PureClauseModel {
     PureClauseModel model = new PureClauseModel(vars);
     model.shapedConstraints = shapes.shaped;
     model.lexPairs = shapes.lexPairs.size();
+    model.cardinalityRows = shapes.cardinalities.size();
     model.solver.ensureVars(n);
     int[] lits = new int[16];
     List<int[]> added = new ArrayList<>(clauses.size());
@@ -313,9 +316,13 @@ final class PureClauseModel {
     if (pairs != null) {
       return shaped.lexClauses(pairs);
     }
-    List<IntVar[][]> cs = clausesOf(c);
+    if (shaped.splits.definitions.contains(c)) {
+      return true;
+    }
+    LinearForm flat = shaped.splits.rows.get(c);
+    List<IntVar[][]> cs = flat != null ? clausesOf(flat) : clausesOf(c);
     if (cs == null) {
-      return false;
+      return shaped.cardinality(flat != null ? flat : LinearForms.of(c));
     }
     shaped.out.addAll(cs);
     shaped.shaped++;
@@ -332,6 +339,11 @@ final class PureClauseModel {
     // the ignored constraints, with the ones that count as clauses when the model is of clauses
     Set<Constraint> ignored;
     int shaped;
+    // the cardinality rows taken as the clauses of their counters, and their auxiliary variables
+    final List<CardinalityClauses> cardinalities = new ArrayList<>();
+    long auxiliaries;
+    // the split linear constraints read back as rows
+    SplitSums splits;
 
     Shapes(Store store, Map<Constraint, List<IntVar[][]>> lex, List<IntVar[][]> out) {
       this.store = store;
@@ -348,6 +360,7 @@ final class PureClauseModel {
         Map<Constraint, List<IntVar[][]>> lex) {
       Shapes shapes = new Shapes(store, lex, new ArrayList<>(clauses));
       shapes.ignored = ignored;
+      shapes.splits = SplitSums.of(store);
       if (onlyClauses(store, ignored, shapes)) {
         shapes.ignored = Collections.newSetFromMap(new IdentityHashMap<>());
         shapes.ignored.addAll(ignored);
@@ -380,6 +393,26 @@ final class PureClauseModel {
     }
 
     // the clauses of the lex pairs, once the variables of the store are no longer read
+    // a cardinality row that is no few clauses, taken as the clauses of its counter while the
+    // auxiliary variables of all counters stay within CardinalityClauses.MAX_AUXILIARIES
+    boolean cardinality(LinearForm f) {
+      CardinalityClauses row = CardinalityClauses.of(f);
+      if (row == null || auxiliaries + row.auxiliaries() > CardinalityClauses.MAX_AUXILIARIES) {
+        return false;
+      }
+      auxiliaries += row.auxiliaries();
+      cardinalities.add(row);
+      return true;
+    }
+
+    // the clauses of the lex pairs and of the counters, once the model is of clauses
+    void encode() {
+      encodeLex();
+      for (CardinalityClauses row : cardinalities) {
+        row.encode(store, out);
+      }
+    }
+
     void encodeLex() {
       for (IntVar[][] pair : lexPairs) {
         IntVar[] x = pair[0];
@@ -425,8 +458,12 @@ final class PureClauseModel {
   // vertex), is a CNF: JaSAT eliminates 6,988 of its 7,089 variables and refutes it in 4 s, where
   // lazy clause generation took 31 s
   static List<IntVar[][]> clausesOf(Constraint c) {
-    LinearForm f = CLAUSE_SHAPED <= 0 ? null : LinearForms.of(c);
-    if (f == null || f.relation() == LinearForm.NE) {
+    return CLAUSE_SHAPED <= 0 ? null : clausesOf(LinearForms.of(c));
+  }
+
+  // the clauses of the linear relation f, or null, as clausesOf(Constraint)
+  private static List<IntVar[][]> clausesOf(LinearForm f) {
+    if (CLAUSE_SHAPED <= 0 || f == null || f.relation() == LinearForm.NE) {
       return null;
     }
     List<IntVar> vars = new ArrayList<>();
@@ -523,6 +560,10 @@ final class PureClauseModel {
     for (int i = 0; i < vars.length; i++) {
       int v = solver.modelValue(i + 1) ? 1 : 0;
       vars[i].domain.in(store.level, vars[i], v, v);
+    }
+    // the block sums of split rows follow from their blocks
+    if (!store.consistency()) {
+      throw new IllegalStateException("the store rejects the model of the clauses");
     }
     for (Var v : store.variablesHashMap.values()) {
       if (v instanceof IntVar x && !x.singleton()) {

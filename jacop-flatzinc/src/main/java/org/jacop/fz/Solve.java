@@ -263,6 +263,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private int pureShaped;
 
   private int pureLexPairs;
+
+  private int pureCardinalities;
   int lcgStatus;
 
   // the linear relaxation (--lp), or null
@@ -4430,6 +4432,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     pureSat = cnf.solver;
     pureShaped = cnf.shapedConstraints;
     pureLexPairs = cnf.lexPairs;
+    pureCardinalities = cnf.cardinalityRows;
     pureComplementFixed = cnf.complementFixed != 0;
     if (options.debug()) {
       FzConsole.println("% pure clause model: " + cnf.numVars() + " variables solved by JaSAT");
@@ -7149,6 +7152,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         IO.println("%%%mzn-stat: pureClauseModel=true");
         IO.println("%%%mzn-stat: pureClauseShaped=" + pureShaped);
         IO.println("%%%mzn-stat: pureClauseLexPairs=" + pureLexPairs);
+        IO.println("%%%mzn-stat: pureClauseCardinalities=" + pureCardinalities);
         if (pureComplementFixed) {
           IO.println("%%%mzn-stat: complementSymmetry=true");
         }
