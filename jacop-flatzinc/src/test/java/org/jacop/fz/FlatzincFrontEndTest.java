@@ -11898,4 +11898,64 @@ class FlatzincFrontEndTest {
       assertTrue(out.contains("v0 = 1;\nv1 = -3;\n----------"), lcg + "\n" + out);
     }
   }
+
+  /**
+   * The successors of the symmetric tour below reach their costs through t = s + 1, and int_le(t1,
+   * t3) constrains them through t. The TSP edge elimination checked that each s occurs only in the
+   * circuit and in one more constraint (here the equation), but not that t occurs only there and in
+   * its element, so it took the tour as pure and removed the arcs of the optimum 3 under the side
+   * constraint: the solver proved 5 optimal.
+   */
+  @Test
+  void tspEdgeEliminationSeesASideConstraintOnAnAliasOfASuccessor() throws IOException {
+    String model =
+        """
+        var {1,2,3,4,5}: s0;
+        var {0,2,3,4}: s1;
+        var {0,1,3,4,5}: s2;
+        var {0,1,2,4,5}: s3;
+        var {0,1,2,3,5}: s4;
+        var {0,2,3,4}: s5;
+        array [1..6] of var int: succ:: output_array([0..5]) = [s0,s1,s2,s3,s4,s5];
+        var 0..3: d0;
+        var 1..6: t0:: is_defined_var;
+        var 0..3: d1;
+        var 1..6: t1:: is_defined_var;
+        var 0..3: d2;
+        var 1..6: t2:: is_defined_var;
+        var 0..3: d3;
+        var 1..6: t3:: is_defined_var;
+        var 0..3: d4;
+        var 1..6: t4:: is_defined_var;
+        var 0..3: d5;
+        var 1..6: t5:: is_defined_var;
+        var -5..23: len:: output_var;
+        constraint int_lin_eq([1,-1],[t0,s0],1):: defines_var(t0);
+        constraint array_int_element(t0,[0,0,3,0,2,1],d0);
+        constraint int_lin_eq([1,-1],[t1,s1],1):: defines_var(t1);
+        constraint array_int_element(t1,[0,0,1,0,0,3],d1);
+        constraint int_lin_eq([1,-1],[t2,s2],1):: defines_var(t2);
+        constraint array_int_element(t2,[3,1,0,2,0,0],d2);
+        constraint int_lin_eq([1,-1],[t3,s3],1):: defines_var(t3);
+        constraint array_int_element(t3,[0,0,2,0,3,3],d3);
+        constraint int_lin_eq([1,-1],[t4,s4],1):: defines_var(t4);
+        constraint array_int_element(t4,[2,0,0,3,0,3],d4);
+        constraint int_lin_eq([1,-1],[t5,s5],1):: defines_var(t5);
+        constraint array_int_element(t5,[1,3,0,3,3,0],d5);
+        constraint jacop_circuit_offset(succ,0);
+        constraint int_lin_eq([1,1,1,1,1,1,-1],[d0,d1,d2,d3,d4,d5,len],0);
+        constraint int_le(t1,t3);
+        solve minimize len;
+        """;
+    for (String kOpt : new String[] {"false", "true"}) {
+      System.setProperty("org.jacop.fz.tspKOpt", kOpt);
+      try {
+        String out = run(model, "--lcg", "off")[0];
+        assertTrue(out.contains("=========="), kOpt + "\n" + out);
+        assertTrue(out.startsWith("len = 3;", out.lastIndexOf("len = ")), kOpt + "\n" + out);
+      } finally {
+        System.clearProperty("org.jacop.fz.tspKOpt");
+      }
+    }
+  }
 }

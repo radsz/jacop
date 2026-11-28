@@ -803,6 +803,12 @@ public class GiantTourDetector implements ParserTreeConstants {
           || aliased.contains(x[v])) {
         return;
       }
+      // an element read through q = x[v] - c (the equation is the second occurrence of x[v]): q
+      // must occur only in that equation and in its element, as a constraint on q is one on x[v]
+      IntVar q = aliasOf.get(x[v]);
+      if (q != null && (occurrences.getOrDefault(q, 0) != 2 || aliased.contains(q))) {
+        return;
+      }
       element[v] = es.get(0);
       cost[v] = element[v].value;
       if (cost[v] == obj
