@@ -457,7 +457,12 @@ public final class CoreSearch {
 
   /**
    * The number of constraints on x that are not used yet, apart from the linear relaxation, which
-   * only relaxes the others.
+   * only relaxes the others, and the redundant constraints that the front end adds with a degree
+   * weight of 0 ({@link Constraint#setDegreeWeight}), which are implied by the others. A redundant
+   * constraint on a sum would keep the sum as a term: on the MiniZinc Challenge 2024
+   * train-scheduling trains05, objective = delay_obj + skip_obj is a row of unit coefficients, so
+   * DifferenceCycles took both sums as offsets, the cores worked on 2 terms instead of 60, found 1
+   * at-most-one group instead of 12, and the optimum 304 was not proved in 300 s instead of 4 s.
    */
   private static int otherConstraints(IntVar x, Set<Constraint> used) {
     IntDomain dom = x.dom();
@@ -468,7 +473,9 @@ public final class CoreSearch {
     for (int e = 0; e < dom.modelConstraints.length; e++) {
       Constraint[] list = dom.modelConstraints[e];
       for (int k = 0; list != null && k < dom.modelConstraintsToEvaluate[e]; k++) {
-        if (!used.contains(list[k]) && !(list[k] instanceof LinearRelaxation)) {
+        if (!used.contains(list[k])
+            && !(list[k] instanceof LinearRelaxation)
+            && list[k].degreeWeight() > 0) {
           on.add(list[k]);
         }
       }

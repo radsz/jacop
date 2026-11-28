@@ -6324,6 +6324,38 @@ class LcgSolverTest {
   }
 
   @Test
+  void coreGuidedSearchReadsThroughPartialSumsUnderRedundantConstraints() {
+    // obj = s1 + s2 as in the test above, and a redundant constraint on the sums that the front
+    // end adds with a degree weight of 0 (DifferenceCycles takes s1 and s2 as offsets of the row
+    // of obj): the terms are still the x's. Counted as a constraint of the model, it kept the sums
+    // as the terms, and MiniZinc Challenge 2024 trains05 lost its 4 s proof
+    for (int weight : new int[] {0, 1}) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[4];
+      for (int i = 0; i < 4; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 3);
+      }
+      IntVar s1 = new IntVar(store, "s1", 0, 6);
+      IntVar s2 = new IntVar(store, "s2", 0, 6);
+      IntVar obj = new IntVar(store, "obj", 0, 12);
+      store.impose(new LinearInt(new IntVar[] {x[0], x[1], s1}, new int[] {1, 1, -1}, "==", 0));
+      store.impose(new LinearInt(new IntVar[] {x[2], x[3], s2}, new int[] {1, 1, -1}, "==", 0));
+      store.impose(new LinearInt(new IntVar[] {s1, s2, obj}, new int[] {1, 1, -1}, "==", 0));
+      store.impose(new LinearInt(x, new int[] {1, 1, 1, 1}, ">=", 2));
+      Constraint implied = new LinearInt(new IntVar[] {s1, s2, obj}, new int[] {1, 1, -1}, "<=", 0);
+      implied.setDegreeWeight(weight);
+      store.impose(implied);
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      solver.setCoreSearch(1, 1_000_000, 100_000);
+      assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+      assertThat(solver.value(obj)).isEqualTo(2);
+      // a constraint of the model on the sums keeps them as the terms
+      assertThat(solver.coreSearch().termCount()).isEqualTo(weight == 0 ? 4 : 2);
+    }
+  }
+
+  @Test
   void coreGuidedSearchReadsThroughPartialSums() {
     // obj = s1 + s2 with s1 = 2 * x0 + x1 and s2 = x2 + 3 * x3, as --lcg splits a long sum into
     // blocks; the terms of the core-guided phase are the x's, not the block sums
