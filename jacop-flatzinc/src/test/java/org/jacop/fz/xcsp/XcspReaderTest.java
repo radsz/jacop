@@ -798,4 +798,23 @@ class XcspReaderTest {
     out = competitionOutput(values);
     assertTrue(out.contains("o 1\ns OPTIMUM FOUND"), out);
   }
+
+  /**
+   * Both branches of an integer if are evaluated, as the XCSP3 solution checker evaluates an
+   * intension (a division by zero in either branch rejects the tuple): a condition known when the
+   * intension was read dropped the other branch, so x[0] = 0 was accepted after eq(x[1],1) and
+   * rejected without it.
+   */
+  @Test
+  void anIfWithAKnownConditionKeepsTheOtherBranchDefined() throws IOException {
+    String ite = "<intension> eq(if(ge(x[1],1),1,div(x[0],x[0])),1) </intension>";
+    check(vars(2, 0, 1), ite, 2, 0, 1, t -> t[0] != 0);
+    check(
+        vars(2, 0, 1),
+        "<intension> eq(x[1],1) </intension>" + ite,
+        2,
+        0,
+        1,
+        t -> t[0] != 0 && t[1] == 1);
+  }
 }

@@ -287,7 +287,11 @@ final class ExprCompiler {
           arity(e, 3);
           Lit c = lit(a[0]);
           if (c.isConstant()) {
-            return result(lin(c.isTrue() ? a[1] : a[2]), target);
+            Lin taken = lin(c.isTrue() ? a[1] : a[2]);
+            // both branches are evaluated (as when the condition is open): a partial operation
+            // of the other branch still rejects the values where it is undefined
+            lin(c.isTrue() ? a[2] : a[1]);
+            return result(taken, target);
           }
           Lin x = lin(a[1]);
           Lin y = lin(a[2]);
