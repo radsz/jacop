@@ -761,4 +761,20 @@ class XcspReaderTest {
     out = competitionOutput(unary);
     assertTrue(out.contains("s SATISFIABLE") && out.contains("<values> b "), out);
   }
+
+  /**
+   * The except of an allDifferent over lists holds tuples: it was first read as a list of values,
+   * and the instance was rejected as unsupported.
+   */
+  @Test
+  void allDifferentListsExceptTuples() throws IOException {
+    check(
+        vars(4, 0, 1),
+        "<allDifferent><list> x[0] x[1] </list><list> x[2] x[3] </list>"
+            + "<except> (0,0)(1,0) </except></allDifferent>",
+        4,
+        0,
+        1,
+        t -> t[0] != t[2] || t[1] != t[3] || t[0] == 0 && t[1] == 0 || t[0] == 1 && t[1] == 0);
+  }
 }

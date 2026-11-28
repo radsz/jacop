@@ -1217,9 +1217,10 @@ public final class XcspReader {
   }
 
   private void allDifferent(Elem c, List<Expr> args, int rest) {
-    List<Expr> except = list(c, "except", args, rest);
     List<Elem> lists = c.all("list");
     Elem matrix = c.child("matrix");
+    // the except of several lists holds tuples, read below
+    List<Expr> except = lists.size() > 1 ? null : list(c, "except", args, rest);
     if (matrix != null) {
       List<List<Expr>> rows = matrix(matrix, args, rest);
       for (List<Expr> row : rows) {
@@ -1245,7 +1246,7 @@ public final class XcspReader {
         cols = row.size();
         flat.addAll(row);
       }
-      if (except == null || except.isEmpty()) {
+      if (c.child("except") == null || c.child("except").trimmed().isEmpty()) {
         m.constraint("jacop_all_different_lists(" + array(flat) + "," + lists.size() + ")");
       } else {
         String e = c.child("except").trimmed();
