@@ -3660,6 +3660,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       scheduled = functionalHint(c, worker);
       tabuHint = scheduled;
     }
+    if (options.timeOutPassed()) {
+      // the probes and hints above took the time: setting up the solver for a search that stops at
+      // once took seconds more on large models (the clauses of its graphs, LNS, the core-guided
+      // phase); the run ends as a time-out with the solutions found so far
+      label.timeOutOccured = true;
+      return numberSolutions > 0;
+    }
     lcg = new LcgSolver(store);
     lcg.setSeed(options.getRandomSeed());
     lcg.setUnusedVariables(dictionary.unusedVariables);

@@ -11220,4 +11220,50 @@ class FlatzincFrontEndTest {
     assertTrue(out.contains("=====UNKNOWN=====\n%% =====TIME-OUT====="), out);
     assertTrue(millis < 5000, millis + " ms");
   }
+
+  @Test
+  void noLcgSolverIsSetUpOnceTheTimeOutHasPassed() throws IOException, ParseException {
+    // the probes and hints before LCG can take the time-out; the set-up of the solver after them
+    // (the clauses of its graphs, LNS, the core-guided phase) then took seconds more on large
+    // models, for a search that stops at once
+    Path fzn = tmp.resolve("lcglate.fzn");
+    Files.writeString(
+        fzn,
+        "var 0..9: x :: output_var;\nvar 0..9: y :: output_var;\n"
+            + "constraint int_lin_le([1,1],[x,y],12);\nsolve maximize x;\n",
+        StandardCharsets.UTF_8);
+    for (boolean late : new boolean[] {false, true}) {
+      // the time-out passes for the check before the solver is set up, and only there
+      Options opt =
+          new Options(new String[] {"-t", "60000", "-f", "--lcg", "on", fzn.toString()}) {
+            @Override
+            public boolean timeOutPassed() {
+              return late
+                  && StackWalker.getInstance()
+                      .walk(f -> f.skip(1).findFirst())
+                      .map(f -> f.getMethodName().equals("executeLcgSearch"))
+                      .orElse(false);
+            }
+          };
+      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+      PrintStream originalOut = System.out;
+      try (PrintStream capture = new PrintStream(bytes, true, StandardCharsets.UTF_8);
+          java.io.FileInputStream input = new java.io.FileInputStream(fzn.toFile())) {
+        System.setOut(capture);
+        Parser parser = new Parser(input);
+        parser.setOptions(opt);
+        parser.model();
+      } finally {
+        System.setOut(originalOut);
+      }
+      String out = bytes.toString(StandardCharsets.UTF_8).replace("\r\n", "\n");
+      if (late) {
+        assertTrue(out.contains("%% =====TIME-OUT====="), out);
+        assertFalse(out.contains("=========="), out);
+      } else {
+        assertTrue(out.contains("x = 9;\ny = "), out);
+        assertTrue(out.contains("=========="), out);
+      }
+    }
+  }
 }
