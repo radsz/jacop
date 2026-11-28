@@ -154,6 +154,14 @@ public final class LocalSearch {
   private final int[] hintValues;
   private final long stallSteps;
   private final long patienceMillis;
+
+  // the scheduling search also stops once it has gone without a better schedule for this many
+  // times as long as it took to find the last one, but not sooner than patienceMinimumMillis
+  private final double patienceFactor;
+
+  private final long patienceMinimumMillis;
+
+  private long solveStarted;
   private Collection<? extends Constraint> extra;
   private final boolean jump;
   private final boolean permutations;
@@ -326,6 +334,8 @@ public final class LocalSearch {
       definedVars.addAll(b.defined);
     }
     patienceMillis = b.patienceMillis;
+    patienceFactor = b.patienceFactor;
+    patienceMinimumMillis = b.patienceMinimumMillis;
     substituted = Collections.newSetFromMap(new IdentityHashMap<>());
     substituted.addAll(b.substituted);
     extra = IndexedConstraints.of(b.extra);
@@ -382,7 +392,8 @@ public final class LocalSearch {
    * @return how the search ended.
    */
   public Status solve() {
-    deadline = timeLimitMillis > 0 ? System.currentTimeMillis() + timeLimitMillis : Long.MAX_VALUE;
+    solveStarted = System.currentTimeMillis();
+    deadline = timeLimitMillis > 0 ? solveStarted + timeLimitMillis : Long.MAX_VALUE;
     if ((scheduleOnly
             && (scheduling == 0
                 || cost == null
@@ -1550,9 +1561,7 @@ public final class LocalSearch {
             if ((++calls & 31) != 0) {
               return false;
             }
-            return timeUp()
-                || (patienceMillis > 0
-                    && System.currentTimeMillis() - lastProgress > patienceMillis);
+            return timeUp() || scheduleStalled(lastProgress);
           }
         };
     boolean done = ds.run(listener);
@@ -1635,9 +1644,7 @@ public final class LocalSearch {
             if ((++calls & 15) != 0) {
               return false;
             }
-            return timeUp()
-                || (patienceMillis > 0
-                    && System.currentTimeMillis() - lastProgress > patienceMillis);
+            return timeUp() || scheduleStalled(lastProgress);
           }
         };
     boolean done = fs.run(listener);
@@ -3948,8 +3955,18 @@ public final class LocalSearch {
     }
     if (cost != null) {
       tightenBound();
+      stopAtLowerBound();
     }
     return true;
+  }
+
+  // a solution whose cost is the least value of the cost variable at the root, where a relaxation
+  // may have bounded it already, cannot be improved: the search after local search proves it
+  // (rcpsp J30 under -f ran the scheduling search alone for 5 s with the optimum found at once)
+  private void stopAtLowerBound() {
+    if (solutionCost <= cost.min()) {
+      stopRequested = true;
+    }
   }
 
   /**
@@ -4154,6 +4171,21 @@ public final class LocalSearch {
     }
   }
 
+  // whether the scheduling search has gone without a better schedule for its patience: the fixed
+  // patience, or with a factor that much times the time to the last better schedule, at least the
+  // minimum (a project schedule whose best schedule came at once need not wait 5 s for another)
+  private boolean scheduleStalled(long lastProgress) {
+    if (patienceMillis <= 0) {
+      return false;
+    }
+    long wait = patienceMillis;
+    if (patienceFactor > 0) {
+      long found = lastProgress - solveStarted;
+      wait = Math.min(wait, Math.max(patienceMinimumMillis, (long) (patienceFactor * found)));
+    }
+    return System.currentTimeMillis() - lastProgress > wait;
+  }
+
   private boolean expired() {
     return stopRequested || System.currentTimeMillis() >= deadline;
   }
@@ -4208,6 +4240,10 @@ public final class LocalSearch {
     private int[] hintValues;
     private long stallSteps = 20_000;
     private long patienceMillis;
+
+    private double patienceFactor;
+
+    private long patienceMinimumMillis;
     private Collection<? extends Var> defined;
     private Collection<? extends IntVar> substituted = List.of();
     private Collection<? extends Constraint> extra;
@@ -4468,6 +4504,21 @@ public final class LocalSearch {
      */
     public Builder patience(Duration patience) {
       this.patienceMillis = patience.toMillis();
+      return this;
+    }
+
+    /**
+     * Stops the scheduling search sooner than the patience once it has gone without a better
+     * schedule for factor times as long as it took to find the last one, but not before minimum.
+     *
+     * @param factor the multiple of the time to the last better schedule, or zero for the patience
+     *     alone.
+     * @param minimum the least time the scheduling search waits for a better schedule.
+     * @return this builder.
+     */
+    public Builder relativePatience(double factor, Duration minimum) {
+      this.patienceFactor = factor;
+      this.patienceMinimumMillis = minimum.toMillis();
       return this;
     }
 

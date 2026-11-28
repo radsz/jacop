@@ -48,6 +48,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Var;
 import org.jacop.fz.ASTConstElem;
 import org.jacop.fz.ASTScalarFlatExpr;
+import org.jacop.fz.ASTSolveKind;
 import org.jacop.fz.FzConsole;
 import org.jacop.fz.Options;
 import org.jacop.fz.ParserTreeConstants;
@@ -339,16 +340,7 @@ public class ZeroSumDetector implements ParserTreeConstants {
         }
       }
       replaced.add(d.node);
-      if (kept.contains(d.s)
-          && (support.options.presolve() != Options.Presolve.OFF
-              || support.options.getAll()
-              || support.options.getNumberSolutions() > 1
-              || support.dictionary.isDeclaredEqual(d.s)
-              || support.dictionary.isAliasTarget(d.s))) {
-        // presolve may eliminate terms; the sum keeps the value of s right. A variable declared
-        // equal to s, or an alias of it, is printed from s, which must keep its value. Searched
-        // for several solutions, s must be a solver variable: the solutions are told apart by the
-        // values of the printed variables, which a value given only when printing does not reach
+      if (keepsSum(d, astTree)) {
         support.pose(groundSum(d));
       } else {
         // s is not constrained otherwise: its value follows from the terms when a solution is
@@ -373,6 +365,42 @@ public class ZeroSumDetector implements ParserTreeConstants {
   }
 
   // the clause not b \/ (x = v), on x itself when it is 0/1, on the literal of x = v otherwise
+  /**
+   * Whether the sum defining an output variable s stays posted. Presolve may eliminate terms; the
+   * sum keeps the value of s right. A variable declared equal to s, or an alias of it, is printed
+   * from s, which must keep its value. A satisfaction problem searched for several solutions needs
+   * s as a solver variable: the solutions are told apart by the values of the printed variables,
+   * which a value given only when printing does not reach. An optimisation problem printing its
+   * improving solutions does not: each has a better objective than the last.
+   */
+  private boolean keepsSum(Definition d, SimpleNode astTree) {
+    if (!kept.contains(d.s)) {
+      return false;
+    }
+    boolean several = support.options.getAll() || support.options.getNumberSolutions() > 1;
+    return support.options.presolve() != Options.Presolve.OFF
+        || several && satisfaction(astTree)
+        || support.dictionary.isDeclaredEqual(d.s)
+        || support.dictionary.isAliasTarget(d.s);
+  }
+
+  private Boolean satisfaction;
+
+  private boolean satisfaction(SimpleNode astTree) {
+    if (satisfaction == null) {
+      satisfaction = true;
+      for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
+        SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
+        if (node.getId() == JJTMODELEND && node.jjtGetNumChildren() > 0) {
+          SimpleNode item = (SimpleNode) node.jjtGetChild(0);
+          SimpleNode last = (SimpleNode) item.jjtGetChild(item.jjtGetNumChildren() - 1);
+          satisfaction = !(last instanceof ASTSolveKind kind) || "satisfy".equals(kind.getKind());
+        }
+      }
+    }
+    return satisfaction;
+  }
+
   private void implication(IntVar b, IntVar x, int v) {
     if (x.min() >= 0 && x.max() <= 1) {
       if (v == 1) {

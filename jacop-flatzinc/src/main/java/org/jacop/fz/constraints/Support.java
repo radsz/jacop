@@ -33,6 +33,7 @@ package org.jacop.fz.constraints;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -792,6 +793,9 @@ public class Support implements ParserTreeConstants {
             dictionary.addHalfDefinedVar(v);
           } else {
             dictionary.addDefinedVar(v);
+            if (options != null && options.getAll()) {
+              dictionary.addDefinition(v, argumentVariables(constraintWithAnnotations, v));
+            }
           }
         }
       } else if ("priority".equals(ann.getAnnId())) {
@@ -800,6 +804,28 @@ public class Support implements ParserTreeConstants {
 
         constraintPriority = getAnnInt(expr);
       }
+    }
+  }
+
+  // the variables of the arguments of a constraint but the given one
+  private Var[] argumentVariables(SimpleNode constraintWithAnnotations, Var defined) {
+    List<Var> vars = new ArrayList<>();
+    collectVariables((SimpleNode) constraintWithAnnotations.jjtGetChild(0), vars);
+    vars.removeIf(x -> x == defined);
+    return vars.toArray(new Var[0]);
+  }
+
+  private void collectVariables(SimpleNode node, List<Var> vars) {
+    if (node instanceof ASTScalarFlatExpr e && (e.getType() == 2 || e.getType() == 3)) {
+      Var[] named = dictionary.namedVariables(e.getIdent());
+      if (e.getType() == 3 && e.getInt() >= 0 && e.getInt() < named.length) {
+        vars.add(named[e.getInt()]);
+      } else {
+        vars.addAll(Arrays.asList(named));
+      }
+    }
+    for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+      collectVariables((SimpleNode) node.jjtGetChild(i), vars);
     }
   }
 
@@ -1168,12 +1194,31 @@ public class Support implements ParserTreeConstants {
       }
     }
 
-    for (Constraint c : delayedConstraints) {
-      store.impose(c);
-      if (options.debug()) {
-        String s = "% " + c;
-        FzConsole.println(s.replace("\n", "\n% "));
+    // the time-out stops the imposition of the delayed constraints between them and within one
+    // whose impose takes long: a regular constraint over 10,000 positions took 7 s to build its
+    // graph
+    boolean timed = options != null && options.getTimeOut() > 0;
+    if (timed) {
+      store.setImposeDeadline(System.currentTimeMillis() + options.getRemainingTimeOut());
+    }
+    try {
+      for (Constraint c : delayedConstraints) {
+        if (timed && options.timeOutPassed()) {
+          throw new ModelTimeOut();
+        }
+        store.impose(c);
+        if (options.debug()) {
+          String s = "% " + c;
+          FzConsole.println(s.replace("\n", "\n% "));
+        }
       }
+    } catch (FailException e) {
+      if (store.imposeDeadlinePassed()) {
+        throw new ModelTimeOut();
+      }
+      throw e;
+    } finally {
+      store.setImposeDeadline(0);
     }
     poseAlldistinctConstraints();
     implied(this::poseOverlappingAlldiffs);
@@ -2051,6 +2096,19 @@ public class Support implements ParserTreeConstants {
       z.domain.in(store.level, z, values);
     }
     pose(new XmulCeqZ(x, c, z));
+  }
+
+  /**
+   * Forgets the reified pairs x = v whose Boolean has no constraint left, because a detector
+   * replaced the constraints that defined it (an internal variable of a tabulated group). A
+   * detector that reads the reified literal of x = v would otherwise take a free variable for it.
+   *
+   * @param dropped the variables the detectors left without constraints
+   */
+  public void forgetDroppedReifications(Collection<? extends Var> dropped) {
+    if (!dropped.isEmpty() && !reif.cs.isEmpty()) {
+      reif.forget(new HashSet<>(dropped));
+    }
   }
 
   /**

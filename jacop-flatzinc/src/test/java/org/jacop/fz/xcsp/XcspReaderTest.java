@@ -729,4 +729,73 @@ class XcspReaderTest {
     String out = competitionOutput(xml);
     assertTrue(out.contains("s SATISFIABLE") && out.contains("<values> 0 </values>"), out);
   }
+
+  /**
+   * The tuples of a table over symbolic variables hold symbols: the letters were dropped as
+   * separators, so supports became a table without rows (unsatisfiable) and conflicts were
+   * entailed.
+   */
+  @Test
+  void symbolicTablesReadTheirSymbols() throws IOException {
+    String vars =
+        "<var id=\"p\" type=\"symbolic\"> r g b </var><var id=\"q\" type=\"symbolic\"> g b </var>";
+    String supports =
+        "<instance format=\"XCSP3\" type=\"CSP\"><variables>"
+            + vars
+            + "</variables><constraints><extension><list> p q </list><supports> (r,g)(g,b) </supports>"
+            + "</extension><intension> eq(p,g) </intension></constraints></instance>";
+    String out = competitionOutput(supports);
+    assertTrue(out.contains("s SATISFIABLE") && out.contains("<values> g b </values>"), out);
+    String conflicts =
+        "<instance format=\"XCSP3\" type=\"CSP\"><variables>"
+            + vars
+            + "</variables><constraints><extension><list> p q </list><conflicts> (r,*)(g,g)(b,*) </conflicts>"
+            + "</extension></constraints></instance>";
+    out = competitionOutput(conflicts);
+    assertTrue(out.contains("s SATISFIABLE") && out.contains("<values> g b </values>"), out);
+    String unary =
+        "<instance format=\"XCSP3\" type=\"CSP\"><variables>"
+            + vars
+            + "</variables><constraints><extension><list> p </list><conflicts> r g </conflicts>"
+            + "</extension></constraints></instance>";
+    out = competitionOutput(unary);
+    assertTrue(out.contains("s SATISFIABLE") && out.contains("<values> b "), out);
+  }
+
+  /**
+   * The except of an allDifferent over lists holds tuples: it was first read as a list of values,
+   * and the instance was rejected as unsupported.
+   */
+  @Test
+  void allDifferentListsExceptTuples() throws IOException {
+    check(
+        vars(4, 0, 1),
+        "<allDifferent><list> x[0] x[1] </list><list> x[2] x[3] </list>"
+            + "<except> (0,0)(1,0) </except></allDifferent>",
+        4,
+        0,
+        1,
+        t -> t[0] != t[2] || t[1] != t[3] || t[0] == 0 && t[1] == 0 || t[0] == 1 && t[1] == 0);
+  }
+
+  /**
+   * The coefficients of a product or nValues objective multiply its terms, as those of a sum,
+   * minimum or maximum do: they were ignored, so the optimum was the one of the plain terms.
+   */
+  @Test
+  void productAndNValuesObjectivesTakeTheirCoefficients() throws IOException {
+    String product =
+        "<instance format=\"XCSP3\" type=\"COP\"><variables><array id=\"x\" size=\"[2]\"> 0..2 </array>"
+            + "</variables><constraints></constraints><objectives><minimize type=\"product\">"
+            + "<list> x[] </list><coeffs> -1 2 </coeffs></minimize></objectives></instance>";
+    String out = competitionOutput(product);
+    assertTrue(out.contains("o -8\ns OPTIMUM FOUND"), out);
+    String values =
+        "<instance format=\"XCSP3\" type=\"COP\"><variables><array id=\"x\" size=\"[2]\"> -1 1 </array>"
+            + "</variables><constraints><intension> ne(x[0],x[1]) </intension></constraints>"
+            + "<objectives><minimize type=\"nValues\"><list> x[] </list><coeffs> 1 -1 </coeffs>"
+            + "</minimize></objectives></instance>";
+    out = competitionOutput(values);
+    assertTrue(out.contains("o 1\ns OPTIMUM FOUND"), out);
+  }
 }

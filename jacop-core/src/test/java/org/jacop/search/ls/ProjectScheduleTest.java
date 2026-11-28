@@ -236,4 +236,33 @@ class ProjectScheduleTest {
     // no cumulative resource
     assertNull(ProjectSchedule.detect(cost, 1));
   }
+
+  @Test
+  void improvementStopsWhenAsked() {
+    // a slice of 20,000 schedules of 1,000 tasks, the neighbourhood that LNS proposes from the
+    // project schedule, took 38 s past -t 2000: the stop is now checked after each generation
+    Random random = new Random(11);
+    for (int trial = 0; trial < 40; trial++) {
+      Project p = new Project(random, 4 + random.nextInt(5), 1 + random.nextInt(3));
+      assertTrue(p.store.consistency());
+      ProjectSchedule ps = ProjectSchedule.detect(p.cost, trial);
+      if (ps == null) {
+        continue;
+      }
+      // the earliest starts: a schedule within the bounds of every task, which improve takes up
+      int[] serial = new int[ps.starts().length];
+      for (int k = 0; k < serial.length; k++) {
+        serial[k] = ps.starts()[k].min();
+      }
+      long before = ps.schedules();
+      ps.improve(serial, 1_000_000, () -> true);
+      long stopped = ps.schedules() - before;
+      ps.improve(serial, 1_000, () -> false);
+      // the stopped call builds at most the first population, no generation
+      assertTrue(stopped < 1_000, "trial " + trial + ": " + stopped);
+      assertTrue(ps.schedules() - before - stopped >= 1_000, "trial " + trial);
+      return;
+    }
+    throw new AssertionError("no project schedule");
+  }
 }

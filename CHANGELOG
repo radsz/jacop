@@ -9806,6 +9806,27 @@ Version 5.0 (unreleased)
    7,390 s, default 8,445 -> 8,281 s, 37 and 35 proved in both; the
    first solution comes earlier on 16 instances and later on 5 with -f.
 
+541. -a and -n k on a satisfaction model print each assignment of the
+   output variables once in every engine, and -n k prints k different
+   ones (all of them, with ==========, when there are fewer). Before,
+   depth-first search (--lcg off, the default engine under --presolve on
+   or -p) printed an assignment again for each value of a variable that
+   the search annotation names but the output does not: 9 lines for 3
+   assignments on int_search([x, h]) with x and y printed, and -n 3 could
+   print one solution three times, where lazy clause generation and free
+   search printed each once. A model whose annotation names such a
+   variable keeps an exact key per printed solution (the printed values
+   packed in the bits of their root domains, 8 bytes per 64 bits plus 8
+   of hash table) and drops a solution whose key was printed. The search
+   follows its decisions (DepthFirstSearch.setDecisionListener, a new
+   DecisionListener): after a solution below a decision on a hidden
+   variable taken once the outputs are fixed, its other branches are not
+   searched, and keys are kept only below the highest decision on a
+   hidden variable taken with outputs still open. A model whose
+   annotation names only printed variables keeps nothing and searches as
+   before. -s solutions= counts the printed solutions; --search-statistics
+   prints repeatedOutputBranches, repeatedOutputs and peakOutputKeys.
+
 542. FlatZinc: an if-then-else over reified equalities of one variable,
    the flattening of if c then x = a else x = b endif
    (jacop_if_then_else_bool([c, true], [p, q], true) with
@@ -9842,6 +9863,15 @@ Version 5.0 (unreleased)
    -> 2,875 s.
    -Djacop.lcg.shrink=true shrinks to any literal, as before item 541,
    =propagated to propagated literals in every search, =false never.
+
+544. fzn-jacop killed by SIGTERM or SIGINT without -s (as MiniZinc and the
+   competition scripts end a solver at their time limit) prints what it
+   prints at its own time-out: the solution it kept and
+   "%% =====TIME-OUT=====", or "=====UNKNOWN=====" when it printed none.
+   Before, without -a a run printed its solutions only when it ended, so
+   a killed run printed nothing and lost the solutions it had found. The
+   exit code stays 143, -s prints as before, and runs started in process
+   (Fz2jacop.callMain) register no hook.
 
 Version 4.11
 =============

@@ -204,6 +204,22 @@ public final class DominanceNogoods {
     runDeadline = nanoTime;
   }
 
+  // the work at which the clock is read next: a pair of variables of 16 values each checks up to
+  // 65,536 moves, so 64 pairs between two readings took a second past the time-out (element
+  // chains of 600 variables at -t 1000)
+  private long nextClockWork;
+
+  private static final long CLOCK_WORK = 1L << 14;
+
+  // whether the deadline has passed, read once per CLOCK_WORK steps of work
+  private boolean pastDeadline(long deadline) {
+    if (work < nextClockWork) {
+      return false;
+    }
+    nextClockWork = work + CLOCK_WORK;
+    return System.nanoTime() > deadline;
+  }
+
   /**
    * Finds the nogoods and imposes them.
    *
@@ -269,7 +285,7 @@ public final class DominanceNogoods {
       if (!candidate[v] || !reaches[v]) {
         continue;
       }
-      if ((v & 63) == 0 && System.nanoTime() > deadline) {
+      if (pastDeadline(deadline)) {
         complete = false;
         break;
       }
@@ -317,9 +333,7 @@ public final class DominanceNogoods {
           if (!seen.add(key)) {
             continue;
           }
-          if (work > BUDGET
-              || nogoods >= MAX_NOGOODS
-              || (checked & 63) == 0 && System.nanoTime() > deadline) {
+          if (work > BUDGET || nogoods >= MAX_NOGOODS || pastDeadline(deadline)) {
             complete = false;
             break outer;
           }

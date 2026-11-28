@@ -1,7 +1,7 @@
 predicate jacop_alldiff(array [int] of var int: x);
 predicate jacop_among(array [int] of var int: x, set of int: v, var int: n);
 predicate jacop_assignment(array [int] of var int: f, array [int] of var int: invf, int: index_f, int: index_invf);
-predicate jacop_bin_packing(array [int] of var int: bin, array [int] of var int: cap, array [int] of int: w);
+predicate jacop_bin_packing(array [int] of var int: bin, array [int] of var int: cap, array [int] of int: w, int: min_bin);
 predicate jacop_count(array [int] of var int: x, int: y, var int: c);
 predicate jacop_cumulative(array [int] of var int: s, array [int] of var int: d, array [int] of var int: r, var int: b);
 predicate jacop_diff2(array [int] of var int: rects);
@@ -22,6 +22,6 @@ array [1..50] of int: w = [99, 98, 95, 95, 95, 94, 94, 91, 88, 87, 86, 85, 76, 7
 array [1..50] of var 1..50: b :: output_array([1..50]);
 array [1..50] of var 0..100: cap____1;
 var 1..50: max_bin :: output_var;
-constraint jacop_bin_packing(b, cap____1, w);
+constraint jacop_bin_packing(b, cap____1, w, 1);
 constraint jacop_maximum(max_bin, b);
 solve  :: int_search(b, input_order, indomain_min, complete) minimize max_bin;

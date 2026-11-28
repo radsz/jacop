@@ -112,6 +112,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   /** It is invoked when consistency function has been executed. */
   @Getter @Setter public ConsistencyListener consistencyListener;
 
+  /** It is told of each decision before it is taken, and can skip a right branch. */
+  @Getter @Setter private DecisionListener<T> decisionListener;
+
   /** It is executed when a solution is found. */
   @Getter @Setter public SolutionListener<T> solutionListener = new SimpleSolutionListener<>();
 
@@ -962,6 +965,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     if (fdv != null) {
       val = heuristic.getChoiceValue();
+      if (decisionListener != null) {
+        decisionListener.leftDecision(fdv, null, depth);
+      }
       applyChoiceVariableValue(fdv, val);
     } else {
       choice = heuristic.getChoiceConstraint(firstVariable);
@@ -971,6 +977,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
           return runChildSearchesWhenSolutionFound();
         }
         return handleSolutionFoundNoChildSearches();
+      }
+      if (decisionListener != null) {
+        decisionListener.leftDecision(null, choice, depth);
       }
       applyChoiceConstraint(choice);
     }
@@ -1019,9 +1028,15 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
   private boolean doRightBranch(PrimitiveConstraint choice, T fdv, int val, int firstVariable) {
     if (choice != null) {
+      if (decisionListener != null && !decisionListener.rightDecision(null, choice, depth)) {
+        return false;
+      }
       return doRightBranchChoice(choice, firstVariable);
     }
     if (!fdv.dom().singleton()) {
+      if (decisionListener != null && !decisionListener.rightDecision(fdv, null, depth)) {
+        return false;
+      }
       return doRightBranchVariable(fdv, val, firstVariable);
     }
     return false;

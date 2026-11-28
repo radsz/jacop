@@ -176,7 +176,7 @@ public final class CountStepCostBound {
         Step s =
             step(
                 support.getVarArray((SimpleNode) c.jjtGetChild(0)),
-                support.getIntArray((SimpleNode) c.jjtGetChild(1)),
+                fixedValues(support.getVarArray((SimpleNode) c.jjtGetChild(1))),
                 reified,
                 reifiedVar);
         if (s != null) {
@@ -251,14 +251,21 @@ public final class CountStepCostBound {
       IntVar[] vars = new IntVar[counted.size() + 1];
       int[] as = new int[vars.length];
       long max = 0;
+      boolean fits = least >= IntDomain.MIN_INT;
       for (int i = 0; i < counted.size(); i++) {
         vars[i] = counted.get(i).term;
         as[i] = (int) counted.get(i).weight;
+        fits &= as[i] == counted.get(i).weight;
         max += counted.get(i).weight * counted.get(i).term.max();
-        covered.put(vars[i], true);
       }
-      if (max > IntDomain.MAX_INT) {
+      // the sum's domain and its coefficients are ints: a bound beyond them is left out
+      if (!fits || max > IntDomain.MAX_INT) {
         continue;
+      }
+      for (IntVar term : vars) {
+        if (term != null) {
+          covered.put(term, true);
+        }
       }
       IntVar sum = new IntVar(support.store, (int) least, (int) max);
       vars[counted.size()] = sum;
@@ -285,6 +292,18 @@ public final class CountStepCostBound {
   }
 
   // the step function of if c[0] then x[0] elseif ... else x[n-1] with c[i] = (v <= k[i])
+  // the values of fixed branches, null when a branch is a variable (fzn_if_then_else_var_int)
+  private static int[] fixedValues(IntVar[] branches) {
+    int[] values = new int[branches.length];
+    for (int i = 0; i < branches.length; i++) {
+      if (!branches[i].singleton()) {
+        return null;
+      }
+      values[i] = branches[i].value();
+    }
+    return values;
+  }
+
   private static Step step(
       IntVar[] conditions, int[] values, Map<IntVar, long[]> reified, Map<IntVar, IntVar> on) {
     int n = conditions.length;

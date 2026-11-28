@@ -350,4 +350,23 @@ class ClausalFlatzincTest {
     }
     return out.toString(StandardCharsets.UTF_8);
   }
+
+  /**
+   * The count of an among whose variable has a hole ({0, 2}) takes no value in the hole: the
+   * clauses tied only y >= 2 to "at least two", so a count of 1 gave y = 0, and the store rejected
+   * the solution of the clausal model.
+   */
+  @Test
+  void aCountWithAHoleTakesNoValueInIt() throws IOException {
+    String model =
+        """
+        var {-3,-2,0,1}: x:: output_var;
+        var 2..6: y:: output_var;
+        var {0,2}: c:: output_var;
+        constraint jacop_among([y,x],{-1,1,2},c);
+        solve satisfy;
+        """;
+    String out = run(model, true);
+    assertTrue(out.contains("clausalModel=true") && !out.contains("rejected"), out);
+  }
 }

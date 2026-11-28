@@ -31,8 +31,11 @@
 package org.jacop.fz.constraints;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.WeakHashMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.ValueEnumeration;
@@ -67,41 +70,38 @@ public final class MddLinearSum {
 
   private MddLinearSum() {}
 
-  /** The per diagram result of the structural part of the check, shared by calls on one graph. */
-  private static final Map<Diagram, Object> STRUCTURE = new HashMap<>();
+  /**
+   * The per diagram result of the structural part of the check, shared by calls on one graph, by
+   * the array of node levels. The map holds that array weakly and no entry reaches it, so the
+   * diagrams of a model are forgotten with the model (a map by the identity of all four arrays kept
+   * every diagram solved in the JVM).
+   */
+  private static final Map<int[], List<Diagram>> STRUCTURE = new WeakHashMap<>();
 
   /**
-   * A diagram by the identity of its four arrays. Two diagrams of one model may share a named array
-   * of sources and differ in their labels, so the sources alone do not name a diagram.
+   * A diagram by the identity of its other arrays, among the diagrams of one array of sources. Two
+   * diagrams of one model may share a named array of sources and differ in their labels, so the
+   * sources alone do not name a diagram.
    */
   private static final class Diagram {
     private final int[] level;
-    private final int[] from;
     private final IntDomain[] label;
     private final int[] to;
+    private final Object structure;
 
-    Diagram(int[] level, int[] from, IntDomain[] label, int[] to) {
+    Diagram(int[] level, IntDomain[] label, int[] to, Object structure) {
       this.level = level;
-      this.from = from;
       this.label = label;
       this.to = to;
+      this.structure = structure;
     }
 
-    @Override
-    public boolean equals(Object o) {
-      return o instanceof Diagram d
-          && d.level == level
-          && d.from == from
-          && d.label == label
-          && d.to == to;
+    Object structure() {
+      return structure;
     }
 
-    @Override
-    public int hashCode() {
-      return 31
-              * (31 * (31 * System.identityHashCode(level) + System.identityHashCode(from))
-                  + System.identityHashCode(label))
-          + System.identityHashCode(to);
+    boolean of(int[] level, IntDomain[] label, int[] to) {
+      return this.level == level && this.label == label && this.to == to;
     }
   }
 
@@ -109,6 +109,9 @@ public final class MddLinearSum {
 
   /** The number of tuples with sum S of a list of domains, by domains and S. */
   private static final Map<String, BigInteger> SUM_COUNTS = new HashMap<>();
+
+  /** The counts kept at most, over all models solved in the JVM. */
+  private static final int MAX_SUM_COUNTS = 4096;
 
   /**
    * It reports whether the system property org.jacop.fz.mddLinear leaves the rewriting on.
@@ -138,11 +141,17 @@ public final class MddLinearSum {
    */
   public static synchronized Long sum(
       IntVar[] x, int[] level, int[] from, IntDomain[] label, int[] to) {
-    Diagram diagram = new Diagram(level, from, label, to);
-    Object s = STRUCTURE.get(diagram);
+    List<Diagram> diagrams = STRUCTURE.computeIfAbsent(from, k -> new ArrayList<>(1));
+    Object s = null;
+    for (Diagram d : diagrams) {
+      if (d.of(level, label, to)) {
+        s = d.structure();
+        break;
+      }
+    }
     if (s == null) {
       s = structure(x.length, level, from, label, to);
-      STRUCTURE.put(diagram, s);
+      diagrams.add(new Diagram(level, label, to, s));
     }
     if (s == NOT_A_SUM) {
       return null;
@@ -289,6 +298,10 @@ public final class MddLinearSum {
     }
     if (hi - lo + 1 > MAX_RANGE) {
       return BigInteger.valueOf(-1);
+    }
+    if (SUM_COUNTS.size() >= MAX_SUM_COUNTS) {
+      // the counts are by content, so forgetting them changes no answer, only bounds the memory
+      SUM_COUNTS.clear();
     }
     return SUM_COUNTS.computeIfAbsent(key.toString(), k -> countSums(x, s));
   }
