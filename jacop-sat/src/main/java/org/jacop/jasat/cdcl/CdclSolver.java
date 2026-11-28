@@ -888,7 +888,10 @@ public final class CdclSolver {
         && !eliminationTried
         && conflicts == 0
         && !externalUsed
-        && numUnits == 0) {
+        && numUnits == 0
+        && !(interrupted || now() > deadline)) {
+      // past the deadline the search below stops at once: no elimination first, which takes
+      // seconds on large formulas and is tried again by a later call
       eliminationTried = true;
       if (!eliminate()) {
         return UNSAT;
@@ -4720,9 +4723,12 @@ public final class CdclSolver {
       n = input.length;
     }
     Congruence cc = null;
-    if (substitution) {
+    // past the deadline the substitution is left out: it is optional, and its set-up alone takes
+    // a second on millions of clauses
+    if (substitution && !(interrupted || now() > deadline)) {
       long t0 = System.nanoTime();
       cc = new Congruence(numVars, input, n, frozen, proof);
+      cc.setDeadline(virtualClock ? Long.MAX_VALUE : deadline);
       cc.gatesOn = congruence && gatesPaid;
       sat = cc.run();
       gatesPaid = cc.gatesOn && cc.andGates + cc.xorGates + cc.iteGates > 0;
@@ -4746,6 +4752,9 @@ public final class CdclSolver {
         external != null
             ? new Eliminator(numVars, elimInput, elimCount, frozen, proof)
             : new Eliminator(numVars, elimInput, elimCount, frozen, proof, limits);
+    // the time-out stops the elimination as its effort limit does; under the virtual clock the
+    // effort limit alone, as the deadline is a time of the solver's work
+    e.setDeadline(virtualClock ? Long.MAX_VALUE : deadline);
     sat = sat && e.run();
     gateEliminations += e.numGateEliminations();
     // the bound rises by one step after each complete run, so the first run before the search

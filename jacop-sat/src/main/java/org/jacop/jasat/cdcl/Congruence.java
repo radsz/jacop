@@ -72,6 +72,9 @@ final class Congruence {
   private final boolean[] frozen;
   private final ProofOutput proof;
 
+  // the time of System.nanoTime() at which the gate extraction stops
+  private long deadline = Long.MAX_VALUE;
+
   private final int[][] clauses;
   private final int numClauses;
   private final int[][] occ;
@@ -153,6 +156,16 @@ final class Congruence {
     for (int v = 0; v < numVars; v++) {
       parent[v] = 2 * v;
     }
+  }
+
+  /**
+   * Stops the gate extraction at this time of {@link System#nanoTime()}: the gates found by then
+   * are substituted.
+   *
+   * @param deadline the time, or {@link Long#MAX_VALUE} for none
+   */
+  void setDeadline(long deadline) {
+    this.deadline = deadline;
   }
 
   /**
@@ -407,6 +420,10 @@ final class Congruence {
     users = new int[numVars][];
     usersSize = new int[numVars];
     for (int v = 0; v < numVars && x.effort < EFFORT_LIMIT; v++) {
+      if ((v & 0xff) == 0 && deadline != Long.MAX_VALUE && System.nanoTime() > deadline) {
+        // the gates found so far are equivalences all the same
+        break;
+      }
       int pos = 2 * v;
       if (occSize[pos] + occSize[pos + 1] < 3) {
         continue;
