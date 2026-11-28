@@ -8179,7 +8179,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         Long.parseLong(
             options.freeConfig("sgs-lns", Long.toString(Math.max(1000, 20L * ps.tasks()))));
     if (slice > 0) {
-      lns.setProposer(ps.starts(), incumbent -> ps.improve(incumbent, slice));
+      // the slice stops at the time-out too; under a virtual clock its budget alone ends it
+      boolean wall = !CdclSolver.VIRTUAL_CLOCK && !FreeSearch.VIRTUAL_CLOCK;
+      lns.setProposer(
+          ps.starts(),
+          incumbent -> ps.improve(incumbent, slice, () -> wall && options.timeOutPassed()));
     }
   }
 
