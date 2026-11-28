@@ -37,6 +37,7 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -1061,7 +1062,7 @@ public final class AdaptiveLns {
           .append('/')
           .append(improvements[i])
           .append(' ')
-          .append(String.format("%.3f", share[i]));
+          .append(String.format(Locale.ROOT, "%.3f", share[i]));
     }
     return b.toString();
   }

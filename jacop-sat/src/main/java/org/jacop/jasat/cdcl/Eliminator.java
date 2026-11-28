@@ -199,19 +199,19 @@ final class Eliminator {
     }
     subsumeQueue();
     Arrays.fill(touched, true);
-    for (int round = 0; !unsat && effort < EFFORT_LIMIT && (!minisat || round < 3); round++) {
+    for (int round = 0; !unsat && !stopped() && (!minisat || round < 3); round++) {
       if (minisat) {
         Arrays.fill(touched, true);
       }
       int[] vars = candidates();
       int before = numEliminated;
-      for (int k = 0; k < vars.length && !unsat && effort < EFFORT_LIMIT; k++) {
+      for (int k = 0; k < vars.length && !unsat && !stopped(); k++) {
         if (tryEliminate(vars[k])) {
           subsumeQueue();
         }
       }
       if (numEliminated == before) {
-        if (unsat || effort >= EFFORT_LIMIT || bound >= maxBound) {
+        if (unsat || stopped() || bound >= maxBound) {
           break;
         }
         // nothing left at this bound: raise it and try every variable again
@@ -243,9 +243,34 @@ final class Eliminator {
     return numGateEliminations;
   }
 
-  /** Whether the run tried every candidate within its effort limit. */
+  /** Whether the run tried every candidate within its effort limit and before its deadline. */
   boolean completed() {
-    return !unsat && effort < EFFORT_LIMIT;
+    return !unsat && effort < EFFORT_LIMIT && !timedOut;
+  }
+
+  /**
+   * Stops the run at this time of {@link System#nanoTime()}: the variables not tried by then stay,
+   * as at the effort limit.
+   *
+   * @param deadline the time, or {@link Long#MAX_VALUE} for none
+   */
+  void setDeadline(long deadline) {
+    this.deadline = deadline;
+  }
+
+  private long deadline = Long.MAX_VALUE;
+  private int deadlineChecks;
+  private boolean timedOut;
+
+  // whether the effort limit or the deadline ends the run; the clock is read at every 256th check
+  private boolean stopped() {
+    if (!timedOut
+        && deadline != Long.MAX_VALUE
+        && (deadlineChecks++ & 0xff) == 0
+        && System.nanoTime() > deadline) {
+      timedOut = true;
+    }
+    return timedOut || effort >= EFFORT_LIMIT;
   }
 
   /** The bound reached, from which the next run starts. */
@@ -391,7 +416,7 @@ final class Eliminator {
   // ------------------------------------------------------------------------------- subsumption
 
   private void subsumeQueue() {
-    while (queueHead < queueSize && !unsat && effort < EFFORT_LIMIT) {
+    while (queueHead < queueSize && !unsat && !stopped()) {
       int i = queue[queueHead++];
       queued[i] = false;
       if (clauses[i] != null) {

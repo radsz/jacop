@@ -32,6 +32,7 @@ package org.jacop.examples.set;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -40,7 +41,7 @@ class ExampleBasedTest {
   private static final int TIMEOUT_MS = 10_000;
 
   @Test
-  @Timeout(TIMEOUT_MS)
+  @Timeout(value = TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
   void testGardner() {
     Gardner example = new Gardner();
     example.model();
@@ -49,7 +50,7 @@ class ExampleBasedTest {
   }
 
   @Test
-  @Timeout(TIMEOUT_MS)
+  @Timeout(value = TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
   void testSocialGolfer() {
     SocialGolfer example = new SocialGolfer();
 
@@ -123,7 +124,7 @@ class ExampleBasedTest {
   }
 
   @Test
-  @Timeout(TIMEOUT_MS)
+  @Timeout(value = TIMEOUT_MS, unit = TimeUnit.MILLISECONDS)
   void testSteiner() {
     Steiner example = new Steiner();
     example.n = 7;

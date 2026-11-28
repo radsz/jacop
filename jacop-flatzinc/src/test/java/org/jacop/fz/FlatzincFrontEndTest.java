@@ -59,6 +59,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -1350,10 +1351,12 @@ class FlatzincFrontEndTest {
             """);
     assertTrue(out[0].endsWith("x = 9;\n----------\n"), out[0]);
 
-    // no claim of unsatisfiability: the solutions may lie in the values cut off
+    // the row x <= -11 keeps x within the range, so the failure while the model is translated cuts
+    // off no solution: unsatisfiable, as a search that completes without one
     out =
         run("var -10..1687566400: x :: output_var;\nconstraint int_le(x, -11);\nsolve satisfy;\n");
-    assertTrue(out[0].endsWith("=====UNKNOWN=====\n"), out[0]);
+    assertTrue(out[0].endsWith("=====UNSATISFIABLE=====\n"), out[0]);
+    // no claim of unsatisfiability: the solutions lie in the values cut off
     out =
         run(
             """
@@ -5270,10 +5273,116 @@ class FlatzincFrontEndTest {
       System.setErr(originalErr);
     }
     // IO.println ends lines with the platform separator ("\r\n" on Windows); the checks expect "\n"
-    return new String[] {
+    String[] result = {
       out.toString(StandardCharsets.UTF_8).replace("\r\n", "\n"),
       err.toString(StandardCharsets.UTF_8).replace("\r\n", "\n")
     };
+    checkUnderDefaults(model, fzn, options, result[0]);
+    return result;
+  }
+
+  // Every model of run() is solved a second time with the defaults of fzn-jacop, which the build
+  // switches off for the expected outputs (LCG, symmetry breaking without presolve, the LP probe,
+  // the symmetry budget: see the parent pom), and the answer must agree: satisfiable or not, and
+  // the optimum. Runs that choose their engine or limit the search themselves are left out.
+  // -Dfz.defaults.check=false skips it, -Dfz.defaults.every=N checks every N-th run only.
+  private static final boolean DEFAULTS_CHECK =
+      !"false".equals(System.getProperty("fz.defaults.check"));
+
+  private static final int DEFAULTS_EVERY = Math.max(1, Integer.getInteger("fz.defaults.every", 1));
+
+  // the options of a run that is compared with its run under the defaults
+  private static final Set<String> NEUTRAL_OPTIONS = Set.of("-a", "-s", "-statistics", "-v");
+
+  private static final Pattern OBJECTIVE =
+      Pattern.compile("solve[^;]*\\b(?:minimize|maximize)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*;");
+
+  private static int defaultsRuns;
+
+  private void checkUnderDefaults(String model, Path fzn, String[] options, String out)
+      throws IOException {
+    if (!DEFAULTS_CHECK
+        || !NEUTRAL_OPTIONS.containsAll(Arrays.asList(options))
+        || !model.contains("solve")
+        || defaultsRuns++ % DEFAULTS_EVERY != 0) {
+      return;
+    }
+    Matcher objective = OBJECTIVE.matcher(model);
+    String cost = objective.find() ? objective.group(1) : null;
+    String expected = answer(out, cost);
+    if (expected == null) {
+      return;
+    }
+    String[] args = new String[options.length + 3];
+    System.arraycopy(options, 0, args, 0, options.length);
+    args[options.length] = "-t";
+    args[options.length + 1] = "5000";
+    args[options.length + 2] = fzn.toString();
+    String[] names = {
+      "jacop.lcg", "jacop.symmetry", "org.jacop.fz.symmetryTime", "org.jacop.fz.lpProbe"
+    };
+    String[] saved = new String[names.length];
+    for (int i = 0; i < names.length; i++) {
+      saved[i] = System.getProperty(names[i]);
+      System.clearProperty(names[i]);
+    }
+    int status = lastStatus;
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+    PrintStream originalErr = System.err;
+    try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8)) {
+      System.setOut(capture);
+      System.setErr(capture);
+      new Fz2jacop().callMain(args);
+    } finally {
+      System.setOut(originalOut);
+      System.setErr(originalErr);
+      for (int i = 0; i < names.length; i++) {
+        restoreProperty(names[i], saved[i]);
+      }
+      lastStatus = status;
+    }
+    String defaults = buffer.toString(StandardCharsets.UTF_8).replace("\r\n", "\n");
+    String got = answer(defaults, cost);
+    // a run under the defaults that reached its time limit decides nothing
+    if (got != null || defaults.contains("=====UNSATISFIABLE=====")) {
+      assertEquals(
+          expected,
+          got,
+          "under the defaults of fzn-jacop "
+              + Arrays.toString(options)
+              + "\n"
+              + model
+              + "\n--- test configuration:\n"
+              + out
+              + "\n--- defaults:\n"
+              + defaults);
+    }
+  }
+
+  // UNSAT, SAT, or the optimum of an output objective; null when the run decided nothing
+  private static String answer(String out, String cost) {
+    if (out.contains("=====UNKNOWN=====") || out.contains("%% Error")) {
+      return null;
+    }
+    if (out.contains("=====UNSATISFIABLE=====")) {
+      return out.contains("----------") ? null : "UNSAT";
+    }
+    if (!out.contains("----------")) {
+      return null;
+    }
+    if (cost == null) {
+      return "SAT";
+    }
+    if (!out.contains("==========")) {
+      return null;
+    }
+    Matcher m = Pattern.compile("(?m)^" + Pattern.quote(cost) + " = (-?\\d+);$").matcher(out);
+    String value = null;
+    while (m.find()) {
+      value = m.group(1);
+    }
+    return value == null ? "OPT" : "OPT " + value;
   }
 
   private Set<String> solveAll(String model) throws IOException {
@@ -9762,6 +9871,27 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void zeroSumDropsAnOutputSumOfAnOptimisationPrintingItsSolutions() throws IOException {
+    // -a on an optimisation prints its improving solutions, each with a better objective, so a
+    // dropped output sum loses none of them; keeping the sum there, as for -a on a satisfaction,
+    // made XCSP 2024 SameQueensKnights-b-65 end at 16-21 instead of 103-111 within 120 s under -f
+    String model =
+        "var 0..2: x :: output_var;\n"
+            + "var 0..1: y;\n"
+            + "var 0..3: s :: output_var;\n"
+            + "var bool: b;\n"
+            + "var bool: c;\n"
+            + "constraint int_lin_eq([1,1,-1],[x,y,s],0);\n"
+            + "constraint int_le_imp(s,0,b);\n"
+            + "constraint bool_clause([b,c],[]);\n"
+            + "solve maximize x;\n";
+    String one = run(model, "-s", "--lcg", "off")[0];
+    String all = run(model, "-a", "-s", "--lcg", "off")[0];
+    assertEquals(stat(one, "propagators"), stat(all, "propagators"), all);
+    assertTrue(all.contains("x = 2;\ns = 2;\n----------\n=========="), all);
+  }
+
+  @Test
   void minOfSumsTakesNoSumThatTheLinearIndexElementDetectionReplaced() throws IOException {
     // z = x + k also defines the index k = z - x of an element, which the linear index element
     // detection replaced by a table over x, z and v, dropping k; the merge of sums into minimums
@@ -10915,5 +11045,818 @@ class FlatzincFrontEndTest {
       String out = run(model, "--symmetry", "on", "--lcg", lcg)[0];
       assertTrue(out.contains("x1 = 2;\nw1 = 1;\n----------"), out);
     }
+  }
+
+  @Test
+  void portfolioThreadWithoutSymmetryBreakingKeepsItsCoveringClausesToItself() throws IOException {
+    // set covering with identical and dominated columns: the lcg-lits thread's symmetry search
+    // runs out of time and posts nothing, and covering dominance fixes columns the other thread's
+    // lex-leader constraints keep; the clauses learnt under those fixings counted as clauses of the
+    // shared model and the given thread proved 16 or 17 optimal (3 of 8 runs), the optimum is 14
+    String model;
+    try (java.io.InputStream in =
+        FlatzincFrontEndTest.class.getResourceAsStream("covering-portfolio.fzn")) {
+      model = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+    }
+    java.util.function.LongSupplier clock = SymmetryBreaking.clock;
+    String min = System.getProperty("org.jacop.fz.coveringDominance.min");
+    try {
+      System.setProperty("org.jacop.fz.coveringDominance.min", "1");
+      // in the lcg-lits thread each reading of the clock is 1000 s after the one before
+      java.util.concurrent.atomic.AtomicLong late = new java.util.concurrent.atomic.AtomicLong();
+      SymmetryBreaking.clock =
+          () ->
+              "jacop-portfolio-lcg-lits".equals(Thread.currentThread().getName())
+                  ? late.getAndAdd(1_000_000_000_000L)
+                  : System.nanoTime();
+      for (int k = 0; k < 8; k++) {
+        String out = run(model, "-p", "2", "--symmetry", "on", "--lcg", "on", "-t", "60000")[0];
+        if (out.contains("==========")) {
+          assertTrue(out.contains("obj = 14;\n"), out);
+        }
+      }
+    } finally {
+      SymmetryBreaking.clock = clock;
+      if (min == null) {
+        System.clearProperty("org.jacop.fz.coveringDominance.min");
+      } else {
+        System.setProperty("org.jacop.fz.coveringDominance.min", min);
+      }
+    }
+  }
+
+  @Test
+  void aModelSolvedTwiceInOneJvmSearchesTheSameTree() throws IOException {
+    // the ids of variables created without one counted in the JVM, and LCG orders the Boolean
+    // variables by id: the second run in the same JVM took 41 nodes and another solution, the
+    // first 46, as every run of its own JVM
+    String model = Files.readString(Path.of("src/test/fz/mznlib", "hook_cumulatives_opt.fzn"));
+    String[] args = {"-f", "-s", "--lcg", "on", "--symmetry", "on"};
+    String first = withoutTimes(run(model, args)[0]);
+    for (int k = 0; k < 3; k++) {
+      assertEquals(first, withoutTimes(run(model, args)[0]));
+    }
+  }
+
+  private static String withoutTimes(String out) {
+    return out.lines()
+        .filter(l -> !(l.startsWith("%%%mzn-stat:") && l.matches("(?i).*(time|mem).*=.*")))
+        .collect(java.util.stream.Collectors.joining("\n"));
+  }
+
+  @Test
+  void lazyClauseGenerationRunsUnderATurkishDefaultLocale() throws IOException {
+    // the branching name "activity" upper-cased in the Turkish locale is "ACT\u0130V\u0130TY"
+    // (dotted capital I), which is no Branching constant: every LCG run stopped with an error
+    String model =
+        "var 1..10: x :: output_var;\nvar 1..10: y :: output_var;\n"
+            + "constraint int_lin_le([1, 1], [x, y], 12);\nconstraint int_ne(x, y);\n"
+            + "solve maximize x;\n";
+    Locale locale = Locale.getDefault();
+    try {
+      Locale.setDefault(Locale.forLanguageTag("tr-TR"));
+      for (String free : new String[] {"-s", "-f"}) {
+        String out = run(model, "--lcg", "on", free)[0];
+        assertTrue(out.contains("x = 10;\ny = 1;\n----------\n=========="), out);
+      }
+    } finally {
+      Locale.setDefault(locale);
+    }
+  }
+
+  @Test
+  void statisticsPrintTheirTimeWithADecimalPointInEveryDefaultLocale() throws IOException {
+    // the time statistic was formatted in the default locale: "time=0,170" in Polish or German
+    String model = "var 1..3: x :: output_var;\nconstraint int_ne(x, 2);\nsolve satisfy;\n";
+    Locale locale = Locale.getDefault();
+    try {
+      Locale.setDefault(Locale.forLanguageTag("pl-PL"));
+      String out = run(model, "-s")[0];
+      assertTrue(Pattern.compile("%%%mzn-stat: time=[0-9]+\\.[0-9]{3} ").matcher(out).find(), out);
+    } finally {
+      Locale.setDefault(locale);
+    }
+  }
+
+  @Test
+  void freeSearchPrintsTheObjectiveOfTheBestSolutionAfterLocalSearch() throws IOException {
+    // local search printed makespans 499 and 493 and then ended on a worse schedule, whose cost
+    // 682 LCG took as its incumbent: the solution printed was 493, the objective statistic 682
+    String model = Files.readString(Path.of("src/test/fz/regression/rcpsp_j3033_2.fzn"));
+    String out = run(model, "--lcg", "on", "-f", "-s", "-t", "20000")[0];
+    assertTrue(out.contains("objective = 493;\n") && out.contains("----------\n=========="), out);
+    assertTrue(out.contains("%%%mzn-stat: objective=493\n"), out);
+  }
+
+  @Test
+  void amongAHugeSetIsCompiledWithoutListingTheSet() throws IOException {
+    // the clausal compiler of LCG listed the set's 10^9 values: out of memory, =====UNKNOWN=====
+    String model =
+        "var 0..3: x :: output_var;\nvar 0..3: y;\nvar 0..1: n;\n"
+            + "constraint jacop_among([x, y], 0..1000000000, n);\nsolve satisfy;\n";
+    assertTrue(run(model, "--lcg", "on")[0].endsWith("=====UNSATISFIABLE=====\n"));
+    // the set's values in the variables' domains count
+    String some =
+        "var 0..3: x :: output_var;\nvar 0..3: y :: output_var;\nvar 0..2: n;\n"
+            + "constraint jacop_among([x, y], {1, 3, 5, 1000000000}, n);\n"
+            + "constraint int_eq(n, 2);\nsolve satisfy;\n";
+    assertEquals(
+        solveAll(some),
+        new TreeSet<>(solveAllInOrder(some, "--lcg", "on")),
+        "LCG -a against the default");
+    assertEquals(4, solveAll(some).size());
+  }
+
+  @Test
+  void countStepCostBoundBeyondIntIsLeftOut() throws IOException {
+    // the least cost -2.4e9 of the counted terms was cast to int for the domain of their sum:
+    // it wrapped to a positive singleton and the model was reported unsatisfiable
+    String model =
+        "var 1..1: x1 :: output_var;\nvar 1..2: x2 :: output_var;\nvar 1..2: x3 :: output_var;\n"
+            + "var 0..3: c;\nvar bool: b;\nvar -500000000..-400000000: y;\n"
+            + "var 400000000..450000000: z;\nvar -536870909..536870909: obj :: output_var;\n"
+            + "constraint jacop_count([x1, x2, x3], 1, c);\nconstraint int_le_reif(c, 0, b);\n"
+            + "constraint jacop_if_then_else_int([b, true], [-500000000, -400000000], y);\n"
+            + "constraint int_lin_eq([6, 6, -1], [y, z, obj], 0);\nsolve minimize obj;\n";
+    for (String lcg : new String[] {"on", "off"}) {
+      String out = run(model, "--lcg", lcg)[0];
+      assertTrue(out.contains("obj = 0;\n----------\n=========="), out);
+    }
+  }
+
+  @Test
+  void countersOfCountValuesDeclaredWithoutBoundsKeepTheSearchComplete() throws IOException {
+    // the counters of count_values, declared var int, were narrowed to JaCoP's range without a
+    // bound
+    // that kept them within it, so the only solution of hakank_farm_puzzle was printed without
+    // ========== (and a maximum count without its proof)
+    String model =
+        "var {2,4}: a;\nvar {2,4}: b;\nvar {2,4}: c;\nvar int: n0;\nvar int: n2;\nvar int: n4;\n"
+            + "array [1..3] of var int: x :: output_array([1..3]) = [a,b,c];\n"
+            + "array [1..3] of var int: n :: output_array([1..3]) = [n0,n2,n4];\n"
+            + "constraint int_lin_eq([1,1,1],[a,b,c],10);\n"
+            + "constraint jacop_count_values(x,[0,2,4],n);\n";
+    String all = run(model + "solve satisfy;\n", "-n", "1000")[0];
+    assertEquals(3, all.split("----------", -1).length - 1, all);
+    assertTrue(all.endsWith("----------\n==========\n"), all);
+    String max = run(model + "solve maximize n4;\n")[0];
+    assertTrue(max.endsWith("n = array1d(1..3, [0, 1, 2]);\n----------\n==========\n"), max);
+  }
+
+  @Test
+  void presolveKeepsTheNarrowingOfUndeclaredBoundsOutOfTheOptimalityClaim() throws IOException {
+    // k = 1 needs y = x * x >= 536800000 with x mod 5 = 3: x = 23173 gives y = 536987929, beyond
+    // JaCoP's range, so the narrowed search finds only k = 0. The copy of the tables made for the
+    // presolved store dropped the record of the narrowing, and k = 0 was printed with ==========
+    String model =
+        "var 0..30000: x :: output_var;\nvar int: y;\nvar 0..4: r;\nvar 0..1: k :: output_var;\n"
+            + "var bool: b;\nconstraint int_times(x,x,y);\n"
+            + "constraint int_le_reif(536800000,y,b);\nconstraint bool2int(b,k);\n"
+            + "constraint int_mod(x,5,r);\nconstraint int_eq(r,3);\nsolve maximize k;\n";
+    for (String presolve : List.of("off", "on")) {
+      String out = run(model, "--presolve", presolve)[0];
+      assertTrue(out.contains("k = 0;\n----------\n"), out);
+      assertFalse(out.contains("=========="), "--presolve " + presolve + ":\n" + out);
+    }
+    // a narrowing that the rows show harmless still lets presolve prove the optimum
+    String bounded =
+        "var int: y :: output_var;\nvar 0..10: x :: output_var;\nvar 0..10: z :: output_var;\n"
+            + "constraint int_lin_le([1,-1],[x,y],0);\nconstraint int_lin_le([1,-1],[z,y],-3);\n"
+            + "constraint int_lin_le([-1,-1],[x,z],-12);\nsolve minimize y;\n";
+    String out = run(bounded, "--presolve", "on")[0];
+    assertTrue(out.contains("y = 8;") && out.endsWith("----------\n==========\n"), out);
+  }
+
+  @Test
+  void floatRowsOverImagesOfIntegersBoundTheirNarrowedDomains() throws IOException {
+    // mip3: B, C and D are declared var int and bounded only by float rows over their int2float
+    // images; the optimum 36 was printed without ==========
+    String mip3 =
+        "var int: B :: output_var;\nvar int: C :: output_var;\nvar int: D :: output_var;\n"
+            + "var float: fb;\nvar float: fc;\nvar float: fd;\nvar float: obj;\n"
+            + "constraint int2float(D,fd);\nconstraint int2float(B,fb);\nconstraint int2float(C,fc);\n"
+            + "constraint float_lin_le([2.0,2.0,1.0],[fc,fb,fd],30.0);\n"
+            + "constraint float_lin_le([2.0,1.5,3.0],[fc,fb,fd],25.0);\n"
+            + "constraint float_lin_le([1.0,2.0,1.0],[fc,fb,fd],20.0);\n"
+            + "constraint int_le(0,B);\nconstraint int_le(0,C);\nconstraint int_le(0,D);\n"
+            + "constraint float_lin_eq([1.0,3.0,3.0,-1.0],[fc,fb,fd,obj],0.0);\n"
+            + "solve maximize obj;\n";
+    String out = run(mip3)[0];
+    assertTrue(out.endsWith("B = 8;\nC = 0;\nD = 4;\n----------\n==========\n"), out);
+    // rows that bound x only beyond the range, or not at all, prove nothing: x = 600000000,
+    // unbounded, x + fz <= 10 with fz a float variable of its own, a reified row
+    String x = "var int: x :: output_var;\nvar float: fx;\nconstraint int2float(x,fx);\n";
+    for (String rows :
+        List.of(
+            "constraint int_le(0,x);\nconstraint float_lin_le([2.0],[fx],1.2e9);\n",
+            "constraint float_lin_le([-1.0],[fx],5.0);\n",
+            "var float: fz;\nconstraint int_le(0,x);\n"
+                + "constraint float_lin_le([1.0,1.0],[fx,fz],10.0);\n",
+            "var bool: b;\nconstraint int_le(0,x);\n"
+                + "constraint float_lin_le_reif([1.0],[fx],10.0,b);\n")) {
+      for (String presolve : List.of("off", "on")) {
+        String o = run(x + rows + "solve maximize x;\n", "--presolve", presolve)[0];
+        assertFalse(o.contains("=========="), rows + o);
+      }
+    }
+    assertTrue(
+        run(
+            x
+                + "constraint int_le(0,x);\nconstraint float_lin_le([1.0],[fx],10.5);\n"
+                + "solve maximize x;\n")[0]
+            .endsWith("x = 10;\n----------\n==========\n"));
+  }
+
+  @Test
+  void aFactorThatMattersOnlyThroughAProductWithANonNegativeFactorKeepsTheOptimum()
+      throws IOException {
+    // shortest_path1: c is declared var int, at least 0, and occurs only as a factor of f * c = p
+    // with f >= 0; the optimum was printed without ==========
+    String head =
+        "var int: c;\nvar int: p;\nvar int: z :: output_var;\n"
+            + "constraint int_le(0,c);\nconstraint int_times(f,c,p);\n";
+    // int_ne keeps z <= 1 consistent for the bounds of the rows, so only the rule proves z = 2
+    String rest =
+        "constraint int_ne(g,1);\nconstraint int_lin_eq([1,1,-1],[p,g,z],0);\nsolve minimize z;\n";
+    List<String> positives =
+        List.of(
+            "var 0..1: f;\nvar 1..5: g;\n" + head + rest,
+            "var int: f;\nvar 1..5: g;\n"
+                + head
+                + "constraint int_le(0,f);\nconstraint int_le(f,1);\n"
+                + rest);
+    for (String model : positives) {
+      for (String presolve : List.of("off", "on")) {
+        assertTrue(
+            run(model, "--presolve", presolve)[0].endsWith("z = 2;\n----------\n==========\n"),
+            model);
+      }
+    }
+    // near misses whose true optimum lies beyond the clamp: no optimality claim
+    List<String> nearMisses =
+        List.of(
+            // the other factor may be negative
+            "var -1..1: f;\n"
+                + head
+                + "constraint int_lin_eq([1,-1],[p,z],0);\nsolve minimize z;\n",
+            // c occurs elsewhere
+            "var 0..1: f;\nvar int: m;\n"
+                + head
+                + "constraint int_max(c,f,m);\nconstraint int_lin_eq([1,-1,-1],[p,m,z],0);\nsolve minimize z;\n",
+            // maximisation
+            "var 0..1: f;\n" + head + "constraint int_lin_eq([1,-1],[p,z],0);\nsolve maximize z;\n",
+            // negative coefficient of the product in the objective
+            "var 0..1: f;\n"
+                + head
+                + "constraint int_lin_eq([-1,-1],[p,z],0);\nsolve minimize z;\n",
+            // the product is forced beyond the clamp by another constraint
+            "var 0..1: f;\nvar 0..1000000: q :: output_var;\n"
+                + head
+                + "constraint int_lin_le([-1,1],[p,q],-536870000);\n"
+                + "constraint int_lin_eq([1,-2,-1],[p,q,z],0);\nsolve minimize z;\n");
+    for (String model : nearMisses) {
+      for (String presolve : List.of("off", "on")) {
+        assertFalse(run(model, "--presolve", presolve)[0].contains("=========="), model);
+      }
+    }
+  }
+
+  @Test
+  void regularImposeStopsAtTheTimeOut() throws IOException {
+    // the layered graph of one regular constraint over 10,000 positions of an automaton of 200
+    // states took 7 s to build at its impose, which did not look at -t 1000 (9 s in all)
+    java.util.Random random = new java.util.Random(1);
+    int length = 10_000;
+    int states = 200;
+    int symbols = 8;
+    StringBuilder model = new StringBuilder();
+    StringJoiner xs = new StringJoiner(",");
+    for (int i = 0; i < length; i++) {
+      model.append("var 1..").append(symbols).append(": x").append(i).append(";\n");
+      xs.add("x" + i);
+    }
+    StringJoiner d = new StringJoiner(",");
+    for (int k = 0; k < states * symbols; k++) {
+      d.add(Integer.toString(random.nextInt(10) < 6 ? 1 + random.nextInt(states) : 0));
+    }
+    model.append(
+        "constraint jacop_regular([%s],%d,%d,[%s],1,1..%d,1);\n"
+            .formatted(xs, states, symbols, d, states));
+    model.append("solve satisfy;\n");
+    long start = System.nanoTime();
+    String out = run(model.toString(), "-t", "1000")[0];
+    long millis = (System.nanoTime() - start) / 1_000_000;
+    assertTrue(out.contains("=====UNKNOWN=====\n%% =====TIME-OUT====="), out);
+    assertTrue(millis < 5000, millis + " ms");
+  }
+
+  @Test
+  void noLcgSolverIsSetUpOnceTheTimeOutHasPassed() throws IOException, ParseException {
+    // the probes and hints before LCG can take the time-out; the set-up of the solver after them
+    // (the clauses of its graphs, LNS, the core-guided phase) then took seconds more on large
+    // models, for a search that stops at once
+    Path fzn = tmp.resolve("lcglate.fzn");
+    Files.writeString(
+        fzn,
+        "var 0..9: x :: output_var;\nvar 0..9: y :: output_var;\n"
+            + "constraint int_lin_le([1,1],[x,y],12);\nsolve maximize x;\n",
+        StandardCharsets.UTF_8);
+    for (boolean late : new boolean[] {false, true}) {
+      // the time-out passes for the check before the solver is set up, and only there
+      Options opt =
+          new Options(new String[] {"-t", "60000", "-f", "--lcg", "on", fzn.toString()}) {
+            @Override
+            public boolean timeOutPassed() {
+              return late
+                  && StackWalker.getInstance()
+                      .walk(f -> f.skip(1).findFirst())
+                      .map(f -> f.getMethodName().equals("executeLcgSearch"))
+                      .orElse(false);
+            }
+          };
+      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+      PrintStream originalOut = System.out;
+      try (PrintStream capture = new PrintStream(bytes, true, StandardCharsets.UTF_8);
+          java.io.FileInputStream input = new java.io.FileInputStream(fzn.toFile())) {
+        System.setOut(capture);
+        Parser parser = new Parser(input);
+        parser.setOptions(opt);
+        parser.model();
+      } finally {
+        System.setOut(originalOut);
+      }
+      String out = bytes.toString(StandardCharsets.UTF_8).replace("\r\n", "\n");
+      if (late) {
+        assertTrue(out.contains("%% =====TIME-OUT====="), out);
+        assertFalse(out.contains("=========="), out);
+      } else {
+        assertTrue(out.contains("x = 9;\ny = "), out);
+        assertTrue(out.contains("=========="), out);
+      }
+    }
+  }
+
+  @Test
+  void mddLinearSumForgetsTheDiagramsOfAFinishedModel() throws InterruptedException {
+    // the structure of each diagram was kept in a static map by the identity of its arrays and
+    // never removed; keyed weakly by one array of the diagram while the graph of its
+    // ExtensionalSupportMdd is shared by another, each map kept the key of the other alive: every
+    // mdd of every model solved in the JVM stayed in memory (180 kB per run of mdd_a10)
+    // (the other arrays go when the maps drop the entries of the collected key, at their next use)
+    java.lang.ref.WeakReference<int[]> sources = mddLinearSumOnce();
+    for (int i = 0; i < 100 && sources.get() != null; i++) {
+      System.gc();
+      Thread.sleep(5);
+    }
+    assertNull(sources.get());
+  }
+
+  private static java.lang.ref.WeakReference<int[]> mddLinearSumOnce() {
+    org.jacop.core.Store store = new org.jacop.core.Store();
+    org.jacop.core.IntVar[] x = {
+      new org.jacop.core.IntVar(store, "x", 0, 1), new org.jacop.core.IntVar(store, "y", 0, 1)
+    };
+    // x + y = 1 over 0..1: root 1 -> 2 (x = 0) or 3 (x = 1), 2 -> terminal (y = 1), 3 -> (y = 0)
+    int[] level = {1, 2, 2};
+    int[] from = {1, 1, 2, 3};
+    org.jacop.core.IntDomain[] label = {
+      new org.jacop.core.IntervalDomain(0, 0),
+      new org.jacop.core.IntervalDomain(1, 1),
+      new org.jacop.core.IntervalDomain(1, 1),
+      new org.jacop.core.IntervalDomain(0, 0)
+    };
+    int[] to = {2, 3, 0, 0};
+    assertEquals(
+        Long.valueOf(1), org.jacop.fz.constraints.MddLinearSum.sum(x, level, from, label, to));
+    store.impose(new org.jacop.constraints.ExtensionalSupportMdd(x, level, from, label, to));
+    assertTrue(store.consistency());
+    return new java.lang.ref.WeakReference<>(from);
+  }
+
+  /**
+   * A run of -s that an exception ends (here the output stream, which throws on the solution) left
+   * its shutdown hook registered: in a JVM that went on, the hook kept the parser, its store and
+   * its solver for the life of the JVM, and ran when the JVM exited (printing the stale statistics
+   * of that run when it had not answered yet).
+   */
+  @Test
+  void anExceptionThatEndsARunRemovesItsShutdownHook() throws IOException, InterruptedException {
+    Path fzn = tmp.resolve("hook.fzn");
+    Files.writeString(fzn, "var 1..3: x :: output_var;\nsolve satisfy;\n");
+    Path java = Path.of(System.getProperty("java.home"), "bin", "java");
+    ProcessBuilder pb =
+        new ProcessBuilder(
+            java.toString(),
+            "--add-opens",
+            "java.base/java.lang=ALL-UNNAMED",
+            "-cp",
+            System.getProperty("java.class.path"),
+            ThrowingOutputRun.class.getName(),
+            fzn.toString());
+    pb.redirectErrorStream(true);
+    Process p = pb.start();
+    String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+    boolean ended = p.waitFor(60, TimeUnit.SECONDS);
+    if (!ended) {
+      p.destroyForcibly();
+    }
+    assertTrue(ended, out);
+    assertTrue(out.contains("%% thrown: "), out);
+    assertTrue(out.contains("%% hooks left: 0\n"), out);
+    assertFalse(out.substring(out.indexOf("%% hooks left")).contains("mzn-stat"), out);
+  }
+
+  /** Solves a model with -s into an output stream that throws, then returns from main. */
+  static final class ThrowingOutputRun {
+    private ThrowingOutputRun() {}
+
+    public static void main(String[] args) throws ReflectiveOperationException {
+      PrintStream saved = System.out;
+      System.setOut(
+          new PrintStream(
+              new OutputStream() {
+                @Override
+                public void write(int b) {
+                  throw new IllegalStateException("output closed");
+                }
+              },
+              true));
+      try {
+        new Fz2jacop().callMain(new String[] {"-s", args[0]});
+      } catch (RuntimeException e) {
+        saved.println("%% thrown: " + e.getMessage());
+      } finally {
+        System.setOut(saved);
+      }
+      Field hooks = Class.forName("java.lang.ApplicationShutdownHooks").getDeclaredField("hooks");
+      hooks.setAccessible(true);
+      long left;
+      synchronized (Class.forName("java.lang.ApplicationShutdownHooks")) {
+        left =
+            ((Map<?, ?>) hooks.get(null))
+                .keySet().stream().filter(h -> h instanceof RunWhenShuttingDown).count();
+      }
+      saved.println("%% hooks left: " + left);
+    }
+  }
+
+  /**
+   * The check of LCG after the search without learning first (fixed-first) is a virtual thread that
+   * wakes after a delay; -n stops LCG by throwing from its solution listener, and the thread was
+   * interrupted only when LCG returned normally: it woke after the run, stopped the old solver and
+   * printed into whatever ran next in the JVM. The model: o = 2 is found at once, o = 1 only after
+   * the search without learning thrashes over 2^24 nodes, which LCG cuts after one conflict.
+   */
+  @Test
+  void theFixedFirstCheckEndsWithARunThatMinusNStops() throws IOException, InterruptedException {
+    StringBuilder model = new StringBuilder();
+    StringBuilder ws = new StringBuilder();
+    model.append("var 1..2: o :: output_var;\nvar bool: b;\nvar 0..1: z :: output_var;\n");
+    model.append("var 0..1: p;\nvar 0..1: q;\nvar bool: r1;\nvar bool: r2;\nvar bool: zb;\n");
+    for (int i = 0; i < 22; i++) {
+      model.append("var 0..1: w").append(i).append(";\n");
+      ws.append(",w").append(i);
+    }
+    model.append("constraint int_eq_reif(o,1,b);\nconstraint int_eq_reif(z,1,zb);\n");
+    model.append("constraint int_ne_reif(p,q,r1);\nconstraint int_eq_reif(p,q,r2);\n");
+    model.append("constraint bool_clause([r1,zb],[b]);\nconstraint bool_clause([r2,zb],[b]);\n");
+    model.append("solve :: seq_search([int_search([o],input_order,indomain_max,complete),");
+    model.append("int_search([z").append(ws).append(",p,q],input_order,indomain_min,complete)])");
+    model.append(" minimize o;\n");
+    String[] first =
+        run(
+            model.toString(),
+            "--lcg",
+            "on",
+            "-debug",
+            "-n",
+            "2",
+            "-t",
+            "20000",
+            "--free-config",
+            "fixed-first-lcg-min=200");
+    assertTrue(first[0].contains("o = 1;"), first[0]);
+    assertTrue(first[0].contains("% fixed search first: 1 solutions"), first[0]);
+    // what the JVM prints after the run, past the delay of the check (at most 3 * 100 ms)
+    ByteArrayOutputStream after = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+    try (PrintStream capture = new PrintStream(after, true, StandardCharsets.UTF_8)) {
+      System.setOut(capture);
+      Thread.sleep(1000);
+    } finally {
+      System.setOut(originalOut);
+    }
+    assertEquals("", after.toString(StandardCharsets.UTF_8));
+  }
+
+  /**
+   * -i (print float domains as intervals) is a static setting of FloatDomain that the search sets
+   * when it starts: what a run printed before its search (the -debug lines of the default float
+   * search) still came out as intervals after a run with -i in the same JVM.
+   */
+  @Test
+  void aRunAfterARunWithMinusIPrintsFloatsAsValues() throws IOException {
+    String model = "var 0.0..1.0: x :: output_var;\nconstraint float_eq(x,0.5);\nsolve satisfy;\n";
+    String before = run(model, "-debug")[0];
+    String interval = run(model, "-i")[0];
+    assertTrue(interval.contains("x = 0.5..0.5;"), interval);
+    String after = run(model, "-debug")[0];
+    assertTrue(before.contains("[x = 0.5]"), before);
+    assertTrue(after.contains("[x = 0.5]"), after);
+    assertFalse(after.contains("0.5..0.5"), after);
+  }
+
+  /**
+   * A model that fails while it is translated, next to a declared domain narrowed to JaCoP's range
+   * that the rows show harmless (s is in no constraint), printed UNKNOWN although a search that
+   * completes without a solution on the same narrowing prints UNSATISFIABLE: the pigeonholes below
+   * printed UNSATISFIABLE without symmetry breaking and UNKNOWN with it (the default when LCG is
+   * off), whose value precedence refutes them while the model is translated. A narrowing that the
+   * failure may come from still gives UNKNOWN.
+   */
+  @Test
+  void aFailureWhileTranslatingNextToAHarmlessNarrowingIsUnsatisfiable() throws IOException {
+    String narrowed = "var 0..2000000000: s :: output_var;\n";
+    StringBuilder holes = new StringBuilder(narrowed);
+    holes.append("array [1..4] of var 1..3: p :: output_array([1..4]);\n");
+    for (int i = 1; i <= 4; i++) {
+      for (int j = i + 1; j <= 4; j++) {
+        holes.append("constraint int_ne(p[").append(i).append("], p[").append(j).append("]);\n");
+      }
+    }
+    holes.append("solve satisfy;\n");
+    String root =
+        narrowed
+            + "var 1..1: a;\nvar 1..1: b :: output_var;\nconstraint int_ne(a,b);\nsolve satisfy;\n";
+    for (String model : List.of(holes.toString(), root)) {
+      for (String symmetry : List.of("off", "on")) {
+        String out = run(model, "--lcg", "off", "--symmetry", symmetry)[0];
+        assertTrue(out.endsWith("=====UNSATISFIABLE=====\n"), symmetry + "\n" + model + out);
+      }
+    }
+    // s = 600000000 is a solution beyond the narrowed domain
+    String cut = narrowed + "constraint int_lin_le([-1],[s],-600000000);\nsolve satisfy;\n";
+    String out = run(cut, "--lcg", "off")[0];
+    assertTrue(out.contains("=====UNKNOWN====="), out);
+  }
+
+  /**
+   * -a under free search (a model without annotation, no LCG) deepens the stack of the search by a
+   * refuted value per solution, and after each solution FreeSearch.skipUnprojected scanned the
+   * whole stack: the 200,000 solutions of one variable took 68 s (50,000: 4.6 s), quadratic, and 1
+   * s with --default-search input. The variable outside the output is still not enumerated.
+   */
+  @Test
+  void allSolutionsOfFreeSearchOverOneVariableTakeLinearTime() {
+    String[] out =
+        assertTimeoutPreemptively(
+            Duration.ofSeconds(30),
+            () ->
+                run(
+                    "var 1..200000: x :: output_var;\nvar 1..1000: y;\nsolve satisfy;\n",
+                    "-a",
+                    "--lcg",
+                    "off"));
+    assertEquals(200_000, out[0].split("----------", -1).length - 1);
+    assertTrue(out[0].endsWith("x = 200000;\n----------\n==========\n"), out[0].substring(0, 100));
+  }
+
+  /**
+   * A run killed by SIGTERM without -s (MiniZinc and the competition scripts end a solver so at the
+   * time limit) printed nothing, although without -a the solutions it found are kept back to be
+   * printed at its end: it now prints what the watchdog prints at the time-out, the kept solution
+   * and TIME-OUT, once and without statistics.
+   */
+  @Test
+  void aRunKilledWithoutStatisticsPrintsItsKeptSolution() throws Exception {
+    // a dense knapsack: a first solution at once, no proof of the optimum for minutes
+    StringBuilder model = new StringBuilder();
+    int n = 80;
+    StringJoiner xs = new StringJoiner(",");
+    for (int i = 0; i < n; i++) {
+      model.append("var 0..20: x").append(i).append(" :: output_var;\n");
+      xs.add("x" + i);
+    }
+    model.append("var 0..100000: obj :: output_var;\n");
+    for (int r = 0; r < n; r++) {
+      StringJoiner c = new StringJoiner(",");
+      long sum = 0;
+      for (int i = 0; i < n; i++) {
+        int w = 1 + (i * 37 + r * 11 + i * r) % 49;
+        c.add(Integer.toString(w));
+        sum += w;
+      }
+      model.append("constraint int_lin_le([" + c + "],[" + xs + "]," + sum * 5 + ");\n");
+    }
+    StringJoiner w = new StringJoiner(",");
+    for (int i = 0; i < n; i++) {
+      w.add(Integer.toString(1 + (i * 23) % 49));
+    }
+    model.append("constraint int_lin_eq([" + w + ",-1],[" + xs + ",obj],0);\n");
+    model.append("solve maximize obj;\n");
+    Path fzn = tmp.resolve("killed.fzn");
+    Files.writeString(fzn, model, StandardCharsets.UTF_8);
+    Path javaBin = Path.of(System.getProperty("java.home"), "bin", "java");
+    String out = "";
+    // later kills only when the run had no solution yet (a slow machine)
+    for (long delay : new long[] {2500, 6000}) {
+      ProcessBuilder pb =
+          new ProcessBuilder(
+              javaBin.toString(),
+              "-cp",
+              System.getProperty("java.class.path"),
+              "org.jacop.fz.Fz2jacop",
+              "--lcg",
+              "off",
+              fzn.toString());
+      pb.redirectError(tmp.resolve("killed.err").toFile());
+      // a file, not a pipe: destroy() closes the pipe before the hook has written to it
+      pb.redirectOutput(tmp.resolve("killed.out").toFile());
+      Process p = pb.start();
+      boolean ended = p.waitFor(delay, TimeUnit.MILLISECONDS);
+      assertFalse(ended, "the run ended before it was killed");
+      p.destroy(); // SIGTERM
+      assertTrue(p.waitFor(30, TimeUnit.SECONDS));
+      out = Files.readString(tmp.resolve("killed.out")).replace("\r\n", "\n");
+      if (!out.isEmpty() && !out.startsWith("=====UNKNOWN=====")) {
+        break;
+      }
+    }
+    assertTrue(
+        out.endsWith("----------\n%% =====TIME-OUT=====\n"),
+        () -> {
+          try {
+            return Files.readString(tmp.resolve("killed.err"));
+          } catch (IOException e) {
+            return e.toString();
+          }
+        });
+    assertEquals(1, out.split("----------", -1).length - 1, out);
+    assertTrue(out.startsWith("x0 = "), out);
+    assertTrue(out.contains("\nobj = "), out);
+    assertFalse(out.contains("%%%mzn-stat"), out);
+    assertFalse(out.contains("=========="), out);
+  }
+
+  @Test
+  void noOptionalStepAtTheRootStartsOnceTheTimeOutHasPassed() throws IOException, ParseException {
+    // the dominance nogoods, the cost network and the linear relaxation after presolve took a
+    // second past -t 2000 on 500 variable elements, for a search that stops at once
+    Path fzn = tmp.resolve("rootlate.fzn");
+    Files.writeString(
+        fzn,
+        """
+        var 0..9: x :: output_var;
+        var 0..9: y :: output_var;
+        var 0..100: obj :: output_var;
+        constraint int_lin_le([3,5],[x,y],27);
+        constraint int_lin_eq([4,7,-1],[x,y,obj],0);
+        solve maximize obj;
+        """,
+        StandardCharsets.UTF_8);
+    for (boolean late : new boolean[] {false, true}) {
+      // the time-out passes only for the checks of the steps at the root
+      Options opt =
+          new Options(
+              new String[] {
+                "-t",
+                "60000",
+                "-s",
+                "--search-statistics",
+                "--lp",
+                "on",
+                "--lcg",
+                "off",
+                fzn.toString()
+              }) {
+            @Override
+            public boolean timeOutPassed() {
+              return late
+                  && StackWalker.getInstance()
+                      .walk(f -> f.skip(1).findFirst())
+                      .map(f -> f.getMethodName().equals("rootSteps"))
+                      .orElse(false);
+            }
+          };
+      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+      PrintStream originalOut = System.out;
+      try (PrintStream capture = new PrintStream(bytes, true, StandardCharsets.UTF_8);
+          java.io.FileInputStream input = new java.io.FileInputStream(fzn.toFile())) {
+        System.setOut(capture);
+        Parser parser = new Parser(input);
+        parser.setOptions(opt);
+        parser.model();
+      } finally {
+        System.setOut(originalOut);
+      }
+      String out = bytes.toString(StandardCharsets.UTF_8).replace("\r\n", "\n");
+      // the search still runs: here it has the time to prove the optimum
+      assertTrue(out.contains("obj = 37;\n----------\n"), out);
+      assertTrue(out.contains("\n==========\n"), out);
+      assertEquals(!late, out.contains("%%%mzn-stat: lpCalls="), out);
+    }
+  }
+
+  @Test
+  void theBinPackingOfTheCostIsFoundInLinearTime() {
+    // the hint of bin completion read the constraints of the cost from every constraint on it:
+    // 16,000 rows s_i + d_i <= makespan took 4.4 s past -t 1000 under -f
+    Store store = new Store();
+    IntVar cost = new IntVar(store, "cost", 0, 10);
+    for (int i = 0; i < 40_000; i++) {
+      store.impose(new org.jacop.constraints.XlteqY(new IntVar(store, 0, 10), cost));
+    }
+    assertTimeoutPreemptively(Duration.ofSeconds(5), () -> assertNull(Solve.binPackingNear(cost)));
+    IntVar[] items = {new IntVar(store, 0, 2), new IntVar(store, 0, 2)};
+    IntVar[] loads = {new IntVar(store, 0, 9), new IntVar(store, 0, 9), new IntVar(store, 0, 9)};
+    org.jacop.constraints.binpacking.Binpacking packing =
+        new org.jacop.constraints.binpacking.Binpacking(items, loads, new int[] {3, 4});
+    store.impose(packing);
+    store.impose(new org.jacop.constraints.XlteqY(items[0], cost));
+    assertSame(packing, Solve.binPackingNear(cost));
+  }
+
+  /**
+   * The copy of the tables into the store derived by presolve keeps the built-ins of on_restart:
+   * without them status() was a free variable of the presolved store and took 2, although it is
+   * START (1) in the only run, and restart neighbourhoods were not imposed.
+   */
+  @Test
+  void presolveKeepsTheOnRestartBuiltIns() throws IOException {
+    String model =
+        """
+        var 0..9: pa;
+        var 0..9: pb :: output_var;
+        var 0..9: pc :: output_var;
+        var 1..5: st :: output_var;
+        constraint int_lin_eq([1,1],[pa,pb],5);
+        constraint int_lin_le([1,1],[pc,pb],5);
+        constraint jacop_on_restart_status(st);
+        constraint int_ne(st,1);
+        solve satisfy;
+        """;
+    for (String mode : new String[] {"off", "on", "check"}) {
+      String out = run(model, "--presolve", mode)[0];
+      assertTrue(out.contains("=====UNSATISFIABLE====="), mode + "\n" + out);
+    }
+  }
+
+  /**
+   * A seq_search below a priority_search applies the LDS of its own sub-search, so the search is
+   * not complete: lds(0) finds only y = 1 here, which was printed with ==========, although the
+   * optimum is y = 3.
+   */
+  @Test
+  void aPrioritySearchOverAnLdsSearchProvesNoOptimum() throws IOException {
+    String model =
+        """
+        var 1..3: x :: output_var;
+        var 1..3: y :: output_var;
+        constraint int_le(x, y);
+        solve :: priority_search([x],[seq_search([int_search([x,y],input_order,indomain_min,\
+        lds(0))])],input_order,complete) maximize y;
+        """;
+    String out = run(model, "--lcg", "off")[0];
+    assertTrue(out.contains("y = 1;"), out);
+    assertFalse(out.contains("=========="), out);
+  }
+
+  /**
+   * The restart calculator limits every search of a chain, the annotation's and the completion of
+   * y, and its one child listener kept that of the completion only: the credit search of the
+   * annotation lost the consistency listener that counts its depth and failed with an index of -2
+   * in its credit arrays.
+   */
+  @Test
+  void aCreditSearchUnderRestartsKeepsItsListener() throws IOException {
+    String model =
+        """
+        var 1..3: x :: output_var;
+        var 1..3: y :: output_var;
+        constraint int_le(x, y);
+        solve :: int_search([x],input_order,indomain_min,credit(2,bbs(1))) \
+        :: restart_constant(2) maximize y;
+        """;
+    String[] out = run(model, "--lcg", "off", "-t", "2000");
+    assertFalse(
+        out[0].contains("out of bound") || out[1].contains("out of bound"), out[0] + out[1]);
+    assertTrue(out[0].contains("y = 3;"), out[0]);
+  }
+
+  /**
+   * A priority_search whose only sub-search is empty searches nothing; next to a restart annotation
+   * it was kept and PrioritySearch failed with an IndexOutOfBoundsException.
+   */
+  @Test
+  void anEmptyPrioritySearchNextToARestartAnnotationSearchesTheRest() throws IOException {
+    String model =
+        """
+        var 1..3: x :: output_var;
+        var bool: b :: output_var;
+        solve :: priority_search([x],[bool_search([],input_order,indomain_min,complete)],\
+        largest,complete) :: restart_luby(27) satisfy;
+        """;
+    String[] out = run(model, "--lcg", "off", "-t", "3000");
+    assertTrue(out[0].contains("x = 1;\nb = false;\n----------"), out[0] + out[1]);
   }
 }

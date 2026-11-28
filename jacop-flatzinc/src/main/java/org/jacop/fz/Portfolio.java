@@ -183,6 +183,10 @@ final class Portfolio {
   private final Object lock = new Object();
   // where the portfolio prints: stdout as it was when the portfolio started
   private PrintStream stdout = System.out;
+
+  // whether a run killed before it answers prints its answer without -s too: on the command line
+  // only, since in process a hook per run would stay for the life of the JVM
+  boolean printsAtKill;
   // stdout while the portfolio runs, given back by the last thread to end if it outlives run()
   private PrintStream dispatch;
   private boolean restorePending;
@@ -433,7 +437,8 @@ final class Portfolio {
     }
     // a run killed before it answers (SIGTERM) prints the best solution, as one thread does
     Thread atShutdown = new Thread(() -> printAtShutdown(out, start), "jacop-portfolio-exit");
-    if (options.getStatistics()) {
+    boolean hook = options.getStatistics() || printsAtKill;
+    if (hook) {
       Runtime.getRuntime().addShutdownHook(atShutdown);
     }
     boolean timedOut = await(timeOutAt);
@@ -441,7 +446,7 @@ final class Portfolio {
       w.stop();
     }
     printResult(out, timedOut, start);
-    if (options.getStatistics()) {
+    if (hook) {
       try {
         Runtime.getRuntime().removeShutdownHook(atShutdown);
       } catch (IllegalStateException _) {
@@ -560,8 +565,9 @@ final class Portfolio {
   }
 
   /**
-   * What the shutdown hook of a run with statistics does when the run is killed before it answers
-   * (SIGTERM): prints the answer as at the time-out, unless it was printed already.
+   * What the shutdown hook of a run with statistics, or of any run on the command line, does when
+   * the run is killed before it answers (SIGTERM): prints the answer as at the time-out, unless it
+   * was printed already.
    *
    * @param out where to print
    * @param start when the run started, for the solveTime statistic

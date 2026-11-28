@@ -9848,7 +9848,16 @@ Version 5.0 (unreleased)
    as stalled and LCG does not take over.
    -Dorg.jacop.fz.conditionalEquality=false turns it off.
 
-543. Pseudo-Boolean models of clauses and cardinality rows go to JaSAT
+543. fzn-jacop killed by SIGTERM or SIGINT without -s (as MiniZinc and the
+   competition scripts end a solver at their time limit) prints what it
+   prints at its own time-out: the solution it kept and
+   "%% =====TIME-OUT=====", or "=====UNKNOWN=====" when it printed none.
+   Before, without -a a run printed its solutions only when it ended, so
+   a killed run printed nothing and lost the solutions it had found. The
+   exit code stays 143, -s prints as before, and runs started in process
+   (Fz2jacop.callMain) register no hook.
+
+544. Pseudo-Boolean models of clauses and cardinality rows go to JaSAT
    whole. A linear constraint over 0/1 variables with weights 1 and -1
    (at most, at least or exactly k of its literals) now counts as clauses
    too: the sequential counter of C. Sinz, "Towards an optimal CNF
@@ -9862,7 +9871,7 @@ Version 5.0 (unreleased)
    169") had no solution in 240 s and now has one in 3-5 s. It fires on
    14 satisfaction models of the Pseudo-Boolean Competition 2016 and on
    none of the wide set. 600 s, those 14: total -f 1,745 -> 314 s, default
-   1,667 -> 321 s, 11 -> 14 decided in both (army13, 5_6_26 UNSAT in 75 s,
+   1,667 -> 321 s, 12 -> 14 decided in both (army13, 5_6_26 UNSAT in 75 s,
    compression64_9 UNSAT 342-411 -> 111-115 s).
 
 Version 4.11

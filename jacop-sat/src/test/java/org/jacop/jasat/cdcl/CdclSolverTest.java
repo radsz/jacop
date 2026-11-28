@@ -1573,4 +1573,34 @@ class CdclSolverTest {
                 new ByteArrayInputStream(wcnf.getBytes(StandardCharsets.US_ASCII)),
                 new CdclSolver()));
   }
+
+  @Test
+  void variableEliminationStopsAtItsDeadline() {
+    // elimination knew only its effort limit, about 3 s of work: under LCG, on the clauses of 300
+    // regular constraints, it and the gate extraction of the substitution ran 2.5 s past -t 5000
+    int[][] clauses = {{0, 2}, {1, 4}, {2, 4}};
+    Eliminator open = new Eliminator(3, clauses, clauses.length, new boolean[3], null);
+    assertTrue(open.run());
+    assertTrue(open.numEliminated() > 0);
+    Eliminator late = new Eliminator(3, clauses, clauses.length, new boolean[3], null);
+    late.setDeadline(System.nanoTime() - 1);
+    assertTrue(late.run());
+    assertEquals(0, late.numEliminated());
+    assertFalse(late.completed());
+  }
+
+  @Test
+  void noPreprocessingStartsPastTheDeadline() {
+    // a solver called past its deadline stops at once, but ran elimination and substitution first
+    CdclSolver s = new CdclSolver();
+    s.setLucky(false);
+    s.ensureVars(4);
+    for (int[] c : new int[][] {{1, 2}, {-1, 3}, {2, 3}, {-2, 4}, {-3, -4}, {1, 4}}) {
+      s.addClause(c);
+    }
+    s.setDeadline(System.nanoTime() - 1);
+    s.solve();
+    assertEquals(0, s.eliminationNanos);
+    assertEquals(0, s.substitutionNanos);
+  }
 }

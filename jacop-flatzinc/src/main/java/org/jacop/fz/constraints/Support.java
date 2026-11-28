@@ -1194,12 +1194,31 @@ public class Support implements ParserTreeConstants {
       }
     }
 
-    for (Constraint c : delayedConstraints) {
-      store.impose(c);
-      if (options.debug()) {
-        String s = "% " + c;
-        FzConsole.println(s.replace("\n", "\n% "));
+    // the time-out stops the imposition of the delayed constraints between them and within one
+    // whose impose takes long: a regular constraint over 10,000 positions took 7 s to build its
+    // graph
+    boolean timed = options != null && options.getTimeOut() > 0;
+    if (timed) {
+      store.setImposeDeadline(System.currentTimeMillis() + options.getRemainingTimeOut());
+    }
+    try {
+      for (Constraint c : delayedConstraints) {
+        if (timed && options.timeOutPassed()) {
+          throw new ModelTimeOut();
+        }
+        store.impose(c);
+        if (options.debug()) {
+          String s = "% " + c;
+          FzConsole.println(s.replace("\n", "\n% "));
+        }
       }
+    } catch (FailException e) {
+      if (store.imposeDeadlinePassed()) {
+        throw new ModelTimeOut();
+      }
+      throw e;
+    } finally {
+      store.setImposeDeadline(0);
     }
     poseAlldistinctConstraints();
     implied(this::poseOverlappingAlldiffs);

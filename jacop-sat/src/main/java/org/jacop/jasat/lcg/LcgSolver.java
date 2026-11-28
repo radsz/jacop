@@ -46,6 +46,7 @@ import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -379,7 +380,8 @@ public final class LcgSolver implements ExternalPropagator {
   public static final long AUTO_CONFLICTS = 1000;
 
   private Branching branching =
-      Branching.valueOf(System.getProperty("jacop.lcg.branching", "activity").toUpperCase());
+      Branching.valueOf(
+          System.getProperty("jacop.lcg.branching", "activity").toUpperCase(Locale.ROOT));
   // whether decisions are on the most active variable, now
   private boolean activityBranching = branching == Branching.ACTIVITY;
   private long runs; // restarts so far, for the turns of Branching.ALTERNATE
@@ -5220,7 +5222,13 @@ public final class LcgSolver implements ExternalPropagator {
         // closed, or within the gap: branch and bound from here, which also proves lb >= ub
         return interleaved() ? minimizeWithLowerBoundSearch() : branchAndBound();
       }
-      long hi = ub - 1; // a better solution has the objective at most hi
+      if (lb >= rootMax[objective]) {
+        // the shared bound is above the objective's largest value here (another thread's solution
+        // that a reduction of this store, such as covering dominance, leaves out): no probe
+        return interleaved() ? minimizeWithLowerBoundSearch() : branchAndBound();
+      }
+      // a better solution has the objective at most hi, and the probe's atom is no constant
+      long hi = Math.min(ub - 1, rootMax[objective]);
       int target = (int) Math.min(hi, lb + (long) Math.floor(fraction * (hi - lb)));
       int lit = -geLit(objective, target + 1);
       long limit = sat.conflicts + budget;
@@ -8474,7 +8482,9 @@ public final class LcgSolver implements ExternalPropagator {
       int top = -1;
       for (int i = 0; i < vars.length; i++) {
         treeId[i] = sharedId[i];
-        if (treeId[i] < 0 && vars[i] != null && !root[i].singleton()) {
+        // a variable fixed at the root here is named too: another solver of the tree may not have
+        // it fixed (a side component its time budget left open) and split on it
+        if (treeId[i] < 0 && vars[i] != null) {
           String n = name.apply(vars[i]);
           if (n != null) {
             treeId[i] = this.shared.id(n);

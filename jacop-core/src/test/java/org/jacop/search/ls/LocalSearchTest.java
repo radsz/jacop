@@ -880,6 +880,69 @@ class LocalSearchTest {
     assertEquals(0, none.getSteps());
   }
 
+  /**
+   * The scheduling search alone stops at a schedule whose makespan is the least value of the
+   * makespan, as a relaxation may have bounded it at the root, instead of waiting its patience for
+   * a better one (rcpsp J30 under -f waited 5 s with the optimum found at once).
+   */
+  @Test
+  void schedulingSearchStopsAtTheLowerBound() {
+    Store store = new Store();
+    IntVar[][] s = jobShop(store);
+    IntVar makespan = new IntVar(store, "makespan", 55, 300);
+    for (int j = 0; j < s.length; j++) {
+      store.impose(
+          new LinearInt(
+              new IntVar[] {s[j][5], makespan}, new int[] {1, -1}, "<=", -FT06_DURATION[j][5]));
+    }
+    assertTrue(store.consistency());
+    LocalSearch ls =
+        LocalSearch.builder(store)
+            .minimize(makespan)
+            .scheduleOnly(true)
+            .timeLimit(Duration.ofSeconds(20))
+            .patience(Duration.ofSeconds(10))
+            .seed(3)
+            .build();
+    long start = System.nanoTime();
+    assertEquals(LocalSearch.Status.SATISFIED, ls.solve());
+    long millis = (System.nanoTime() - start) / 1_000_000;
+    assertEquals(55, ls.getCostValue());
+    assertTrue(millis < 5_000, "the search went on for " + millis + " ms after the optimum");
+  }
+
+  /**
+   * With a relative patience the scheduling search stops once it has gone twice as long as it took
+   * to find its last better schedule (at least 300 ms) without a better one, well before the fixed
+   * patience of 10 s: ft06 has no schedule better than 55.
+   */
+  @Test
+  void schedulingSearchStopsAfterARelativePatience() {
+    Store store = new Store();
+    IntVar[][] s = jobShop(store);
+    IntVar makespan = new IntVar(store, "makespan", 0, 300);
+    for (int j = 0; j < s.length; j++) {
+      store.impose(
+          new LinearInt(
+              new IntVar[] {s[j][5], makespan}, new int[] {1, -1}, "<=", -FT06_DURATION[j][5]));
+    }
+    assertTrue(store.consistency());
+    LocalSearch ls =
+        LocalSearch.builder(store)
+            .minimize(makespan)
+            .scheduleOnly(true)
+            .timeLimit(Duration.ofSeconds(20))
+            .patience(Duration.ofSeconds(10))
+            .relativePatience(2, Duration.ofMillis(300))
+            .seed(3)
+            .build();
+    long start = System.nanoTime();
+    assertEquals(LocalSearch.Status.SATISFIED, ls.solve());
+    long millis = (System.nanoTime() - start) / 1_000_000;
+    assertEquals(55, ls.getCostValue());
+    assertTrue(millis < 5_000, "the search waited " + millis + " ms for a better schedule");
+  }
+
   // a permutation flow shop as the fz front end posts pfsp.mzn: positions x[k], one table per
   // position with the times of its job, precedences between the starts; the makespan plus extra
   private static IntVar flowShop(Store store, int[][] p, int extra) {

@@ -34,9 +34,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -45,6 +47,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.fz.Fz2jacop;
@@ -107,13 +111,6 @@ class MinizincBasedTestsHelper {
 
   @AfterEach
   void cleanUp() {
-    String outputFilename = RELATIVE_PATH + timeCategory + testFilename + ".fzn" + ".out";
-    try {
-      Files.delete(Path.of(outputFilename));
-    } catch (IOException _) {
-      // e.printStackTrace(); // can be helpful when updating code and/or tests instances.
-      // File was not created (because the test timeout before it was created so deleting it failed.
-    }
     System.gc();
   }
 
@@ -121,80 +118,97 @@ class MinizincBasedTestsHelper {
     return COUNTER;
   }
 
+  /**
+   * The arguments of the model's directory: every whitespace-separated word of every line of its
+   * options.opt, or none when the directory has no such file.
+   */
+  protected static List<String> options(String modelDirectory) throws IOException {
+    Path file = Path.of(modelDirectory, "options.opt");
+    List<String> options = new ArrayList<>();
+    if (Files.exists(file)) {
+      for (String line : Files.readAllLines(file, Charset.defaultCharset())) {
+        for (String word : line.trim().split("\\s+")) {
+          if (!word.isEmpty()) {
+            options.add(word);
+          }
+        }
+      }
+    }
+    return options;
+  }
+
+  /**
+   * Solves the model as fzn-jacop does from the command line and returns what it prints, its status
+   * lines ({@code ==========}, {@code =====UNSATISFIABLE=====}, {@code =====UNKNOWN=====})
+   * included. Comment lines (starting with %) are left out. A run that ends with a non-zero exit
+   * status fails.
+   */
   protected List<String> computeResult(String filename) throws IOException {
 
-    String outputFilename =
-        RELATIVE_PATH + filename + ".out"; // outputFilename contains path to *.out file.
-    String foo = outputFilename.substring(0, outputFilename.lastIndexOf('/'));
-
+    String model = RELATIVE_PATH + filename;
     // The expected outputs of models without search annotation were recorded with the input order
-    // search, so it is kept with --default-search input.
-    // If options.opt exist reads parameters from the file and uses them in fzn2jacop program.
-    if (Files.exists(Path.of(foo + "/options.opt"))) {
-      try (BufferedReader reader =
-          Files.newBufferedReader(Path.of(foo + "/options.opt"), Charset.defaultCharset())) {
-        String line;
-        List<String> options = new ArrayList<>();
-        while ((line = reader.readLine()) != null) {
-          options.add(line);
-        }
-        // fz2jacop compute result with options
-        fz2jacop.callMain(
-            new String[] {
-              options.getFirst(),
-              options.get(1),
-              "--default-search",
-              "input",
-              "--outputfile",
-              outputFilename,
-              RELATIVE_PATH + filename
-            });
-        FloatDomain.setFormat(Double.MAX_VALUE);
-      }
-    } else {
-      // fz2jacop compute result
-      fz2jacop.callMain(
-          new String[] {
-            "--default-search", "input", "--outputfile", outputFilename, RELATIVE_PATH + filename
-          });
-    }
+    // search, so it is kept with --default-search input. The options of options.opt come first.
+    List<String> args = options(model.substring(0, model.lastIndexOf('/')));
+    args.addAll(List.of("--default-search", "input", model));
 
-    String result = new String(Files.readAllBytes(Path.of(outputFilename)));
+    PrintStream out = System.out;
+    ByteArrayOutputStream printed = new ByteArrayOutputStream();
+    int status;
+    try (PrintStream capture = new PrintStream(printed, true, StandardCharsets.UTF_8)) {
+      System.setOut(capture);
+      status = fz2jacop.callMain(args.toArray(new String[0]));
+    } finally {
+      System.setOut(out);
+      FloatDomain.setFormat(Double.MAX_VALUE);
+    }
+    String result = printed.toString(StandardCharsets.UTF_8);
 
     if (PRINT_INFO) {
       log.info(filename + "\n" + result);
     }
+    assertThat(status)
+        .as("\nFile path: " + filename + " ended with exit status " + status + ":\n" + result)
+        .isZero();
 
-    return Arrays.asList(result.split("\n"));
+    return withoutComments(Arrays.asList(result.split("\n")));
+  }
+
+  private static List<String> withoutComments(List<String> lines) {
+    return lines.stream().filter(l -> !l.trim().startsWith("%")).toList();
   }
 
   protected void testExecution(String timeCategory) throws IOException {
 
-    log.info("Test file: " + timeCategory + testFilename);
-    List<String> result = new ArrayList<>();
-    List<String> expectedResult =
-        expected(timeCategory + testFilename + ".out"); // path to file name *.out
-    List<String> res =
-        computeResult(timeCategory + testFilename + ".fzn"); // path to file name *.fzn
-
-    if ("==========".equals(expectedResult.getLast())) {
-      int i;
-      for (i = 0; i < res.size(); i++) {
-        result.add(res.get(i));
-      }
-      result.add("==========");
-    } else {
-      result = res;
+    String test = timeCategory + testFilename;
+    log.info("Test file: " + test);
+    // the status line the expected output ends with (==========, =====UNSATISFIABLE=====) is
+    // compared as any other line: a run that does not prove what the expected output claims fails
+    List<String> expectedResult = withoutComments(expected(test + ".out"));
+    String previous = FIRST_ATTEMPTS.get(test);
+    try {
+      compare(test, expectedResult, computeResult(test + ".fzn"));
+    } catch (AssertionError e) {
+      FIRST_ATTEMPTS.putIfAbsent(test, e.getMessage());
+      throw e;
     }
-
-    if (result.isEmpty()) {
+    if (previous != null) {
+      // a rerun (rerunFailingTestsCount) that passes after an attempt that printed another output:
+      // the answer depends on the run, so the test fails rather than passing as a flake
       fail(
-          "\n"
-              + "File path: "
-              + timeCategory
-              + testFilename
-              + ".fzn "
-              + " gave no output to compare against.");
+          "\nFile path: "
+              + test
+              + " printed the expected output only when run again:\n"
+              + previous);
+    }
+  }
+
+  /** The output of the first attempt of a test that printed a wrong output, by test. */
+  private static final Map<String, String> FIRST_ATTEMPTS = new ConcurrentHashMap<>();
+
+  private static void compare(String test, List<String> expectedResult, List<String> result) {
+
+    if (result.stream().allMatch(l -> l.trim().isEmpty())) {
+      fail("\n" + "File path: " + test + ".fzn " + " gave no output to compare against.");
     }
 
     for (int i = 0, j = 0; i < result.size() || j < expectedResult.size(); ) {
@@ -210,31 +224,32 @@ class MinizincBasedTestsHelper {
         fail(
             "\n"
                 + "File path: "
-                + timeCategory
-                + testFilename
+                + test
                 + ".out "
                 + " gave as a result less textlines that was expected. Expected line "
                 + (j + 1)
-                + " not found.");
+                + " ("
+                + expectedResult.get(j).trim()
+                + ") not found.");
       }
       if (expectedResult.size() == j) {
         fail(
             "\n"
                 + "File path: "
-                + timeCategory
-                + testFilename
+                + test
                 + ".out "
                 + " gave as a result more textlines that was expected. Actual line "
                 + (i + 1)
-                + "not found in expected result");
+                + " ("
+                + result.get(i).trim()
+                + ") not found in expected result");
       }
 
       assertThat(result.get(i).trim())
           .as(
               "\n"
                   + "File path: "
-                  + timeCategory
-                  + testFilename
+                  + test
                   + ".out "
                   + "\nError line number (expected, actual): ("
                   + (j + 1)
